@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import static org.ctc.util.LogSanitizer.sanitize;
+
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.*;
@@ -185,7 +187,7 @@ public class SeasonManagementService {
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         season.setDiscordRaceResultsThreadId(threadId);
         var saved = seasonRepository.save(season);
-        log.info("Linked race-results thread {} to season {}", threadId, seasonId);
+        log.info("Linked race-results thread {} to season {}", sanitize(threadId), seasonId);
         return saved;
     }
 
@@ -195,7 +197,7 @@ public class SeasonManagementService {
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         season.setDiscordStandingsThreadId(threadId);
         var saved = seasonRepository.save(season);
-        log.info("Linked standings thread {} to season {}", threadId, seasonId);
+        log.info("Linked standings thread {} to season {}", sanitize(threadId), seasonId);
         return saved;
     }
 

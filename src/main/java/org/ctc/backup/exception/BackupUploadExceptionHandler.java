@@ -1,5 +1,7 @@
 package org.ctc.backup.exception;
 
+import static org.ctc.util.LogSanitizer.sanitize;
+
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
@@ -36,7 +38,7 @@ public class BackupUploadExceptionHandler {
             RedirectAttributes redirectAttributes) {
 
         log.warn("Multipart upload rejected: max-size exceeded — uri={}, limit={}",
-                request.getRequestURI(), ex.getMaxUploadSize());
+                sanitize(request.getRequestURI()), ex.getMaxUploadSize());
         redirectAttributes.addFlashAttribute("errorMessage",
                 "Upload too large — maximum is 100 MB.");
         return "redirect:/admin/backup";

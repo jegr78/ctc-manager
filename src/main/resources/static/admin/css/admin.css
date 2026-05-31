@@ -1487,6 +1487,12 @@ a.season-header-title:hover {
     font-style: italic;
 }
 
+.match-wo {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-style: italic;
+}
+
 .leg-row {
     display: flex;
     align-items: center;

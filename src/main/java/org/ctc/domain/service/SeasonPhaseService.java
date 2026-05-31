@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import static org.ctc.util.LogSanitizer.sanitize;
+
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -272,7 +274,7 @@ public class SeasonPhaseService {
         var phase = findById(phaseId);
         var group = new SeasonPhaseGroup(phase, name, sortIndex);
         var saved = seasonPhaseGroupRepository.save(group);
-        log.info("Created group '{}' (sortIndex={}) for phase {}", name, sortIndex, phaseId);
+        log.info("Created group '{}' (sortIndex={}) for phase {}", sanitize(name), sortIndex, phaseId);
         return saved;
     }
 
@@ -287,7 +289,7 @@ public class SeasonPhaseService {
 		if (sortIndex != null) {
 			group.setSortIndex(sortIndex);
 		}
-        log.info("Updated group {} ({})", groupId, name);
+        log.info("Updated group {} ({})", groupId, sanitize(name));
         return seasonPhaseGroupRepository.save(group);
     }
 

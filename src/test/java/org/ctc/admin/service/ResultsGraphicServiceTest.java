@@ -66,7 +66,7 @@ class ResultsGraphicServiceTest {
 		var rows = service.buildResultRows(race);
 
 		// then
-		assertThat(rows).hasSize(2);
+		assertThat(rows).hasSize(6);
 		assertThat(rows.get(0).homeDriver()).isEqualTo("HomeTop");
 		assertThat(rows.get(0).homeNickname()).isEqualTo("Nick_HT");
 		assertThat(rows.get(0).homePoints()).isEqualTo(20);
@@ -79,6 +79,10 @@ class ResultsGraphicServiceTest {
 		assertThat(rows.get(1).awayDriver()).isEqualTo("AwayMid");
 		assertThat(rows.get(1).awayNickname()).isEqualTo("Nick_AM");
 		assertThat(rows.get(1).awayPoints()).isEqualTo(12);
+		assertThat(rows.get(2).homeDriver()).isEqualTo("n/a");
+		assertThat(rows.get(2).awayDriver()).isEqualTo("n/a");
+		assertThat(rows.get(2).homePoints()).isZero();
+		assertThat(rows.get(2).awayPoints()).isZero();
 	}
 
 	@Test
@@ -107,9 +111,11 @@ class ResultsGraphicServiceTest {
 		var rows = service.buildResultRows(race);
 
 		// then
-		assertThat(rows).hasSize(2);
+		assertThat(rows).hasSize(6);
 		assertThat(rows.get(0).homeDriver()).isEqualTo("HomeP1");
 		assertThat(rows.get(1).homeDriver()).isEqualTo("HomeP3");
+		assertThat(rows.get(2).homeDriver()).isEqualTo("n/a");
+		assertThat(rows.get(2).homePoints()).isZero();
 	}
 
 	@Test
@@ -143,13 +149,17 @@ class ResultsGraphicServiceTest {
 		var rows = service.buildResultRows(race);
 
 		// then
-		assertThat(rows).hasSize(3);
+		assertThat(rows).hasSize(6);
 		assertThat(rows.get(2).homeDriver()).isEqualTo("H3");
 		assertThat(rows.get(2).homeNickname()).isEqualTo("Nick_H3");
 		assertThat(rows.get(2).homePoints()).isEqualTo(14);
-		assertThat(rows.get(2).awayDriver()).isEmpty();
+		assertThat(rows.get(2).awayDriver()).isEqualTo("n/a");
 		assertThat(rows.get(2).awayNickname()).isEmpty();
 		assertThat(rows.get(2).awayPoints()).isZero();
+		assertThat(rows.get(3).homeDriver()).isEqualTo("n/a");
+		assertThat(rows.get(3).awayDriver()).isEqualTo("n/a");
+		assertThat(rows.get(5).homeDriver()).isEqualTo("n/a");
+		assertThat(rows.get(5).awayDriver()).isEqualTo("n/a");
 	}
 
 	@Test
@@ -177,7 +187,7 @@ class ResultsGraphicServiceTest {
 		var rows = service.buildResultRows(race);
 
 		// then
-		assertThat(rows).hasSize(1);
+		assertThat(rows).hasSize(6);
 		assertThat(rows.get(0).homeNickname()).isEqualTo("HomeNoNick");
 		assertThat(rows.get(0).awayNickname()).isEqualTo("AwayNoNick");
 	}

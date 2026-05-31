@@ -26,7 +26,10 @@ import org.ctc.discord.service.DiscordGlobalConfigService;
 import org.ctc.discord.service.DiscordPostService;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Race;
-import org.ctc.domain.service.*;
+import org.ctc.domain.service.RaceAttachmentService;
+import org.ctc.domain.service.RaceCalendarService;
+import org.ctc.domain.service.RaceFormDataService;
+import org.ctc.domain.service.RaceService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -80,6 +83,9 @@ public class RaceController {
 		model.addAttribute("canGenerateSettings", data.canGenerateSettings());
 		model.addAttribute("settingsMissing", data.settingsMissing());
 		model.addAttribute("settingsExist", data.settingsExist());
+		model.addAttribute("canGenerateLobbySettings", data.canGenerateLobbySettings());
+		model.addAttribute("lobbySettingsMissing", data.lobbySettingsMissing());
+		model.addAttribute("lobbySettingsExist", data.lobbySettingsExist());
 		model.addAttribute("canGenerateOverlay", data.canGenerateOverlay());
 		model.addAttribute("overlayExists", data.overlayExists());
 		model.addAttribute("calendarAvailable", data.calendarAvailable());
@@ -320,6 +326,17 @@ public class RaceController {
 		try {
 			raceGraphicService.generateSettings(id);
 			redirectAttributes.addFlashAttribute("successMessage", "Settings graphic generated");
+		} catch (RuntimeException e) {
+			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+		}
+		return "redirect:/admin/races/" + id;
+	}
+
+	@PostMapping("/{id}/generate-lobby-settings")
+	public String generateLobbySettings(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+		try {
+			raceGraphicService.generateLobbySettings(id);
+			redirectAttributes.addFlashAttribute("successMessage", "Lobby settings graphic generated");
 		} catch (RuntimeException e) {
 			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
 		}

@@ -22,6 +22,7 @@ public class RaceGraphicService {
     private final LineupGraphicService lineupGraphicService;
     private final ResultsGraphicService resultsGraphicService;
     private final SettingsGraphicService settingsGraphicService;
+    private final LobbySettingsGraphicService lobbySettingsGraphicService;
     private final OverlayGraphicService overlayGraphicService;
 
     @Transactional
@@ -37,6 +38,11 @@ public class RaceGraphicService {
     @Transactional
     public void generateSettings(UUID raceId) {
         generateAndSaveGraphic(raceId, "Settings", settingsGraphicService::generateSettings);
+    }
+
+    @Transactional
+    public void generateLobbySettings(UUID raceId) {
+        generateAndSaveGraphic(raceId, "LobbySettings", lobbySettingsGraphicService::generateLobbySettings);
     }
 
     @Transactional

@@ -50,8 +50,13 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 
 		var season = race.getMatchday().getSeason();
 
+		var match = race.getMatch();
+		boolean homeIsWalkover = match != null && match.isWalkoverFor(homeTeam);
+		boolean awayIsWalkover = match != null && match.isWalkoverFor(awayTeam);
+		boolean isWalkover = match != null && match.getWalkoverTeam() != null;
+
 		var lineups = raceLineupRepository.findByRaceId(race.getId());
-		if (lineups.isEmpty()) {
+		if (lineups.isEmpty() && !isWalkover) {
 			throw new IllegalStateException("No lineup entries for this race");
 		}
 		var pairings = buildPairings(lineups, homeTeam, awayTeam);
@@ -103,6 +108,8 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 		ctx.setVariable("homePosition", homePosition);
 		ctx.setVariable("awayPosition", awayPosition);
 		ctx.setVariable("pairings", pairings);
+		ctx.setVariable("homeIsWalkover", homeIsWalkover);
+		ctx.setVariable("awayIsWalkover", awayIsWalkover);
 		ctx.setVariable("ctcLogoBase64", encodeClasspathResource(CTC_LOGO_CLASSPATH, "image/png"));
 		ctx.setVariable("fontBase64", encodeClasspathResource(FONT_CLASSPATH, "font/woff2"));
 
@@ -128,12 +135,11 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 				.map(RaceLineup::getDriver)
 				.toList();
 
-		int maxSize = Math.max(homeEntries.size(), awayEntries.size());
 		var pairings = new ArrayList<DriverPairing>();
-		for (int i = 0; i < maxSize; i++) {
-			String homePsn = i < homeEntries.size() ? homeEntries.get(i).getPsnId() : "";
+		for (int i = 0; i < TEAM_DRIVERS; i++) {
+			String homePsn = i < homeEntries.size() ? homeEntries.get(i).getPsnId() : "n/a";
 			String homeNick = i < homeEntries.size() ? resolveNickname(homeEntries.get(i)) : "";
-			String awayPsn = i < awayEntries.size() ? awayEntries.get(i).getPsnId() : "";
+			String awayPsn = i < awayEntries.size() ? awayEntries.get(i).getPsnId() : "n/a";
 			String awayNick = i < awayEntries.size() ? resolveNickname(awayEntries.get(i)) : "";
 			pairings.add(new DriverPairing(homePsn, homeNick, awayPsn, awayNick));
 		}

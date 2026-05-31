@@ -428,19 +428,63 @@ Living retrospective across milestones. Updated at each milestone completion.
 - Notable: 51 commits in a single day; graphics-redesign churn concentrated in Thymeleaf render-templates + `admin.css` (JaCoCo-excluded surface), so the +6.6k / −2.5k LOC delta is overwhelmingly template/CSS, not test or production-Java code
 - Notable: the redesign itself was coverage-neutral (JaCoCo-excluded services) — the only coverage-relevant additions were the Phase 104 IT and Phase 105 color-robustness / raceLabel unit tests
 
+## Milestone: v1.15 — CI Optimisation & Race/Match Defaults
+
+**Shipped:** 2026-05-31
+**Phases:** 6 (106, 108-112; 107 removed) | **Plans:** 21 | **Timeline:** 2026-05-30 → 2026-05-31 (2 days · 149 commits · 263 files · +16.5k / −337 LOC)
+
+### What Was Built
+- **Phase 106 — CI Pipeline Optimisation (4 plans, CI-01..06):** Path-aware `ci.yml` — a `dorny/paths-filter` `changes` job gates the expensive Maven/E2E/Docker steps while the 3 required checks (`build-and-test`, `dockerfile-noble-pin-guard`, `docker-build`) always report a status, so a docs-only PR never deadlocks (approach A); hard `paths-ignore` only on the non-required `codeql.yml` + `mariadb-migration-smoke.yml` (approach C); buildx Docker layer cache; single `clean verify -Pe2e`; pom.xml no-rerun build guard + flaky-test policy doc. Live-PR checkpoint: `build-and-test` 14:55 < 17:39 baseline.
+- **Phase 108 — Missing-Driver n/a Rendering (3 plans, LINEUP-01..04):** Central `TEAM_DRIVERS = 6` constant pads Lineup + Scorecard/Results + Provisional-Scores graphics to 6 rows with an "n/a" placeholder + shared `.empty-slot` de-emphasis (fixing the Provisional graphic's missing-row inconsistency); `ScoringService` records 0 points / no position for a missing slot at save time — no template/controller fallback.
+- **Phase 109 — Walkover Handling (5 plans, WO-01..04):** Flyway **V17** `Match.walkoverTeam` (additive, V1-V16 untouched, H2 + MariaDB); bye-analogous auto-win crediting the opponent the full team race score; `TeamStanding.hasWalkover` + visible "(w/o)" label in matchday-detail, public standings, and 3 graphics; admin match-edit walkover dropdown via `MatchForm.walkoverTeamId` + validating `MatchService.updateWalkover` (2 review passes resolved).
+- **Phase 110 — Lobby Settings Graphic (5 plans, LOBBY-01..05):** New `LobbySettingsGraphicService` (Carbon-HUD, template-variable-driven, `extends AbstractGraphicService implements TemplateManageable`, JaCoCo-excluded); admin preview + PNG download; `DiscordPostType.LOBBY_SETTINGS` + `postLobbySettings` manual match-channel button; template-editor override tab. No new data model, no Flyway. Blocked on + unblocked by the external Claude-Design handoff (Phase-105 pattern).
+- **Phase 111 — Log-Injection Remediation, CodeQL CWE-117 (3 plans, SEC-LOG-01..04):** Central `org.ctc.util.LogSanitizer` (strips CR/LF + control chars) wraps all 29 flagged user-controlled log arguments across 17 files + removes the ad-hoc `MatchdayService.safeWeekend`; CodeQL re-scan reports 0 open `java/log-injection` with **no** new `query-filters` suppressions (5 review findings fixed).
+- **Phase 112 — Unused Import Cleanup & Regression Guard (1 plan, IMP-01..02):** OpenRewrite `RemoveUnusedImports` strips every unused import across `src/main` + `src/test` (import-only diff), then a `maven-checkstyle-plugin` `UnusedImports` + `RedundantImports` gate bound to `validate` (+ `checkstyle-gate-guard` drift guard) makes regression impossible, documented in CLAUDE.md.
+
+### What Worked
+- **Dropping a requirement when the codebase scout proves there's no real problem.** Phase 107 (Race/Match prefill) was removed during discuss, not forced: scoring is already inherited via `Matchday → SeasonPhase → RaceScoring`, `legs` is a `SeasonPhase` setting (a Race *is* a single leg), and Matchday has no scheduled date to inherit. RACE-01..03 dropped permanently (not backlogged), the number left as a gap. Building all three would have meant a schema change the roadmap excluded — the discuss-phase scout caught it before any code was written.
+- **Single-point-of-change patterns paid off twice.** The central `TEAM_DRIVERS = 6` constant (108) means a future per-season `driverSlots` feature swaps in one place; the central `LogSanitizer` (111) closed 29 alerts from one utility. Both fix the root cause at one site rather than scattering the change across graphics/log call sites.
+- **CI-first strand independence cleaned the pipeline before any Java landed.** Phase 106 touches only `.github/workflows/*.yml` + `pom.xml` — zero shared surface with the application strands — so running it first meant every subsequent feature phase ran on the optimised, path-aware pipeline.
+- **Log-injection fixed at source, no suppressions.** All 29 CWE-117 alerts were eliminated by sanitising the taint at the call site (`LogSanitizer.sanitize(...)`), not by adding `query-filters` dismissals — the security posture genuinely improved (0 open alerts, 0 new suppressions) per the integration-checker re-scan.
+- **LINEUP-before-WO graphic sequencing avoided template clobber.** Phase 108 established the n/a placeholder pattern on the shared graphic templates; Phase 109 added the "(w/o)" label on top of that stable baseline. Reversing the order would have risked clobber on the same Thymeleaf files (D-Graphic-Sequencing).
+
+### What Was Inefficient
+- **The same VERIFICATION.md / Nyquist backfill recurrence as v1.13 and v1.14.** The first milestone audit graded `gaps_found` — but for verification-rigor only, not missing functionality: 5 of 6 phases shipped without a `VERIFICATION.md`, Phase 108 had no `VALIDATION.md`, and 106/109 were `nyquist_compliant: false`. All were closable retroactively (validate-phase runs + verification backfill) and were closed the same day, but the verify/validate chain again ran *after* the phases shipped rather than inline at each phase close. This is now a three-milestone pattern (v1.13 → v1.14 → v1.15).
+- **REQUIREMENTS.md traceability drift, again.** At audit time 22 of 25 active rows still read "Pending" though the work was complete and REVIEW-resolved; SUMMARY `requirements_completed` frontmatter was populated for only 2 of 6 phases. The bookkeeping-drift theme is now overdue for a tooling solution (auto-flip on phase-complete commit, or a strict frontmatter gate).
+- **CI-01/CI-02 could not be empirically proven on the milestone PR.** `pull_request` path filters evaluate the cumulative base…head diff, which on PR #132 contains code — so the docs-only skip only manifests on a wholly-docs-only PR. The behaviour was accepted config-sound by inspection (throwaway PR deliberately skipped), tracked in `docs/ci/v1.15-open-verify.md` as non-blocking debt.
+- **Two CI-only failures surfaced at close that the milestone audit's local `clean verify -Pe2e` could not see.** (1) `docker-build` was red the whole milestone: Phase 112's `validate`-bound Checkstyle gate needs `config/checkstyle.xml`, but the Dockerfile build stage copied only `mvnw/.mvn/pom.xml/src` — so `./mvnw package` inside the multi-stage build failed (`/build/config/checkstyle.xml` not found). The full-checkout `build-and-test` job passed, which is exactly why local `verify` and the audit missed it. Lesson: a new `validate`-phase plugin that reads a repo file must be matched by a Dockerfile `COPY` — the container build is a distinct verification surface from `mvnw verify`. (2) An intermittent `ConcurrentModificationException` in `BackupControllerTest` (pre-existing async-streaming/MockHttpServletResponse race) failed `build-and-test` once — not reproducible locally even at `@RepeatedTest(300)` because the window only opens under CI thread-scheduling. Per the user's directive, both were root-cause-fixed inside the milestone before merge (no retry/timeout hotfix); the flaky test was aligned to the `asyncDispatch` pattern its sibling tests already use.
+
+### Patterns Established
+- **Discuss-phase can DELETE scope, not only add it.** When the codebase scout shows a planned requirement maps to no real problem in the current data model, the right move is to drop it permanently (Phase 107 / RACE-01..03), leaving the phase number as a gap per the integer-phase policy — not to build a speculative feature or carry it as backlog.
+- **Path-aware CI without touching branch protection (approach A+C).** Gate expensive steps *inside* the required jobs via a `paths-filter` `changes` job (so the required-check contract stays intact) and apply hard `paths-ignore` only to non-required workflows. A single aggregation-gate (approach B) would have forced a branch-protection reconfiguration — explicitly out of scope.
+- **Central-constant / central-util as the default for cross-cutting changes.** `TEAM_DRIVERS` and `LogSanitizer` both made a many-site change a one-site change, and both leave a clean seam for the next evolution (per-season slots; additional sanitised call sites).
+
+### Key Lessons
+1. **Promote "verify + validate inline at phase close" to an enforced gate — the retroactive-backfill pattern has now recurred three milestones running (v1.13/v1.14/v1.15).** v1.12's strict Nyquist gate (D-11) shipped all 4 phases compliant; v1.15 reverted to backfill-at-audit. The orchestrator hand-carries the review → verify-work → validate chain (CLAUDE.md "Validate-Phase Before New Phase"), but it was not run at each phase close. Front-load it.
+2. **The bookkeeping-drift tooling solution is now badly overdue.** REQUIREMENTS traceability + SUMMARY `requirements_completed` frontmatter drifted Pending-at-close in v1.0/v1.1/v1.2/v1.9/v1.11/v1.12/v1.15. A pre-commit auto-flip or strict frontmatter validation would end a theme that has cost cleanup time in seven milestones.
+3. **A `gaps_found` audit verdict is not necessarily a functional gap.** v1.15's initial `gaps_found` was verification-rigor only — every requirement was WIRED with file:line, integration was 6/6 CONNECTED, 3/3 flows complete. Distinguish "definition-of-done met, artifacts missing" from "functionality missing" when triaging an audit.
+4. **Security findings below the CI gate threshold still get fixed at source.** The 29 `java/log-injection` alerts were medium (below the 7.0 HIGH/CRITICAL gate, so they never blocked the build) — but were driven to 0 by source-fix rather than left as accepted noise. Below-threshold ≠ ignorable.
+5. **`feat(v1.15):` squash-merge subject is mandatory for the `v1.15.0` MINOR bump.** PR #132; release CI tags after merge per CLAUDE.md "No Local Git Tags".
+
+### Cost Observations
+- Model mix: ~100 % opus (Claude Opus 4.8 1M-context — orchestrator + inline-sequential executor across all 6 phases per CLAUDE.md "Inline Sequential is the Default"); read-only verifier / integration-checker / validate / audit agents on the "balanced" profile
+- Sessions: 2 calendar days; 6 phases through discuss/plan/execute + a same-day audit-gap-closure pass (VERIFICATION backfill + 3 validate-phase runs + traceability/roadmap sync)
+- Notable: 149 commits over 2 days; the +16.5k / −337 LOC delta is feature-heavy (new graphic service + walkover scoring/standings/graphics + 29-call-site log sanitisation + whole-tree import cleanup), not a template/CSS churn like v1.14
+- Notable: test count 2416 → 2472 (+56); coverage held ~89 % (gate 82 %) — the new `LobbySettingsGraphicService` is JaCoCo-excluded, so coverage came from walkover/missing-driver/LogSanitizer unit + IT tests
+
 ## Cross-Milestone Trends
 
-| Metric | v1.0 | v1.1 | v1.2 | v1.8 | v1.9 | v1.10 | v1.11 | v1.12 | v1.13 | v1.14 |
-| ------ | ---- | ---- | ---- | ---- | ---- | ----- | ----- | ----- | ----- | ----- |
-| Phases | 5 | 10 | 4 | 2 | 15 | 9 | 8 | 4 | 12 | 2 |
-| Plans | 12 | 20 | 5 | 4 | ~70 | 50 | 46 | 15 | 43 | 5 |
-| Tests (start → end) | 628 → 753 | 753 → 820 | 832 → 852 | 1011 → 1064 | 1064 → 1258 | 1258 → 1652 | 1652 → 1675 | 1675 → 1696 | 1696 → 2393 | 2393 → 2416 |
-| Coverage | 82%+ | 82%+ | 82%+ | 82%+ | 87.02% | 87.80% | 88.88% | 88.44% | **89.43%** | ~89.42% |
-| CI E2E baseline | n/a | n/a | n/a | n/a | n/a | n/a | 23:00 | **17:39** | 17:39 (held) | 17:39 (held) |
-| Timeline (days) | 8 | 4 | 11 | 2 | 14 | 7 | 2 | 2 | 8 | 1 |
-| Files changed | 68 | ~80 | ~15 | 39 | 567 | 521 | 718 | 128 | 559 | 80 |
-| LOC delta | +3850 / -962 | +5100 / -1300 | +600 / -30 | +11.2k / -539 | +88.4k / -2.5k | +77.4k / -1.2k | +81.3k / -3.2k | +19.5k / -462 | +93.8k / -1.2k | +6.6k / -2.5k |
-| Nyquist verdict at close | n/a | n/a | n/a | n/a | n/a | partial → compliant (via v1.11 Phase 87) | compliant 8/0/0 | compliant 4/0/0 | compliant 12/0/0 | compliant 2/0/0 |
+| Metric | v1.0 | v1.1 | v1.2 | v1.8 | v1.9 | v1.10 | v1.11 | v1.12 | v1.13 | v1.14 | v1.15 |
+| ------ | ---- | ---- | ---- | ---- | ---- | ----- | ----- | ----- | ----- | ----- | ----- |
+| Phases | 5 | 10 | 4 | 2 | 15 | 9 | 8 | 4 | 12 | 2 | 6 |
+| Plans | 12 | 20 | 5 | 4 | ~70 | 50 | 46 | 15 | 43 | 5 | 21 |
+| Tests (start → end) | 628 → 753 | 753 → 820 | 832 → 852 | 1011 → 1064 | 1064 → 1258 | 1258 → 1652 | 1652 → 1675 | 1675 → 1696 | 1696 → 2393 | 2393 → 2416 | 2416 → 2472 |
+| Coverage | 82%+ | 82%+ | 82%+ | 82%+ | 87.02% | 87.80% | 88.88% | 88.44% | **89.43%** | ~89.42% | ~89% |
+| CI E2E baseline | n/a | n/a | n/a | n/a | n/a | n/a | 23:00 | **17:39** | 17:39 (held) | 17:39 (held) | path-aware; B&T 14:55 |
+| Timeline (days) | 8 | 4 | 11 | 2 | 14 | 7 | 2 | 2 | 8 | 1 | 2 |
+| Files changed | 68 | ~80 | ~15 | 39 | 567 | 521 | 718 | 128 | 559 | 80 | 263 |
+| LOC delta | +3850 / -962 | +5100 / -1300 | +600 / -30 | +11.2k / -539 | +88.4k / -2.5k | +77.4k / -1.2k | +81.3k / -3.2k | +19.5k / -462 | +93.8k / -1.2k | +6.6k / -2.5k | +16.5k / -337 |
+| Nyquist verdict at close | n/a | n/a | n/a | n/a | n/a | partial → compliant (via v1.11 Phase 87) | compliant 8/0/0 | compliant 4/0/0 | compliant 12/0/0 | compliant 2/0/0 | 5 compliant + 1 partial-by-design (backfilled at audit) |
 
 ### Recurring Themes
 

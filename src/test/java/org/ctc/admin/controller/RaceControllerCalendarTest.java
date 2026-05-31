@@ -114,7 +114,8 @@ class RaceControllerCalendarTest {
 				false, false, false,
 				false, false, false,
 				false, false,
-				calendarAvailable, hasCalendarEvent, canCreateCalendarEvent);
+				calendarAvailable, hasCalendarEvent, canCreateCalendarEvent,
+				false, false, false);
 	}
 
 	@Test

@@ -108,6 +108,7 @@ public class MatchController {
 		form.setLobbyHost(match.getLobbyHost());
 		form.setRaceDirector(match.getRaceDirector());
 		form.setStreamer(match.getStreamer());
+		form.setWalkoverTeamId(match.getWalkoverTeam() != null ? match.getWalkoverTeam().getId() : null);
 		model.addAttribute("matchForm", form);
 		model.addAttribute("match", match);
 		return "admin/match-form-edit";
@@ -123,7 +124,12 @@ public class MatchController {
 			model.addAttribute("match", matchService.findById(id));
 			return "admin/match-form-edit";
 		}
-		matchService.updateDiscordFields(id, form);
+		try {
+			matchService.updateMatchEdit(id, form);
+		} catch (BusinessRuleException e) {
+			applyErrorFlash(redirectAttributes, e, "Walkover update");
+			return "redirect:/admin/matches/" + id;
+		}
 		redirectAttributes.addFlashAttribute("successMessage", "Match details updated.");
 		return "redirect:/admin/matches/" + id;
 	}
@@ -170,6 +176,19 @@ public class MatchController {
 			applyErrorFlash(redirectAttributes, e, "Post settings");
 		} catch (DiscordApiException e) {
 			applyErrorFlash(redirectAttributes, e, "Post settings");
+		}
+		return "redirect:/admin/matches/" + id;
+	}
+
+	@PostMapping("/{id}/post-lobby-settings")
+	public String postLobbySettings(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+		try {
+			discordPostService.postLobbySettings(matchService.findById(id));
+			redirectAttributes.addFlashAttribute("successMessage", "Lobby settings posted.");
+		} catch (BusinessRuleException e) {
+			applyErrorFlash(redirectAttributes, e, "Post lobby settings");
+		} catch (DiscordApiException e) {
+			applyErrorFlash(redirectAttributes, e, "Post lobby settings");
 		}
 		return "redirect:/admin/matches/" + id;
 	}

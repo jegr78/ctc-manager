@@ -10,7 +10,6 @@ import java.util.Locale;
 import java.util.UUID;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.SeasonTeamRepository;
-import org.ctc.domain.service.PhaseTestFixtures;
 import org.ctc.domain.service.StandingsService;
 import org.ctc.domain.service.StandingsService.TeamStanding;
 import org.junit.jupiter.api.BeforeEach;

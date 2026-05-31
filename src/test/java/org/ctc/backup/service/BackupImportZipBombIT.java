@@ -12,7 +12,6 @@ import java.util.zip.ZipOutputStream;
 import org.ctc.backup.exception.BackupArchiveException;
 import org.ctc.backup.exception.BackupArchiveException.Reason;
 import org.ctc.backup.schema.BackupSchema;
-import org.ctc.backup.schema.EntityRef;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

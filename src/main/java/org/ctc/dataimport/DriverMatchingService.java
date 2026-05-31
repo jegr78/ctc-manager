@@ -1,5 +1,6 @@
 package org.ctc.dataimport;
 
+import static org.ctc.util.LogSanitizer.sanitize;
 import static org.springframework.util.StringUtils.hasText;
 
 import java.util.Comparator;
@@ -30,21 +31,21 @@ public class DriverMatchingService {
 		// Stage 1: Exact match on PSN ID
 		var exact = driverRepository.findByPsnId(searchTerm);
 		if (exact.isPresent()) {
-			log.debug("Exact match for '{}': {}", searchTerm, exact.get().getPsnId());
+			log.debug("Exact match for '{}': {}", sanitize(searchTerm), sanitize(exact.get().getPsnId()));
 			return MatchResult.exact(searchTerm, exact.get());
 		}
 
 		// Stage 2: Case-insensitive match on PSN ID
 		var caseInsensitive = driverRepository.findByPsnIdIgnoreCase(searchTerm);
 		if (caseInsensitive.isPresent()) {
-			log.debug("Case-insensitive match for '{}': {}", searchTerm, caseInsensitive.get().getPsnId());
+			log.debug("Case-insensitive match for '{}': {}", sanitize(searchTerm), sanitize(caseInsensitive.get().getPsnId()));
 			return MatchResult.exact(searchTerm, caseInsensitive.get());
 		}
 
 		// Stage 3: Alias match (case-insensitive)
 		var aliasMatch = driverRepository.findByAliasIgnoreCase(searchTerm);
 		if (aliasMatch.isPresent()) {
-			log.debug("Alias match for '{}': {}", searchTerm, aliasMatch.get().getPsnId());
+			log.debug("Alias match for '{}': {}", sanitize(searchTerm), sanitize(aliasMatch.get().getPsnId()));
 			return MatchResult.exact(searchTerm, aliasMatch.get());
 		}
 
@@ -54,12 +55,12 @@ public class DriverMatchingService {
 		if (bestFuzzy.isPresent()) {
 			var match = bestFuzzy.get();
 			log.debug("Fuzzy match for '{}': {} (similarity: {})",
-					searchTerm, match.driver().getPsnId(), match.similarity());
+					sanitize(searchTerm), sanitize(match.driver().getPsnId()), match.similarity());
 			return MatchResult.fuzzy(searchTerm, match.driver(), match.similarity());
 		}
 
 		// Stage 5: No match
-		log.debug("No match found for '{}'", searchTerm);
+		log.debug("No match found for '{}'", sanitize(searchTerm));
 		return MatchResult.noMatch(searchTerm);
 	}
 

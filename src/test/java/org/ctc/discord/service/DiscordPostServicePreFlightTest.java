@@ -1,6 +1,9 @@
 package org.ctc.discord.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import org.ctc.domain.exception.BusinessRuleException;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -37,6 +40,7 @@ class DiscordPostServicePreFlightTest {
 				mock(org.ctc.admin.service.TeamCardService.class),
 				mock(SeasonTeamRepository.class),
 				mock(org.ctc.admin.service.SettingsGraphicService.class),
+				mock(org.ctc.admin.service.LobbySettingsGraphicService.class),
 				mock(org.ctc.admin.service.LineupGraphicService.class),
 				raceLineupRepository,
 				mock(org.ctc.admin.service.MatchResultsGraphicService.class),
@@ -113,6 +117,17 @@ class DiscordPostServicePreFlightTest {
 	void givenRaceHasPartialSettings_whenMatchHasCompleteSettings_thenFalse() {
 		Match match = matchWithRaces(List.of(raceWithSettings(true), raceWithPartialSettings()));
 		assertThat(service.matchHasCompleteSettings(match)).isFalse();
+	}
+
+	@Test
+	void givenCompleteSettingsButNoTrack_whenPostLobbySettings_thenThrowsBusinessRuleException() {
+		// given
+		Match match = matchWithRaces(List.of(raceWithSettings(true)));
+
+		// when / then
+		assertThatThrownBy(() -> service.postLobbySettings(match))
+				.isInstanceOf(BusinessRuleException.class)
+				.hasMessageContaining("track");
 	}
 
 	@Test

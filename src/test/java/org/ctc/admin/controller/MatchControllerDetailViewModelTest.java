@@ -30,6 +30,7 @@ import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.TeamRepository;
 import org.ctc.domain.service.MatchService;
 import org.ctc.domain.service.PhaseTestFixtures;
+import org.ctc.domain.service.ScoringService;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -37,7 +38,7 @@ class MatchControllerDetailViewModelTest {
 
 	private static final List<String> EXPECTED_KEYS = List.of(
 			"match", "archiveCategories", "defaultSelectionId", "pageTitle",
-			"teamCardsPost", "settingsPost", "lineupsPost", "provisionalPost",
+			"teamCardsPost", "settingsPost", "lobbySettingsPost", "lineupsPost", "provisionalPost",
 			"matchHasCompleteSettings", "matchHasCompleteLineups", "matchHasProvisionalData",
 			"matchResultsPost", "matchResultsStale", "schedulePost",
 			"matchCanRenderResults", "scheduleVisible",
@@ -57,6 +58,7 @@ class MatchControllerDetailViewModelTest {
 				mock(MatchdayRepository.class),
 				mock(TeamRepository.class),
 				mock(RaceRepository.class),
+				mock(ScoringService.class),
 				categoryResolver,
 				discordPostService,
 				discordPostRepository,
@@ -117,6 +119,7 @@ class MatchControllerDetailViewModelTest {
 				mock(MatchdayRepository.class),
 				mock(TeamRepository.class),
 				mock(RaceRepository.class),
+				mock(ScoringService.class),
 				categoryResolver,
 				discordPostService,
 				discordPostRepository,

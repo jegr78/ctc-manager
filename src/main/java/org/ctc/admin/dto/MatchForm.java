@@ -13,6 +13,8 @@ public class MatchForm {
 
 	private UUID id;
 
+	private UUID walkoverTeamId;
+
 	@Size(max = 2000)
 	private String discordTeaser;
 

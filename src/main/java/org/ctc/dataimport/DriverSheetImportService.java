@@ -1,5 +1,6 @@
 package org.ctc.dataimport;
 
+import static org.ctc.util.LogSanitizer.sanitize;
 import static org.springframework.util.StringUtils.hasText;
 
 import java.util.*;
@@ -69,7 +70,7 @@ public class DriverSheetImportService {
     @Transactional(readOnly = true)
     public DriverSheetImportPreview preview(String sheetUrl) throws GoogleApiException {
         String spreadsheetId = googleSheetsService.extractSpreadsheetId(sheetUrl);
-        log.info("Building driver sheet import preview for spreadsheet {}", spreadsheetId);
+        log.info("Building driver sheet import preview for spreadsheet {}", sanitize(spreadsheetId));
 
         List<String> allTabs = googleSheetsService.getSheetNames(spreadsheetId);
         List<String> yearTabs = allTabs.stream()
@@ -101,7 +102,7 @@ public class DriverSheetImportService {
      */
     @Transactional
     public ExecuteResult execute(String sheetUrl, Map<String, String> allParams) throws GoogleApiException {
-        log.info("Executing driver sheet import: sheetUrl={}", sheetUrl);
+        log.info("Executing driver sheet import: sheetUrl={}", sanitize(sheetUrl));
         if (allParams == null) {
             allParams = Map.of();
         }
@@ -130,7 +131,6 @@ public class DriverSheetImportService {
                 // created by an earlier tab in this same execute() call. Look up by PSN
                 // inside the lambda so cross-tab same-PSN NEW_DRIVER rows and pre-existing
                 // Driver rows classified as NEW_DRIVER never attempt a duplicate INSERT.
-                // Closes GAP-70-01 (live-MariaDB UAT blocker, Saison 2023, 2026-05-09).
                 Driver driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId(), psnId ->
                         driverRepository.findByPsnId(psnId).orElseGet(() -> {
                             Driver d = new Driver(psnId, psnId);

@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchPreviewPreFlightResult;
 import org.ctc.admin.service.LineupGraphicService;
+import org.ctc.admin.service.LobbySettingsGraphicService;
 import org.ctc.admin.service.MatchResultsGraphicService;
 import org.ctc.admin.service.MatchdayPairingsGraphicService;
 import org.ctc.admin.service.MatchdayResultsGraphicService;
@@ -84,6 +85,7 @@ public class DiscordPostService {
 	private final TeamCardService teamCardService;
 	private final SeasonTeamRepository seasonTeamRepository;
 	private final SettingsGraphicService settingsGraphicService;
+	private final LobbySettingsGraphicService lobbySettingsGraphicService;
 	private final LineupGraphicService lineupGraphicService;
 	private final RaceLineupRepository raceLineupRepository;
 	private final MatchResultsGraphicService matchResultsGraphicService;
@@ -109,7 +111,7 @@ public class DiscordPostService {
 			value = "EI_EXPOSE_REP2",
 			justification = "Spring-managed singleton beans (DiscordWebhookClient, DiscordRestClient, DiscordPostRepository, "
 					+ "DiscordHostValidator, DiscordGlobalConfigService, TeamCardService, SeasonTeamRepository, "
-					+ "SettingsGraphicService, LineupGraphicService, RaceLineupRepository, MatchResultsGraphicService, "
+					+ "SettingsGraphicService, LobbySettingsGraphicService, LineupGraphicService, RaceLineupRepository, MatchResultsGraphicService, "
 					+ "ResultsGraphicService, ProvisionalScoresGraphicService, DiscordTimestamps, DiscordEmojiCache, "
 					+ "MatchdayResultsGraphicService, PowerRankingsGraphicService, StandingsGraphicService, "
 					+ "MatchdayPairingsGraphicService, MatchdayScheduleGraphicService) "
@@ -126,6 +128,7 @@ public class DiscordPostService {
 			TeamCardService teamCardService,
 			SeasonTeamRepository seasonTeamRepository,
 			SettingsGraphicService settingsGraphicService,
+			LobbySettingsGraphicService lobbySettingsGraphicService,
 			LineupGraphicService lineupGraphicService,
 			RaceLineupRepository raceLineupRepository,
 			MatchResultsGraphicService matchResultsGraphicService,
@@ -148,6 +151,7 @@ public class DiscordPostService {
 		this.teamCardService = teamCardService;
 		this.seasonTeamRepository = seasonTeamRepository;
 		this.settingsGraphicService = settingsGraphicService;
+		this.lobbySettingsGraphicService = lobbySettingsGraphicService;
 		this.lineupGraphicService = lineupGraphicService;
 		this.raceLineupRepository = raceLineupRepository;
 		this.matchResultsGraphicService = matchResultsGraphicService;
@@ -164,6 +168,9 @@ public class DiscordPostService {
 	}
 
 	public boolean matchCanRenderResults(Match match) {
+		if (match.getWalkoverTeam() != null) {
+			return false;
+		}
 		List<Race> races = match.getRaces();
 		return !races.isEmpty() && races.stream().allMatch(r -> !r.getResults().isEmpty());
 	}
@@ -688,6 +695,9 @@ public class DiscordPostService {
 	}
 
 	public boolean matchHasProvisionalData(Match match) {
+		if (match.getWalkoverTeam() != null) {
+			return false;
+		}
 		List<Race> races = match.getRaces();
 		return !races.isEmpty() && races.stream().anyMatch(r -> !r.getResults().isEmpty());
 	}
@@ -727,6 +737,18 @@ public class DiscordPostService {
 		}
 		return postRaceBundle(match, DiscordPostType.SETTINGS, "settings-race-",
 				race -> readRaceGraphic(settingsGraphicService.generateSettings(race)));
+	}
+
+	@Transactional
+	public DiscordPost postLobbySettings(Match match) throws DiscordApiException {
+		if (!matchHasCompleteSettings(match)) {
+			throw new BusinessRuleException("Configure settings for all races first");
+		}
+		if (match.getRaces().stream().anyMatch(race -> race.getTrack() == null)) {
+			throw new BusinessRuleException("Configure a track for all races first");
+		}
+		return postRaceBundle(match, DiscordPostType.LOBBY_SETTINGS, "lobby-settings-race-",
+				race -> readRaceGraphic(lobbySettingsGraphicService.generateLobbySettings(race)));
 	}
 
 	@Transactional

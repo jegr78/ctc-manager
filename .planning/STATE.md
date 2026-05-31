@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.14
-milestone_name: Team Card Redesign & Data Safety
-status: completed
-stopped_at: Phase 105 context gathered (re-scoped to Carbon HUD graphics redesign — 16 templates, CARD-01..04)
-last_updated: "2026-05-29T18:29:38.905Z"
-last_activity: 2026-05-29 — Milestone v1.14 completed and archived
+milestone: v1.15
+milestone_name: CI Optimisation & Race/Match Defaults
+status: Awaiting next milestone
+stopped_at: v1.15 milestone shipped
+last_updated: "2026-05-31T16:54:30.364Z"
+last_activity: 2026-05-31 — Milestone v1.15 completed and archived
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_phases: 6
+  completed_phases: 6
+  total_plans: 21
+  completed_plans: 21
   percent: 100
 ---
 
@@ -18,153 +18,100 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
+See: .planning/PROJECT.md (updated 2026-05-31 after v1.15 milestone close)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Planning next milestone — start via `/gsd-new-milestone`.
+**Current focus:** Planning next milestone — v1.15 shipped 2026-05-31; run `/gsd-new-milestone` (after PR #132 squash-merge → release CI tags v1.15.0).
 
 ## Current Position
 
-Phase: Milestone v1.14 complete
+Phase: Milestone v1.15 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-05-29 — Milestone v1.14 completed and archived
+Last activity: 2026-05-31 — Milestone v1.15 completed and archived
 
-### Prior position (Phase 103 close)
+## Shipped Milestone
 
-Phase: 103 (string-utils-blank-check-sweep) — COMPLETE ✓ (v1.13 final phase)
-Plan: 1 of 1 (103-01 — `StringUtils.hasText` sweep across 42 production files)
-Verification: passed (v1.13 milestone close 2026-05-28, JaCoCo 89.43 %, 2393 tests)
-Last activity: 2026-05-28 — v1.13 shipped (PR #130 squash-merged to master)
+**v1.15 CI Optimisation & Race/Match Defaults** — SHIPPED 2026-05-31 — Branch: `gsd/v1.15-ci-and-race-defaults` (PR #132)
 
-## Completed Milestones
+| Phase | Goal | Requirements | Status |
+|-------|------|--------------|--------|
+| 106 | CI Pipeline Optimisation | CI-01..06 | Complete (CI-03/04/06 ✓; CI-05 ✓ verified; CI-01/02 ✓ config-sound) |
+| ~~107~~ | ~~Race/Match Prefill Defaults~~ | ~~RACE-01..03~~ | **Removed 2026-05-30** (RACE-01..03 dropped) |
+| 108 | Missing-Driver n/a Rendering | LINEUP-01..04 | Complete (LINEUP-01..04 ✓; 108-REVIEW.md resolved — WR-01 fixed) |
+| 109 | Walkover Handling | WO-01..04 | Complete (109-01..05 ✓; WO-01..04 ✓; 2 review passes resolved; verify -Pe2e green) |
+| 110 | Lobby Settings Graphic | LOBBY-01..05 | Complete (110-01..05 ✓; 110-REVIEW.md resolved; verify -Pe2e green) |
+| 111 | Log-Injection Remediation (CodeQL CWE-117) | SEC-LOG-01..04 | Complete (111-01..03 ✓; SEC-LOG-01..04 ✓; 29→0 java/log-injection on PR ref; 111-REVIEW.md resolved — 5 findings fixed; verify -Pe2e green) |
+| 112 | Unused Import Cleanup & Regression Guard | IMP-01..02 | Complete (112-01 ✓; IMP-01/02 ✓; Checkstyle UnusedImports gate bound to validate; verify -Pe2e green) |
 
-- v1.0 Technical Debt Cleanup (5 phases, 12 plans) — shipped 2026-04-04
-- v1.1 Codebase Concerns Cleanup (10 phases, 20 plans) — shipped 2026-04-07
-- v1.2 Driver Merge (4 phases, 5 plans) — shipped 2026-04-07
-- v1.3 English Test Data (8 phases) — shipped 2026-04-10
-- v1.5 Code Review Fixes (9 phases, 14 plans) — shipped 2026-04-15
-- v1.6 Static Site Quality (17 phases, 56 requirements) — shipped 2026-04-18
-- v1.8 Bulk Driver Import from Google Sheets (2 phases, 4 plans, +52 tests) — shipped 2026-04-25
-- v1.9 Season Phases & Groups (15 phases, ~70 plans, 38/38 requirements, +88.4k LOC) — shipped 2026-05-09
-- v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import (9 phases, 50 plans, 39/39 requirements, +77.4k LOC, 87.80% JaCoCo) — shipped 2026-05-16
-- v1.11 Tooling Infrastructure & Tech-Debt Sweep (8 phases 80-87, 46 plans, 46/46 requirements, JaCoCo 88.88%, 1675 tests, CI E2E median 23:00) — shipped 2026-05-18
-- v1.12 Driver-Import Gap-Closure & Test Performance Round 2 (4 phases 88-91, 15 plans, 15/15 requirements substantively satisfied, JaCoCo 88.44%, 1696 tests, CI E2E median **17:39** Δ−23.3 %, Nyquist 4/0/0 compliant) — shipped 2026-05-20
-- v1.13 Discord Integration & Carry-Forwards (12 phases 92-103, 43 plans, 28/28 requirements satisfied, JaCoCo **89.43 %**, **2393 tests**, CI E2E median 17:39 held, Nyquist 12/12 compliant, 399 commits, +93.8k LOC, 9 new Flyway migrations V8-V16) — shipped 2026-05-28
-- v1.14 Team Card Redesign & Data Safety (2 phases 104-105, 5 plans, 6/6 requirements satisfied, JaCoCo ~89.42 %, **2416 tests** (1772 Surefire + 529 Failsafe IT + 115 E2E, Δ+23), CI E2E median 17:39 held, Nyquist 2/2 compliant, 51 commits, +6.6k/−2.5k LOC, no new Flyway migrations) — shipped 2026-05-29
+## Baselines to Preserve
 
-## Active Milestone
-
-_None — v1.14 shipped 2026-05-29. Start the next milestone via `/gsd-new-milestone`._
-
-PR #131 (`feat(v1.14): team card redesign & data safety`) squash-merged to master at close; release CI tags `v1.14.0` and bumps pom to the next `-SNAPSHOT`.
-
-## Deferred Items
-
-Items carried forward into v1.14 from v1.13 close (per `PROJECT.md § Out of scope for v1.14` + `REQUIREMENTS.md § Future Requirements`):
-
-| Category | Item | Resolution Plan |
-| -------- | ---- | --------------- |
-| future_req | DISC-FUTURE-01 — Inbound Discord interaction (slash commands, polls, reaction reads) | Deferred to a later milestone; requires deployment model change (always-online endpoint instead of outbound webhooks) |
-| future_req | DISC-FUTURE-02 — Auto-trigger pipeline (race-save → post) | Deferred; revisit once edit-confidence is established |
-| future_req | DISC-FUTURE-03 — Discord settings-form migration into the admin app | Deferred to a later milestone |
-| future_req | DISC-FUTURE-04 — Multi-guild support | Deferred to a later milestone |
-| future_req | DISC-FUTURE-05 — Discord-notification webhook for the public site | Deferred to a later milestone |
-| tech_debt | String `.isEmpty()` audit (~10 callsites with different semantics from `.isBlank()`) | Deferred; case-by-case decision per Phase 103 CONTEXT D-06 |
-| uat (carry) | UAT-02 legacy season visual smoke (real pre-V4 production data) | post-deploy operator action (procedure `docs/uat/UAT-02-legacy-season-smoke.md`); cross-milestone per CLAUDE.md "Pre-existing debt may cross milestone boundaries" |
-| uat (carry) | QUAL-02 `local`-profile MariaDB manual smoke | post-deploy operator action; **note:** Phase 104 SAFE-01 reverts the v1.11 widening — this UAT semantics changes from "verify seeder runs against MariaDB" to "verify seeder is ABSENT on local" (already covered by SAFE-02 regression IT) |
-| uat (carry) | UX-01 visual UAT — 4 error-category badges × Desktop + Mobile (8 Playwright screenshots) | post-deploy operator action (procedure `.planning/phases/91/91-02-SUMMARY.md § Manual UAT`) |
-| tech_debt (v1.13) | Existing match-channels created under the Phase-94 scheme (`md{N}-{home}-vs-{away}`) retain their old names. Phase 100 D-08 verdict 2026-05-26: leave-as-is — no PATCH-rename action, no diagnostic UI list, no lazy auto-rename. | Potential v1.14+ phase — admin bulk-rename action on `/admin/discord-config` that iterates matches WHERE `discord_channel_id IS NOT NULL` and PATCHes each via Discord API. **Not in v1.14 scope per scoping decision 2026-05-29.** |
-| tech_debt (v1.13) | Two-scheme coexistence in the `matches` table is acceptable post-Phase-100. Discord is the source of truth for live channel names; `matches.discord_channel_id` stores only the channel ID, not the name. | Linked to row above. Diagnostic read-only "channels with old naming scheme" panel on `/admin/discord-config` is the optional v1.14+ entry point. **Not in v1.14 scope per scoping decision 2026-05-29.** |
-| operator_action | Real-upload restore into `data/local/uploads/` — user already mirrored the real logo / car / track images to `~/Library/CloudStorage/.../CTC-Admin/Backup/uploads` | Operator action, not a v1.14 code requirement. Execute after Phase 104 ships if local-MariaDB smoke is desired. |
-| operator_action | Orphan-file cleanup in `data/local/uploads/teams/` — 17 verwaiste Test-Logo folders (VRX / SGM / ADR / TBR / ICL / SVT / NFR / EGP / HMS / PWR) from v1.11 seeder drift | Operator action, not a v1.14 code requirement. After Phase 104 ships, run `rm -rf` against the 17 T-prefix / fictive-shortname folders. |
-
-## Pending UATs
-
-(Carry-forward from v1.13 close — no new UAT slots opened by v1.14 yet; UAT slots for Phase 104 + 105 will be added during `/gsd-discuss-phase` or `/gsd-plan-phase`.)
-
-### UAT-02: Legacy Season Visual Smoke (carry-forward from v1.11 QUAL-05)
-
-- **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** v1.14 milestone complete
-- **Result:** _(operator fills after execution)_
-- **Date:** _(operator fills)_
-- **Screenshots:** _(operator links)_
-
-### QUAL-02: Local-Profile MariaDB Smoke (semantics change in v1.14 Phase 104)
-
-- **Pre-Phase-104:** verify `DevDataSeeder` widened to `@Profile({"dev","local"})` seeds correctly against real MariaDB.
-- **Post-Phase-104 (target semantics):** verify `DevDataSeeder` + `TestDataService` are ABSENT on `local` profile (Spring context boots, neither bean instantiated; SAFE-02 IT covers automated verification, this operator UAT covers the real-MariaDB visual smoke).
-- **Status:** post-deploy operator action — semantics flips with Phase 104
-- **Result:** _(operator fills after execution)_
-
-### UX-01: Driver-Import Error-Category Badges (carry-forward from v1.12)
-
-- **Procedure:** Trigger each of the 4 typed `GoogleApiException` permits (transient/auth/not-found/permission) in `/admin/driver-import` and capture Desktop + Mobile screenshots per `feedback_playwright_cli`
-- **Status:** post-deploy operator action (cross-milestone)
-- **Result:** _(operator fills)_
+- JaCoCo line coverage: **≥ ~89.42 %** (v1.14 baseline; gate 82 % in pom.xml)
+- Test count: **≥ 2416** (v1.14: 1772 Surefire + 529 Failsafe IT + 115 E2E)
+- CI E2E median: **17:39** (v1.14 baseline; Phase 106 targets a reduction)
+- `BackupSchema.SCHEMA_VERSION`: **2** (v1.13 Phase 101; no v1.15 schema changes anticipated except WO Flyway V17)
+- `EXPORT_ORDER` size: **26 entities** (only walkover flag may need Flyway V17 — not a new entity)
+- SpotBugs `BugInstance` count: **0** (blocking gate)
+- CodeQL gate-step: **exit 0** on new HIGH/CRITICAL
+- CodeQL open alerts: **29 `java/log-injection` (medium)** to be driven to **0** in Phase 111 (below the 7.0 gate, so they never blocked the build — closed via source fix, not suppression)
+- Flyway migrations: V1-V16 immutable; next is V17 (walkover flag, Phase 109)
 
 ## Accumulated Context
 
 ### Decisions
 
-All decisions logged in PROJECT.md "Key Decisions" table and per-milestone in `milestones/v*.x-ROADMAP.md`. v1.14 decisions will be captured per phase during `/gsd-discuss-phase`.
+Roadmap-level decisions for v1.15 (2026-05-30):
 
-Roadmap-level decisions for v1.14 (captured during ROADMAP.md drafting 2026-05-29):
-
-- **2-phase structure (D-Two-Pillars)** — v1.14 has exactly two unrelated workstreams (Data Safety + Team Card Redesign); they don't share entities, services, templates, or migrations. Splitting into two phases (104 + 105) is more honest than bundling — each phase has its own goal, success criteria, and end-of-phase verify gate.
-- **Phase 104 first (D-Safety-Before-Redesign)** — Data Safety is immediately executable (fix staged in `stash@{0}`, regression IT is small + isolated). Team Card Redesign blocks on external handoff. Sequencing Phase 104 first lets the milestone make progress while waiting on the design spec, and establishes a clean green-baseline on the milestone branch before any UI/CSS churn.
-- **SAFE-01 + SAFE-02 in one phase (D-Fix-And-Fence-Together)** — The bean-scope flip and the regression IT belong together: shipping the flip without the fence re-opens the v1.11 drift risk on the next refactor; shipping the IT without the flip would test a state the code isn't in. Single small phase keeps them atomic.
-- **Phase 105 blocked label in roadmap (D-External-Handoff-Visible)** — `/gsd-progress` and STATE.md MUST surface "awaiting external Claude-Design handoff" so the orchestrator and the user both see that Phase 105 is not blocked on internal capacity. The label removes the "why isn't this moving?" ambiguity.
-- **CARD-02 backward-compat as explicit success criterion (D-No-Caller-Churn)** — The redesign rewrites `TeamCardService` output; every caller (Discord auto-post, Re-Post, Refresh, admin preview) must keep working without code changes on their side. Promoting CARD-02 to a first-class requirement (not "implicit") forces the planner to explicitly verify each consumer path during discuss/plan.
-
-### Phase Numbering
-
-Last phase shipped: **103** (v1.13 closer). v1.14 spans phases **104-105** (integer phases, no insertions, no reset — milestone started without `--reset-phase-numbers`). Estimated 2-5 plans total (Phase 104 ≈ 1-2 plans, Phase 105 ≈ 2-3 plans pending handoff scope).
-
-### Roadmap Evolution
-
-- 2026-05-28: v1.13 milestone closed via `/gsd-complete-milestone v1.13`; PR #130 squash-merged to master; release CI tagged `v1.13.0`.
-- 2026-05-29: v1.14 milestone started. Branch `gsd/v1.14-team-card-redesign` already in place (off `origin/master` `b0b90696`, pom at `1.14.0-SNAPSHOT`). User scoping decision narrowed v1.14 to Layout + Visual Redesign of the single existing team card plus Data Safety lockdown (5 explicit exclusions in `REQUIREMENTS.md § Out of Scope`).
-- 2026-05-29: v1.14 ROADMAP.md created — 2 phases (104-105), 4/4 REQ-IDs mapped (100 % coverage), no orphans. Per-phase REQ counts: 2 (SAFE) + 2 (CARD) = 4 ✓. Phase 104 ready for `/gsd-discuss-phase 104` or `/gsd-plan-phase 104`; Phase 105 blocked on external Claude-Design handoff.
+- **5-phase structure** — 22 requirements across 5 natural delivery categories (CI, RACE, LINEUP, WO, LOBBY); one phase per category gives "standard" granularity (5-8 phases).
+- **CI first (D-CI-Independent)** — CI strand has zero shared surface with application strands; running it first cleans the pipeline before any Java work lands.
+- **LINEUP before WO (D-Graphic-Sequencing)** — Both phases modify graphic Thymeleaf templates. LINEUP-01..04 establishes the n/a placeholder pattern; WO-03 adds the "w/o" label on top of that stable baseline. Reversing the order would risk clobber on shared template files.
+- **LOBBY last + external-handoff gate (D-Lobby-Blocked)** — LOBBY-01..05 are blocked on the Claude-Design Lobby Settings HTML handoff. Phase 110 is explicitly labelled as requiring the handoff before execution begins (same pattern as Phase 105 CARD-01 in v1.14).
+- **WO reuses bye semantics (D-WO-Bye-Analogy)** — Per the out-of-scope table in REQUIREMENTS.md, a richer walkover model (dedicated points config, forfeit reasons) is out of scope; the implementation mirrors `Match.bye` auto-win logic.
+- **SEC-LOG last + source-fix (D-LogInjection-Last, 2026-05-30)** — Log-injection remediation runs as Phase 111 (after 106-110) so it also captures any log statements added by the feature phases. Strategy is per-callsite sanitization via a central `LogSanitizer` (strips CR/LF + control chars), fixing the CodeQL taint path at source rather than adding `query-filters` suppressions.
+- **Phase 107 removed — RACE-01..03 dropped (D-Race-Drop, 2026-05-30)** — The Phase 107 discuss surfaced that the three "prefill" targets do not map to a real re-entry problem in the current data model: scoring scheme is already inherited via `Matchday → SeasonPhase → RaceScoring` (no create-form dropdown, no per-race override field); `legs` is a `SeasonPhase` setting and a Race *is* a single leg (no legs field); Matchday has no scheduled date/time to inherit from (only `pickDeadline` + a `scheduledWeekend` label). User decision: remove Phase 107 entirely and drop RACE-01..03 permanently (not backlog). v1.15 now delivers 5 phases (106, 108, 109, 110, 111). Phase number 107 left as a gap per the integer-phase policy.
 
 ### Blockers/Concerns
 
-None open. All v1.14 roadmap-creation concerns resolved at close:
+- Phase 110 (Lobby Settings) handoff delivered 2026-05-31 → unblocked; context gathered (110-CONTEXT.md), ready for planning. Phases 108-109 complete.
 
-- ✓ Phase 105 external-handoff blocker — handoff delivered 2026-05-29; phase executed (4 waves) and verified.
-- ✓ JaCoCo baseline — held at ~89.42 % (gate 82 %); redesign was coverage-neutral (JaCoCo-excluded graphic services).
-- ✓ `stash@{0}` — applied + committed as Phase 104; no longer outstanding.
-- ✓ Phase 105 `playwright-cli` visual verification — 12/12 UAT + 16/16 AUTO-UAT, screenshots in `.screenshots/105-*/`.
+### Phase Numbering
 
-### Quick Tasks Completed
+Last phase shipped: **105** (v1.14 Carbon HUD Graphics Redesign). v1.15 spans phases **106-112** (integer phases, no insertions, no reset). **107 removed 2026-05-30** — number left as a gap (no renumbering); active phases are 106, 108, 109, 110, 111, 112.
 
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260529-dc2 | Favicon /favicon.ico 404 + NoResourceFoundException handling | 2026-05-29 | 791c945d | [260529-dc2-favicon-noresource-404](./quick/260529-dc2-favicon-noresource-404/) |
+### Roadmap Evolution
 
-### Baselines to Preserve
+- 2026-05-29: v1.14 shipped (PR #131 squash-merged to master; release CI tagged v1.14.0).
+- 2026-05-30: v1.15 milestone started; REQUIREMENTS.md defined (22 requirements across CI/RACE/LINEUP/WO/LOBBY); ROADMAP.md created (5 phases 106-110, 22/22 coverage).
+- 2026-05-30: Phase 111 (Log-Injection Remediation, CodeQL CWE-117) added at end of v1.15 — 29 open `java/log-injection` alerts discovered in GitHub code scanning; SEC-LOG-01..04 added (now 6 phases, 26/26 coverage). Strategy: per-callsite sanitization via central `LogSanitizer` (user decision 2026-05-30).
+- 2026-05-30: Phase 107 (Race/Match Prefill Defaults) **removed** during discuss — RACE-01..03 dropped permanently (data-model mismatch: scoring/legs already inherited via `SeasonPhase`, no Matchday date to inherit). v1.15 now 5 phases (106, 108-111), 23/23 coverage on the remaining requirements.
+- 2026-05-31: Phase 112 (Unused Import Cleanup & Regression Guard) added at end of v1.15 — unused package imports discovered mid-milestone were not cleaned up; IMP-01..02 added (cleanup all `src/main`+`src/test` imports via OpenRewrite `RemoveUnusedImports`, plus a build-level guard so future phases cannot reintroduce them). v1.15 now 6 active phases (106, 108-112), 28/28 coverage. Runs last so the cleaned import set is final.
 
-- JaCoCo line coverage: **≥ ~89.42 %** (v1.14 baseline; gate remains 82 % in pom.xml; graphic services JaCoCo-excluded so redesign is coverage-neutral)
-- Test count: **≥ 2416** (v1.14 baseline: 1772 Surefire + 529 Failsafe IT + 115 E2E; was 2393 at v1.13)
-- `./mvnw verify -Pe2e` CI median (E2E step): **17:39 ± 20 %** (v1.12/v1.13 baseline; no expected regression — Phase 104 is a Spring-context IT only, Phase 105 is graphic-service redesign with `TeamCardService` JaCoCo-excluded)
-- `BackupSchema.SCHEMA_VERSION`: **2** (v1.13 Phase 101; no v1.14 changes anticipated)
-- `EXPORT_ORDER` size: **26 entities** (v1.13 Phase 101; no v1.14 schema changes anticipated)
-- SpotBugs `BugInstance` count: **0** (blocking gate)
-- CodeQL gate-step: **exit 0 on new HIGH/CRITICAL** (3-layer FP suppression invariant maintained)
-- Flyway migrations: V1-V16 immutable; no new V17+ anticipated for v1.14
-- Dev-profile seeder behaviour: `DevDataSeeder` + `TestDataService` continue to seed exactly as before for `@Profile("dev")` and `@Profile("dev,demo")` — Phase 104 only narrows `local` out, does NOT touch `dev` semantics
+## Deferred Items
+
+Carried forward from v1.13/v1.14 close (unchanged):
+
+| Category | Item | Resolution Plan |
+| -------- | ---- | --------------- |
+| future_req | DISC-FUTURE-01..05 — Inbound Discord, auto-trigger, settings-form, multi-guild, public-site webhook | Later milestone; requires deployment model change |
+| future_req | Per-season configurable team size — `driverSlots` field on `SeasonPhase`/`Season` (default 6) + Flyway migration + admin UI; graphics/scoring read the season value | Own phase (v1.15 backlog or later). Surfaced in Phase 108 discuss; Phase 108 uses a central constant so the later swap stays local |
+| tech_debt | String `.isEmpty()` audit (~10 callsites) | Case-by-case; per Phase 103 CONTEXT D-06 |
+| uat (carry) | UAT-02 legacy season visual smoke | Post-deploy operator action; cross-milestone per CLAUDE.md |
+| uat (carry) | QUAL-02 `local`-profile MariaDB manual smoke | Post-deploy operator action |
+| uat (carry) | UX-01 driver-import error-category badge screenshots | Post-deploy operator action |
+| tech_debt | Existing match-channels under old Phase-94 naming scheme | Potential future admin bulk-rename action; two-scheme coexistence accepted |
+| ✅ verified (2026-05-31) | **CI-05** warm-cache — CONFIRMED empirically: `docker-build` 0m20s/0m21s full-cache-hit runs + sublinear rebuilds (2–4 min vs ~6–10 min cold); `build-and-test` stable 18–20 min. See `docs/ci/v1.15-open-verify.md`. |
+| ✅ accepted config-sound (2026-05-31) | **CI-01/CI-02** docs-only — path filters verified correct by inspection; not empirically isolable on PR #132 because `pull_request` filters evaluate the cumulative base…head diff (which contains code). Manifests only on a wholly-docs-only PR. Throwaway PR deliberately skipped. See `docs/ci/v1.15-open-verify.md`. |
 
 ## Session Continuity
 
-**Last session:** 2026-05-29 — v1.14 milestone close (`/gsd-complete-milestone v1.14`)
+**Last session:** 2026-05-31 — v1.15 milestone closed and archived.
 
-**Stopped at:** Milestone v1.14 complete — archived to `milestones/v1.14-*`, PROJECT.md evolved, RETROSPECTIVE.md updated, PR #131 squash-merged to master.
+**Stopped at:** v1.15 shipped — archives written (`milestones/v1.15-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`), ROADMAP collapsed, PROJECT evolved, REQUIREMENTS.md removed.
 
-**Next action:** `/gsd-new-milestone` to scope the next version (questioning → research → requirements → roadmap).
+**Next action:** Squash-merge PR #132 with subject `feat(v1.15): ci optimisation & race/match defaults` (release CI tags v1.15.0). Then `/gsd-new-milestone`.
 
-**Branch:** `master` after PR #131 squash-merge; release CI tags `v1.14.0`.
+**Branch:** `gsd/v1.15-ci-and-race-defaults` (merges to `master` at close)
 
 ## Operator Next Steps
 

@@ -30,6 +30,8 @@ class RaceGraphicServiceTest {
 	@Mock
 	private SettingsGraphicService settingsGraphicService;
 	@Mock
+	private LobbySettingsGraphicService lobbySettingsGraphicService;
+	@Mock
 	private OverlayGraphicService overlayGraphicService;
 
 	@InjectMocks
@@ -121,6 +123,52 @@ class RaceGraphicServiceTest {
 
 		// when / then
 		assertThatThrownBy(() -> service.generateSettings(race.getId()))
+				.isInstanceOf(RuntimeException.class)
+				.hasMessageContaining("Playwright failed");
+	}
+
+
+	@Test
+	void givenRace_whenGenerateLobbySettings_thenCreatesAttachment() throws Exception {
+		// given
+		var homeTeam = createTeam("HOM", "Home");
+		var awayTeam = createTeam("AWY", "Away");
+		var matchday = new Matchday();
+		matchday.setId(UUID.randomUUID());
+		matchday.setLabel("MD 1");
+		matchday.setPhase(new SeasonPhase(new Season("S"), PhaseType.REGULAR, PhaseLayout.LEAGUE, 0));
+		var match = new Match(matchday, homeTeam, awayTeam);
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		race.setMatchday(matchday);
+		race.setMatch(match);
+
+		when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+		when(lobbySettingsGraphicService.generateLobbySettings(race))
+				.thenReturn("/uploads/races/" + race.getId() + "/lobby-settings.png");
+
+		// when
+		service.generateLobbySettings(race.getId());
+
+		// then
+		verify(raceAttachmentRepository).save(argThat(att ->
+				"MD 1-HOM-AWY-LobbySettings".equals(att.getName())
+						&& att.getUrl().endsWith("/lobby-settings.png")
+						&& att.getType() == AttachmentType.FILE));
+	}
+
+	@Test
+	void givenGraphicServiceFailure_whenGenerateLobbySettings_thenRethrowsException() throws Exception {
+		// given
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+
+		when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+		when(lobbySettingsGraphicService.generateLobbySettings(race))
+				.thenThrow(new RuntimeException("Playwright failed"));
+
+		// when / then
+		assertThatThrownBy(() -> service.generateLobbySettings(race.getId()))
 				.isInstanceOf(RuntimeException.class)
 				.hasMessageContaining("Playwright failed");
 	}

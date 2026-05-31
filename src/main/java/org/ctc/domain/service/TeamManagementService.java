@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import static org.ctc.util.LogSanitizer.sanitize;
 import static org.springframework.util.StringUtils.hasText;
 
 import java.io.IOException;
@@ -158,7 +159,7 @@ public class TeamManagementService {
 			}
 			if (changed) {
 				teamRepository.save(sub);
-				log.info("Propagated colors from {} to {}", parent.getShortName(), sub.getShortName());
+				log.info("Propagated colors from {} to {}", sanitize(parent.getShortName()), sanitize(sub.getShortName()));
 			}
 		}
 	}

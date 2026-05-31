@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import static org.ctc.util.LogSanitizer.sanitize;
+
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +40,7 @@ public class ScoringService {
 		result.setPointsTotal(rp + qp + fp);
 
 		log.debug("Calculated points for driver {}: race={}, quali={}, fl={}, total={}",
-				result.getDriver() != null ? result.getDriver().getPsnId() : "unknown",
+				sanitize(result.getDriver() != null ? result.getDriver().getPsnId() : "unknown"),
 				rp, qp, fp, result.getPointsTotal());
 	}
 
@@ -61,6 +63,9 @@ public class ScoringService {
 	@Transactional
 	public void recomputeMatchScoresFromAllLegs(Race race) {
 		if (race.isBye()) {
+			return;
+		}
+		if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
 			return;
 		}
 		if (race.getMatch() != null) {
@@ -129,6 +134,9 @@ public class ScoringService {
 			return;
 		}
 		if (race.isBye()) {
+			return;
+		}
+		if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
 			return;
 		}
 

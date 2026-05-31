@@ -1,5 +1,7 @@
 package org.ctc.backup.lock;
 
+import static org.ctc.util.LogSanitizer.sanitize;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -68,7 +70,7 @@ public class ImportLockedWriteRejector implements HandlerInterceptor {
 		if ("/admin/backup/import-execute".equals(req.getRequestURI())) {
 			return true;   // step 3 — whitelist
 		}
-		log.info("Rejected admin POST during import lock: {} {}", req.getMethod(), req.getRequestURI());
+		log.info("Rejected admin POST during import lock: {} {}", sanitize(req.getMethod()), sanitize(req.getRequestURI()));
 		res.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
 		res.setContentType("text/html;charset=UTF-8");
 		res.getWriter().write(LOCK_HTML);

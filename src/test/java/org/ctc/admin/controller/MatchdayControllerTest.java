@@ -5,7 +5,8 @@ import org.ctc.admin.service.MatchResultsGraphicService;
 import org.ctc.admin.service.MatchdayOverviewGraphicService;
 import org.ctc.admin.service.MatchdayResultsGraphicService;
 import org.ctc.admin.service.MatchdayScheduleGraphicService;
-import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.Match;
+import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,10 +18,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -31,6 +34,7 @@ class MatchdayControllerTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private MatchdayRepository matchdayRepository;
+    @Autowired private MatchRepository matchRepository;
     @Autowired private TestHelper testHelper;
 
     @MockitoBean private MatchdayOverviewGraphicService overviewGraphicService;
@@ -50,6 +54,27 @@ class MatchdayControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/matchday-detail"))
                 .andExpect(model().attributeExists("matchday"));
+    }
+
+    @Test
+    void givenHalfScoredMatch_whenGetMatchdayDetail_thenRendersWithoutNpe() throws Exception {
+        // given — exactly one of home/away score null must not NPE in the OGNL score comparison
+        var season = testHelper.createSeason("MD Half Score Season");
+        var matchday = testHelper.createMatchdayInRegularPhase(season, "Half Score MD", 1);
+        var home = testHelper.createTeam("MD HS Home", "mdhsh");
+        var away = testHelper.createTeam("MD HS Away", "mdhsa");
+        Match match = testHelper.createMatch(matchday, home, away);
+        match.setHomeScore(50);
+        match.setAwayScore(null);
+        matchRepository.save(match);
+        matchday.getMatches().add(match);
+        matchdayRepository.save(matchday);
+
+        // when / then — renders without NPE and still shows the one known score
+        mockMvc.perform(get("/admin/matchdays/" + matchday.getId()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/matchday-detail"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(">50<")));
     }
 
     @Test

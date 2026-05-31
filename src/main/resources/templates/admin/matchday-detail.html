@@ -41,28 +41,37 @@
                     <div class="match-header"
                          th:styleappend="${match.bye ? 'opacity:0.6;' : ''}"
                          th:classappend="${!match.races.isEmpty() ? '' : ''}">
-                        <div class="match-team-name match-team-name--right" th:text="${match.homeTeam.shortName}"></div>
-                        <div th:unless="${match.bye}" class="match-score-area">
+                        <div class="match-team-name match-team-name--right">
+                            <span th:text="${match.homeTeam.shortName}"></span>
+                            <span th:if="${match.walkoverTeam != null and match.walkoverTeam.id.equals(match.homeTeam.id)}" class="match-wo">w/o</span>
+                        </div>
+                        <div th:if="${!match.bye and match.walkoverTeam == null}" class="match-score-area">
                             <span th:if="${match.homeScore != null}" class="match-score-value"
-                                  th:classappend="${match.homeScore > match.awayScore ? 'score-win' : (match.homeScore < match.awayScore ? 'score-loss' : 'score-draw')}"
+                                  th:classappend="${match.awayScore == null ? '' : (match.homeScore > match.awayScore ? 'score-win' : (match.homeScore < match.awayScore ? 'score-loss' : 'score-draw'))}"
                                   th:text="${match.homeScore}"></span>
                             <span th:unless="${match.homeScore != null}" class="match-score-value match-score-value--dim">–</span>
                             <span class="match-score-separator">:</span>
                             <span th:if="${match.awayScore != null}" class="match-score-value"
-                                  th:classappend="${match.awayScore > match.homeScore ? 'score-win' : (match.awayScore < match.homeScore ? 'score-loss' : 'score-draw')}"
+                                  th:classappend="${match.homeScore == null ? '' : (match.awayScore > match.homeScore ? 'score-win' : (match.awayScore < match.homeScore ? 'score-loss' : 'score-draw'))}"
                                   th:text="${match.awayScore}"></span>
                             <span th:unless="${match.awayScore != null}" class="match-score-value match-score-value--dim">–</span>
+                        </div>
+                        <div th:if="${!match.bye and match.walkoverTeam != null}" class="match-score-area">
+                            <span class="match-wo">w/o</span>
                         </div>
                         <div th:if="${match.bye}" class="match-score-area">
                             <span class="match-bye">Bye</span>
                         </div>
-                        <div th:unless="${match.bye}" class="match-team-name" th:text="${match.awayTeam?.shortName}"></div>
+                        <div th:unless="${match.bye}" class="match-team-name">
+                            <span th:text="${match.awayTeam?.shortName}"></span>
+                            <span th:if="${match.walkoverTeam != null and match.awayTeam != null and match.walkoverTeam.id.equals(match.awayTeam.id)}" class="match-wo">w/o</span>
+                        </div>
                         <div th:if="${match.bye}" class="flex-spacer"></div>
                         <div class="ml-md">
                             <span th:if="${matchday.phase.legs > 1}" class="badge"
                                   th:classappend="${match.races.size() >= matchday.phase.legs ? 'badge-active' : 'badge-inactive'}"
                                   th:text="${match.races.size() + '/' + matchday.phase.legs + ' Legs'}"></span>
-                            <span th:if="${matchday.phase.legs <= 1 && match.homeScore == null && !match.bye}" class="badge badge-inactive">Open</span>
+                            <span th:if="${matchday.phase.legs <= 1 && match.homeScore == null && !match.bye && match.walkoverTeam == null}" class="badge badge-inactive">Open</span>
                             <a th:href="@{/admin/matches/{id}(id=${match.id})}"
                                class="btn btn-xs btn-secondary"
                                data-testid="match-row-detail-link">&rarr; Detail</a>
@@ -76,7 +85,8 @@
                             <div class="leg-label" th:text="'Leg ' + ${iter.count}"></div>
                             <div class="leg-detail" th:text="${(race.track?.name ?: '') + (race.car != null ? ' · ' + race.car.displayName : '')}"></div>
                             <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link leg-link">
-                                <span th:if="${race.results.isEmpty()}" class="badge badge-inactive">Open</span>
+                                <span th:if="${race.results.isEmpty() and match.walkoverTeam != null}" class="badge badge-inactive">w/o</span>
+                                <span th:if="${race.results.isEmpty() and match.walkoverTeam == null}" class="badge badge-inactive">Open</span>
                                 <span th:unless="${race.results.isEmpty()}" class="badge badge-active" th:text="${race.results.size() + ' Results'}"></span>
                             </a>
                         </div>
@@ -97,7 +107,8 @@
                         <div th:each="race : ${match.races}" class="single-leg-row">
                             <div class="leg-detail" th:text="${(race.track?.name ?: '') + (race.car != null ? ' · ' + race.car.displayName : '')}"></div>
                             <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link leg-link">
-                                <span th:if="${race.results.isEmpty()}" class="badge badge-inactive">Open</span>
+                                <span th:if="${race.results.isEmpty() and match.walkoverTeam != null}" class="badge badge-inactive">w/o</span>
+                                <span th:if="${race.results.isEmpty() and match.walkoverTeam == null}" class="badge badge-inactive">Open</span>
                                 <span th:unless="${race.results.isEmpty()}" class="badge badge-active" th:text="${race.results.size() + ' Results'}"></span>
                             </a>
                         </div>

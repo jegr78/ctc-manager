@@ -386,6 +386,7 @@
 						<exclude>org/ctc/admin/service/PlayoffRoundResultsGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/MatchdayPairingsGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/MatchdayScheduleGraphicService.class</exclude>
+						<exclude>org/ctc/admin/service/LobbySettingsGraphicService.class</exclude>
 					</excludes>
 				</configuration>
 				<executions>
@@ -453,6 +454,36 @@
 				</dependencies>
 			</plugin>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<version>3.6.0</version>
+				<configuration>
+					<configLocation>${project.basedir}/config/checkstyle.xml</configLocation>
+					<failOnViolation>true</failOnViolation>
+					<violationSeverity>error</violationSeverity>
+					<includeTestSourceDirectory>true</includeTestSourceDirectory>
+					<consoleOutput>true</consoleOutput>
+					<logViolationsToConsole>true</logViolationsToConsole>
+				</configuration>
+				<executions>
+					<execution>
+						<id>checkstyle-unused-imports</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
+				<dependencies>
+					<!-- Override the plugin's bundled Checkstyle 9.3, which cannot parse Java 25 sources (JEP 513). 13.5.0 is the first line with full Java 25 support. -->
+					<dependency>
+						<groupId>com.puppycrawl.tools</groupId>
+						<artifactId>checkstyle</artifactId>
+						<version>13.5.0</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>exec-maven-plugin</artifactId>
 				<executions>
@@ -497,6 +528,55 @@ if [ -n "$violations" ]; then
   exit 1;
 fi;
 echo "[CLEAN-01 build-guard] OK - no JUnit-Jupiter Assumptions offenders.";
+exit 0;
+]]></argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>no-rerun-guard</id>
+						<phase>validate</phase>
+						<goals><goal>exec</goal></goals>
+						<configuration>
+							<executable>bash</executable>
+							<arguments>
+								<argument>-c</argument>
+								<argument><![CDATA[
+# Match the opening-tag form, not the bare identifier, so this guard's own pattern literal does not self-trip.
+violations=$(grep -nE '<(rerunFailingTestsCount|retryCount)' pom.xml || true);
+if [ -n "$violations" ]; then
+  echo "[CI-06 build-guard] FAIL: Surefire/Failsafe rerun/retry config detected in pom.xml:";
+  echo "$violations";
+  echo "rerunFailingTestsCount and retryCount are PERMANENTLY FORBIDDEN (CLAUDE.md No Flaky Dismissal).";
+  echo "Stabilise flaky tests at the root cause - never via rerun loops or timeout bumps. See docs/ci/FLAKY-TEST-POLICY.md.";
+  exit 1;
+fi;
+echo "[CI-06 build-guard] OK - no rerun/retry config in pom.xml.";
+exit 0;
+]]></argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>checkstyle-gate-guard</id>
+						<phase>validate</phase>
+						<goals><goal>exec</goal></goals>
+						<configuration>
+							<executable>bash</executable>
+							<arguments>
+								<argument>-c</argument>
+								<argument><![CDATA[
+# Presence patterns use [[:space:]]* between tag and value so the guard's own literals do not self-satisfy the grep.
+fail=0;
+grep -qE '<failOnViolation>[[:space:]]*true' pom.xml || { echo "checkstyle-gate-guard FAIL: <failOnViolation>true</failOnViolation> missing or weakened in the maven-checkstyle-plugin config."; fail=1; };
+grep -qE '<includeTestSourceDirectory>[[:space:]]*true' pom.xml || { echo "checkstyle-gate-guard FAIL: <includeTestSourceDirectory>true</includeTestSourceDirectory> missing - src/test/java would silently stop being scanned for unused imports."; fail=1; };
+grep -q 'UnusedImports' config/checkstyle.xml || { echo "checkstyle-gate-guard FAIL: UnusedImports module missing from config/checkstyle.xml."; fail=1; };
+grep -q 'RedundantImport' config/checkstyle.xml || { echo "checkstyle-gate-guard FAIL: RedundantImport module missing from config/checkstyle.xml."; fail=1; };
+if [ "$fail" -ne 0 ]; then
+  echo "Restore the unused-import gate config. See CLAUDE.md 'Checkstyle (Unused-Import Gate)'.";
+  exit 1;
+fi;
+echo "checkstyle-gate-guard OK - unused-import gate config intact.";
 exit 0;
 ]]></argument>
 							</arguments>

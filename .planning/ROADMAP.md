@@ -14,6 +14,7 @@
 - :white_check_mark: **v1.12 Driver-Import Gap-Closure & Test Performance Round 2** — Phases 88-91 (shipped 2026-05-20)
 - :white_check_mark: **v1.13 Discord Integration & Carry-Forwards** — Phases 92-103 (shipped 2026-05-28)
 - :white_check_mark: **v1.14 Team Card Redesign & Data Safety** — Phases 104-105 (shipped 2026-05-29)
+- :white_check_mark: **v1.15 CI Optimisation & Race/Match Defaults** — Phases 106, 108-112 (shipped 2026-05-31)
 
 ## Phases
 
@@ -111,7 +112,7 @@ See: milestones/v1.8-ROADMAP.md for full details
 </details>
 
 <details>
-<summary>v1.9 Season Phases & Groups (Phases 56-70) -- SHIPPED 2026-05-09</summary>
+<summary>v1.9 Season Phases &amp; Groups (Phases 56-70) -- SHIPPED 2026-05-09</summary>
 
 - [x] Phase 56: Model & Schema Foundation (5/5 plans) -- completed 2026-04-26
 - [x] Phase 57: Data Migration (3/3 plans) -- completed 2026-04-27
@@ -134,7 +135,7 @@ See: milestones/v1.9-ROADMAP.md for full details
 </details>
 
 <details>
-<summary>v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import (Phases 71-79) -- SHIPPED 2026-05-16</summary>
+<summary>v1.10 Spring Boot 4.0.6 Upgrade &amp; Data Export/Import (Phases 71-79) -- SHIPPED 2026-05-16</summary>
 
 - [x] Phase 71: Spring Boot 4.0.6 Upgrade + Thymeleaf 3.1.5 Template Audit + Build Guard (5/5 plans) -- completed 2026-05-11
 - [x] Phase 72: Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit-Log Scope (5/5 plans) -- completed 2026-05-11
@@ -151,7 +152,7 @@ See: milestones/v1.10-ROADMAP.md for full details
 </details>
 
 <details>
-<summary>v1.11 Tooling Infrastructure & Tech-Debt Sweep (Phases 80-87) -- SHIPPED 2026-05-18</summary>
+<summary>v1.11 Tooling Infrastructure &amp; Tech-Debt Sweep (Phases 80-87) -- SHIPPED 2026-05-18</summary>
 
 - [x] Phase 80: OpenRewrite Integration (5/5 plans) -- completed 2026-05-16
 - [x] Phase 81: Static Analysis Gate (SpotBugs + find-sec-bugs) (3/3 plans) -- completed 2026-05-16
@@ -167,7 +168,7 @@ See: milestones/v1.11-ROADMAP.md for full details
 </details>
 
 <details>
-<summary>v1.12 Driver-Import Gap-Closure & Test Performance Round 2 (Phases 88-91) -- SHIPPED 2026-05-20</summary>
+<summary>v1.12 Driver-Import Gap-Closure &amp; Test Performance Round 2 (Phases 88-91) -- SHIPPED 2026-05-20</summary>
 
 - [x] Phase 88: Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure (6/6 plans) -- completed 2026-05-19
 - [x] Phase 89: PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir) (3/3 plans) -- completed 2026-05-19
@@ -179,7 +180,7 @@ See: milestones/v1.12-ROADMAP.md for full details
 </details>
 
 <details>
-<summary>v1.13 Discord Integration & Carry-Forwards (Phases 92-103) -- SHIPPED 2026-05-28</summary>
+<summary>v1.13 Discord Integration &amp; Carry-Forwards (Phases 92-103) -- SHIPPED 2026-05-28</summary>
 
 - [x] Phase 92: Carry-Forwards & Cleanup (4/4 plans) -- completed 2026-05-21
 - [x] Phase 93: Discord Foundation (3/3 plans) -- completed 2026-05-21
@@ -199,12 +200,27 @@ See: milestones/v1.13-ROADMAP.md for full details
 </details>
 
 <details>
-<summary>v1.14 Team Card Redesign & Data Safety (Phases 104-105) -- SHIPPED 2026-05-29</summary>
+<summary>v1.14 Team Card Redesign &amp; Data Safety (Phases 104-105) -- SHIPPED 2026-05-29</summary>
 
 - [x] Phase 104: Data Safety Lockdown (1/1 plan) -- completed 2026-05-29
 - [x] Phase 105: Carbon HUD Graphics Redesign (4/4 plans) -- completed 2026-05-29
 
 See: milestones/v1.14-ROADMAP.md for full details
+
+</details>
+
+<details>
+<summary>v1.15 CI Optimisation &amp; Race/Match Defaults (Phases 106, 108-112 — 107 removed) -- SHIPPED 2026-05-31</summary>
+
+- [x] Phase 106: CI Pipeline Optimisation (4/4 plans) -- completed 2026-05-30 — path-aware `ci.yml` step gating + non-required `paths-ignore` + Docker buildx cache + flaky-test policy (CI-01..06)
+- ~~Phase 107: Race/Match Prefill Defaults~~ -- REMOVED 2026-05-30 (RACE-01..03 dropped; scoring/legs inherited via `SeasonPhase`, no Matchday date to inherit; number kept as a gap)
+- [x] Phase 108: Missing-Driver n/a Rendering (3/3 plans) -- completed 2026-05-31 — TEAM_DRIVERS=6 padding + `.empty-slot` across 3 graphics; ScoringService 0-points no-fallback (LINEUP-01..04)
+- [x] Phase 109: Walkover Handling (5/5 plans) -- completed 2026-05-31 — Flyway V17 `walkoverTeam`, bye-analogous auto-win, "w/o" label in standings + 3 graphics, admin form (WO-01..04)
+- [x] Phase 110: Lobby Settings Graphic (5/5 plans) -- completed 2026-05-31 — Carbon-HUD LobbySettingsGraphicService, preview/download, Discord post type, template editor, JaCoCo-excluded (LOBBY-01..05)
+- [x] Phase 111: Log-Injection Remediation, CodeQL CWE-117 (3/3 plans) -- completed 2026-05-31 — central LogSanitizer over 29 call sites in 17 files; CodeQL 29→0 `java/log-injection`, no suppressions (SEC-LOG-01..04)
+- [x] Phase 112: Unused Import Cleanup & Regression Guard (1/1 plan) -- completed 2026-05-31 — OpenRewrite RemoveUnusedImports + Checkstyle `UnusedImports` gate bound to `validate` + drift guard (IMP-01, IMP-02)
+
+See: milestones/v1.15-ROADMAP.md for full details
 
 </details>
 
@@ -224,3 +240,4 @@ See: milestones/v1.14-ROADMAP.md for full details
 | v1.12 Driver-Import Gap-Closure & Test Performance Round 2 | 88-91 | 15 | Complete | 2026-05-20 |
 | v1.13 Discord Integration & Carry-Forwards | 92-103 | 43 | Complete | 2026-05-28 |
 | v1.14 Team Card Redesign & Data Safety | 104-105 | 5 | Complete | 2026-05-29 |
+| v1.15 CI Optimisation & Race/Match Defaults | 106, 108-112 | 21 | Complete | 2026-05-31 |

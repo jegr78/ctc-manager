@@ -3,6 +3,7 @@ package org.ctc.discord.model;
 public enum DiscordPostType {
 	TEAM_CARDS,
 	SETTINGS,
+	LOBBY_SETTINGS,
 	LINEUPS,
 	SCHEDULE,
 	PROVISIONAL_SCORES,

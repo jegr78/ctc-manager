@@ -1,6 +1,9 @@
 package org.ctc.domain.service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.junit.jupiter.api.Test;
@@ -347,6 +350,81 @@ class RaceServiceTest {
         assertThat(data.settingsMissing()).isTrue();
         assertThat(data.canGenerateSettings()).isFalse();
         assertThat(data.settingsExist()).isFalse();
+    }
+
+    @Test
+    void givenSettingsTrackTeamsButNoCar_whenGetRaceDetailData_thenCanGenerateLobbySettings() {
+        // given
+        var homeTeam = createTeam("HOM", "Home");
+        var awayTeam = createTeam("AWY", "Away");
+        var season = new Season("Test Season 2026");
+        season.setId(UUID.randomUUID());
+        var matchday = new Matchday();
+        matchday.setId(UUID.randomUUID());
+        matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
+        var match = new Match(matchday, homeTeam, awayTeam);
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(match);
+        race.setTrack(new Track("Test Track"));
+        completeSettings(race);
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of());
+
+        // when
+        var data = service.getRaceDetailData(race.getId());
+
+        // then
+        assertThat(data.canGenerateLobbySettings()).isTrue();
+        assertThat(data.lobbySettingsMissing()).isFalse();
+        assertThat(data.lobbySettingsExist()).isFalse();
+        assertThat(data.canGenerateSettings()).isFalse();
+    }
+
+    @Test
+    void givenCompleteSettingsButNoAwayTeam_whenGetRaceDetailData_thenCannotGenerateLobbySettings() {
+        // given
+        var homeTeam = createTeam("HOM", "Home");
+        var season = new Season("Test Season 2026");
+        season.setId(UUID.randomUUID());
+        var matchday = new Matchday();
+        matchday.setId(UUID.randomUUID());
+        matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
+        var match = new Match(matchday, homeTeam, null);
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(match);
+        race.setTrack(new Track("Test Track"));
+        completeSettings(race);
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of());
+
+        // when
+        var data = service.getRaceDetailData(race.getId());
+
+        // then
+        assertThat(data.canGenerateLobbySettings()).isFalse();
+        assertThat(data.lobbySettingsMissing()).isFalse();
+    }
+
+    private void completeSettings(Race race) {
+        var settings = new RaceSettings(race);
+        settings.setNumberOfLaps(20);
+        settings.setTyreWearMultiplier(3);
+        settings.setFuelConsumptionMultiplier(3);
+        settings.setRefuelingSpeed(10);
+        settings.setInitialFuel("90");
+        settings.setNumberOfRequiredPitStops(0);
+        settings.setTimeProgressionMultiplier(5);
+        settings.setWeather("Preset S02");
+        settings.setTimeOfDay("Afternoon");
+        settings.setAvailableTyres("RS, RM, RH, I, W");
+        settings.setMandatoryTyres("RS, RM, RH");
+        race.setSettings(settings);
     }
 
 

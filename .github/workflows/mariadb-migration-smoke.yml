@@ -79,7 +79,7 @@ jobs:
             --spring.datasource.username=ctc \
             --spring.datasource.password=ctc \
             > app.log 2>&1 &
-          echo "APP_PID=$!" >> $GITHUB_ENV
+          echo "APP_PID=$!" >> "$GITHUB_ENV"
 
       - name: Wait for /actuator/health = UP
         run: |

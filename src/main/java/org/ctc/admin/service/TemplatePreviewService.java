@@ -3,6 +3,7 @@ package org.ctc.admin.service;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +55,7 @@ public class TemplatePreviewService {
             case "matchday-results" -> buildMatchdayResultsContext();
             case "overlay" -> buildOverlayContext();
             case "power-rankings" -> buildPowerRankingsContext();
+            case "lobby-settings" -> buildLobbySettingsContext();
             default -> throw new IllegalArgumentException("Unknown template type: " + templateType);
         };
         return processTemplate(templateContent, ctx);
@@ -106,6 +108,32 @@ public class TemplatePreviewService {
         ctx.setVariable("timeOfDay", "14:00");
         ctx.setVariable("availableTyres", "SS, SM, SH, RH, IM, HW");
         ctx.setVariable("mandatoryTyres", "SH");
+        return ctx;
+    }
+
+    private Context buildLobbySettingsContext() {
+        var ctx = new Context();
+        ctx.setVariable("fontBase64", getFontBase64());
+        ctx.setVariable("ctcLogoBase64", getLogoBase64());
+        ctx.setVariable("seasonYear", "2026");
+        ctx.setVariable("seasonName", "Community Team Cup · 2026");
+        var v = new HashMap<String, Object>();
+        v.put("roomName", "CTC – Season – Matchday – Home vs. Away");
+        v.put("track", "Track · Layout");
+        v.put("laps", "—");
+        v.put("weatherMethod", "Preset Weather");
+        v.put("weather", "S01");
+        v.put("customWeather", "—");
+        v.put("timeOfDay", "Afternoon");
+        v.put("timeSpeed", "3×");
+        v.put("tyreWear", "4×");
+        v.put("fuelRate", "3×");
+        v.put("refuelSpeed", "3 Litre/sec");
+        v.put("initialFuel", "Default");
+        v.put("minPitStops", 0);
+        v.put("usableTyres", "Soft, Medium, Hard, Intermediate, Wet");
+        v.put("requiredTyre", "None");
+        ctx.setVariable("v", v);
         return ctx;
     }
 

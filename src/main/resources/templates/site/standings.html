@@ -40,7 +40,7 @@
                         <td class="font-bold text-white" th:text="${i.count}"></td>
                         <td>
                             <a class="entity-link font-bold" th:href="${teamSlugMap.get(s.team.id)}" th:text="${s.team.shortName}"></a>
-                            <span class="text-dim" th:text="' ' + ${s.team.name}"></span>
+                            <span class="text-dim" th:text="' ' + ${s.team.name}"></span><span th:if="${s.hasWalkover}" class="text-dim" th:text="' (w/o)'"></span>
                         </td><td th:if="${showGroupColumn}" class="text-center" th:text="${s.group != null ? s.group.name : '-'}"></td>
                         <td class="text-center" th:text="${s.played}"></td>
                         <td class="text-center" th:text="${s.wins}"></td>

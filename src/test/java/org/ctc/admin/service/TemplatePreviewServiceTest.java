@@ -247,7 +247,7 @@ class TemplatePreviewServiceTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"team-cards", "lineup", "settings", "race-results",
-            "matchday-overview", "matchday-schedule", "matchday-results", "overlay"})
+            "matchday-overview", "matchday-schedule", "matchday-results", "overlay", "lobby-settings"})
     void givenAnyTemplateType_whenRenderPreview_thenReturnsNonEmptyHtml(String templateType) {
         // given
         String template = "<html><body>Test</body></html>";
@@ -258,6 +258,25 @@ class TemplatePreviewServiceTest {
         // then
         assertThat(html).isNotEmpty();
         assertThat(html).contains("Test");
+    }
+
+    @Test
+    void givenLobbySettingsTemplate_whenRenderPreview_thenContainsWeatherVars() {
+        // given
+        String template = """
+                <html><body>
+                <span th:text="${v.weatherMethod}"></span>
+                <span th:text="${v.weather}"></span>
+                <span th:text="${v.customWeather}"></span>
+                </body></html>
+                """;
+
+        // when
+        String html = service.renderPreview("lobby-settings", template);
+
+        // then
+        assertThat(html).contains("Preset Weather");
+        assertThat(html).contains("S01");
     }
 
     @Nested

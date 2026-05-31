@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import static org.ctc.util.LogSanitizer.sanitize;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -103,7 +105,7 @@ public class MatchdayService {
         }
 
         matchdayRepository.save(matchday);
-        log.info("Saved matchday: {} (season {})", label, seasonId);
+        log.info("Saved matchday: {} (season {})", sanitize(label), seasonId);
         return matchday;
     }
 
@@ -114,9 +116,8 @@ public class MatchdayService {
         matchday.setPickDeadline(pickDeadline);
         matchday.setScheduledWeekend(scheduledWeekend);
         matchdayRepository.save(matchday);
-        String safeWeekend = scheduledWeekend == null ? null : scheduledWeekend.replaceAll("[\\r\\n]", "_");
         log.info("Saved matchday pairings: {} (deadline={}, weekend={})",
-                matchday.getLabel(), pickDeadline, safeWeekend);
+                sanitize(matchday.getLabel()), pickDeadline, sanitize(scheduledWeekend));
         return matchday;
     }
 

@@ -23,6 +23,8 @@ public abstract class AbstractGraphicService {
 	protected static final String FONT_CLASSPATH = "static/admin/fonts/ConthraxSb.woff2";
 	protected static final String CTC_LOGO_CLASSPATH = "static/admin/img/ctc-logo-white.png";
 
+	protected static final int TEAM_DRIVERS = 6;
+
 	protected final TemplateEngine templateEngine;
 	protected final Path uploadDir;
 

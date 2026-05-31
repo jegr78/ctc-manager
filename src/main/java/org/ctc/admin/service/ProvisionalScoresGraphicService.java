@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceResult;
 import org.ctc.domain.model.Team;
@@ -38,6 +39,9 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 	}
 
 	public byte[] generateProvisional(Race race, int raceIndex) throws IOException {
+		if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
+			throw new BusinessRuleException("Walkover match has no provisional scores");
+		}
 		if (race.getResults().isEmpty()) {
 			throw new IllegalStateException("No results for this race");
 		}
@@ -70,6 +74,13 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 			} else {
 				awayRows.add(row);
 			}
+		}
+
+		while (homeRows.size() < TEAM_DRIVERS) {
+			homeRows.add(emptyRow());
+		}
+		while (awayRows.size() < TEAM_DRIVERS) {
+			awayRows.add(emptyRow());
 		}
 
 		var season = race.getMatchday().getSeason();
@@ -111,9 +122,16 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 		ctx.setVariable("awayOverallPtsQuali", awayOverallPtsQuali);
 		ctx.setVariable("awayOverallPtsFl", awayOverallPtsFl);
 		ctx.setVariable("awayOverallTotal", awayOverallTotal);
+		var match = race.getMatch();
+		ctx.setVariable("homeIsWalkover", match != null && match.isWalkoverFor(homeTeam));
+		ctx.setVariable("awayIsWalkover", match != null && match.isWalkoverFor(awayTeam));
 		ctx.setVariable("ctcLogoBase64", encodeClasspathResource(CTC_LOGO_CLASSPATH, "image/png"));
 		ctx.setVariable("fontBase64", encodeClasspathResource(FONT_CLASSPATH, "font/woff2"));
 		return ctx;
+	}
+
+	private ProvisionalRow emptyRow() {
+		return new ProvisionalRow("n/a", 0, 0, false, 0, 0, 0, 0);
 	}
 
 	private ProvisionalRow toRow(RaceResult result) {

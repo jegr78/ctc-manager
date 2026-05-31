@@ -25,6 +25,7 @@ import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.discord.service.DiscordCategoryResolver;
 import org.ctc.discord.service.DiscordGlobalConfigService;
 import org.ctc.discord.service.DiscordPostService;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
@@ -47,6 +48,7 @@ public class MatchService {
 	private final MatchdayRepository matchdayRepository;
 	private final TeamRepository teamRepository;
 	private final RaceRepository raceRepository;
+	private final ScoringService scoringService;
 	private final DiscordCategoryResolver discordCategoryResolver;
 	private final DiscordPostService discordPostService;
 	private final DiscordPostRepository discordPostRepository;
@@ -93,6 +95,7 @@ public class MatchService {
 
 		model.put("teamCardsPost", findMatchPost(match, DiscordPostType.TEAM_CARDS));
 		model.put("settingsPost", findMatchPost(match, DiscordPostType.SETTINGS));
+		model.put("lobbySettingsPost", findMatchPost(match, DiscordPostType.LOBBY_SETTINGS));
 		model.put("lineupsPost", findMatchPost(match, DiscordPostType.LINEUPS));
 		model.put("provisionalPost", findMatchPost(match, DiscordPostType.PROVISIONAL_SCORES));
 		model.put("matchHasCompleteSettings",
@@ -178,6 +181,50 @@ public class MatchService {
 		if (previewFieldsChanged) {
 			eventPublisher.publishEvent(new MatchPreviewFieldsChangedEvent(saved.getId()));
 		}
+	}
+
+	@Transactional
+	public void updateMatchEdit(UUID id, MatchForm form) {
+		updateWalkover(id, form.getWalkoverTeamId());
+		updateDiscordFields(id, form);
+	}
+
+	@Transactional
+	public void updateWalkover(UUID matchId, UUID walkoverTeamId) {
+		Match match = findById(matchId);
+		if (walkoverTeamId == null) {
+			match.setWalkoverTeam(null);
+			List<Race> legs = raceRepository.findByMatchId(matchId);
+			boolean hasResults = legs.stream().anyMatch(race -> !race.getResults().isEmpty());
+			if (hasResults) {
+				matchRepository.save(match);
+				scoringService.recomputeMatchScoresFromAllLegs(legs.getFirst());
+			} else {
+				match.setHomeScore(null);
+				match.setAwayScore(null);
+				matchRepository.save(match);
+			}
+			log.info("Cleared walkover for match {}", matchId);
+			return;
+		}
+		if (match.isBye()) {
+			throw new BusinessRuleException("A bye match cannot be marked as a walkover.");
+		}
+		if (match.getAwayTeam() == null) {
+			throw new BusinessRuleException("Match has no away team — cannot be a walkover.");
+		}
+		boolean isHome = walkoverTeamId.equals(match.getHomeTeam().getId());
+		boolean isAway = walkoverTeamId.equals(match.getAwayTeam().getId());
+		if (!isHome && !isAway) {
+			throw new BusinessRuleException("Walkover team must be one of the match's two teams.");
+		}
+		Team team = teamRepository.findById(walkoverTeamId)
+				.orElseThrow(() -> new EntityNotFoundException("Team", walkoverTeamId));
+		match.setWalkoverTeam(team);
+		match.setHomeScore(null);
+		match.setAwayScore(null);
+		matchRepository.save(match);
+		log.info("Set walkover for match {} — team {}", matchId, walkoverTeamId);
 	}
 
 	@Transactional

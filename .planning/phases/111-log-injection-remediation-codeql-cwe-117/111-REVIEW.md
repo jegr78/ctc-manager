@@ -1,0 +1,227 @@
+---
+phase: 111-log-injection-remediation-codeql-cwe-117
+reviewed: 2026-05-31T00:00:00Z
+depth: standard
+files_reviewed: 19
+files_reviewed_list:
+  - src/main/java/org/ctc/util/LogSanitizer.java
+  - src/test/java/org/ctc/util/LogSanitizerTest.java
+  - src/main/java/org/ctc/admin/controller/DriverController.java
+  - src/main/java/org/ctc/admin/controller/DriverSheetImportController.java
+  - src/main/java/org/ctc/admin/controller/TemplateEditorController.java
+  - src/main/java/org/ctc/backup/exception/BackupUploadExceptionHandler.java
+  - src/main/java/org/ctc/backup/lock/ImportLockedWriteRejector.java
+  - src/main/java/org/ctc/backup/service/BackupImportService.java
+  - src/main/java/org/ctc/dataimport/CsvImportService.java
+  - src/main/java/org/ctc/dataimport/DriverMatchingService.java
+  - src/main/java/org/ctc/dataimport/DriverSheetImportService.java
+  - src/main/java/org/ctc/domain/service/FileStorageService.java
+  - src/main/java/org/ctc/domain/service/MatchdayService.java
+  - src/main/java/org/ctc/domain/service/PlayoffService.java
+  - src/main/java/org/ctc/domain/service/ScoringService.java
+  - src/main/java/org/ctc/domain/service/SeasonManagementService.java
+  - src/main/java/org/ctc/domain/service/SeasonPhaseService.java
+  - src/main/java/org/ctc/domain/service/StandingsViewService.java
+  - src/main/java/org/ctc/domain/service/TeamManagementService.java
+findings:
+  critical: 2
+  warning: 2
+  info: 1
+  total: 5
+status: resolved
+resolution:
+  resolved: 2026-05-31
+  commit: 61ca01c1
+  note: "All 5 findings fixed inline; clean verify -Pe2e green (2472 tests, SpotBugs 0, coverage met); CodeQL re-scan on refs/pull/132/merge still 0 open java/log-injection."
+---
+
+# Phase 111: Code Review Report
+
+**Reviewed:** 2026-05-31
+**Depth:** standard
+**Files Reviewed:** 19
+**Status:** resolved (all 5 findings fixed in commit `61ca01c1`)
+
+## Resolution (2026-05-31)
+
+| ID | Fix |
+|----|-----|
+| CR-01 | `FileStorageService` private `sanitize` → `sanitizeFilename` (3 callers); log call site (line 177) now binds to static-imported `LogSanitizer.sanitize` (D-09 met; dead import removed; `..`/`/` stays visible in the log). |
+| CR-02 | `TemplateEditorController:152` `RuntimeException` catch → `sanitize(templateType)`. |
+| WR-01 | `LogSanitizerTest` UUID case → `isEqualTo(uuid.toString())`. |
+| WR-02 | Added `givenC0OrDelControlChar` parameterized test (NUL/BEL/ESC/DEL via int codes). |
+| IN-01 | Removed stale `// Closes GAP-70-01 …` issue-marker from `DriverSheetImportService`. |
+
+Re-verified: `./mvnw clean verify -Pe2e` green; CodeQL `refs/pull/132/merge` analysis `506055308b` → **0 open `java/log-injection`**.
+
+## Summary
+
+Phase 111 added `LogSanitizer.sanitize(Object)` in `org.ctc.util` and wrapped 29 CodeQL-flagged
+log arguments across 17 files. The utility class itself is correct: the two-pass regex design is
+sound, null-safety via `String.valueOf` works, and the class is stateless. The majority of call
+sites are correctly wrapped and no entry-point mutations (D-05) were found.
+
+Two blockers require attention before this PR is considered remediated:
+
+1. `FileStorageService` has a private method named `sanitize(String)` that **shadows** the static
+   import from `LogSanitizer`. The intended log-injection fix on line 177 calls the private method
+   — not `LogSanitizer.sanitize` — meaning CodeQL will not recognise that log call as sanitized.
+   The static import on line 3 is dead code that was never reachable.
+
+2. `TemplateEditorController.preview()` wraps `e.getMessage()` in the `TemplateSecurityException`
+   catch but leaves the sibling `templateType` (@PathVariable, user-controlled) unwrapped on the
+   adjacent `RuntimeException` catch at line 152.
+
+---
+
+## Critical Issues
+
+### CR-01: `FileStorageService` — static import shadowed by private method; `LogSanitizer.sanitize` never called
+
+**File:** `src/main/java/org/ctc/domain/service/FileStorageService.java:3,177`
+
+**Issue:** The file declares `import static org.ctc.util.LogSanitizer.sanitize;` on line 3 and
+uses `sanitize(filename)` on line 177 inside a `log.warn` call. However, the class also declares
+a private instance method `private String sanitize(String filename)` on line 122. Per JLS §6.5.7.1,
+an instance method in scope takes precedence over a static import. Every call to `sanitize(...)` in
+this class — including the log call on line 177 — resolves to the **private method**, not to
+`LogSanitizer.sanitize(Object)`.
+
+Consequences:
+- The static import is dead code (the compiler does not error because it is not flagged as unused
+  by default, but no code path reaches it).
+- CodeQL's `java/log-injection` taint analysis only recognises `LogSanitizer.sanitize` as a taint
+  barrier (per the documented CodeQL constraint). Since the private method is called instead, CodeQL
+  will continue to report line 177 as an unsanitized sink — the remediation is silently ineffective.
+- The private method (`replaceAll("[^a-zA-Z0-9._-]", "_")`) does functionally strip newlines, so
+  actual log injection is prevented at runtime, but the CodeQL alert will re-open on the next scan.
+
+**Fix:** Rename the private method (e.g., `sanitizeFilename`) to remove the shadowing conflict,
+then ensure the log call explicitly uses `LogSanitizer.sanitize`:
+
+```java
+// Line 3: keep the static import (now reachable)
+import static org.ctc.util.LogSanitizer.sanitize;
+
+// Line 122: rename private method
+private String sanitizeFilename(String filename) {
+    if (filename == null) {
+        return "file";
+    }
+    return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
+}
+
+// Lines 42, 99, 114: call the renamed private method
+String filename = UUID.randomUUID().toString().substring(0, 8) + "_" + sanitizeFilename(file.getOriginalFilename());
+// ...
+String safeName = UUID.randomUUID().toString().substring(0, 8) + "_" + sanitizeFilename(filename);
+// ...
+String safeName = UUID.randomUUID().toString().substring(0, 8) + "_" + sanitizeFilename(file.getOriginalFilename());
+
+// Line 177: now LogSanitizer.sanitize is called (CodeQL-recognised barrier)
+log.warn("Attempted path traversal in filename: {}", sanitize(filename));
+```
+
+---
+
+### CR-02: `TemplateEditorController.preview()` — user-controlled `templateType` logged without `sanitize` in `RuntimeException` catch
+
+**File:** `src/main/java/org/ctc/admin/controller/TemplateEditorController.java:152`
+
+**Issue:** The `preview(@PathVariable String templateType, ...)` method at line 133 wraps the
+`TemplateSecurityException` path at line 147 with `sanitize(e.getMessage())`, but the adjacent
+`RuntimeException` fallback at line 152 logs `templateType` directly without sanitization:
+
+```java
+} catch (RuntimeException e) {
+    log.error("Preview failed for template type: {}", templateType, e);  // line 152 — unsanitized
+```
+
+`templateType` is a `@PathVariable` value — fully user-controlled. This is a missed sibling on the
+same log-statement family that was partially fixed in this phase. CodeQL's sibling-statement
+detection will flag this, and the `java/log-injection` alert on this line will remain open.
+
+**Fix:**
+```java
+} catch (RuntimeException e) {
+    log.error("Preview failed for template type: {}", sanitize(templateType), e);
+}
+```
+
+---
+
+## Warnings
+
+### WR-01: `LogSanitizerTest` — UUID passthrough assertion is tautological
+
+**File:** `src/test/java/org/ctc/util/LogSanitizerTest.java:47`
+
+**Issue:** The non-String-object test asserts only `isNotBlank()` for a `UUID`:
+
+```java
+assertThat(LogSanitizer.sanitize(UUID.randomUUID())).isNotBlank();
+```
+
+A `UUID.toString()` value consists solely of hex digits and hyphens — it can never be blank, never
+contain control characters, and will always pass through `sanitize` unchanged. The assertion
+exercises the `String.valueOf(Object)` path (the only interesting behaviour for non-String objects)
+but does not pin the passthrough contract: a broken implementation that returned `""` or `"REDACTED"`
+for non-String inputs would fail the `isNotBlank` check but still pass if the non-blank result were
+any other non-empty string.
+
+**Fix:** Assert identity of the string representation:
+
+```java
+UUID uuid = UUID.randomUUID();
+assertThat(LogSanitizer.sanitize(uuid)).isEqualTo(uuid.toString());
+```
+
+---
+
+### WR-02: `LogSanitizerTest` — second-regex-pass characters (C0 controls, DEL) are not directly tested
+
+**File:** `src/test/java/org/ctc/util/LogSanitizerTest.java`
+
+**Issue:** The test suite pins `\n`, `\r`, and `\t` (the three most common injection vectors) but
+provides no direct coverage of the characters cleaned up exclusively by the second regex pass:
+`\x00` (NUL), `\x07` (BEL), `\x1B` (ESC), `\x7F` (DEL). The `givenEmbeddedControlChars` test
+only embeds `\n` and `\r`. A regression in the second `replaceAll` expression (e.g., an
+off-by-one in the hex range) would go undetected.
+
+**Fix:** Add a parameterized test or a dedicated test covering at least one character from each
+sub-range of the second pass:
+
+```java
+@ParameterizedTest
+@ValueSource(strings = {" ", "", "", ""})
+void givenC0OrDelControl_whenSanitize_thenReplacedWithUnderscore(String input) {
+    assertThat(LogSanitizer.sanitize(input)).isEqualTo("_");
+}
+```
+
+---
+
+## Info
+
+### IN-01: `DriverSheetImportService` — pre-existing comment-pollution marker not removed despite file being touched
+
+**File:** `src/main/java/org/ctc/dataimport/DriverSheetImportService.java:134`
+
+**Issue:** A pre-existing issue-tracking reference survives in a file that was touched by this phase:
+
+```java
+// Closes GAP-70-01 (live-MariaDB UAT blocker, Saison 2023, 2026-05-09).
+```
+
+CLAUDE.md ("No Comment Pollution") states: "When refactoring, remove pollution from touched files."
+The `DriverSheetImportService` file was modified in this phase (static import + two log-call
+wraps), so the pre-existing cross-reference should have been removed. The comment refers to an
+issue in git history; it is greppable via the commit that introduced the guard logic.
+
+**Fix:** Delete line 134.
+
+---
+
+_Reviewed: 2026-05-31_
+_Reviewer: Claude (gsd-code-reviewer)_
+_Depth: standard_

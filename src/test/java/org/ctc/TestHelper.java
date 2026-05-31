@@ -35,7 +35,7 @@ public class TestHelper {
 	 * RaceScoring + MatchScoring there.
 	 */
 	public Season createSeason(String name, int year, int number) {
-		var suffix = UUID.randomUUID().toString().substring(0, 4);
+		var suffix = UUID.randomUUID().toString();
 		var rs = raceScoringRepository.save(
 				new RaceScoring("RS " + suffix, "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
 		var ms = matchScoringRepository.save(

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 import org.ctc.admin.dto.MatchPreviewPreFlightResult;
 import org.ctc.admin.service.LineupGraphicService;
+import org.ctc.admin.service.LobbySettingsGraphicService;
 import org.ctc.admin.service.MatchResultsGraphicService;
 import org.ctc.admin.service.MatchdayPairingsGraphicService;
 import org.ctc.admin.service.MatchdayResultsGraphicService;
@@ -50,6 +51,7 @@ class DiscordPostServiceMatchdaySchedulePreFlightTest {
 				mock(TeamCardService.class),
 				mock(SeasonTeamRepository.class),
 				mock(SettingsGraphicService.class),
+				mock(LobbySettingsGraphicService.class),
 				mock(LineupGraphicService.class),
 				mock(RaceLineupRepository.class),
 				mock(MatchResultsGraphicService.class),

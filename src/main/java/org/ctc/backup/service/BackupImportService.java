@@ -1,5 +1,7 @@
 package org.ctc.backup.service;
 
+import static org.ctc.util.LogSanitizer.sanitize;
+
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -315,7 +317,7 @@ public class BackupImportService {
      */
     public BackupImportPreview stage(MultipartFile file) throws BackupArchiveException, IOException {
         log.info("Backup import staging started: originalFilename={}, sizeBytes={}",
-                file.getOriginalFilename(), file.getSize());
+                sanitize(file.getOriginalFilename()), file.getSize());
 
         // Step 1: ensure staging directory exists (idempotent)
         Files.createDirectories(stagingDir);

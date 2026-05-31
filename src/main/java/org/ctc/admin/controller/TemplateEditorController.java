@@ -1,5 +1,8 @@
 package org.ctc.admin.controller;
 
+import static java.util.Map.entry;
+import static org.ctc.util.LogSanitizer.sanitize;
+
 import java.io.IOException;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -19,43 +22,46 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 public class TemplateEditorController {
 
-    private static final Map<String, String> TEMPLATE_TYPE_TO_BEAN = Map.of(
-        "team-cards",         "teamCardService",
-        "lineup",             "lineupGraphicService",
-        "settings",           "settingsGraphicService",
-        "race-results",       "resultsGraphicService",
-        "match-results",      "matchResultsGraphicService",
-        "matchday-overview",  "matchdayOverviewGraphicService",
-        "matchday-schedule",  "matchdayScheduleGraphicService",
-        "matchday-results",   "matchdayResultsGraphicService",
-        "overlay",            "overlayGraphicService",
-        "power-rankings",     "powerRankingsGraphicService"
+    private static final Map<String, String> TEMPLATE_TYPE_TO_BEAN = Map.ofEntries(
+        entry("team-cards",         "teamCardService"),
+        entry("lineup",             "lineupGraphicService"),
+        entry("settings",           "settingsGraphicService"),
+        entry("race-results",       "resultsGraphicService"),
+        entry("match-results",      "matchResultsGraphicService"),
+        entry("matchday-overview",  "matchdayOverviewGraphicService"),
+        entry("matchday-schedule",  "matchdayScheduleGraphicService"),
+        entry("matchday-results",   "matchdayResultsGraphicService"),
+        entry("overlay",            "overlayGraphicService"),
+        entry("power-rankings",     "powerRankingsGraphicService"),
+        entry("lobby-settings",     "lobbySettingsGraphicService")
     );
 
-    private static final Map<String, String> TEMPLATE_TYPE_TO_ATTR = Map.of(
-        "team-cards",         "teamCard",
-        "lineup",             "lineup",
-        "settings",           "settings",
-        "race-results",       "raceResults",
-        "match-results",      "matchResults",
-        "matchday-overview",  "matchdayOverview",
-        "matchday-schedule",  "matchdaySchedule",
-        "matchday-results",   "matchdayResults",
-        "overlay",            "overlay",
-        "power-rankings",     "powerRankings"
+    private static final Map<String, String> TEMPLATE_TYPE_TO_ATTR = Map.ofEntries(
+        entry("team-cards",         "teamCard"),
+        entry("lineup",             "lineup"),
+        entry("settings",           "settings"),
+        entry("race-results",       "raceResults"),
+        entry("match-results",      "matchResults"),
+        entry("matchday-overview",  "matchdayOverview"),
+        entry("matchday-schedule",  "matchdaySchedule"),
+        entry("matchday-results",   "matchdayResults"),
+        entry("overlay",            "overlay"),
+        entry("power-rankings",     "powerRankings"),
+        entry("lobby-settings",     "lobbySettings")
     );
 
-    private static final Map<String, String> TEMPLATE_TYPE_TO_LABEL = Map.of(
-        "team-cards",         "Team card",
-        "lineup",             "Lineup",
-        "settings",           "Settings",
-        "race-results",       "Race results",
-        "match-results",      "Match results",
-        "matchday-overview",  "Matchday overview",
-        "matchday-schedule",  "Matchday schedule",
-        "matchday-results",   "Matchday results",
-        "overlay",            "Overlay",
-        "power-rankings",     "Power rankings"
+    private static final Map<String, String> TEMPLATE_TYPE_TO_LABEL = Map.ofEntries(
+        entry("team-cards",         "Team card"),
+        entry("lineup",             "Lineup"),
+        entry("settings",           "Settings"),
+        entry("race-results",       "Race results"),
+        entry("match-results",      "Match results"),
+        entry("matchday-overview",  "Matchday overview"),
+        entry("matchday-schedule",  "Matchday schedule"),
+        entry("matchday-results",   "Matchday results"),
+        entry("overlay",            "Overlay"),
+        entry("power-rankings",     "Power rankings"),
+        entry("lobby-settings",     "Lobby settings")
     );
 
     private final Map<String, TemplateManageable> templateServices;
@@ -98,7 +104,7 @@ public class TemplateEditorController {
             redirectAttributes.addFlashAttribute("successMessage",
                 TEMPLATE_TYPE_TO_LABEL.get(templateType) + " template saved");
         } catch (TemplatePreviewService.TemplateSecurityException e) {
-            log.warn("Blocked unsafe template save for type {}: {}", templateType, e.getMessage());
+            log.warn("Blocked unsafe template save for type {}: {}", sanitize(templateType), e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", "Template contains unsafe expressions");
         } catch (IOException e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Save failed: " + e.getMessage());
@@ -138,12 +144,12 @@ public class TemplateEditorController {
                     .contentType(MediaType.TEXT_PLAIN)
                     .body("Unknown template type");
         } catch (TemplatePreviewService.TemplateSecurityException e) {
-            log.warn("Blocked unsafe template preview: {}", e.getMessage());
+            log.warn("Blocked unsafe template preview: {}", sanitize(e.getMessage()));
             return ResponseEntity.badRequest()
                     .contentType(MediaType.TEXT_PLAIN)
                     .body("Template contains unsafe expressions");
         } catch (RuntimeException e) {
-            log.error("Preview failed for template type: {}", templateType, e);
+            log.error("Preview failed for template type: {}", sanitize(templateType), e);
             return ResponseEntity.internalServerError()
                     .contentType(MediaType.TEXT_PLAIN)
                     .body("Preview failed");

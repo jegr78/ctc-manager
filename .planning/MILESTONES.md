@@ -1,5 +1,28 @@
 # Milestones
 
+## v1.15 CI Optimisation & Race/Match Defaults (Shipped: 2026-05-31)
+
+**Phases completed:** 6 phases (106, 108-112; 107 removed), 21 plans, 25/25 active requirements satisfied (CI ×6 + LINEUP ×4 + WO ×4 + LOBBY ×5 + SEC-LOG ×4 + IMP ×2; RACE-01..03 dropped)
+**Diff:** +16 547 / −337 across 263 files (149 commits in milestone range `8a7d7780..HEAD`, 2026-05-30 → 2026-05-31)
+**Tests:** **2472 tests** passing (Δ+56 vs v1.14 2416; LogSanitizer + walkover + missing-driver + lobby-settings coverage); JaCoCo line coverage **~89 %** (gate 82 %; held — all `*GraphicService` JaCoCo-excluded, 111/112 are log/import-only)
+**Timeline:** 2 days (2026-05-30 → 2026-05-31)
+**Branch:** `gsd/v1.15-ci-and-race-defaults` (PR #132 — rolling milestone PR per CLAUDE.md)
+**Audit verdict:** passed — 25/25 requirements, 6/6 phases, integration 6/6 seams CONNECTED, 3/3 E2E flows complete, 0 blockers; Nyquist 5 compliant + 1 partial-by-design (106 CI-config). See `milestones/v1.15-MILESTONE-AUDIT.md`.
+
+**Key accomplishments:**
+
+- Phase 106 — CI Pipeline Optimisation (CI-01..06): path-aware `ci.yml` — a `dorny/paths-filter` `changes` job gates the expensive Maven/E2E/Docker steps while the required checks (`build-and-test`, `dockerfile-noble-pin-guard`, `docker-build`) always report a status (no PR deadlock); hard `paths-ignore` on the non-required `codeql.yml` + `mariadb-migration-smoke.yml`; buildx Docker layer cache; single `clean verify -Pe2e`; pom.xml no-rerun build guard + flaky-test policy doc. Live-PR checkpoint: `build-and-test` 14:55 < 17:39 baseline; CI-05 warm-cache confirmed empirically; CI-01/02 accepted config-sound (`docs/ci/v1.15-open-verify.md`).
+- Phase 108 — Missing-Driver n/a Rendering (LINEUP-01..04): central `TEAM_DRIVERS = 6` constant pads Lineup, Scorecard/Results, and Provisional-Scores graphics to 6 rows with an "n/a" placeholder + shared `.empty-slot` de-emphasis; `ScoringService` records 0 points / no position for a missing slot at save time — root-cause fix at the service layer, no template/controller fallback (CLAUDE.md "No Fallback Calculations").
+- Phase 109 — Walkover Handling (WO-01..04): Flyway V17 `Match.walkoverTeam` (additive, V1-V16 untouched, H2 + MariaDB); bye-analogous auto-win crediting the opponent the full team race score; `TeamStanding.hasWalkover` + visible "(w/o)" label in matchday-detail, public standings, and 3 graphics (`.match-wo` / `.wo-badge`); admin match-edit-form walkover dropdown via `MatchForm.walkoverTeamId` + validating `MatchService.updateWalkover`.
+- Phase 110 — Lobby Settings Graphic (LOBBY-01..05): new `LobbySettingsGraphicService` (Carbon-HUD, template-variable-driven, `extends AbstractGraphicService implements TemplateManageable`, JaCoCo-excluded); admin preview + PNG download (race-detail generate button); `DiscordPostType.LOBBY_SETTINGS` + `postLobbySettings` manual match-channel button; template-editor override tab. No new data model, no Flyway migration.
+- Phase 111 — Log-Injection Remediation, CodeQL CWE-117 (SEC-LOG-01..04): central `org.ctc.util.LogSanitizer` (strips CR/LF + control chars) wraps all 29 flagged user-controlled log arguments across 17 files (`dataimport/`, `domain/service/`, `backup/`, `admin/controller/`) + the ad-hoc `MatchdayService.safeWeekend` removed; CodeQL re-scan reports 0 open `java/log-injection` alerts on the milestone branch with **no** new `query-filters` suppressions — taint fixed at source.
+- Phase 112 — Unused Import Cleanup & Regression Guard (IMP-01..02): every unused package import stripped across `src/main/java` + `src/test/java` via OpenRewrite `RemoveUnusedImports` (isolated run, import-only diff); a `maven-checkstyle-plugin` `UnusedImports` + `RedundantImports` gate bound to the `validate` phase (no opt-in flag, runs locally + CI) with a `checkstyle-gate-guard` drift guard, documented in CLAUDE.md so future phases inherit the rule.
+- Scope correction: Phase 107 (Race/Match Prefill Defaults) **removed** during discuss — RACE-01..03 dropped permanently (scoring scheme + legs already inherited via `SeasonPhase`; Matchday has no scheduled date to inherit — no real re-entry problem without a schema change). Phase number 107 left as a gap per the integer-phase policy.
+
+**Accepted tech debt (non-blocking):** CI-01/CI-02 docs-only path-filter behaviour accepted config-sound (only observable on a wholly-docs-only PR); final CI-04/CI-05 warm `build-and-test` settles at 18-20 min vs the 14:55 first observed run (test count grew 2416 → 2472). Tracked in `docs/ci/v1.15-open-verify.md`.
+
+---
+
 ## v1.14 Team Card Redesign & Data Safety (Shipped: 2026-05-29)
 
 **Phases completed:** 2 phases (104-105), 5 plans, 6/6 requirements satisfied (2 SAFE + 4 CARD)

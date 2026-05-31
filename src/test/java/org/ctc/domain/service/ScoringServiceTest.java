@@ -389,6 +389,22 @@ class ScoringServiceTest {
 		}
 
 		@Test
+		void givenWalkoverMatchRace_whenRecomputeMatchScoresFromAllLegs_thenScoresRemainUnchanged() {
+			var homeTeam = createTeam("Home");
+			var awayTeam = createTeam("Away");
+			var match = createMatch(homeTeam, awayTeam);
+			match.setWalkoverTeam(awayTeam);
+
+			var walkoverRace = createRace(match);
+			walkoverRace.setResults(List.of());
+
+			scoringService.recomputeMatchScoresFromAllLegs(walkoverRace);
+
+			assertNull(match.getHomeScore());
+			assertNull(match.getAwayScore());
+		}
+
+		@Test
 		void givenClearedPlayoffRace_whenRecomputeMatchScoresFromAllLegs_thenPlayoffMatchupScoresRecomputedFromRemainingLegs() {
 			var team1 = createTeam("Team1");
 			var team2 = createTeam("Team2");
@@ -444,6 +460,67 @@ class ScoringServiceTest {
 			// then — no scoring happens, no NPE, scores remain unset (null)
 			assertNull(match.getHomeScore());
 			assertNull(match.getAwayScore());
+		}
+
+		@Test
+		void givenWalkoverMatchRaceWithResults_whenAggregateMatchScores_thenScoresRemainNull() {
+			// given
+			var homeTeam = createTeam("Home");
+			var awayTeam = createTeam("Away");
+			var match = createMatch(homeTeam, awayTeam);
+			match.setWalkoverTeam(awayTeam);
+			var race = createRace(match);
+			var driver = createDriver("d1");
+			var r1 = createResult(race, driver, 10);
+			race.setResults(List.of(r1));
+
+			// when
+			scoringService.aggregateMatchScores(race);
+
+			// then — walkover wins are awarded at standings read-time; aggregation must not write scores
+			assertNull(match.getHomeScore());
+			assertNull(match.getAwayScore());
+		}
+
+		@Test
+		void givenHomeTeamWithFewerThanSixDrivers_whenAggregateMatchScores_thenTotalsEqualSumOfRealDrivers() {
+			// given
+			var homeTeam = createTeam("Home");
+			var awayTeam = createTeam("Away");
+			var match = createMatch(homeTeam, awayTeam);
+			var race = createRace(match);
+
+			var h1 = createDriver("h1");
+			var h2 = createDriver("h2");
+			var h3 = createDriver("h3");
+			var a1 = createDriver("a1");
+			var a2 = createDriver("a2");
+
+			var rh1 = createResult(race, h1, 20);
+			var rh2 = createResult(race, h2, 14);
+			var rh3 = createResult(race, h3, 10);
+			var ra1 = createResult(race, a1, 17);
+			var ra2 = createResult(race, a2, 12);
+			race.setResults(List.of(rh1, rh2, rh3, ra1, ra2));
+
+			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), h1.getId()))
+					.thenReturn(Optional.of(new RaceLineup(race, h1, homeTeam)));
+			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), h2.getId()))
+					.thenReturn(Optional.of(new RaceLineup(race, h2, homeTeam)));
+			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), h3.getId()))
+					.thenReturn(Optional.of(new RaceLineup(race, h3, homeTeam)));
+			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), a1.getId()))
+					.thenReturn(Optional.of(new RaceLineup(race, a1, awayTeam)));
+			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), a2.getId()))
+					.thenReturn(Optional.of(new RaceLineup(race, a2, awayTeam)));
+			when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
+
+			// when
+			scoringService.aggregateMatchScores(race);
+
+			// then — home has 3 drivers (fewer than 6); totals equal the sum of real drivers only, no NPE
+			assertEquals(44, match.getHomeScore());
+			assertEquals(29, match.getAwayScore());
 		}
 
 		private Driver createDriver(String psnId) {
