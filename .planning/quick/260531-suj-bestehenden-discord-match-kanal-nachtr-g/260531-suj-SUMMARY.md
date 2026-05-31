@@ -30,6 +30,16 @@ Implemented end-to-end, TDD, 3 atomic commits. `./mvnw clean verify` green — a
 | cb1f5647 | 2 | `DiscordChannelService.linkExistingChannel(match, channelId)`; 4 WireMock IT scenarios (reuse / create / 404 / 403), no ChannelCreatedEvent |
 | 886b99d9 | 3 | `MatchController` POST `/admin/matches/{id}/link-discord-channel` (thin, blank-check, `applyErrorFlash`) + inline link form in match-detail card; 3 controller tests |
 
+## Self code-review (2026-05-31)
+
+`feature-dev:code-reviewer` on `origin/master..HEAD`. No Critical. Acted on:
+- **Important** — `linkExistingChannel` had no re-link guard: a direct POST could silently overwrite an already-linked channel (UI hides the form but the endpoint was open). Added a `BusinessRuleException` guard + controller catch + service IT + 4th controller test. (commit `4da9b24f`)
+- **Minor** — channel-ID input lacked an accessible label → added `aria-label`. (commit `4da9b24f`)
+- **Deferred (Minor)** — log.warn on multiple "CTC Manager" webhooks: low value (operator can re-link), YAGNI.
+- Reviewer confirmed the `@MockitoBean` in the controller test is an appropriate boundary (HTTP-routing test; real transactional flow covered by the WireMock IT).
+
+Re-ran `./mvnw clean verify` → BUILD SUCCESS, Failsafe IT 544/0, coverage met.
+
 ## Files changed
 
 - `src/main/java/org/ctc/discord/dto/Webhook.java`
