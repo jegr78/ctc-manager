@@ -329,7 +329,8 @@ RACE-01..03 dropped permanently (user decision 2026-05-30, not backlog). The pha
   2. A build-level guard fails `./mvnw verify` (or a dedicated gate) when a new unused import is introduced — the mechanism is decided at plan time (candidates: OpenRewrite dryRun-as-gate, Checkstyle `UnusedImports`, or the existing static-analysis gate) and documented in CLAUDE.md so future phases inherit the rule.
   3. The cleanup commit changes only `import` lines — no behavioural diff; `./mvnw clean verify -Pe2e` exits 0 with all existing tests green and the 82 % line-coverage gate still met.
   4. The guard is wired into the standard `verify` lifecycle (no separate opt-in flag) so it runs on every local build and in CI, consistent with the SpotBugs/find-sec-bugs gate convention.
-**Plans**: TBD (run /gsd-plan-phase 112 to break down)
+**Plans**: 1 plan
+- [ ] 112-01-PLAN.md — Isolated RemoveUnusedImports cleanup, then Checkstyle UnusedImports gate bound to `validate`, then CLAUDE.md doc, then `clean verify -Pe2e` gate (4 sequential tasks)
 **Cross-phase risk**: Runs last in v1.15. Touches `import` lines across the whole source tree — must execute only after Phases 106 + 108-111 are merged/verified so no later phase re-introduces unused imports onto an already-cleaned tree. The OpenRewrite recipe edit and the guard config (`rewrite.yml` / `pom.xml` / Checkstyle config) are additive; no Flyway, no behavioural code change.
 
 </details>
@@ -350,4 +351,4 @@ RACE-01..03 dropped permanently (user decision 2026-05-30, not backlog). The pha
 | v1.12 Driver-Import Gap-Closure & Test Performance Round 2 | 88-91 | 15 | Complete | 2026-05-20 |
 | v1.13 Discord Integration & Carry-Forwards | 92-103 | 43 | Complete | 2026-05-28 |
 | v1.14 Team Card Redesign & Data Safety | 104-105 | 5 | Complete | 2026-05-29 |
-| v1.15 CI Optimisation & Race/Match Defaults | 106-112 | TBD | Active | — |
+| v1.15 CI Optimisation & Race/Match Defaults | 106-112 | 21 | Active | — |
