@@ -156,6 +156,23 @@ public class MatchController {
 		return "redirect:/admin/matches/" + id;
 	}
 
+	@PostMapping("/{id}/link-discord-channel")
+	public String linkDiscordChannel(@PathVariable UUID id,
+	                                 @RequestParam(required = false) String channelId,
+	                                 RedirectAttributes redirectAttributes) {
+		if (!hasText(channelId)) {
+			redirectAttributes.addFlashAttribute("errorMessage", "Discord channel ID is required.");
+			return "redirect:/admin/matches/" + id;
+		}
+		try {
+			discordChannelService.linkExistingChannel(matchService.findById(id), channelId.trim());
+			redirectAttributes.addFlashAttribute("successMessage", "Discord channel linked.");
+		} catch (DiscordApiException e) {
+			applyErrorFlash(redirectAttributes, e, "Link Discord Channel");
+		}
+		return "redirect:/admin/matches/" + id;
+	}
+
 	@PostMapping("/{id}/post-team-cards")
 	public String postTeamCards(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
 		try {
