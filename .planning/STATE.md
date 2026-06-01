@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.17
 milestone_name: Guest Drivers
-status: ready_to_plan
-stopped_at: Phase 113 complete (3/3) — ready to discuss Phase 114
-last_updated: 2026-06-01T12:51:39.432Z
+status: planning
+stopped_at: Phase 114 context gathered
+last_updated: "2026-06-01T13:15:04.230Z"
 last_activity: 2026-06-01
 progress:
   total_phases: 3
-  completed_phases: 12
+  completed_phases: 1
   total_plans: 3
   completed_plans: 3
-  percent: 400
+  percent: 33
 ---
 
 # Project State
@@ -93,9 +93,9 @@ Carried forward from v1.13/v1.14/v1.15 close (unchanged):
 
 ## Session Continuity
 
-**Last session:** 2026-06-01T10:39:01.256Z
+**Last session:** 2026-06-01T13:15:04.221Z
 
-**Stopped at:** Phase 113 context gathered
+**Stopped at:** Phase 114 context gathered
 
 **Next action:** `/gsd-discuss-phase 113` on branch `gsd/v1.17-guest-drivers`.
 
