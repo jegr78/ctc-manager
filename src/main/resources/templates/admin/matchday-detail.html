@@ -154,7 +154,9 @@
                 <h3 th:text="${entry.key}"></h3>
                 <div class="chip-list">
                     <span th:each="lu : ${entry.value}" class="chip">
+                        <span class="guest-marker" th:if="${lu.guest}" aria-label="Guest driver">&#x2605;</span>
                         <span th:text="${lu.driver.psnId}"></span>
+                        <span class="guest-label" th:if="${lu.guest}" th:text="${lu.team.shortName}"></span>
                     </span>
                 </div>
             </div>

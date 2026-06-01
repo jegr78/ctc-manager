@@ -73,6 +73,7 @@ public class RaceController {
 		model.addAttribute("homeTotal", data.homeTotal());
 		model.addAttribute("awayTotal", data.awayTotal());
 		model.addAttribute("driverTeamMap", data.driverTeamMap());
+		model.addAttribute("guestDriverMap", data.guestDriverMap());
 		model.addAttribute("canGenerateLineup", data.canGenerateLineup());
 		model.addAttribute("lineupMissing", data.lineupMissing());
 		model.addAttribute("cardsMissing", data.cardsMissing());

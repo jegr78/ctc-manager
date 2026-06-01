@@ -168,7 +168,10 @@
                                 <span class="td-label"
                                       th:text="${driverTeamMap != null ? driverTeamMap[result.driver.id] : '?'}"></span>
                             </td>
-                            <td><a th:href="@{/admin/drivers/{id}(id=${result.driver.id})}" class="detail-link" th:text="${result.driver.psnId}"></a></td>
+                            <td>
+                                <span class="guest-marker" th:if="${guestDriverMap != null and guestDriverMap[result.driver.id]}" aria-label="Guest driver">&#x2605;</span>
+                                <a th:href="@{/admin/drivers/{id}(id=${result.driver.id})}" class="detail-link" th:text="${result.driver.psnId}"></a>
+                            </td>
                             <td class="td-center td-numeric" th:text="${result.qualiPosition}"></td>
                             <td class="td-right td-numeric" th:text="${result.pointsRace}"></td>
                             <td class="td-right td-numeric text-dim" th:text="${result.pointsQuali > 0 ? result.pointsQuali : '-'}"></td>
