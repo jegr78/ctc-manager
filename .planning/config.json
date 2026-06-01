@@ -9,7 +9,7 @@
   "git": {
     "branching_strategy": "milestone",
     "phase_branch_template": "gsd/phase-{phase}-{slug}",
-    "milestone_branch_template": "gsd/v1.15-ci-and-race-defaults",
+    "milestone_branch_template": "gsd/v1.17-guest-drivers",
     "quick_branch_template": null
   },
   "workflow": {

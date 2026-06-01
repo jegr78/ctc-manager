@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.15
-milestone_name: CI Optimisation & Race/Match Defaults
-status: Awaiting next milestone
-stopped_at: v1.15 milestone shipped
-last_updated: "2026-05-31T16:54:30.364Z"
-last_activity: 2026-05-31 — Milestone v1.15 completed and archived
+milestone: v1.17
+milestone_name: Guest Drivers
+status: planning
+last_updated: "2026-06-01T10:06:26.313Z"
+last_activity: 2026-06-01
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 21
-  completed_plans: 21
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -26,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-31 after v1.15 milestone close)
 
 ## Current Position
 
-Phase: Milestone v1.15 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-05-31 — Completed quick task 260531-suj: link existing Discord channel to a Match via Admin UI
+Status: Defining requirements
+Last activity: 2026-06-01 — Milestone v1.17 started
 
 ## Shipped Milestone
 
