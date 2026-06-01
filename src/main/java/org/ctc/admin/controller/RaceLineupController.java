@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.domain.service.DriverService;
 import org.ctc.domain.service.RaceLineupService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -21,6 +22,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class RaceLineupController {
 
 	private final RaceLineupService raceLineupService;
+	private final DriverService driverService;
 
 	@GetMapping("/{raceId}/lineup")
 	public String lineup(@PathVariable UUID raceId, Model model) {
@@ -36,6 +38,8 @@ public class RaceLineupController {
 		model.addAttribute("race", data.race());
 		model.addAttribute("teamEntries", teamEntries);
 		model.addAttribute("driverAssignments", raceLineupService.getDriverAssignments(raceId));
+		model.addAttribute("guestLineups", raceLineupService.getGuestLineups(raceId));
+		model.addAttribute("allDrivers", driverService.findAll());
 		return "admin/race-lineup";
 	}
 
@@ -43,17 +47,23 @@ public class RaceLineupController {
 	public String saveLineup(@PathVariable UUID raceId,
 	                         @RequestParam Map<String, String> params,
 	                         RedirectAttributes redirectAttributes) {
-		var driverTeamAssignments = new HashMap<UUID, UUID>();
+		var rosterAssignments = new HashMap<UUID, UUID>();
+		var guestAssignments = new HashMap<UUID, UUID>();
 		for (var entry : params.entrySet()) {
-			if (!entry.getKey().startsWith("driver_") || !hasText(entry.getValue())) {
+			var key = entry.getKey();
+			if (!hasText(entry.getValue())) {
 				continue;
 			}
-			UUID driverId = UUID.fromString(entry.getKey().substring("driver_".length()));
-			UUID teamId = UUID.fromString(entry.getValue());
-			driverTeamAssignments.put(driverId, teamId);
+			if (key.startsWith("driver_")) {
+				UUID driverId = UUID.fromString(key.substring("driver_".length()));
+				rosterAssignments.put(driverId, UUID.fromString(entry.getValue()));
+			} else if (key.startsWith("guest_")) {
+				UUID driverId = UUID.fromString(key.substring("guest_".length()));
+				guestAssignments.put(driverId, UUID.fromString(entry.getValue()));
+			}
 		}
 
-		int count = raceLineupService.saveLineup(raceId, driverTeamAssignments);
+		int count = raceLineupService.saveLineup(raceId, rosterAssignments, guestAssignments);
 		redirectAttributes.addFlashAttribute("successMessage", "Lineup saved: " + count + " drivers assigned");
 		return "redirect:/admin/races/" + raceId + "/lineup";
 	}
