@@ -2080,3 +2080,31 @@ a.season-header-title:hover {
         flex-shrink: 0;
     }
 }
+
+.guest-section {
+    margin-top: var(--space-md, 1rem);
+    padding-top: var(--space-sm, 0.5rem);
+    border-top: 1px solid var(--border-color, #e0e0e0);
+}
+
+.guest-section h3 {
+    margin: 0 0 var(--space-sm, 0.5rem);
+    font-size: 0.95rem;
+}
+
+.guest-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm, 0.5rem);
+    margin-bottom: var(--space-sm, 0.5rem);
+    flex-wrap: wrap;
+}
+
+.guest-driver-input {
+    flex: 1 1 16rem;
+    min-width: 12rem;
+}
+
+.guest-subteam {
+    flex: 0 0 auto;
+}
