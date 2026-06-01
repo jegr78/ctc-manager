@@ -1,10 +1,11 @@
 ---
 phase: 115
 slug: guest-marking-visibility
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-06-01
+reviewed_at: 2026-06-01
 ---
 
 # Phase 115 — UI Design Contract
@@ -151,7 +152,7 @@ For **graphic render templates** (inline CSS since they do not load admin.css):
 
 ```css
 /* Inline in <style> block of each render template */
-.guest-marker { color: #f59e0b; font-size: 0.85em; margin-right: 3px; }
+.guest-marker { color: #f59e0b; font-size: 0.85em; margin-right: 4px; }
 ```
 
 ### Shared Thymeleaf Fragment
