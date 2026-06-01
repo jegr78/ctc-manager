@@ -272,7 +272,7 @@ See: milestones/v1.15-ROADMAP.md for full details
   4. The season driver-ranking (admin and public site) marks entries that include points earned as a guest driver
   5. The public driver-profile page shows each guest race as a marked entry, identifying the fielding team
 **Plans**: 6 plans
-- [ ] 115-01-PLAN.md — Foundation: --guest CSS token + .guest-marker/.guest-label classes (admin.css + site style.css) + shared guestMarker fragment
+- [x] 115-01-PLAN.md — Foundation: --guest CSS token + .guest-marker/.guest-label classes (admin.css + site style.css) + shared guestMarker fragment
 - [ ] 115-02-PLAN.md — Graphics marking (MARK-01/02/03): Scorecard + Provisional Scores + Lineup render services/templates
 - [ ] 115-03-PLAN.md — Admin detail (MARK-04): race-detail guestDriverMap + matchday-detail chip marker + sub-team label
 - [ ] 115-04-PLAN.md — Ranking (MARK-05): DriverRanking.hasGuestAppearance across all paths + admin standings + both site rankings
@@ -286,7 +286,7 @@ See: milestones/v1.15-ROADMAP.md for full details
 |-------|----------------|--------|-----------|
 | 113. Guest Assignment Foundation | 3/3 | Complete    | 2026-06-01 |
 | 114. Scoring & Personal Crediting | 4/4 | Complete | 2026-06-01 |
-| 115. Guest Marking & Visibility | 0/6 | Planned | - |
+| 115. Guest Marking & Visibility | 1/6 | In Progress|  |
 
 ---
 
