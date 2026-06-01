@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.ctc.domain.model.*;
+import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.service.ScoringService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -20,11 +22,12 @@ import static org.mockito.Mockito.when;
 class ResultsGraphicServiceTest {
 
 	private final ScoringService scoringService = mock(ScoringService.class);
+	private final RaceLineupRepository raceLineupRepository = mock(RaceLineupRepository.class);
 	@TempDir
 	Path tempDir;
 
 	private ResultsGraphicService createService() {
-		return new ResultsGraphicService(null, scoringService, tempDir.toString());
+		return new ResultsGraphicService(null, scoringService, raceLineupRepository, tempDir.toString());
 	}
 
 	private RaceResult createResult(Race race, String psnId, String nickname, Team team, int position, int pointsTotal) {
@@ -190,6 +193,42 @@ class ResultsGraphicServiceTest {
 		assertThat(rows).hasSize(6);
 		assertThat(rows.get(0).homeNickname()).isEqualTo("HomeNoNick");
 		assertThat(rows.get(0).awayNickname()).isEqualTo("AwayNoNick");
+	}
+
+	@Test
+	void givenGuestResult_whenBuildResultRows_thenGuestFlagSetFromRaceLineup() {
+		// given
+		var service = createService();
+		var homeTeam = new Team("Home", "HOM");
+		homeTeam.setId(UUID.randomUUID());
+		var awayTeam = new Team("Away", "AWY");
+		awayTeam.setId(UUID.randomUUID());
+
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		var match = new Match(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("S"), "MD 1", 1), homeTeam, awayTeam);
+		race.setMatch(match);
+
+		var r1 = createResult(race, "HomeGuest", "Nick_HG", homeTeam, 1, 20);
+		var r2 = createResult(race, "AwayReg", "Nick_AR", awayTeam, 2, 17);
+		race.getResults().addAll(List.of(r1, r2));
+
+		when(scoringService.isDriverInTeam(eq(r1), any(), eq(homeTeam.getId()))).thenReturn(true);
+		when(scoringService.isDriverInTeam(eq(r2), any(), eq(homeTeam.getId()))).thenReturn(false);
+
+		when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), r1.getDriver().getId()))
+				.thenReturn(Optional.of(new RaceLineup(race, r1.getDriver(), homeTeam, true)));
+		when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), r2.getDriver().getId()))
+				.thenReturn(Optional.of(new RaceLineup(race, r2.getDriver(), awayTeam, false)));
+
+		// when
+		var rows = service.buildResultRows(race);
+
+		// then
+		assertThat(rows.get(0).homeIsGuest()).isTrue();
+		assertThat(rows.get(0).awayIsGuest()).isFalse();
+		assertThat(rows.get(1).homeIsGuest()).isFalse();
+		assertThat(rows.get(1).awayIsGuest()).isFalse();
 	}
 
 	@Test

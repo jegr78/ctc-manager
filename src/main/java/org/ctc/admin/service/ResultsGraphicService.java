@@ -9,10 +9,13 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Race;
+import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.RaceResult;
+import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.service.ScoringService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,12 +30,15 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 	private static final String CUSTOM_TEMPLATE_FILE = "results-template.html";
 
 	private final ScoringService scoringService;
+	private final RaceLineupRepository raceLineupRepository;
 
 	public ResultsGraphicService(TemplateEngine templateEngine,
 	                             ScoringService scoringService,
+	                             RaceLineupRepository raceLineupRepository,
 	                             @Value("${app.upload-dir:uploads}") String uploadDir) {
 		super(templateEngine, uploadDir);
 		this.scoringService = scoringService;
+		this.raceLineupRepository = raceLineupRepository;
 	}
 
 	public String generateResults(Race race) throws IOException {
@@ -169,9 +175,17 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 			String awayName = i < awayResults.size() ? awayResults.get(i).getDriver().getPsnId() : "n/a";
 			String awayNick = i < awayResults.size() ? resolveNickname(awayResults.get(i).getDriver()) : "";
 			int awayPoints = i < awayResults.size() ? awayResults.get(i).getPointsTotal() : 0;
-			rows.add(new DriverResultRow(homeName, homeNick, homePoints, awayPoints, awayName, awayNick));
+			boolean homeIsGuest = i < homeResults.size() && resolveGuest(raceId, homeResults.get(i));
+			boolean awayIsGuest = i < awayResults.size() && resolveGuest(raceId, awayResults.get(i));
+			rows.add(new DriverResultRow(homeName, homeNick, homePoints, awayPoints, awayName, awayNick,
+					homeIsGuest, awayIsGuest));
 		}
 		return rows;
+	}
+
+	private boolean resolveGuest(UUID raceId, RaceResult result) {
+		return raceLineupRepository.findByRaceIdAndDriverId(raceId, result.getDriver().getId())
+				.map(RaceLineup::isGuest).orElse(false);
 	}
 
 	private String resolveNickname(Driver driver) {
@@ -180,6 +194,7 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 	}
 
 	public record DriverResultRow(String homeDriver, String homeNickname, int homePoints,
-	                              int awayPoints, String awayDriver, String awayNickname) {
+	                              int awayPoints, String awayDriver, String awayNickname,
+	                              boolean homeIsGuest, boolean awayIsGuest) {
 	}
 }
