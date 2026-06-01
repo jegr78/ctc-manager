@@ -35,9 +35,19 @@ public class RaceLineup extends BaseEntity {
 	@JoinColumn(name = "team_id", nullable = false)
 	private Team team;
 
+	@Column(name = "is_guest", nullable = false)
+	private boolean guest;
+
 	public RaceLineup(Race race, Driver driver, Team team) {
 		this.race = race;
 		this.driver = driver;
 		this.team = team;
+	}
+
+	public RaceLineup(Race race, Driver driver, Team team, boolean guest) {
+		this.race = race;
+		this.driver = driver;
+		this.team = team;
+		this.guest = guest;
 	}
 }
