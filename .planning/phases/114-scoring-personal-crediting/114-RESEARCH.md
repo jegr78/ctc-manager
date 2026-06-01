@@ -585,22 +585,19 @@ The following CLAUDE.md directives constrain this phase directly:
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **`calculateRankingForPhase` does not have `seasonId` in scope**
+1. **`calculateRankingForPhase` does not have `seasonId` in scope** — **RESOLVED**
    - What we know: the method takes only `phaseId`; seasonId must be derived.
-   - What's unclear: whether to derive it from `seasonPhaseService.findById(phaseId).getSeason().getId()` (already called for validation at line 40) or to add it as a parameter.
-   - Recommendation: derive from the already-loaded phase entity at line 40 — no signature change, no new query. [ASSUMED]
+   - Resolution: derive from the already-loaded phase entity at line 40 (`seasonPhaseService.findById(phaseId).getSeason().getId()`, already called for validation) — no signature change, no new query.
 
-2. **`DriverProfilePageGenerator` second-pass page rendering for pure guests**
+2. **`DriverProfilePageGenerator` second-pass page rendering for pure guests** — **RESOLVED**
    - What we know: the existing SeasonDriver loop sets `team = sd.getTeam()` and renders a full profile page including `context.setVariable("team", team)`. For a pure guest, team comes from lineup.
-   - What's unclear: Phase 115 will add a visual guest marker; does Phase 114 need to set any `isGuest` flag on the template context now? Per D-05: "data/page-existence hook only" — the answer is no.
-   - Recommendation: keep the second-pass page identical in structure to the first-pass page; just pass the lineup-resolved team. Phase 115 will add the guest marker.
+   - Resolution: per D-05 ("data/page-existence hook only") Phase 114 sets NO `isGuest` flag on the template context. Keep the second-pass page identical in structure to the first-pass page; just pass the lineup-resolved team. Phase 115 (MARK-06) adds the guest marker.
 
-3. **Fixture placement: extend `seedRaceLineups` or add new method?**
+3. **Fixture placement: extend `seedRaceLineups` or add new method?** — **RESOLVED**
    - What we know: `seedRaceLineups()` already creates `Test-Season 2026` with `T-ALF` vs `T-BRV 1` and `T-ALF` vs `T-BRV 2`. The guest fixture must use the same test teams.
-   - What's unclear: whether to inline the guest rows into `seedRaceLineups` or add a `seedGuestFixtures()` call.
-   - Recommendation: inline into `seedRaceLineups` for simplicity — the guest lineup rows are just `new RaceLineup(race, driver, team, true)` for existing test drivers/races. [ASSUMED]
+   - Resolution: inline the guest rows into `seedRaceLineups` for simplicity — the guest lineup rows are just `new RaceLineup(race, driver, team, true)` for existing test drivers/races. (The `dev,demo` seed example for D-12 is a separate edit in `DevDataSeeder`, not in this test fixture.)
 
 ---
 
