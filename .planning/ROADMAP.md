@@ -228,7 +228,7 @@ See: milestones/v1.15-ROADMAP.md for full details
 ### v1.17 Guest Drivers (Phases 113-115)
 
 - [x] **Phase 113: Guest Assignment Foundation** - Flyway migration + RaceLineup/RaceResult guest flag + admin CRUD (add, edit, remove guest drivers selectable from any driver in the system) (completed 2026-06-01)
-- [ ] **Phase 114: Scoring & Personal Crediting** - Guest points flow to fielding team via existing aggregation; driver-ranking crediting for guests (including drivers without a SeasonDriver in that season); idempotent on every result save
+- [x] **Phase 114: Scoring & Personal Crediting** - Guest points flow to fielding team via existing aggregation; driver-ranking crediting for guests (including drivers without a SeasonDriver in that season); idempotent on every result save
 - [ ] **Phase 115: Guest Marking & Visibility** - Guest driver marking across all surfaces: Scorecard + Provisional-Scores + matchday-results graphics, admin matchday/race detail, driver-ranking (admin + public site), driver-profile public page; visual treatment decided against rendered reference
 
 ## Phase Details
@@ -256,10 +256,10 @@ See: milestones/v1.15-ROADMAP.md for full details
   2. The guest driver appears in the season's driver-ranking with points earned across all races where they were a guest (additive to their own team races), even when the driver has no `SeasonDriver` entry in that season
   3. Saving race results multiple times does not double-count guest points in either the team score or the personal driver-ranking (idempotent crediting handled in the service layer, no template/controller fallback)
 **Plans**: 4 plans
-- [ ] 114-01-PLAN.md — Wave-0 foundation: guest fixture (doppelrollen + pure guest) in TestDataService seed + RaceResults + DriverRankingServiceGuestIT scaffold (D-11, D-12)
-- [ ] 114-02-PLAN.md — Unified attribution helper (home-first/fallback-fielding) across all three ranking paths + alltime null-team gap close + audit-all-callers (D-01..D-04, SCORE-02)
-- [ ] 114-03-PLAN.md — DriverProfilePageGenerator pure-guest second pass: page-existence hook only, no visual marking (D-05, SCORE-02)
-- [ ] 114-04-PLAN.md — Regression IT suite: SCORE-01/02/03 + alltime/profile via real H2 round-trip (D-13..D-16)
+- [x] 114-01-PLAN.md — Wave-0 foundation: guest fixture (doppelrollen + pure guest) in TestDataService seed + RaceResults + DriverRankingServiceGuestIT scaffold (D-11, D-12)
+- [x] 114-02-PLAN.md — Unified attribution helper (home-first/fallback-fielding) across all three ranking paths + alltime null-team gap close + audit-all-callers (D-01..D-04, SCORE-02)
+- [x] 114-03-PLAN.md — DriverProfilePageGenerator pure-guest second pass: page-existence hook only, no visual marking (D-05, SCORE-02)
+- [x] 114-04-PLAN.md — Regression IT suite: SCORE-01/02/03 + alltime/profile via real H2 round-trip (D-13..D-16)
 
 ### Phase 115: Guest Marking & Visibility
 **Goal**: Guest drivers are visually marked across all relevant surfaces — graphics, admin views, and public site — so operators and viewers can identify guest appearances at a glance; the exact visual treatment is chosen against a rendered reference
@@ -279,7 +279,7 @@ See: milestones/v1.15-ROADMAP.md for full details
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 113. Guest Assignment Foundation | 3/3 | Complete    | 2026-06-01 |
-| 114. Scoring & Personal Crediting | 0/4 | Planned | - |
+| 114. Scoring & Personal Crediting | 4/4 | Executed | 2026-06-01 |
 | 115. Guest Marking & Visibility | 0/TBD | Not started | - |
 
 ---
