@@ -7,10 +7,14 @@ import static org.ctc.discord.DiscordPermissions.OVERWRITE_TYPE_ROLE;
 import static org.ctc.discord.DiscordPermissions.TEAM_MEMBER_ALLOW_MASK;
 import static org.ctc.discord.DiscordPermissions.TEAM_MEMBER_DENY_MASK;
 import static org.ctc.discord.DiscordPermissions.VIEW_CHANNEL;
+import static org.ctc.util.LogSanitizer.sanitize;
 import static org.springframework.util.StringUtils.hasText;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -47,6 +51,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DiscordChannelService {
 
 	private static final String WEBHOOK_NAME = "CTC Manager";
+	private static final String WEBHOOK_AVATAR = loadWebhookAvatar();
 	private static final int CHANNEL_TYPE_TEXT = 0;
 	private static final Pattern COMBINING_MARKS = Pattern.compile("\\p{M}");
 	private static final Pattern NON_SLUG_CHARS = Pattern.compile("[^a-z0-9]");
@@ -89,7 +94,7 @@ public class DiscordChannelService {
 		Channel channel = restClient.createChannel(guildId, req);
 		Webhook webhook;
 		try {
-			webhook = restClient.createWebhook(channel.id(), WEBHOOK_NAME);
+			webhook = restClient.createWebhook(channel.id(), WEBHOOK_NAME, WEBHOOK_AVATAR);
 		} catch (DiscordApiException webhookEx) {
 			try {
 				restClient.deleteChannel(channel.id());
@@ -129,6 +134,47 @@ public class DiscordChannelService {
 				match.getId(), channel.name(), channel.id());
 
 		eventPublisher.publishEvent(new ChannelCreatedEvent(match.getId()));
+	}
+
+	@Transactional
+	public void linkExistingChannel(Match match, String channelId) throws DiscordApiException {
+		if (match.getDiscordChannelId() != null) {
+			throw new BusinessRuleException(
+					"Match already has a Discord channel linked: " + match.getDiscordChannelId());
+		}
+		restClient.fetchChannel(channelId);
+
+		List<Webhook> existing = restClient.listWebhooks(channelId);
+		String webhookUrl = null;
+		for (Webhook webhook : existing) {
+			if (WEBHOOK_NAME.equals(webhook.name()) && hasText(webhook.url())) {
+				webhookUrl = webhook.url();
+				break;
+			}
+		}
+		if (webhookUrl == null) {
+			webhookUrl = restClient.createWebhook(channelId, WEBHOOK_NAME, WEBHOOK_AVATAR).url();
+		}
+
+		match.setDiscordChannelId(channelId);
+		match.setDiscordChannelWebhookUrl(webhookUrl);
+		matchRepository.save(match);
+		// No ChannelCreatedEvent: linking a prepared channel must not auto-post Team Cards
+		// (DiscordAutoPostListener.onChannelCreated does) — the operator uses the explicit button.
+		log.info("Discord channel linked to match {} → channelId={}", match.getId(), sanitize(channelId));
+	}
+
+	private static String loadWebhookAvatar() {
+		try (InputStream in = DiscordChannelService.class.getResourceAsStream("/static/admin/img/ctc-logo-white.png")) {
+			if (in == null) {
+				log.warn("Webhook avatar asset not found on classpath; webhooks will be created without a logo");
+				return null;
+			}
+			return "data:image/png;base64," + Base64.getEncoder().encodeToString(in.readAllBytes());
+		} catch (IOException ex) {
+			log.warn("Failed to load webhook avatar asset: {}", ex.toString());
+			return null;
+		}
 	}
 
 	private static void assertPreconditions(Match match, DiscordGlobalConfig cfg) {

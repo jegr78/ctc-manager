@@ -1,6 +1,7 @@
 package org.ctc.discord.service;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
@@ -19,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import org.ctc.TestHelper;
 import org.ctc.discord.DiscordPermissions;
+import org.ctc.discord.exception.DiscordMissingPermissionsException;
+import org.ctc.discord.exception.DiscordNotFoundException;
 import org.ctc.discord.exception.DiscordTransientException;
 import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.discord.repository.DiscordGlobalConfigRepository;
@@ -207,6 +210,107 @@ class DiscordChannelServiceWireMockIT {
 				.withRequestBody(matchingJsonPath("$.permission_overwrites[2].type", equalTo("1")))
 				.withRequestBody(matchingJsonPath("$.permission_overwrites[2].id", equalTo(BOT_USER_ID))));
 		wm.verify(exactly(0), deleteRequestedFor(urlPathMatching("/api/v10/channels/.*")));
+	}
+
+	@Test
+	void givenReachableChannelWithCtcWebhook_whenLinkExistingChannel_thenReusesWebhookNoPost() throws Exception {
+		// given — channel c9 reachable, and it already has a "CTC Manager" webhook
+		seedConfig("g1", "cat1");
+		Match match = seedMatch("LR", "100", "200");
+		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c9"))
+				.willReturn(okJson("{\"id\":\"c9\",\"name\":\"prepared\",\"type\":0,\"parent_id\":\"cat1\"}")));
+		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c9/webhooks"))
+				.willReturn(okJson("[{\"id\":\"w7\",\"name\":\"CTC Manager\",\"channel_id\":\"c9\","
+						+ "\"token\":\"tok-7\",\"url\":\"https://discord.com/api/webhooks/w7/tok-7\"}]")));
+
+		// when
+		service.linkExistingChannel(match, "c9");
+
+		// then — both fields persisted, reused webhook url, no webhook POST
+		Match reloaded = matchRepository.findById(match.getId()).orElseThrow();
+		assertThat(reloaded.getDiscordChannelId()).isEqualTo("c9");
+		assertThat(reloaded.getDiscordChannelWebhookUrl())
+				.isEqualTo("https://discord.com/api/webhooks/w7/tok-7");
+		wm.verify(exactly(0), postRequestedFor(urlPathEqualTo("/api/v10/channels/c9/webhooks")));
+	}
+
+	@Test
+	void givenReachableChannelWithoutCtcWebhook_whenLinkExistingChannel_thenCreatesWebhook() throws Exception {
+		// given — channel c9 reachable, but no "CTC Manager" webhook present
+		seedConfig("g1", "cat1");
+		Match match = seedMatch("LC", "100", "200");
+		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c9"))
+				.willReturn(okJson("{\"id\":\"c9\",\"name\":\"prepared\",\"type\":0,\"parent_id\":\"cat1\"}")));
+		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c9/webhooks"))
+				.willReturn(okJson("[{\"id\":\"w0\",\"name\":\"Other\",\"channel_id\":\"c9\","
+						+ "\"token\":\"tok-0\",\"url\":\"https://discord.com/api/webhooks/w0/tok-0\"}]")));
+		wm.stubFor(post(urlPathEqualTo("/api/v10/channels/c9/webhooks"))
+				.willReturn(okJson("{\"id\":\"w9\",\"name\":\"CTC Manager\",\"channel_id\":\"c9\","
+						+ "\"token\":\"tok-9\",\"url\":\"https://discord.com/api/webhooks/w9/tok-9\"}")));
+
+		// when
+		service.linkExistingChannel(match, "c9");
+
+		// then — webhook created and its url persisted
+		Match reloaded = matchRepository.findById(match.getId()).orElseThrow();
+		assertThat(reloaded.getDiscordChannelId()).isEqualTo("c9");
+		assertThat(reloaded.getDiscordChannelWebhookUrl())
+				.isEqualTo("https://discord.com/api/webhooks/w9/tok-9");
+		wm.verify(postRequestedFor(urlPathEqualTo("/api/v10/channels/c9/webhooks"))
+				.withRequestBody(containing("\"avatar\":\"data:image/png;base64,")));
+	}
+
+	@Test
+	void givenChannelNotFound_whenLinkExistingChannel_thenNotFoundAndNothingPersisted() {
+		// given
+		seedConfig("g1", "cat1");
+		Match match = seedMatch("LN", "100", "200");
+		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/bad"))
+				.willReturn(aResponse().withStatus(404)
+						.withHeader("Content-Type", "application/json")
+						.withBody("{\"message\":\"Unknown Channel\",\"code\":10003}")));
+
+		// when / then
+		assertThatThrownBy(() -> service.linkExistingChannel(match, "bad"))
+				.isInstanceOf(DiscordNotFoundException.class);
+
+		assertThat(matchRepository.findById(match.getId()).orElseThrow().getDiscordChannelId()).isNull();
+		wm.verify(exactly(0), getRequestedFor(urlPathEqualTo("/api/v10/channels/bad/webhooks")));
+	}
+
+	@Test
+	void givenChannelForbidden_whenLinkExistingChannel_thenMissingPermissionsAndNothingPersisted() {
+		// given — fetchChannel returns 403 with the missing-permissions code
+		seedConfig("g1", "cat1");
+		Match match = seedMatch("LF", "100", "200");
+		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/forbidden"))
+				.willReturn(aResponse().withStatus(403)
+						.withHeader("Content-Type", "application/json")
+						.withBody("{\"message\":\"Missing Permissions\",\"code\":50013}")));
+
+		// when / then
+		assertThatThrownBy(() -> service.linkExistingChannel(match, "forbidden"))
+				.isInstanceOf(DiscordMissingPermissionsException.class);
+
+		assertThat(matchRepository.findById(match.getId()).orElseThrow().getDiscordChannelId()).isNull();
+	}
+
+	@Test
+	void givenAlreadyLinkedMatch_whenLinkExistingChannel_thenBusinessRuleExceptionNoOutbound() {
+		// given — match already carries a Discord channel id
+		seedConfig("g1", "cat1");
+		Match match = seedMatch("LA", "100", "200");
+		match.setDiscordChannelId("already-set");
+		matchRepository.save(match);
+
+		// when / then
+		assertThatThrownBy(() -> service.linkExistingChannel(match, "c9"))
+				.isInstanceOf(BusinessRuleException.class)
+				.hasMessageContaining("already has a Discord channel");
+
+		assertThat(matchRepository.findById(match.getId()).orElseThrow().getDiscordChannelId())
+				.isEqualTo("already-set");
+		wm.verify(exactly(0), getRequestedFor(urlPathMatching("/api/v10/channels/.*")));
 	}
 
 	@Test

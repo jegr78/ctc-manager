@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record Webhook(
 		String id,
+		String name,
 		String token,
 		String url,
 		@JsonProperty("channel_id") String channelId) {

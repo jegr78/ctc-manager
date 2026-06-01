@@ -35,6 +35,19 @@
                     Create Discord Channel
                 </button>
             </form>
+            <form th:if="${match.discordChannelId == null}"
+                  th:action="@{/admin/matches/{id}/link-discord-channel(id=${match.id})}"
+                  method="post" class="form-inline">
+                <input type="text" name="channelId" required
+                       placeholder="Existing channel ID"
+                       aria-label="Existing Discord channel ID"
+                       data-testid="link-discord-channel-input">
+                <button type="submit"
+                        class="btn btn-secondary btn-sm"
+                        data-testid="link-discord-channel">
+                    Link Existing Channel
+                </button>
+            </form>
             <span th:if="${match.discordChannelId != null}"
                   class="badge badge-active"
                   data-testid="discord-channel-id"
