@@ -48,10 +48,14 @@ public class DriverRankingService {
 		Map<UUID, DriverRanking> rankingMap = new LinkedHashMap<>();
 		for (RaceResult result : all) {
 			UUID driverId = result.getDriver().getId();
-			rankingMap.computeIfAbsent(driverId, id -> {
+			DriverRanking ranking = rankingMap.computeIfAbsent(driverId, id -> {
 				Team team = resolveAttributedTeam(result.getDriver(), seasonId, result.getRace().getId());
 				return new DriverRanking(result.getDriver(), team);
-			}).addResult(result);
+			});
+			ranking.addResult(result);
+			raceLineupRepository.findByRaceIdAndDriverId(result.getRace().getId(), driverId)
+					.filter(RaceLineup::isGuest)
+					.ifPresent(rl -> ranking.markGuestAppearance());
 		}
 
 		List<DriverRanking> rankings = new ArrayList<>(rankingMap.values());
@@ -79,6 +83,9 @@ public class DriverRankingService {
 				// Merge phase results into season-wide ranking
 				DriverRanking merged = rankingMap.get(driverId);
 				phaseRanking.getRaceResults().forEach(merged::addResult);
+				if (phaseRanking.isHasGuestAppearance()) {
+					merged.markGuestAppearance();
+				}
 			}
 		}
 
@@ -156,6 +163,9 @@ public class DriverRankingService {
 			DriverRanking ranking = rankingMap.computeIfAbsent(driverId,
 					id -> new DriverRanking(result.getDriver(), driverTeamMap.get(id)));
 			ranking.addResult(result);
+			raceLineupRepository.findByRaceIdAndDriverId(result.getRace().getId(), driverId)
+					.filter(RaceLineup::isGuest)
+					.ifPresent(rl -> ranking.markGuestAppearance());
 		}
 
 		List<DriverRanking> rankings = new ArrayList<>(rankingMap.values());
@@ -213,6 +223,7 @@ public class DriverRankingService {
 		private int totalFlPoints;
 		private int racesCount;
 		private int bestPosition = Integer.MAX_VALUE;
+		private boolean hasGuestAppearance;
 		private final List<RaceResult> raceResults = new ArrayList<>();
 
 		public DriverRanking(Driver driver, Team team) {
@@ -230,6 +241,14 @@ public class DriverRankingService {
 				bestPosition = result.getPosition();
 			}
 			raceResults.add(result);
+		}
+
+		public void markGuestAppearance() {
+			this.hasGuestAppearance = true;
+		}
+
+		public boolean isHasGuestAppearance() {
+			return hasGuestAppearance;
 		}
 
 		public Driver getDriver() {

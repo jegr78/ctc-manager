@@ -149,6 +149,36 @@ class DriverRankingServiceGuestIT {
 		assertThat(guestRow.getTeam().getShortName()).isEqualTo("T-BRV");
 	}
 
+	@Test
+	void givenGuestAppearances_whenCalculateRankings_thenRowsAreMarkedHasGuestAppearance() {
+		// given
+		var season = testSeason();
+		UUID regularPhaseId = regularPhaseId(season.getId());
+
+		// when
+		var phaseRanking = driverRankingService.calculateRankingForPhase(regularPhaseId);
+		var seasonRanking = driverRankingService.aggregateAcrossPhases(List.of(regularPhaseId), season.getId());
+		var alltimeRanking = driverRankingService.calculateAlltimeRanking(List.of(season.getId()));
+
+		// then — pure guest marked across all three ranking paths
+		assertThat(rowFor(phaseRanking, "Test_Guest_1").isHasGuestAppearance()).isTrue();
+		assertThat(rowFor(seasonRanking, "Test_Guest_1").isHasGuestAppearance()).isTrue();
+		assertThat(rowFor(alltimeRanking, "Test_Guest_1").isHasGuestAppearance()).isTrue();
+
+		// and — dual-role guest marked even though it has a SeasonDriver (per-result check, Pitfall 4)
+		assertThat(rowFor(seasonRanking, "Test_DualRole_1").isHasGuestAppearance()).isTrue();
+		assertThat(rowFor(alltimeRanking, "Test_DualRole_1").isHasGuestAppearance()).isTrue();
+
+		// and — at least one rostered non-guest row stays unmarked (flag is not trivially always-true)
+		assertThat(seasonRanking).anyMatch(r -> !r.isHasGuestAppearance());
+	}
+
+	private DriverRankingService.DriverRanking rowFor(List<DriverRankingService.DriverRanking> rankings, String psnId) {
+		return rankings.stream()
+				.filter(r -> r.getDriver().getPsnId().equals(psnId))
+				.findFirst().orElseThrow();
+	}
+
 	private Season testSeason() {
 		return seasonRepository.findByYearAndNumber(2026, 99).getFirst();
 	}
