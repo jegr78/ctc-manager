@@ -2,9 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.17
 milestone_name: Guest Drivers
-status: planning
-last_updated: "2026-06-01T00:00:00.000Z"
-last_activity: 2026-06-01
+status: Roadmap created — ready for `/gsd-discuss-phase 113`
+stopped_at: Phase 113 context gathered
+last_updated: "2026-06-01T10:39:01.265Z"
+last_activity: 2026-06-01 — Roadmap created for v1.17
 progress:
   total_phases: 3
   completed_phases: 0
@@ -92,9 +93,9 @@ Carried forward from v1.13/v1.14/v1.15 close (unchanged):
 
 ## Session Continuity
 
-**Last session:** 2026-06-01 — v1.17 roadmap created (3 phases: 113 Guest Assignment Foundation, 114 Scoring & Personal Crediting, 115 Guest Marking & Visibility).
+**Last session:** 2026-06-01T10:39:01.256Z
 
-**Stopped at:** Roadmap written — ready for Phase 113 planning.
+**Stopped at:** Phase 113 context gathered
 
 **Next action:** `/gsd-discuss-phase 113` on branch `gsd/v1.17-guest-drivers`.
 
