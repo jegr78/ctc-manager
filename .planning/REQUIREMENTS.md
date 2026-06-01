@@ -10,8 +10,8 @@ Requirements for the v1.17 milestone. Each maps to roadmap phases.
 ### GUEST — Guest Assignment (Lineup & Results)
 
 - [ ] **GUEST-01**: An admin can add a guest driver to a race lineup, selectable from **any existing driver** in the system (not restricted to the season roster), specifying which team the guest is fielded for.
-- [ ] **GUEST-02**: An admin can record a guest driver's finishing position/result in the race results for the fielding team.
-- [ ] **GUEST-03**: An admin can edit or remove a guest-driver assignment from a lineup/result.
+- [x] **GUEST-02**: An admin can record a guest driver's finishing position/result in the race results for the fielding team.
+- [x] **GUEST-03**: An admin can edit or remove a guest-driver assignment from a lineup/result.
 - [x] **GUEST-04**: A lineup/result entry is persistently identifiable as a guest assignment in the data model, independent of season-roster membership (new additive Flyway migration if needed; existing migrations untouched, H2 + MariaDB compatible).
 
 ### SCORE — Scoring & Personal Crediting
@@ -58,8 +58,8 @@ Explicitly excluded for v1.17 to prevent scope creep.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | GUEST-01 | Phase 113 | Pending |
-| GUEST-02 | Phase 113 | Pending |
-| GUEST-03 | Phase 113 | Pending |
+| GUEST-02 | Phase 113 | Complete |
+| GUEST-03 | Phase 113 | Complete |
 | GUEST-04 | Phase 113 | Complete |
 | SCORE-01 | Phase 114 | Pending |
 | SCORE-02 | Phase 114 | Pending |
