@@ -560,17 +560,17 @@ Not applicable. No stored data, live service configs, OS-registered state, secre
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Fragment vs. inline for graphic templates**
    - What we know: String template mode (used by custom uploaded templates) cannot resolve classpath fragments. Default templates use classpath resolver and CAN use `th:replace`.
    - What's unclear: Should the default graphic templates use `th:replace` (fragment-based, DRY) or inline markup (simpler, robust for custom-template users)?
-   - Recommendation: Use **inline markup** in graphic render templates to be consistent regardless of whether the operator has a custom template. The admin/site templates use the shared fragment normally.
+   - RESOLVED: Use **inline markup** in graphic render templates to be consistent regardless of whether the operator has a custom template. The admin/site templates use the shared fragment normally. Baked into Plan 115-01 (fragment for admin/site only) and 115-02 (inline `<span class="guest-marker">&#x2605;</span>` in each graphic render template).
 
 2. **DriverRanking.hasGuestAppearance lookup strategy for `calculateAlltimeRanking`**
    - What we know: The alltime helper already looks up `RaceLineup` for pure guests (line 148-150). For rostered drivers, no lineup lookup happens.
    - What's unclear: Should the alltime ranking also mark `hasGuestAppearance` for dual-role drivers whose alltime row aggregates both home and guest races?
-   - Recommendation: Yes — D-05 says "≥1 guest appearance in the row" regardless of whether the driver is rostered. Requires a per-result lineup lookup in the alltime accumulation loop; can use the existing `guestRaceByDriver` map structure as a template.
+   - RESOLVED: Yes — D-05 says "≥1 guest appearance in the row" regardless of whether the driver is rostered. Requires a per-result lineup lookup in the alltime accumulation loop; can use the existing `guestRaceByDriver` map structure as a template. Baked into Plan 115-04 (per-result `hasGuestAppearance` across all three ranking paths, covering dual-role drivers).
 
 ---
 
