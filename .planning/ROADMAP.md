@@ -274,7 +274,7 @@ See: milestones/v1.15-ROADMAP.md for full details
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 113. Guest Assignment Foundation | 3/3 | Complete   | 2026-06-01 |
+| 113. Guest Assignment Foundation | 3/3 | Complete    | 2026-06-01 |
 | 114. Scoring & Personal Crediting | 0/TBD | Not started | - |
 | 115. Guest Marking & Visibility | 0/TBD | Not started | - |
 
