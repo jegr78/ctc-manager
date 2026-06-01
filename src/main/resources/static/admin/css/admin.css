@@ -28,6 +28,7 @@
     --radius-sm: 6px;
     --radius-md: 8px;
     --radius-lg: 12px;
+    --guest: #f59e0b;
 }
 
 body {
@@ -2111,4 +2112,19 @@ a.season-header-title:hover {
 
 .guest-add-row {
     margin-top: var(--space-sm, 0.5rem);
+}
+
+.guest-marker {
+    color: var(--guest);
+    font-size: 12px;
+    margin-right: 4px;
+    vertical-align: middle;
+    line-height: 1;
+}
+
+.guest-label {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-dim);
+    margin-left: 4px;
 }
