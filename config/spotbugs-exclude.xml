@@ -86,6 +86,16 @@
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
 
+    <!-- sitegen page-generator inner record DTOs: read-only per-page view-data carriers that wrap a
+         JPA entity for the Thymeleaf template (e.g. DriverProfilePageGenerator$DriverProfileRow wraps
+         a RaceResult to expose result + guest flag + fielding-team name). Created and consumed within
+         a single site-generation pass under OSIV; a defensive copy of the entity would be meaningless.
+         Same rationale as the org.ctc.(domain|admin|backup).service inner-record rule above. -->
+    <Match>
+        <Class name="~org\.ctc\.sitegen\.[A-Z][A-Za-z0-9]*\$.+"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
     <!-- admin.controller inner record classes: lightweight response DTOs defined as inner records
          inside controllers (e.g., for JSON endpoints). 2 findings. -->
     <Match>

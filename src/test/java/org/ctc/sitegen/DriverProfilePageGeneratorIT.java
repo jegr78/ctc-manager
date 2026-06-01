@@ -6,6 +6,9 @@ import java.nio.file.Path;
 import java.util.List;
 import javax.sql.DataSource;
 import org.ctc.admin.TestDataService;
+import org.ctc.domain.model.RaceLineup;
+import org.ctc.domain.repository.DriverRepository;
+import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.sitegen.model.GenerationContext;
 import org.flywaydb.core.Flyway;
@@ -63,6 +66,8 @@ class DriverProfilePageGeneratorIT {
     @Autowired private DriverProfilePageGenerator driverProfilePageGenerator;
     @Autowired private SeasonRepository seasonRepository;
     @Autowired private SiteSlugger siteSlugger;
+    @Autowired private DriverRepository driverRepository;
+    @Autowired private RaceLineupRepository raceLineupRepository;
 
     @MockitoBean private YouTubeScraperService youTubeScraperService;
 
@@ -131,6 +136,40 @@ class DriverProfilePageGeneratorIT {
         assertThat(driverProfile).exists();
         String html = Files.readString(driverProfile);
         assertThat(html).contains("Test_Guest_1");
+    }
+
+    /**
+     * MARK-06: a guest race on the public driver-profile is marked with the star glyph and an
+     * inline "as guest for &lt;SubTeamName&gt;" sub-label naming the actual fielding sub-team.
+     */
+    @Test
+    @Transactional(readOnly = true)
+    void givenPureGuestDriver_whenGenerate_thenGuestRaceMarkedWithStarAndSubLabel() throws IOException {
+        // given
+        var season = seasonRepository.findByYearAndNumber(2026, 99).getFirst();
+        var slug = siteSlugger.slugify(season.getDisplayLabel());
+        var ctx = new GenerationContext(tempDir, season, slug, season.getName(), false, null);
+        var genResult = new SiteGeneratorService.GenerationResult();
+        var guest = driverRepository.findByPsnId("Test_Guest_1").orElseThrow();
+        // The actual fielding sub-team names, scoped to the season (same source the generator uses).
+        var guestSubTeams = raceLineupRepository.findByRaceMatchdaySeasonId(season.getId()).stream()
+                .filter(RaceLineup::isGuest)
+                .filter(rl -> rl.getDriver().getId().equals(guest.getId()))
+                .map(rl -> rl.getTeam().getShortName())
+                .distinct().toList();
+
+        // when
+        driverProfilePageGenerator.generate(ctx, genResult);
+
+        // then — star glyph + inline sub-label naming the actual fielding sub-team
+        Path profile = tempDir.resolve("season").resolve(slug)
+                .resolve("driver").resolve(siteSlugger.slugify("Test_Guest_1") + ".html");
+        String html = Files.readString(profile);
+        assertThat(html).contains("guest-marker");
+        assertThat(html).contains("&#x2605;");
+        assertThat(html).contains("as guest for");
+        assertThat(guestSubTeams).isNotEmpty();
+        assertThat(guestSubTeams).anyMatch(html::contains);
     }
 
     /**

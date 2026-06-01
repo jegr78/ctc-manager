@@ -60,19 +60,26 @@ public class DriverProfilePageGenerator {
         boolean seasonHasMultiplePhases =
                 seasonPhaseService.findAllPhases(season.getId()).size() >= 2;
 
+        // Season lineups (team eager-loaded via @EntityGraph) are fetched once and reused for both
+        // the guest team resolution and the per-race guest marker lookup (no per-result query).
+        var seasonLineups = raceLineupRepository.findByRaceMatchdaySeasonId(season.getId());
+        Map<String, RaceLineup> guestLookup = new LinkedHashMap<>();
+        for (var rl : seasonLineups) {
+            if (rl.isGuest()) {
+                guestLookup.put(rl.getRace().getId() + ":" + rl.getDriver().getId(), rl);
+            }
+        }
+
         for (var sd : seasonDrivers) {
             var driver = sd.getDriver();
 			if (!generatedDriverIds.add(driver.getId())) {
 				continue;
 			}
-            writeDriverProfile(ctx, season, driver, sd.getTeam(), seasonHasMultiplePhases, result);
+            writeDriverProfile(ctx, season, driver, sd.getTeam(), seasonHasMultiplePhases, guestLookup, result);
         }
 
         // Second pass: pure guests appear only in a RaceLineup (no SeasonDriver row) and would
         // otherwise have no profile page. Deduped against the SeasonDriver pass via the same set.
-        // The season lineups (team eager-loaded via @EntityGraph) are fetched once and reused to
-        // resolve each guest's team in-memory; the parent team is picked deterministically.
-        var seasonLineups = raceLineupRepository.findByRaceMatchdaySeasonId(season.getId());
         Map<java.util.UUID, Team> guestTeamByDriver = new java.util.LinkedHashMap<>();
         for (var rl : seasonLineups) {
             Team parent = rl.getTeam().getParentOrSelf();
@@ -87,12 +94,13 @@ public class DriverProfilePageGenerator {
             if (team == null) {
                 continue;
             }
-            writeDriverProfile(ctx, season, driver, team, seasonHasMultiplePhases, result);
+            writeDriverProfile(ctx, season, driver, team, seasonHasMultiplePhases, guestLookup, result);
         }
     }
 
     private void writeDriverProfile(GenerationContext ctx, Season season, Driver driver, Team team,
                                     boolean seasonHasMultiplePhases,
+                                    Map<String, RaceLineup> guestLookup,
                                     SiteGeneratorService.GenerationResult result) throws IOException {
         var results = raceResultRepository.findByDriverId(driver.getId()).stream()
                 .filter(r -> r.getRace().getMatchday().getSeason().getId().equals(season.getId()))
@@ -135,7 +143,7 @@ public class DriverProfilePageGenerator {
         context.setVariable("season", season);
         context.setVariable("driver", driver);
         context.setVariable("team", team);
-        context.setVariable("results", results);
+        context.setVariable("profileRows", results.stream().map(r -> toProfileRow(r, guestLookup)).toList());
         int total = results.stream().mapToInt(RaceResult::getPointsTotal).sum();
         context.setVariable("totalRaces", results.size());
         context.setVariable("totalPoints", total);
@@ -151,7 +159,10 @@ public class DriverProfilePageGenerator {
         context.setVariable("breadcrumbCurrent", driver.getPsnId());
         context.setVariable("pageTitle", driver.getPsnId());
         context.setVariable("showPhaseBreakdown", showPhaseBreakdown);
-        context.setVariable("resultsByPhase", resultsByPhase);
+        LinkedHashMap<PhaseType, List<DriverProfileRow>> profileRowsByPhase = new LinkedHashMap<>();
+        resultsByPhase.forEach((pt, list) ->
+                profileRowsByPhase.put(pt, list.stream().map(r -> toProfileRow(r, guestLookup)).toList()));
+        context.setVariable("profileRowsByPhase", profileRowsByPhase);
         context.setVariable("phaseHeadings", PHASE_HEADINGS);
 
         var dir = ctx.outPath().resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel())).resolve("driver");
@@ -159,5 +170,15 @@ public class DriverProfilePageGenerator {
         templateWriter.write("site/driver-profile", context, dir.resolve(siteSlugger.slugify(driver.getPsnId()) + ".html"),
                 ctx.activeSeasonSlug(), ctx.activeSeasonName());
         result.incrementPages();
+    }
+
+    private DriverProfileRow toProfileRow(RaceResult result, Map<String, RaceLineup> guestLookup) {
+        RaceLineup lineup = guestLookup.get(result.getRace().getId() + ":" + result.getDriver().getId());
+        return lineup != null
+                ? new DriverProfileRow(result, true, lineup.getTeam().getShortName())
+                : new DriverProfileRow(result, false, null);
+    }
+
+    public record DriverProfileRow(RaceResult result, boolean guest, String fieldingTeamName) {
     }
 }
