@@ -227,7 +227,7 @@ See: milestones/v1.15-ROADMAP.md for full details
 
 ### v1.17 Guest Drivers (Phases 113-115)
 
-- [ ] **Phase 113: Guest Assignment Foundation** - Flyway migration + RaceLineup/RaceResult guest flag + admin CRUD (add, edit, remove guest drivers selectable from any driver in the system)
+- [x] **Phase 113: Guest Assignment Foundation** - Flyway migration + RaceLineup/RaceResult guest flag + admin CRUD (add, edit, remove guest drivers selectable from any driver in the system) (completed 2026-06-01)
 - [ ] **Phase 114: Scoring & Personal Crediting** - Guest points flow to fielding team via existing aggregation; driver-ranking crediting for guests (including drivers without a SeasonDriver in that season); idempotent on every result save
 - [ ] **Phase 115: Guest Marking & Visibility** - Guest driver marking across all surfaces: Scorecard + Provisional-Scores + matchday-results graphics, admin matchday/race detail, driver-ranking (admin + public site), driver-profile public page; visual treatment decided against rendered reference
 
@@ -245,7 +245,7 @@ See: milestones/v1.15-ROADMAP.md for full details
 **Plans**: 3 plans
 - [x] 113-01-PLAN.md — Data-model foundation: Flyway V18 is_guest column + RaceLineup entity field + backup restorer round-trip (GUEST-04)
 - [x] 113-02-PLAN.md — Service layer: saveLineup guest overload + dedup + guest-removal result cascade + getGuestLineups/roster filter; results auto-derive (GUEST-02, GUEST-03)
-- [ ] 113-03-PLAN.md — Admin CRUD: controller guest_* parsing + race-lineup.html datalist Add-Guest block + prefill (GUEST-01, GUEST-03)
+- [x] 113-03-PLAN.md — Admin CRUD: controller guest_* parsing + race-lineup.html datalist Add-Guest block + prefill (GUEST-01, GUEST-03)
 
 ### Phase 114: Scoring & Personal Crediting
 **Goal**: A guest driver's race points count for the fielding team and are also credited to the guest driver personally in the season's driver-ranking, with no double-counting on repeated saves
@@ -274,7 +274,7 @@ See: milestones/v1.15-ROADMAP.md for full details
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 113. Guest Assignment Foundation | 2/3 | In Progress|  |
+| 113. Guest Assignment Foundation | 3/3 | Complete   | 2026-06-01 |
 | 114. Scoring & Personal Crediting | 0/TBD | Not started | - |
 | 115. Guest Marking & Visibility | 0/TBD | Not started | - |
 
