@@ -353,6 +353,37 @@ class RaceLineupServiceTest {
 	}
 
 	@Test
+	void givenKeptGuestMovedToDifferentTeam_whenSaveLineup_thenScoresReaggregated() {
+		// given — an existing guest whose team_id changes on re-save
+		var raceId = UUID.randomUUID();
+		var guestId = UUID.randomUUID();
+		var oldTeamId = UUID.randomUUID();
+		var newTeamId = UUID.randomUUID();
+
+		var race = new Race();
+		race.setId(raceId);
+		var driver = new Driver();
+		driver.setId(guestId);
+		var oldTeam = new Team();
+		oldTeam.setId(oldTeamId);
+		var newTeam = new Team();
+		newTeam.setId(newTeamId);
+		var existingGuest = new RaceLineup(race, driver, oldTeam, true);
+
+		when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
+		when(raceLineupRepository.findByRaceId(raceId)).thenReturn(List.of(existingGuest));
+		when(driverRepository.findById(guestId)).thenReturn(Optional.of(driver));
+		when(teamRepository.findById(newTeamId)).thenReturn(Optional.of(newTeam));
+		when(raceLineupRepository.save(any(RaceLineup.class))).thenAnswer(inv -> inv.getArgument(0));
+
+		// when
+		service.saveLineup(raceId, Map.of(), Map.of(guestId, newTeamId));
+
+		// then
+		verify(scoringService).aggregateMatchScores(race);
+	}
+
+	@Test
 	void givenDriverInBothRosterAndGuestMaps_whenSaveLineup_thenThrowsBusinessRule() {
 		// given
 		var raceId = UUID.randomUUID();

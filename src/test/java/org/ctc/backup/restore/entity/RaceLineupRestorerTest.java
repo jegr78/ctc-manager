@@ -18,11 +18,6 @@ import static org.mockito.Mockito.*;
 
 /**
  * Unit test for {@link RaceLineupRestorer}.
- *
- * <p>RaceLineup is source-of-truth for driver-team assignments. The setter MUST preserve the
- * {@code race_id} / {@code driver_id} / {@code team_id} triple verbatim from JSON to JDBC, and
- * round-trip the {@code is_guest} flag with a backward-compatible default for pre-V18 backups
- * that lack the field.
  */
 class RaceLineupRestorerTest {
 

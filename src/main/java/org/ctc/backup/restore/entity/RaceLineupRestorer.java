@@ -11,19 +11,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Restores rows into the {@code race_lineups} table from the
- * {@code data/race-lineups.json} array in a backup ZIP.
+ * Restores rows into the {@code race_lineups} table from a backup ZIP.
  *
- * <p>Schema (V1/V18): {@code id UUID PK, race_id UUID NOT NULL, driver_id UUID NOT NULL,
- * team_id UUID NOT NULL, is_guest BOOLEAN NOT NULL, created_at TIMESTAMP, updated_at TIMESTAMP}.
- *
- * <p>Operationally critical: {@code RaceLineup} is the source-of-truth for driver-team
- * assignments. The setter MUST preserve every row's {@code race_id} / {@code driver_id} /
- * {@code team_id} triple verbatim from the source JSON — sub-team assignments depend on this.
- *
- * <p>Auditing bypass: written via {@link JdbcTemplate#batchUpdate} so
- * {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener}
- * does NOT overwrite {@code createdAt}/{@code updatedAt}.
+ * <p>Writes via {@link JdbcTemplate#batchUpdate} to bypass {@code AuditingEntityListener}
+ * so {@code createdAt}/{@code updatedAt} are preserved verbatim from the backup.
  */
 @Slf4j
 @Component

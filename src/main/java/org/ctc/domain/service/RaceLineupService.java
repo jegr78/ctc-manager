@@ -1,6 +1,7 @@
 package org.ctc.domain.service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -100,11 +101,15 @@ public class RaceLineupService {
 		}
 
 		var existing = raceLineupRepository.findByRaceId(raceId);
-		var droppedGuestDriverIds = existing.stream()
+		var priorGuestTeams = existing.stream()
 				.filter(RaceLineup::isGuest)
-				.map(lineup -> lineup.getDriver().getId())
+				.collect(Collectors.toMap(lineup -> lineup.getDriver().getId(), lineup -> lineup.getTeam().getId()));
+		var droppedGuestDriverIds = priorGuestTeams.keySet().stream()
 				.filter(driverId -> !guestAssignments.containsKey(driverId))
 				.toList();
+		boolean keptGuestTeamChanged = guestAssignments.entrySet().stream()
+				.anyMatch(entry -> priorGuestTeams.containsKey(entry.getKey())
+						&& !entry.getValue().equals(priorGuestTeams.get(entry.getKey())));
 
 		raceLineupRepository.deleteAll(existing);
 
@@ -130,7 +135,7 @@ public class RaceLineupService {
 			raceResultRepository.findByRaceIdAndDriverId(raceId, driverId)
 					.ifPresent(raceResultRepository::delete);
 		}
-		if (!droppedGuestDriverIds.isEmpty()) {
+		if (!droppedGuestDriverIds.isEmpty() || keptGuestTeamChanged) {
 			scoringService.aggregateMatchScores(race);
 		}
 
