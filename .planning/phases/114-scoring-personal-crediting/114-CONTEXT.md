@@ -32,7 +32,7 @@ Ensure a guest driver's race points are credited correctly in two ways: (a) towa
 ## Implementation Decisions
 
 ### Team Attribution in the Driver-Ranking
-- **D-01 (Doppelrolle):** A driver who is a roster member of Team A but guests for Team B is attributed in their **personal** ranking row to their **home team** — the `SeasonDriver` team for that season. The home-team preference only changes behavior for guests; normal roster drivers are unaffected (their lineup team *is* their home team).
+- **D-01 (dual role):** A driver who is a roster member of Team A but guests for Team B is attributed in their **personal** ranking row to their **home team** — the `SeasonDriver` team for that season. The home-team preference only changes behavior for guests; normal roster drivers are unaffected (their lineup team *is* their home team).
 - **D-02 (Pure guest):** A driver with **no `SeasonDriver`** in the season is attributed to the **fielding team via `RaceLineup`** (sub-team→parent rollup as in `isDriverInTeam`). There is always a concrete team — no null/empty attribution.
 - **D-03 (Unified policy):** The attribution rule is **home-first, fallback fielding** and applies **uniformly across all ranking surfaces** — `calculateRankingForPhase` (admin per-phase), `aggregateAcrossPhases` (site season), and `calculateAlltimeRanking` (admin + site alltime). One shared attribution helper is preferred over three divergent implementations. Accepted edge: a per-phase view may show a guest's (possibly phase-foreign) home team — the user chose the simpler uniform model over context-specific attribution.
   - **⚠ Planner note:** Today the three paths use *different* logic — `calculateRankingForPhase` uses lineup-only (`resolveTeamFromLineup`); `aggregateAcrossPhases` uses `attributeTeamFromRegularOrLineup`; `calculateAlltimeRanking` uses SeasonDriver-most-recent. Unifying them is the core refactor. Grep all callers (CLAUDE.md "Grep All Usages Before Refactor"); the per-phase change alters admin standings attribution for guests (no regression today — no guests exist yet).
@@ -51,12 +51,12 @@ Ensure a guest driver's race points are credited correctly in two ways: (a) towa
 - **D-10 (Live read-model — LOCKED):** Keep the existing **live, on-read** computation for the driver-ranking. **No new persisted personal-points table / `DriverSeasonScore` aggregate, no recompute trigger.** Only the match score (`Match.homeScore`/`awayScore`) stays persisted (recomputed from all legs on each save, as today). This makes SCORE-03 idempotent by construction — no double-count is possible. The planner must NOT introduce a persistence layer for personal points.
 
 ### Test & Demo Fixtures
-- **D-11 (Test fixture):** Extend the shared fixture (`TestDataService` / `TestHelper.createFullSeasonFixture`) with a guest scenario covering **both** a doppelrollen guest (roster Team A + guest Team B) and a **pure guest** (no `SeasonDriver`). Reusable for 114 + 115. Use the mandated test-prefix isolation (`T-…`, `Test_…`, `Test-Season …`).
+- **D-11 (Test fixture):** Extend the shared fixture (`TestDataService` / `TestHelper.createFullSeasonFixture`) with a guest scenario covering **both** a dual-role guest (roster Team A + guest Team B) and a **pure guest** (no `SeasonDriver`). Reusable for 114 + 115. Use the mandated test-prefix isolation (`T-…`, `Test_…`, `Test-Season …`).
 - **D-12 (Demo seed):** Add a guest example to the **`dev,demo`** seed so `/gsd-auto-uat` (114) and the visual reference (115) have real guest data to render. The seeder stays `@Profile("dev")` only — **never** `local`/`prod`/`docker` (CLAUDE.md / memory "local darf KEINE Dev-Daten").
 
 ### Regression Test Scope (all four MUST be pinned)
 - **D-13:** SCORE-01 — guest result flows into the fielding team's `Match.homeScore`/`awayScore` (incl. sub-team→parent via `isDriverInTeam`).
-- **D-14:** SCORE-02 — pure guest (no `SeasonDriver`) appears in the season ranking with correct points + fielding team; doppelrollen guest sums additively under the home team.
+- **D-14:** SCORE-02 — pure guest (no `SeasonDriver`) appears in the season ranking with correct points + fielding team; dual-role guest sums additively under the home team.
 - **D-15:** SCORE-03 — repeated `saveResults`/`aggregateMatchScores` yields identical scores (no double-count); removing a guest (Phase 113 D-11 cascade-delete of `RaceResult` + re-aggregation) makes both the personal credit and the team score disappear cleanly.
 - **D-16:** Alltime + profile — guest race counts in the alltime ranking (team ≠ null); a pure guest gets a profile page containing the guest race.
 
@@ -100,7 +100,7 @@ Ensure a guest driver's race points are credited correctly in two ways: (a) towa
 ### Reusable Assets
 - **`ScoringService.isDriverInTeam`** — the canonical RaceLineup-based team resolver (incl. sub-team→parent). The unified guest attribution helper should reuse/mirror its lineup-resolution logic.
 - **`DriverRanking` inner accumulator** — already sums points and counts races per driver; D-06/D-07/D-08 are satisfied by its current `addResult` over all results. No change needed to the accumulator itself, only to team attribution.
-- **`generatedDriverIds` dedup set** in `DriverProfilePageGenerator` — reuse when extending iteration to pure guests (D-05) so doppelrollen drivers aren't double-generated.
+- **`generatedDriverIds` dedup set** in `DriverProfilePageGenerator` — reuse when extending iteration to pure guests (D-05) so dual-role drivers aren't double-generated.
 
 ### Established Patterns
 - **Live, read-time ranking computation** (`@Transactional(readOnly = true)`) — no persisted personal score; the basis for D-10's idempotency lock.

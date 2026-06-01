@@ -36,9 +36,9 @@ class DriverRankingServiceGuestIT {
 
 	@Test
 	void givenGuestResultInRace_whenAggregateMatchScores_thenCountsForFieldingTeamScore() {
-		// given — doppelrollen guest Test_Doppel_1 fielded for the away team of match1
-		var doppel = driverRepository.findByPsnId("Test_Doppel_1").orElseThrow();
-		var guestLineup = raceLineupRepository.findByDriverId(doppel.getId()).stream()
+		// given — dual-role guest Test_DualRole_1 fielded for the away team of match1
+		var dualRole = driverRepository.findByPsnId("Test_DualRole_1").orElseThrow();
+		var guestLineup = raceLineupRepository.findByDriverId(dualRole.getId()).stream()
 				.filter(rl -> rl.isGuest()).findFirst().orElseThrow();
 		Race race = raceRepository.findById(guestLineup.getRace().getId()).orElseThrow();
 
@@ -48,7 +48,7 @@ class DriverRankingServiceGuestIT {
 		// then — guest fields for the away team and contributes to its match score
 		var match = race.getMatch();
 		UUID awayTeamId = match.getAwayTeam().getId();
-		var guestResult = raceResultRepository.findByRaceIdAndDriverId(race.getId(), doppel.getId()).orElseThrow();
+		var guestResult = raceResultRepository.findByRaceIdAndDriverId(race.getId(), dualRole.getId()).orElseThrow();
 		assertThat(scoringService.isDriverInTeam(guestResult, race.getId(), awayTeamId)).isTrue();
 		assertThat(match.getAwayScore()).isGreaterThan(0);
 		assertThat(match.getAwayScore()).isGreaterThanOrEqualTo(guestResult.getPointsTotal());
@@ -74,21 +74,21 @@ class DriverRankingServiceGuestIT {
 				.mapToInt(r -> r.getPointsTotal()).sum();
 		assertThat(guestRow.getTotalPoints()).isEqualTo(expectedGuestPoints);
 
-		// and — doppelrollen guest appears once under its HOME team (home-first)
-		var doppelRows = rankings.stream()
-				.filter(r -> r.getDriver().getPsnId().equals("Test_Doppel_1"))
+		// and — dual-role guest appears once under its HOME team (home-first)
+		var dualRoleRows = rankings.stream()
+				.filter(r -> r.getDriver().getPsnId().equals("Test_DualRole_1"))
 				.toList();
-		assertThat(doppelRows).hasSize(1);
-		assertThat(doppelRows.get(0).getTeam().getShortName()).isEqualTo("T-ALF");
+		assertThat(dualRoleRows).hasSize(1);
+		assertThat(dualRoleRows.get(0).getTeam().getShortName()).isEqualTo("T-ALF");
 	}
 
 	@Test
 	void givenGuestResultSavedTwice_whenAggregateMatchScores_thenScoresAreIdempotent() {
-		// given — the doppelrollen guest's race
-		var doppel = driverRepository.findByPsnId("Test_Doppel_1").orElseThrow();
-		var doppelLineup = raceLineupRepository.findByDriverId(doppel.getId()).stream()
+		// given — the dual-role guest's race
+		var dualRole = driverRepository.findByPsnId("Test_DualRole_1").orElseThrow();
+		var dualRoleLineup = raceLineupRepository.findByDriverId(dualRole.getId()).stream()
 				.filter(rl -> rl.isGuest()).findFirst().orElseThrow();
-		Race race = raceRepository.findById(doppelLineup.getRace().getId()).orElseThrow();
+		Race race = raceRepository.findById(dualRoleLineup.getRace().getId()).orElseThrow();
 
 		// when — aggregate twice (recompute-from-all-legs replaces, never accumulates)
 		scoringService.aggregateMatchScores(race);

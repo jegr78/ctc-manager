@@ -24,7 +24,7 @@ Per the no-red-commit rule, the 6 new unit tests and the implementation landed i
 - `calculateAlltimeRanking` (private): backfills `driverTeamMap` for result drivers missing from SeasonDriver via `raceLineupRepository.findByDriverId(...).findFirst().getParentOrSelf()` (D-04).
 - Removed the two legacy private helpers `resolveTeamFromLineup` + `attributeTeamFromRegularOrLineup` and the now-dead `PhaseTeamRepository` field + import.
 
-**New unit tests (6):** `givenDoppelrollenGuest...thenAttributedToHomeTeam`, `givenPureGuest...thenAttributedToFieldingTeam`, `givenDoppelrollenInAggregate...thenSingleRowUnderHomeTeam`, `givenPureGuestInAlltime...thenTeamNotNull`, `givenNormalRosterDriver...thenUnchangedTeam`, `givenDriverWithHomeAndGuestRace...thenSingleRowPointsSummed`.
+**New unit tests (6):** `givenDualRoleGuest...thenAttributedToHomeTeam`, `givenPureGuest...thenAttributedToFieldingTeam`, `givenDualRoleGuestInAggregate...thenSingleRowUnderHomeTeam`, `givenPureGuestInAlltime...thenTeamNotNull`, `givenNormalRosterDriver...thenUnchangedTeam`, `givenDriverWithHomeAndGuestRace...thenSingleRowPointsSummed`.
 
 ### Adjusted existing-test assertions/mocks (Mockito STRICT_STUBS)
 The unified path no longer calls `seasonPhaseService.findByType` or `phaseTeamRepository.findByPhaseId`, so those stubs became unnecessary (would trip STRICT_STUBS). Removed from:

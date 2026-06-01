@@ -11,7 +11,7 @@
 
 ### Locked Decisions
 
-- **D-01 (Doppelrolle):** A driver on roster Team A who guests for Team B is attributed in their personal ranking row to their **home team** (SeasonDriver team for that season). Normal roster drivers are unaffected.
+- **D-01 (dual role):** A driver on roster Team A who guests for Team B is attributed in their personal ranking row to their **home team** (SeasonDriver team for that season). Normal roster drivers are unaffected.
 - **D-02 (Pure guest):** A driver with no SeasonDriver in the season is attributed to the **fielding team via RaceLineup** (sub-team→parent rollup per `isDriverInTeam`). Never null.
 - **D-03 (Unified policy):** Home-first, fallback fielding — applied **uniformly** across all three ranking surfaces (`calculateRankingForPhase`, `aggregateAcrossPhases`, `calculateAlltimeRanking`). One shared attribution helper.
 - **D-04 (Alltime):** Guest race counts toward the cross-season alltime ranking. Close `team = null` gap in `calculateAlltimeRanking` by falling back to RaceLineup-resolved team for pure guests.
@@ -21,10 +21,10 @@
 - **D-08 (Counting threshold):** Any RaceResult row triggers credit — including 0-point / DNF-with-position. No-RaceResult means no credit.
 - **D-09 (Phase edge):** Season ranking merges races across all season phases — existing `aggregateAcrossPhases` behavior; keep it.
 - **D-10 (Live read-model — LOCKED):** No new persisted personal-points table. Live on-read computation only. Match scores (`Match.homeScore`/`awayScore`) remain the only persisted scoring artifact.
-- **D-11 (Test fixture):** Extend `TestDataService` / `TestHelper.createFullSeasonFixture` with doppelrollen guest + pure guest scenarios. Test-prefix isolation (`T-…`, `Test_…`, `Test-Season …`).
+- **D-11 (Test fixture):** Extend `TestDataService` / `TestHelper.createFullSeasonFixture` with dual-role guest + pure guest scenarios. Test-prefix isolation (`T-…`, `Test_…`, `Test-Season …`).
 - **D-12 (Demo seed):** Add guest example to `dev,demo` seed inside `TestDataService`/`DevDataSeeder`. `@Profile("dev")` only — never `local`/`prod`/`docker`.
 - **D-13:** SCORE-01 regression — guest result flows into fielding team's match score.
-- **D-14:** SCORE-02 regression — pure guest in season ranking with correct points + team; doppelrollen guest summed under home team.
+- **D-14:** SCORE-02 regression — pure guest in season ranking with correct points + team; dual-role guest summed under home team.
 - **D-15:** SCORE-03 regression — repeated saves idempotent; guest removal → clean disappearance.
 - **D-16:** Alltime + profile regression — guest in alltime ranking (team ≠ null); pure guest gets profile page.
 
@@ -57,7 +57,7 @@ Phase 114 is **verification + edge-case hardening + regression tests**, not a ne
 
 **What is genuinely broken (three gaps to close):**
 
-1. **Three divergent attribution helpers in `DriverRankingService`** — `calculateRankingForPhase` uses `resolveTeamFromLineup` (lineup-only, correct for a single race but misses the home-first rule for doppelrollen guests); `aggregateAcrossPhases` uses `attributeTeamFromRegularOrLineup` (partially correct — prefers REGULAR-phase team, but does not apply the home-first D-01 rule); `calculateAlltimeRanking` uses a SeasonDriver-only `driverTeamMap` — pure guests are absent from this map, so `driverTeamMap.get(id)` returns `null` and a pure guest's `DriverRanking` is created with `team = null`. These three paths need to be unified under one helper implementing D-01/D-02/D-03.
+1. **Three divergent attribution helpers in `DriverRankingService`** — `calculateRankingForPhase` uses `resolveTeamFromLineup` (lineup-only, correct for a single race but misses the home-first rule for dual-role guests); `aggregateAcrossPhases` uses `attributeTeamFromRegularOrLineup` (partially correct — prefers REGULAR-phase team, but does not apply the home-first D-01 rule); `calculateAlltimeRanking` uses a SeasonDriver-only `driverTeamMap` — pure guests are absent from this map, so `driverTeamMap.get(id)` returns `null` and a pure guest's `DriverRanking` is created with `team = null`. These three paths need to be unified under one helper implementing D-01/D-02/D-03.
 
 2. **`calculateAlltimeRanking` team = null gap (D-04)** — when a driver appears in `results` but has no `SeasonDriver`, `driverTeamMap.get(driverId)` returns `null` (via `orElse(null)`), causing `new DriverRanking(driver, null)`. The fix is to augment the team map with a RaceLineup-based fallback for drivers missing from SeasonDriver.
 
@@ -191,10 +191,10 @@ return raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driverId)
 | Driver Type | Today | After D-03 |
 |-------------|-------|------------|
 | Normal roster (Team A races for Team A) | Team A (from lineup) | Team A (unchanged) |
-| Doppelrollen (roster Team A, guesting Team B) | **Team B** (fielding team from lineup — wrong per D-01) | **Team A** (home team from SeasonDriver — correct) |
+| dual-role (roster Team A, guesting Team B) | **Team B** (fielding team from lineup — wrong per D-01) | **Team A** (home team from SeasonDriver — correct) |
 | Pure guest (no SeasonDriver) | Fielding team from lineup (correct per D-02, but no parent rollup today) | Fielding team via `getParentOrSelf()` |
 
-**Key issue:** `resolveTeamFromLineup` returns the raw lineup team without parent rollup AND without checking SeasonDriver for the home-first rule (D-01). For a doppelrollen guest, the per-phase ranking will show the *fielding* team, not the home team.
+**Key issue:** `resolveTeamFromLineup` returns the raw lineup team without parent rollup AND without checking SeasonDriver for the home-first rule (D-01). For a dual-role guest, the per-phase ranking will show the *fielding* team, not the home team.
 
 ---
 
@@ -226,10 +226,10 @@ return lineups.stream()
 | Driver Type | Today | After D-03 |
 |-------------|-------|------------|
 | Normal roster | REGULAR-phase lineup team (correct) | Unchanged |
-| Doppelrollen (roster Team A, guesting Team B) | **Team B** if only guest lineup exists, or **Team A** if regular-phase lineup team matches regularPhaseTeamIds (partially correct depending on context) | **Team A** (SeasonDriver home team, per D-01) |
+| dual-role (roster Team A, guesting Team B) | **Team B** if only guest lineup exists, or **Team A** if regular-phase lineup team matches regularPhaseTeamIds (partially correct depending on context) | **Team A** (SeasonDriver home team, per D-01) |
 | Pure guest (no SeasonDriver) | `lineups.get(0).getTeam()` — raw team, no parent rollup | Fielding team via `getParentOrSelf()` |
 
-**Key issue for doppelrollen:** `regularPhaseTeamIds` is built from `PhaseTeam` entries (teams enrolled in the REGULAR phase). A doppelrollen driver's regular roster team is in `regularPhaseTeamIds`; their guest team for the other team is also in `regularPhaseTeamIds`. The filter `regularPhaseTeamIds.contains(rl.getTeam().getId())` will match the *first* lineup for either team in REGULAR phase — this is not deterministic if the driver has both a roster lineup (Team A) and a guest lineup (Team B) in REGULAR. The home-first rule (check SeasonDriver explicitly) is not implemented.
+**Key issue for dual-role:** `regularPhaseTeamIds` is built from `PhaseTeam` entries (teams enrolled in the REGULAR phase). A dual-role driver's regular roster team is in `regularPhaseTeamIds`; their guest team for the other team is also in `regularPhaseTeamIds`. The filter `regularPhaseTeamIds.contains(rl.getTeam().getId())` will match the *first* lineup for either team in REGULAR phase — this is not deterministic if the driver has both a roster lineup (Team A) and a guest lineup (Team B) in REGULAR. The home-first rule (check SeasonDriver explicitly) is not implemented.
 
 ---
 
@@ -262,7 +262,7 @@ for (RaceResult result : results) {
 | Driver Type | Today | After D-04 |
 |-------------|-------|------------|
 | Normal roster | Most recent SeasonDriver team, `getParentOrSelf()` — correct | Unchanged |
-| Doppelrollen | Most recent SeasonDriver team (home team) — actually correct for alltime by accident, since SeasonDriver always records the home team | Unchanged (already correct) |
+| dual-role | Most recent SeasonDriver team (home team) — actually correct for alltime by accident, since SeasonDriver always records the home team | Unchanged (already correct) |
 | **Pure guest** (no SeasonDriver anywhere) | **`driverTeamMap.get(id)` returns `null`** → `new DriverRanking(driver, null)` | Fallback to RaceLineup-resolved team (most recent lineup's parent) |
 
 **The D-04 gap in precise code terms:** `driverTeamMap.get(id)` is `null` for any `driverId` not present in `allSeasonDrivers`. When the loop encounters such a driver's result, `computeIfAbsent` creates `new DriverRanking(driver, null)`. This null team propagates to the admin alltime standings and the public alltime page.
@@ -422,8 +422,8 @@ for (var driver : guestDrivers) {
 **What goes wrong:** The current flow calls `calculateRankingForPhase(phaseId)` which creates `DriverRanking` objects with phase-level team attribution. Then `aggregateAcrossPhases` discards those objects entirely and creates a new `DriverRanking` with season-level team. This is correct intentionally — the season-level aggregation uses `attributeTeamFromRegularOrLineup` for team, not the per-phase team. After unification, the season-level `DriverRanking` will use `resolveAttributedTeam(driver, seasonId, ...)`.
 **How to avoid:** Ensure the new helper is called in the `computeIfAbsent` lambda of `aggregateAcrossPhases`, not in `calculateRankingForPhase`.
 
-### Pitfall 4: Double-profile-page for doppelrollen driver
-**What goes wrong:** A doppelrollen driver is in `seasonDrivers` (has a SeasonDriver) and also in the lineup-only pass. Without dedup, their profile page is generated twice — the second write clobbers the first.
+### Pitfall 4: Double-profile-page for dual-role driver
+**What goes wrong:** A dual-role driver is in `seasonDrivers` (has a SeasonDriver) and also in the lineup-only pass. Without dedup, their profile page is generated twice — the second write clobbers the first.
 **How to avoid:** The `generatedDriverIds.add(driver.getId())` check in the second pass returns `false` for drivers already processed in the first pass. This is the existing dedup mechanism — reuse it exactly as specified in D-05.
 
 ### Pitfall 5: Alltime overload disambiguation
@@ -476,11 +476,11 @@ Add the following test cases to the existing file:
 
 | Test ID | Behavior (D-ref) | Mock setup | Assertion |
 |---------|-----------------|------------|-----------|
-| D-01/D-03 doppelrollen per-phase | `calculateRankingForPhase` attributes doppelrollen to SeasonDriver team | lineup has guest=true for Team B; SeasonDriver has Team A | ranking.getTeam() = Team A |
+| D-01/D-03 dual-role per-phase | `calculateRankingForPhase` attributes dual-role to SeasonDriver team | lineup has guest=true for Team B; SeasonDriver has Team A | ranking.getTeam() = Team A |
 | D-02/D-03 pure guest per-phase | `calculateRankingForPhase` attributes pure guest (no SeasonDriver) to fielding team | lineup has guest=true for Team B; no SeasonDriver | ranking.getTeam() = Team B (parent) |
-| D-03 doppelrollen aggregate | `aggregateAcrossPhases` attributes doppelrollen to home team across phases | lineup for guest race + SeasonDriver for home team | single DriverRanking row, team = home team |
+| D-03 dual-role aggregate | `aggregateAcrossPhases` attributes dual-role to home team across phases | lineup for guest race + SeasonDriver for home team | single DriverRanking row, team = home team |
 | D-04 alltime pure guest non-null | `calculateAlltimeRanking` — pure guest team ≠ null | results include pure guest; SeasonDrivers list does not include guest | ranking.getTeam() != null |
-| D-06 additive single row | doppelrollen: one row, points summed | two RaceResult rows for same driver, different races | one DriverRanking, racesCount = 2 |
+| D-06 additive single row | dual-role: one row, points summed | two RaceResult rows for same driver, different races | one DriverRanking, racesCount = 2 |
 
 ### Integration Tests (Spring context — @CtcDevSpringBootContext + @Tag("integration"))
 
@@ -529,12 +529,12 @@ The test requires a pure-guest driver in the test fixture for at least one seaso
 |--------|----------|-----------|-------------------|-------------|
 | SCORE-01 | Guest points counted in fielding team's match score | @SpringBootTest IT | `./mvnw -Dit.test=DriverRankingServiceGuestIT -DfailIfNoTests=false verify` | ❌ Wave 0 |
 | SCORE-02 | Pure guest in season driver-ranking with correct team | @SpringBootTest IT | same | ❌ Wave 0 |
-| SCORE-02 | Doppelrollen guest summed under home team | Unit + IT | `./mvnw -Dtest=DriverRankingServiceTest test` | ❌ new test methods needed |
+| SCORE-02 | dual-role guest summed under home team | Unit + IT | `./mvnw -Dtest=DriverRankingServiceTest test` | ❌ new test methods needed |
 | SCORE-03 | Idempotent double-save, no double-count | @SpringBootTest IT | same | ❌ Wave 0 |
 | SCORE-03 | Guest removal → clean score disappearance | @SpringBootTest IT | same | ❌ Wave 0 |
 | D-04 | Alltime ranking: pure guest team ≠ null | Unit + IT | `./mvnw -Dtest=DriverRankingServiceTest test` | ❌ new test methods needed |
 | D-05 | Pure guest gets driver-profile page | @SpringBootTest sitegen | `./mvnw -Dtest=DriverProfilePageGeneratorTest test` | ❌ new test method needed |
-| D-11 | Test fixture has doppelrollen + pure guest | Verified by above ITs passing | — | ❌ Wave 0 (TestDataService extension) |
+| D-11 | Test fixture has dual-role + pure guest | Verified by above ITs passing | — | ❌ Wave 0 (TestDataService extension) |
 
 ### Sampling Rate
 
@@ -545,9 +545,9 @@ The test requires a pure-guest driver in the test fixture for at least one seaso
 ### Wave 0 Gaps
 
 - [ ] `src/test/java/org/ctc/domain/service/DriverRankingServiceGuestIT.java` — covers SCORE-01/02/03 + D-04/D-16; create empty class with `@CtcDevSpringBootContext` + `@Tag("integration")` + four `@Test` skeletons
-- [ ] New test methods in `src/test/java/org/ctc/domain/service/DriverRankingServiceTest.java` — unit coverage for D-01/D-02/D-03 doppelrollen + pure guest
+- [ ] New test methods in `src/test/java/org/ctc/domain/service/DriverRankingServiceTest.java` — unit coverage for D-01/D-02/D-03 dual-role + pure guest
 - [ ] New test method in `src/test/java/org/ctc/sitegen/DriverProfilePageGeneratorTest.java` — covers D-05/D-16 profile page existence
-- [ ] `TestDataService.seedRaceLineups()` must gain guest fixture (doppelrollen + pure guest in `Test-Season 2026`) — prerequisite for all ITs above
+- [ ] `TestDataService.seedRaceLineups()` must gain guest fixture (dual-role + pure guest in `Test-Season 2026`) — prerequisite for all ITs above
 
 ---
 

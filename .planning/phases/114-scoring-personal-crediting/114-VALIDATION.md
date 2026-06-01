@@ -54,7 +54,7 @@ created: 2026-06-01
 
 ## Wave 0 Requirements
 
-- [x] Guest scenario in `TestDataService.seedRaceLineups` — doppelrollen guest (roster Team A + guest Team B) + pure guest (no SeasonDriver), `T-`/`Test_`/`Test-Season` prefixed, with RaceResults + aggregated match score (Plan 114-01 Task 1, D-11)
+- [x] Guest scenario in `TestDataService.seedRaceLineups` — dual-role guest (roster Team A + guest Team B) + pure guest (no SeasonDriver), `T-`/`Test_`/`Test-Season` prefixed, with RaceResults + aggregated match score (Plan 114-01 Task 1, D-11)
 - [x] `DevDataSeeder` (`@Profile("dev")`) verifies + logs the seeded guest example so `dev,demo` renders real guest data for `/gsd-auto-uat 114` and the Phase 115 visual reference (Plan 114-01 Task 2, D-12)
 - [x] `DriverRankingServiceGuestIT` with `@Tag("integration")` + four real regression tests (scaffold Plan 114-01 Task 3, bodies Plan 114-04)
 - [x] New unit test methods in `DriverRankingServiceTest` for D-01/D-02/D-03/D-04 (Plan 114-02 Task 2)

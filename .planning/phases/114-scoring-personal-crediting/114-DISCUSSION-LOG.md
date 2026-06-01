@@ -5,13 +5,13 @@
 
 **Date:** 2026-06-01
 **Phase:** 114-Scoring & Personal Crediting
-**Areas discussed:** Team-Zuordnung im Ranking, Alltime & Fahrer-Profil, Additiv & Doppelrolle, Idempotenz & Gast-Entfernen, Attribution-Konsistenz, 0-Punkte/DNF/n.a., Test-/Demo-Fixture
+**Areas discussed:** Team-Zuordnung im Ranking, Alltime & Fahrer-Profil, Additiv & dual role, Idempotenz & Gast-Entfernen, Attribution-Konsistenz, 0-Punkte/DNF/n.a., Test-/Demo-Fixture
 
 ---
 
 ## Team-Zuordnung im Ranking
 
-### Doppelrolle (Roster Team A + Gast Team B) — welches Team in der persönlichen Ranking-Zeile?
+### dual role (Roster Team A + Gast Team B) — welches Team in der persönlichen Ranking-Zeile?
 | Option | Description | Selected |
 |--------|-------------|----------|
 | Heimat-Team (Team A) | SeasonDriver-Team der Saison; deterministisch, intuitiv | ✓ |
@@ -46,7 +46,7 @@
 
 ---
 
-## Additiv & Doppelrolle
+## Additiv & dual role
 
 ### Gast-Race in racesCount/Ø/beste Position oder nur Gesamtpunkte?
 | Option | Description | Selected |
@@ -68,14 +68,14 @@
 | Option | Description | Selected |
 |--------|-------------|----------|
 | Live-Read-Modell beibehalten | Kein neues Table; idempotent by-design | ✓ |
-| Persistiertes Personal-Punkte-Modell | Migration + Doppelcount-Risiko | |
+| Persistiertes Personal-Punkte-Modell | Migration + DualRolecount-Risiko | |
 
 ### Test-Scope (Mehrfachauswahl)
 | Option | Description | Selected |
 |--------|-------------|----------|
 | SCORE-01: Gast-Punkte im Team-Score | IT inkl. Sub-Team→Parent | ✓ |
 | SCORE-02: reiner Gast (kein SeasonDriver) | Saison-Ranking + additiv | ✓ |
-| SCORE-03: Idempotenz & Mehrfach-Save | Kein Doppelcount; Gast-Entfernen | ✓ |
+| SCORE-03: Idempotenz & Mehrfach-Save | Kein DualRolecount; Gast-Entfernen | ✓ |
 | Alltime + Profilseite für Gast | Team≠null; Profilseite | ✓ |
 
 ---

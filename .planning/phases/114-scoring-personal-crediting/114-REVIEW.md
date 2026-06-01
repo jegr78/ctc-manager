@@ -31,7 +31,7 @@ resolved: 2026-06-01
 
 Phase 114 unifies driver→team attribution in `DriverRankingService` behind a single
 `resolveAttributedTeam` helper (home-first SeasonDriver → fallback fielding RaceLineup with
-parent rollup), adds an alltime null-team backfill, seeds a doppelrollen + pure-guest fixture
+parent rollup), adds an alltime null-team backfill, seeds a dual-role + pure-guest fixture
 with RaceResults + score aggregation in `TestDataService`, logs a guest-lineup count in
 `DevDataSeeder`, and emits driver-profile pages for lineup-only (pure-guest) drivers via a
 deduped second pass in `DriverProfilePageGenerator`.
@@ -119,7 +119,7 @@ per-race `RaceLineup` (`resolveTeamFromLineup`); it now routes through `resolveA
 which checks `SeasonDriver` **first**. A rostered driver who guests for another team in a race
 will now show under their HOME team in the per-phase ranking, where before it showed the fielding
 team. This is the intended D-01 policy and is covered by tests
-(`givenDoppelrollenGuest_whenCalculateRankingForPhase_thenAttributedToHomeTeam`), but it is a
+(`givenDualRoleGuest_whenCalculateRankingForPhase_thenAttributedToHomeTeam`), but it is a
 visible semantic change to a previously RaceLineup-only path — confirm consumers of per-phase
 rankings expect home-first attribution.
 **Fix:** None required if intended; noted for traceability. Ensure the per-phase standings UI/wiki

@@ -893,11 +893,11 @@ public class TestDataService {
 		raceLineupRepository.save(new RaceLineup(race2, tdb3, testBravo2));
 		raceLineupRepository.save(new RaceLineup(race2, tdb4, testBravo2));
 
-		var tdDoppel = driver("Test_Doppel_1", "Test Doppel Driver 1");
+		var tdDualRole = driver("Test_DualRole_1", "Test DualRole Driver 1");
 		var tdGuest = driver("Test_Guest_1", "Test Guest Driver 1");
 
-		seasonDriverRepository.save(new SeasonDriver(testSeason1, tdDoppel, testAlpha));
-		raceLineupRepository.save(new RaceLineup(race1, tdDoppel, testBravo1, true));
+		seasonDriverRepository.save(new SeasonDriver(testSeason1, tdDualRole, testAlpha));
+		raceLineupRepository.save(new RaceLineup(race1, tdDualRole, testBravo1, true));
 		raceLineupRepository.save(new RaceLineup(race2, tdGuest, testBravo2, true));
 
 		seedGuestRaceResults(race1, scorings.raceScoring(), List.of(
@@ -905,7 +905,7 @@ public class TestDataService {
 				new RaceResult(race1, tda2, 3, 3, false),
 				new RaceResult(race1, tdb1, 2, 2, false),
 				new RaceResult(race1, tdb2, 4, 4, false),
-				new RaceResult(race1, tdDoppel, 5, 5, false)));
+				new RaceResult(race1, tdDualRole, 5, 5, false)));
 		seedGuestRaceResults(race2, scorings.raceScoring(), List.of(
 				new RaceResult(race2, tda1, 1, 1, false),
 				new RaceResult(race2, tda2, 2, 2, false),

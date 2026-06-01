@@ -547,7 +547,7 @@ class DriverRankingServiceTest {
 	}
 
 	@Test
-	void givenDoppelrollenGuest_whenCalculateRankingForPhase_thenAttributedToHomeTeam() {
+	void givenDualRoleGuest_whenCalculateRankingForPhase_thenAttributedToHomeTeam() {
 		// given — driver rostered in homeTeam (SeasonDriver) but guests for guestTeam in this race
 		var rs = new RaceScoring("Guest-RS1", "20,15,10", "3,2,1", 2);
 		rs.setId(UUID.randomUUID());
@@ -613,8 +613,8 @@ class DriverRankingServiceTest {
 	}
 
 	@Test
-	void givenDoppelrollenInAggregate_whenAggregateAcrossPhases_thenSingleRowUnderHomeTeam() {
-		// given — doppelrollen guest across the season aggregate
+	void givenDualRoleGuestInAggregate_whenAggregateAcrossPhases_thenSingleRowUnderHomeTeam() {
+		// given — dual-role guest across the season aggregate
 		var rs = new RaceScoring("Guest-RS3", "20,15,10", "3,2,1", 2);
 		rs.setId(UUID.randomUUID());
 		var ms = new MatchScoring("Guest-MS3", 3, 1, 0);
