@@ -1,9 +1,9 @@
 package org.ctc.admin;
 
-import org.ctc.domain.model.RaceLineup;
-import org.ctc.domain.repository.RaceLineupRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.domain.model.RaceLineup;
+import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.sitegen.SiteGeneratorService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;

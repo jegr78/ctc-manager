@@ -133,14 +133,21 @@ public class DriverRankingService {
 								.map(sd -> sd.getTeam().getParentOrSelf())
 								.orElse(null)));
 
-		// Pure guests have no SeasonDriver row — backfill their team from any RaceLineup (parent rollup)
+		// Pure guests have no SeasonDriver row — backfill from their own in-scope fielding race
+		// (deterministic: smallest race id), with sub-team→parent rollup. Scoping to a race that
+		// is actually in `results` keeps the team in the same season set as the points.
+		Map<UUID, UUID> guestRaceByDriver = new LinkedHashMap<>();
 		for (RaceResult result : results) {
 			UUID driverId = result.getDriver().getId();
-			if (!driverTeamMap.containsKey(driverId)) {
-				raceLineupRepository.findByDriverId(driverId).stream().findFirst()
-						.ifPresent(rl -> driverTeamMap.put(driverId, rl.getTeam().getParentOrSelf()));
+			if (driverTeamMap.containsKey(driverId)) {
+				continue;
 			}
+			guestRaceByDriver.merge(driverId, result.getRace().getId(),
+					(existing, candidate) -> existing.compareTo(candidate) <= 0 ? existing : candidate);
 		}
+		guestRaceByDriver.forEach((driverId, raceId) ->
+				raceLineupRepository.findByRaceIdAndDriverId(raceId, driverId)
+						.ifPresent(rl -> driverTeamMap.put(driverId, rl.getTeam().getParentOrSelf())));
 
 		Map<UUID, DriverRanking> rankingMap = new LinkedHashMap<>();
 
@@ -185,8 +192,8 @@ public class DriverRankingService {
 			}
 		}
 		return raceLineupRepository.findByDriverIdAndRaceMatchdaySeasonId(driver.getId(), seasonId).stream()
-				.findFirst()
 				.map(rl -> rl.getTeam().getParentOrSelf())
+				.min(Comparator.comparing(Team::getId))
 				.orElse(null);
 	}
 

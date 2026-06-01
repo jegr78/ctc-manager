@@ -70,18 +70,20 @@ public class DriverProfilePageGenerator {
 
         // Second pass: pure guests appear only in a RaceLineup (no SeasonDriver row) and would
         // otherwise have no profile page. Deduped against the SeasonDriver pass via the same set.
-        var lineupOnlyDrivers = raceLineupRepository.findByRaceMatchdaySeasonId(season.getId()).stream()
-                .map(RaceLineup::getDriver)
-                .distinct()
-                .toList();
-        for (var driver : lineupOnlyDrivers) {
+        // The season lineups (team eager-loaded via @EntityGraph) are fetched once and reused to
+        // resolve each guest's team in-memory; the parent team is picked deterministically.
+        var seasonLineups = raceLineupRepository.findByRaceMatchdaySeasonId(season.getId());
+        Map<java.util.UUID, Team> guestTeamByDriver = new java.util.LinkedHashMap<>();
+        for (var rl : seasonLineups) {
+            Team parent = rl.getTeam().getParentOrSelf();
+            guestTeamByDriver.merge(rl.getDriver().getId(), parent,
+                    (a, b) -> a.getId().compareTo(b.getId()) <= 0 ? a : b);
+        }
+        for (var driver : seasonLineups.stream().map(RaceLineup::getDriver).distinct().toList()) {
             if (!generatedDriverIds.add(driver.getId())) {
                 continue;
             }
-            Team team = raceLineupRepository.findByDriverIdAndRaceMatchdaySeasonId(driver.getId(), season.getId()).stream()
-                    .findFirst()
-                    .map(rl -> rl.getTeam().getParentOrSelf())
-                    .orElse(null);
+            Team team = guestTeamByDriver.get(driver.getId());
             if (team == null) {
                 continue;
             }

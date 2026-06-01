@@ -16,7 +16,8 @@ findings:
   warning: 3
   info: 4
   total: 7
-status: issues_found
+status: resolved
+resolved: 2026-06-01
 ---
 
 # Phase 114: Code Review Report
@@ -158,6 +159,20 @@ OpenRewrite import-ordering recipe.
 
 ---
 
+## Resolution (2026-06-01)
+
+All findings fixed — nothing deferred. Re-verified with `./mvnw clean verify -Pe2e`: BUILD SUCCESS, all coverage checks met, all unit/IT/E2E green.
+
+| Finding | Resolution |
+|---------|------------|
+| **WR-01** | Alltime guest backfill (`DriverRankingService`) now resolves each pure guest from **their own in-scope race** (`findByRaceIdAndDriverId(result.getRace().getId(), driverId)`, smallest race id), replacing the unscoped `findByDriverId`. Team is now guaranteed in the same season set as the points. Unit test mock updated accordingly. |
+| **WR-02** | Determinism: the alltime backfill picks the guest's smallest-race-id lineup; the `resolveAttributedTeam` season-scoped fallback now uses `.min(Comparator.comparing(Team::getId))` instead of `findFirst()` over an unordered query. Both selections are now stable across DBs/runs. |
+| **WR-03** | Profile second pass builds a `Map<driverId, Team>` (deterministic min-parent-id) from the already eager-loaded `findByRaceMatchdaySeasonId` result, eliminating the per-guest `findByDriverIdAndRaceMatchdaySeasonId` team re-query. The bounded per-distinct-driver lookups in `resolveAttributedTeam` are correct and run only on OSIV batch paths (admin standings + site-gen), not a latency-critical request path. |
+| **IN-01 / IN-02** | Intended D-01/D-03 behavior (home-first + parent rollup), test-covered. No code change; confirmed correct. |
+| **IN-03** | Fixed: `DriverProfilePageGeneratorTest` renamed to `DriverProfilePageGeneratorIT` + `@Tag("integration")`. Verified it now executes under Failsafe (7 tests green) — surefire count dropped 1853→1846, confirming the move with no silent gap. |
+| **IN-04** | `DevDataSeeder` imports reordered (`lombok.*` before `org.ctc.*`). |
+
 _Reviewed: 2026-06-01_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+_Fixes applied + re-verified: 2026-06-01_

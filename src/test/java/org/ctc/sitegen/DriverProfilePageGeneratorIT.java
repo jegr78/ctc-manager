@@ -13,6 +13,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.ctc.testsupport.SitegenTestDir;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,8 +43,9 @@ import static org.mockito.BDDMockito.given;
  */
 @SpringBootTest
 @ActiveProfiles("dev")
+@Tag("integration")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class DriverProfilePageGeneratorTest {
+class DriverProfilePageGeneratorIT {
 
     private static final List<String> PER_PHASE_HEADINGS = List.of(
             "Regular Season Results", "Playoff Results", "Placement Phase Results");

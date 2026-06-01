@@ -655,7 +655,8 @@ class DriverRankingServiceTest {
 
 		when(raceResultRepository.findByRacePlayoffMatchupIsNull()).thenReturn(List.of(result));
 		when(seasonDriverRepository.findAll()).thenReturn(List.of());
-		when(raceLineupRepository.findByDriverId(levitius.getId())).thenReturn(List.of(lineup));
+		when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), levitius.getId()))
+				.thenReturn(java.util.Optional.of(lineup));
 
 		// when
 		var rankings = driverRankingService.calculateAlltimeRanking();
