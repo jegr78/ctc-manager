@@ -6,6 +6,8 @@ import java.nio.file.Path;
 import java.util.List;
 import javax.sql.DataSource;
 import org.ctc.admin.TestDataService;
+import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.sitegen.model.GenerationContext;
 import org.flywaydb.core.Flyway;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -19,6 +21,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -55,6 +58,9 @@ class DriverProfilePageGeneratorTest {
     @Autowired private SiteGeneratorService siteGeneratorService;
     @Autowired private TestDataService testDataService;
     @Autowired private DataSource dataSource;
+    @Autowired private DriverProfilePageGenerator driverProfilePageGenerator;
+    @Autowired private SeasonRepository seasonRepository;
+    @Autowired private SiteSlugger siteSlugger;
 
     @MockitoBean private YouTubeScraperService youTubeScraperService;
 
@@ -98,6 +104,31 @@ class DriverProfilePageGeneratorTest {
             assertThat(html).as("LEAGUE-only driver profile must not contain '%s'", heading)
                     .doesNotContain(heading);
         }
+    }
+
+    /**
+     * A pure guest — a driver who appears only in a RaceLineup for the season with no
+     * SeasonDriver row — must still get a public driver-profile page (D-05). Driven directly
+     * because the full SiteGeneratorService filters out "Test" seasons from the public site.
+     */
+    @Test
+    @Transactional(readOnly = true)
+    void givenPureGuestDriver_whenGenerate_thenProfilePageExists() throws IOException {
+        // given — Test-Season 2026 (year=2026, number=99) seeded with pure guest Test_Guest_1
+        var season = seasonRepository.findByYearAndNumber(2026, 99).getFirst();
+        var slug = siteSlugger.slugify(season.getDisplayLabel());
+        var ctx = new GenerationContext(tempDir, season, slug, season.getName(), false, null);
+        var result = new SiteGeneratorService.GenerationResult();
+
+        // when
+        driverProfilePageGenerator.generate(ctx, result);
+
+        // then — a profile page exists for the lineup-only guest
+        Path driverProfile = tempDir.resolve("season").resolve(slug)
+                .resolve("driver").resolve(siteSlugger.slugify("Test_Guest_1") + ".html");
+        assertThat(driverProfile).exists();
+        String html = Files.readString(driverProfile);
+        assertThat(html).contains("Test_Guest_1");
     }
 
     /**
