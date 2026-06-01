@@ -7,6 +7,7 @@ import static org.ctc.discord.DiscordPermissions.OVERWRITE_TYPE_ROLE;
 import static org.ctc.discord.DiscordPermissions.TEAM_MEMBER_ALLOW_MASK;
 import static org.ctc.discord.DiscordPermissions.TEAM_MEMBER_DENY_MASK;
 import static org.ctc.discord.DiscordPermissions.VIEW_CHANNEL;
+import static org.ctc.util.LogSanitizer.sanitize;
 import static org.springframework.util.StringUtils.hasText;
 
 import java.io.IOException;
@@ -160,7 +161,7 @@ public class DiscordChannelService {
 		matchRepository.save(match);
 		// No ChannelCreatedEvent: linking a prepared channel must not auto-post Team Cards
 		// (DiscordAutoPostListener.onChannelCreated does) — the operator uses the explicit button.
-		log.info("Discord channel linked to match {} → channelId={}", match.getId(), channelId);
+		log.info("Discord channel linked to match {} → channelId={}", match.getId(), sanitize(channelId));
 	}
 
 	private static String loadWebhookAvatar() {
