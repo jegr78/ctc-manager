@@ -93,6 +93,51 @@ class RaceLineupControllerTest {
 	}
 
 	@Test
+	void givenExistingGuest_whenReSavedToOtherTeam_thenMovesWithoutUniqueViolation() throws Exception {
+		// given — same driver already a guest on the home team
+		var guest = testHelper.createDriver("Test_lineup_guest_mv", "Test Lineup Guest Move");
+		raceLineupRepository.save(new RaceLineup(fixture.race(), guest, fixture.homeTeam(), true));
+
+		// when — re-save the same driver as a guest for the away team (delete + re-insert same race/driver)
+		mockMvc.perform(post("/admin/races/" + fixture.race().getId() + "/lineup")
+						.param("guest_" + guest.getId(), fixture.awayTeam().getId().toString()))
+				.andExpect(status().is3xxRedirection());
+
+		// then — exactly one guest entry, now on the away team, no constraint violation
+		var lineups = raceLineupRepository.findByRaceId(fixture.race().getId());
+		assertEquals(1, lineups.size());
+		assertTrue(lineups.get(0).isGuest());
+		assertEquals(fixture.awayTeam().getId(), lineups.get(0).getTeam().getId());
+	}
+
+	@Test
+	void givenMalformedGuestKey_whenSaveLineup_thenSkippedWithErrorAndNoCrash() throws Exception {
+		// when — a guest_ key whose driver segment is not a UUID
+		mockMvc.perform(post("/admin/races/" + fixture.race().getId() + "/lineup")
+						.param("guest_not-a-uuid", fixture.homeTeam().getId().toString()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(flash().attributeExists("errorMessage"));
+
+		// then — nothing persisted, no 500
+		assertEquals(0, raceLineupRepository.findByRaceId(fixture.race().getId()).size());
+	}
+
+	@Test
+	void givenGuestRowWithoutTeam_whenSaveLineup_thenReportedAsSkipped() throws Exception {
+		// given — a guest driver entered but no fielding team chosen (empty value)
+		var guest = testHelper.createDriver("Test_lineup_guest_nt", "Test Lineup Guest NoTeam");
+
+		// when
+		mockMvc.perform(post("/admin/races/" + fixture.race().getId() + "/lineup")
+						.param("guest_" + guest.getId(), ""))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(flash().attributeExists("errorMessage"));
+
+		// then — the guest was not silently persisted
+		assertEquals(0, raceLineupRepository.findByRaceId(fixture.race().getId()).size());
+	}
+
+	@Test
 	void givenTwoDriversAssigned_whenSaveLineup_thenRedirectsAndPersistsTwoEntries() throws Exception {
 		// given
 		var driver1 = testHelper.createDriver("Test_lineup_d1", "Test Lineup Driver 1");

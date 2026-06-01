@@ -2108,3 +2108,7 @@ a.season-header-title:hover {
 .guest-subteam {
     flex: 0 0 auto;
 }
+
+.guest-add-row {
+    margin-top: var(--space-sm, 0.5rem);
+}

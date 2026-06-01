@@ -49,22 +49,40 @@ public class RaceLineupController {
 	                         RedirectAttributes redirectAttributes) {
 		var rosterAssignments = new HashMap<UUID, UUID>();
 		var guestAssignments = new HashMap<UUID, UUID>();
+		int malformed = 0;
+		int skippedGuests = 0;
 		for (var entry : params.entrySet()) {
 			var key = entry.getKey();
-			if (!hasText(entry.getValue())) {
+			boolean isRoster = key.startsWith("driver_");
+			boolean isGuest = key.startsWith("guest_");
+			if (!isRoster && !isGuest) {
 				continue;
 			}
-			if (key.startsWith("driver_")) {
-				UUID driverId = UUID.fromString(key.substring("driver_".length()));
-				rosterAssignments.put(driverId, UUID.fromString(entry.getValue()));
-			} else if (key.startsWith("guest_")) {
-				UUID driverId = UUID.fromString(key.substring("guest_".length()));
-				guestAssignments.put(driverId, UUID.fromString(entry.getValue()));
+			if (!hasText(entry.getValue())) {
+				if (isGuest) {
+					skippedGuests++;
+				}
+				continue;
+			}
+			try {
+				var prefix = isRoster ? "driver_" : "guest_";
+				UUID driverId = UUID.fromString(key.substring(prefix.length()));
+				UUID teamId = UUID.fromString(entry.getValue());
+				(isRoster ? rosterAssignments : guestAssignments).put(driverId, teamId);
+			} catch (IllegalArgumentException ex) {
+				malformed++;
 			}
 		}
 
 		int count = raceLineupService.saveLineup(raceId, rosterAssignments, guestAssignments);
 		redirectAttributes.addFlashAttribute("successMessage", "Lineup saved: " + count + " drivers assigned");
+		if (skippedGuests > 0) {
+			redirectAttributes.addFlashAttribute("errorMessage",
+					skippedGuests + " guest row(s) skipped — no team selected");
+		} else if (malformed > 0) {
+			redirectAttributes.addFlashAttribute("errorMessage",
+					malformed + " entr(y/ies) skipped — invalid id");
+		}
 		return "redirect:/admin/races/" + raceId + "/lineup";
 	}
 }

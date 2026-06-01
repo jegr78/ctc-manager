@@ -100,6 +100,14 @@ public class RaceLineupService {
 			throw new BusinessRuleException("Driver already assigned as roster driver");
 		}
 
+		if (!guestAssignments.isEmpty()) {
+			var validTeamIds = validFieldingTeamIds(race);
+			boolean invalidTeam = guestAssignments.values().stream().anyMatch(teamId -> !validTeamIds.contains(teamId));
+			if (invalidTeam) {
+				throw new BusinessRuleException("Guest team is not one of the race's participating teams");
+			}
+		}
+
 		var existing = raceLineupRepository.findByRaceId(raceId);
 		var priorGuestTeams = existing.stream()
 				.filter(RaceLineup::isGuest)
@@ -112,6 +120,7 @@ public class RaceLineupService {
 						&& !entry.getValue().equals(priorGuestTeams.get(entry.getKey())));
 
 		raceLineupRepository.deleteAll(existing);
+		raceLineupRepository.flush();
 
 		int count = 0;
 		for (var entry : rosterAssignments.entrySet()) {
@@ -141,6 +150,22 @@ public class RaceLineupService {
 
 		log.info("Saved {} lineup entries for race {}", count, raceId);
 		return count;
+	}
+
+	private Set<UUID> validFieldingTeamIds(Race race) {
+		var seasonTeams = race.getMatchday().getSeason().getTeams();
+		var validIds = new HashSet<UUID>();
+		Stream.of(race.getHomeTeam(), race.getAwayTeam())
+				.filter(Objects::nonNull)
+				.forEach(team -> {
+					var parentId = team.getParentOrSelf().getId();
+					validIds.add(team.getId());
+					validIds.add(parentId);
+					seasonTeams.stream()
+							.filter(seasonTeam -> seasonTeam.getParentOrSelf().getId().equals(parentId))
+							.forEach(seasonTeam -> validIds.add(seasonTeam.getId()));
+				});
+		return validIds;
 	}
 
 	public record LineupTeamEntry(Team team, List<SeasonDriver> drivers, List<Team> subTeams, boolean hasSubTeams) {

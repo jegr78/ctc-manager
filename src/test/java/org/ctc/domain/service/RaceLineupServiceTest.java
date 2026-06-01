@@ -242,12 +242,13 @@ class RaceLineupServiceTest {
 		var guestDriverId = UUID.randomUUID();
 		var teamId = UUID.randomUUID();
 
-		var race = new Race();
-		race.setId(raceId);
 		var driver = new Driver();
 		driver.setId(guestDriverId);
 		var team = new Team();
 		team.setId(teamId);
+		var awayTeam = new Team();
+		awayTeam.setId(UUID.randomUUID());
+		var race = raceWithTeams(raceId, team, awayTeam);
 
 		when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
 		when(raceLineupRepository.findByRaceId(raceId)).thenReturn(List.of());
@@ -331,12 +332,13 @@ class RaceLineupServiceTest {
 		var guestId = UUID.randomUUID();
 		var teamId = UUID.randomUUID();
 
-		var race = new Race();
-		race.setId(raceId);
 		var driver = new Driver();
 		driver.setId(guestId);
 		var team = new Team();
 		team.setId(teamId);
+		var awayTeam = new Team();
+		awayTeam.setId(UUID.randomUUID());
+		var race = raceWithTeams(raceId, team, awayTeam);
 		var existingGuest = new RaceLineup(race, driver, team, true);
 
 		when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
@@ -360,14 +362,13 @@ class RaceLineupServiceTest {
 		var oldTeamId = UUID.randomUUID();
 		var newTeamId = UUID.randomUUID();
 
-		var race = new Race();
-		race.setId(raceId);
 		var driver = new Driver();
 		driver.setId(guestId);
 		var oldTeam = new Team();
 		oldTeam.setId(oldTeamId);
 		var newTeam = new Team();
 		newTeam.setId(newTeamId);
+		var race = raceWithTeams(raceId, oldTeam, newTeam);
 		var existingGuest = new RaceLineup(race, driver, oldTeam, true);
 
 		when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
@@ -381,6 +382,38 @@ class RaceLineupServiceTest {
 
 		// then
 		verify(scoringService).aggregateMatchScores(race);
+	}
+
+	@Test
+	void givenGuestTeamNotInRace_whenSaveLineup_thenThrowsBusinessRule() {
+		// given — a guest assigned to a team that is neither home nor away
+		var raceId = UUID.randomUUID();
+		var guestId = UUID.randomUUID();
+		var homeTeam = new Team();
+		homeTeam.setId(UUID.randomUUID());
+		var awayTeam = new Team();
+		awayTeam.setId(UUID.randomUUID());
+		var foreignTeamId = UUID.randomUUID();
+		var race = raceWithTeams(raceId, homeTeam, awayTeam);
+
+		when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
+
+		// when / then
+		assertThatThrownBy(() -> service.saveLineup(raceId, Map.of(), Map.of(guestId, foreignTeamId)))
+				.isInstanceOf(BusinessRuleException.class);
+		verify(raceLineupRepository, org.mockito.Mockito.never()).deleteAll(any());
+	}
+
+	private Race raceWithTeams(UUID raceId, Team homeTeam, Team awayTeam) {
+		var season = new Season("Test_GuestSvc");
+		season.setId(UUID.randomUUID());
+		var matchday = PhaseTestFixtures.matchdayInRegularPhase(season, "MD", 1);
+		var match = new Match(matchday, homeTeam, awayTeam);
+		var race = new Race();
+		race.setId(raceId);
+		race.setMatchday(matchday);
+		race.setMatch(match);
+		return race;
 	}
 
 	@Test

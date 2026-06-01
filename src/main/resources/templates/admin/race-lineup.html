@@ -50,7 +50,7 @@
                             <input type="checkbox"
                                    th:name="'driver_' + ${sd.driver.id}"
                                    th:value="${entry.team.id}"
-                                   th:checked="${driverAssignments.containsKey(sd.driver.id)}">
+                                   th:checked="${driverAssignments.get(sd.driver.id) == entry.team.id}">
                         </td>
                     </tr>
                 </tbody>
@@ -75,7 +75,6 @@
                     <input type="text" class="guest-driver-input" list="guestDriverList">
                     <input type="hidden" class="guest-driver-id" name="">
                     <select th:if="${entry.hasSubTeams}" class="guest-subteam">
-                        <option value="">-- Select sub-team --</option>
                         <option th:each="sub : ${entry.subTeams}"
                                 th:value="${sub.id}" th:text="${sub.shortName}"></option>
                     </select>
