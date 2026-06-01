@@ -10,8 +10,10 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Race;
+import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.RaceResult;
 import org.ctc.domain.model.Team;
+import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.service.ScoringService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,14 +29,17 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 	private static final String CUSTOM_TEMPLATE_FILE = "provisional-scores-template.html";
 
 	private final ScoringService scoringService;
+	private final RaceLineupRepository raceLineupRepository;
 	private final PlaywrightScreenshotter screenshotter;
 
 	public ProvisionalScoresGraphicService(TemplateEngine templateEngine,
 	                                       ScoringService scoringService,
+	                                       RaceLineupRepository raceLineupRepository,
 	                                       @Value("${app.upload-dir:uploads}") String uploadDir,
 	                                       PlaywrightScreenshotter screenshotter) {
 		super(templateEngine, uploadDir);
 		this.scoringService = scoringService;
+		this.raceLineupRepository = raceLineupRepository;
 		this.screenshotter = screenshotter;
 	}
 
@@ -68,7 +73,9 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 		List<ProvisionalRow> homeRows = new ArrayList<>();
 		List<ProvisionalRow> awayRows = new ArrayList<>();
 		for (RaceResult result : race.getResults()) {
-			ProvisionalRow row = toRow(result);
+			boolean isGuest = raceLineupRepository.findByRaceIdAndDriverId(raceId, result.getDriver().getId())
+					.map(RaceLineup::isGuest).orElse(false);
+			ProvisionalRow row = toRow(result, isGuest);
 			if (scoringService.isDriverInTeam(result, raceId, homeTeamId)) {
 				homeRows.add(row);
 			} else {
@@ -131,10 +138,10 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 	}
 
 	private ProvisionalRow emptyRow() {
-		return new ProvisionalRow("n/a", 0, 0, false, 0, 0, 0, 0);
+		return new ProvisionalRow("n/a", 0, 0, false, 0, 0, 0, 0, false);
 	}
 
-	private ProvisionalRow toRow(RaceResult result) {
+	private ProvisionalRow toRow(RaceResult result, boolean isGuest) {
 		String driverName = result.getDriver() != null ? result.getDriver().getPsnId() : "?";
 		return new ProvisionalRow(
 				driverName,
@@ -144,7 +151,8 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 				result.getPointsRace(),
 				result.getPointsQuali(),
 				result.getPointsFl(),
-				result.getPointsTotal());
+				result.getPointsTotal(),
+				isGuest);
 	}
 
 	private String renderTemplate(Context ctx) throws IOException {
@@ -187,6 +195,6 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 	}
 
 	public record ProvisionalRow(String driverName, int position, int qualiPosition, boolean fastestLap,
-	                              int ptsRace, int ptsQuali, int ptsFl, int total) {
+	                              int ptsRace, int ptsQuali, int ptsFl, int total, boolean isGuest) {
 	}
 }

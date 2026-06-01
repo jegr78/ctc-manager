@@ -80,6 +80,7 @@
         .fl-marker { color: #f5c542; font-size: 20px; }
 
         .provisional-table tr.empty-slot td { color: #5f5f68; }
+        .guest-marker { color: #f59e0b; font-size: 0.85em; margin-right: 4px; vertical-align: middle; }
 
         /* Race-Chip rechts unten — nur bei mehr als einem Rennen (Service setzt raceLabel sonst null) */
         .race-chip { position: absolute; right: 50px; bottom: 12px; font-size: 19px; font-weight: 700;
@@ -129,7 +130,10 @@
                     </thead>
                     <tbody>
                         <tr th:each="row : ${homeRows}" th:classappend="${row.driverName == 'n/a'} ? 'empty-slot' : ''">
-                            <td class="col-driver" th:text="${row.driverName}"></td>
+                            <td class="col-driver">
+                                <span class="guest-marker" th:if="${row.isGuest}" aria-label="Guest driver">&#x2605;</span>
+                                <span th:text="${row.driverName}"></span>
+                            </td>
                             <td th:text="${row.position}"></td>
                             <td th:text="${row.qualiPosition}"></td>
                             <td><span class="fl-marker" th:if="${row.fastestLap}">FL</span></td>
@@ -174,7 +178,10 @@
                     </thead>
                     <tbody>
                         <tr th:each="row : ${awayRows}" th:classappend="${row.driverName == 'n/a'} ? 'empty-slot' : ''">
-                            <td class="col-driver" th:text="${row.driverName}"></td>
+                            <td class="col-driver">
+                                <span class="guest-marker" th:if="${row.isGuest}" aria-label="Guest driver">&#x2605;</span>
+                                <span th:text="${row.driverName}"></span>
+                            </td>
                             <td th:text="${row.position}"></td>
                             <td th:text="${row.qualiPosition}"></td>
                             <td><span class="fl-marker" th:if="${row.fastestLap}">FL</span></td>
