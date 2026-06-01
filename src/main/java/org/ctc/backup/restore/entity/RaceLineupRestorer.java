@@ -14,8 +14,8 @@ import org.springframework.stereotype.Component;
  * Restores rows into the {@code race_lineups} table from the
  * {@code data/race-lineups.json} array in a backup ZIP.
  *
- * <p>Schema (V1): {@code id UUID PK, race_id UUID NOT NULL, driver_id UUID NOT NULL,
- * team_id UUID NOT NULL, created_at TIMESTAMP, updated_at TIMESTAMP}.
+ * <p>Schema (V1/V18): {@code id UUID PK, race_id UUID NOT NULL, driver_id UUID NOT NULL,
+ * team_id UUID NOT NULL, is_guest BOOLEAN NOT NULL, created_at TIMESTAMP, updated_at TIMESTAMP}.
  *
  * <p>Operationally critical: {@code RaceLineup} is the source-of-truth for driver-team
  * assignments. The setter MUST preserve every row's {@code race_id} / {@code driver_id} /
@@ -30,9 +30,9 @@ import org.springframework.stereotype.Component;
 public class RaceLineupRestorer implements EntityRestorer {
 
     private static final String INSERT_SQL =
-            "INSERT INTO race_lineups (id, race_id, driver_id, team_id, "
+            "INSERT INTO race_lineups (id, race_id, driver_id, team_id, is_guest, "
           + "created_at, updated_at) "
-          + "VALUES (?, ?, ?, ?, ?, ?)";
+          + "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
     @Override
     public String tableName() {
@@ -46,8 +46,9 @@ public class RaceLineupRestorer implements EntityRestorer {
             ps.setObject(2, UUID.fromString(row.get("race").asText()));
             ps.setObject(3, UUID.fromString(row.get("driver").asText()));
             ps.setObject(4, UUID.fromString(row.get("team").asText()));
-            ps.setTimestamp(5, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
-            ps.setTimestamp(6, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
+            ps.setBoolean(5, row.path("guest").asBoolean(false));
+            ps.setTimestamp(6, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
+            ps.setTimestamp(7, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
         });
         log.debug("RaceLineupRestorer: restored {} rows", rows.size());
     }
