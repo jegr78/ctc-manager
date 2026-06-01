@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.17
 milestone_name: Guest Drivers
-status: executing
-stopped_at: Phase 114 complete — all gates passed (review, UAT, secure, validate)
-last_updated: "2026-06-01T18:25:00.000Z"
-last_activity: 2026-06-01 -- Phase 114 closed (review+UAT+secure+validate green); Phase 115 next
+status: Phase 114 closed — review✓ UAT✓ secure✓ validate✓ (Nyquist-compliant). Phase 115 next.
+stopped_at: Phase 115 context gathered
+last_updated: "2026-06-01T16:36:54.782Z"
+last_activity: 2026-06-01 -- Phase 114 fully closed; ready for /gsd-discuss-phase 115
 progress:
   total_phases: 3
   completed_phases: 2
@@ -93,9 +93,9 @@ Carried forward from v1.13/v1.14/v1.15 close (unchanged):
 
 ## Session Continuity
 
-**Last session:** 2026-06-01T13:15:04.221Z
+**Last session:** 2026-06-01T16:36:54.749Z
 
-**Stopped at:** Phase 114 context gathered
+**Stopped at:** Phase 115 context gathered
 
 **Next action:** `/gsd-discuss-phase 113` on branch `gsd/v1.17-guest-drivers`.
 
