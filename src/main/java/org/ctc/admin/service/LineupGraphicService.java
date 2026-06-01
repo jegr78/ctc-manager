@@ -128,20 +128,20 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 	List<DriverPairing> buildPairings(List<RaceLineup> lineups, Team homeTeam, Team awayTeam) {
 		var homeEntries = lineups.stream()
 				.filter(lu -> isTeamOrSubTeam(lu.getTeam(), homeTeam))
-				.map(RaceLineup::getDriver)
 				.toList();
 		var awayEntries = lineups.stream()
 				.filter(lu -> isTeamOrSubTeam(lu.getTeam(), awayTeam))
-				.map(RaceLineup::getDriver)
 				.toList();
 
 		var pairings = new ArrayList<DriverPairing>();
 		for (int i = 0; i < TEAM_DRIVERS; i++) {
-			String homePsn = i < homeEntries.size() ? homeEntries.get(i).getPsnId() : "n/a";
-			String homeNick = i < homeEntries.size() ? resolveNickname(homeEntries.get(i)) : "";
-			String awayPsn = i < awayEntries.size() ? awayEntries.get(i).getPsnId() : "n/a";
-			String awayNick = i < awayEntries.size() ? resolveNickname(awayEntries.get(i)) : "";
-			pairings.add(new DriverPairing(homePsn, homeNick, awayPsn, awayNick));
+			String homePsn = i < homeEntries.size() ? homeEntries.get(i).getDriver().getPsnId() : "n/a";
+			String homeNick = i < homeEntries.size() ? resolveNickname(homeEntries.get(i).getDriver()) : "";
+			boolean homeIsGuest = i < homeEntries.size() && homeEntries.get(i).isGuest();
+			String awayPsn = i < awayEntries.size() ? awayEntries.get(i).getDriver().getPsnId() : "n/a";
+			String awayNick = i < awayEntries.size() ? resolveNickname(awayEntries.get(i).getDriver()) : "";
+			boolean awayIsGuest = i < awayEntries.size() && awayEntries.get(i).isGuest();
+			pairings.add(new DriverPairing(homePsn, homeNick, awayPsn, awayNick, homeIsGuest, awayIsGuest));
 		}
 		return pairings;
 	}
@@ -197,6 +197,7 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 		return Files.exists(uploadDir.resolve(CUSTOM_TEMPLATE_FILE));
 	}
 
-	public record DriverPairing(String homeDriver, String homeNickname, String awayDriver, String awayNickname) {
+	public record DriverPairing(String homeDriver, String homeNickname, String awayDriver, String awayNickname,
+	                            boolean homeIsGuest, boolean awayIsGuest) {
 	}
 }
