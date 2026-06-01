@@ -26,6 +26,7 @@ a, label[for], [role="button"] { cursor: pointer; }
     --accent-glow: rgba(79, 195, 247, 0.15);
     --radius-sm: 6px;
     --radius-md: 8px;
+    --guest: #f59e0b;
 }
 
 body {
@@ -1086,4 +1087,19 @@ a.season-tag:hover {
     .group-tab-row-inner { height: auto; padding: 8px 0; flex-wrap: nowrap; }
 
     .empty-phase-banner { padding: 16px; }
+}
+
+.guest-marker {
+    color: var(--guest);
+    font-size: 12px;
+    margin-right: 4px;
+    vertical-align: middle;
+    line-height: 1;
+}
+
+.guest-label {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-dim);
+    margin-left: 4px;
 }
