@@ -109,7 +109,7 @@ class RaceControllerCalendarTest {
 
 	private RaceDetailData detailData(boolean calendarAvailable, boolean hasCalendarEvent, boolean canCreateCalendarEvent) {
 		return new RaceDetailData(
-				homeAwayRace(), 0, 0, Map.of(),
+				homeAwayRace(), 0, 0, Map.of(), Map.of(),
 				false, false, false, false,
 				false, false, false,
 				false, false, false,
