@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.17
 milestone_name: Guest Drivers
 status: executing
-stopped_at: Phase 114 executed — all 4 plans green, clean verify -Pe2e passed
-last_updated: "2026-06-01T17:00:00.000Z"
-last_activity: 2026-06-01 -- Phase 114 execution complete (4/4 plans, verify -Pe2e green)
+stopped_at: Phase 114 complete — all gates passed (review, UAT, secure, validate)
+last_updated: "2026-06-01T18:25:00.000Z"
+last_activity: 2026-06-01 -- Phase 114 closed (review+UAT+secure+validate green); Phase 115 next
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
   completed_plans: 7
   percent: 67
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-05-31 after v1.15 milestone close)
 
 ## Current Position
 
-Phase: 114
-Plan: 114-01..04 all executed
-Status: Executed — pending code-review → verify-work → validate-phase
-Last activity: 2026-06-01 -- Phase 114 execution complete (4/4 plans, clean verify -Pe2e green, ≥82% coverage)
+Phase: 114 → 115
+Plan: Phase 114 complete (4/4 plans + all gates); Phase 115 not started
+Status: Phase 114 closed — review✓ UAT✓ secure✓ validate✓ (Nyquist-compliant). Phase 115 next.
+Last activity: 2026-06-01 -- Phase 114 fully closed; ready for /gsd-discuss-phase 115
 
 ## Shipped Milestone
 
