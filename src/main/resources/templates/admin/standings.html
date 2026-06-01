@@ -127,7 +127,10 @@
                 <tbody>
                     <tr th:each="ranking, iter : ${driverRanking}" class="data-row">
                         <td th:text="${iter.count}"></td>
-                        <td><strong th:text="${ranking.driver.psnId}"></strong></td>
+                        <td>
+                            <span class="guest-marker" th:if="${ranking.hasGuestAppearance}" aria-label="Guest driver">&#x2605;</span>
+                            <strong th:text="${ranking.driver.psnId}"></strong>
+                        </td>
                         <td th:text="${ranking.team != null ? ranking.team.shortName : '-'}"></td>
                         <td th:text="${ranking.racesCount}"></td>
                         <td th:text="${ranking.bestPosition}"></td>
