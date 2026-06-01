@@ -1,8 +1,9 @@
 ---
 phase: 113-guest-assignment-foundation
 verified: 2026-06-01T16:00:00Z
-status: human_needed
+status: passed
 score: 4/4 must-haves verified
+human_verification_status: auto-verified 2026-06-01 via playwright-cli — see 113-AUTO-UAT.md (4/4 passed)
 overrides_applied: 0
 human_verification:
   - test: "Open /admin/races/{raceId}/lineup in a browser for a race with no sub-teams. Type a partial PSN ID in the Add-Guest datalist input. Verify the dropdown filters to matching drivers, select one, and confirm the hidden guest_ field name resolves to guest_<driverUUID>."
