@@ -255,7 +255,11 @@ See: milestones/v1.15-ROADMAP.md for full details
   1. After result save, the fielding team's match score and standings reflect the guest driver's earned points — computed through the existing `ScoringService.aggregateMatchScores(race)` aggregation with no separate points model
   2. The guest driver appears in the season's driver-ranking with points earned across all races where they were a guest (additive to their own team races), even when the driver has no `SeasonDriver` entry in that season
   3. Saving race results multiple times does not double-count guest points in either the team score or the personal driver-ranking (idempotent crediting handled in the service layer, no template/controller fallback)
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 114-01-PLAN.md — Wave-0 foundation: guest fixture (doppelrollen + pure guest) in TestDataService seed + RaceResults + DriverRankingServiceGuestIT scaffold (D-11, D-12)
+- [ ] 114-02-PLAN.md — Unified attribution helper (home-first/fallback-fielding) across all three ranking paths + alltime null-team gap close + audit-all-callers (D-01..D-04, SCORE-02)
+- [ ] 114-03-PLAN.md — DriverProfilePageGenerator pure-guest second pass: page-existence hook only, no visual marking (D-05, SCORE-02)
+- [ ] 114-04-PLAN.md — Regression IT suite: SCORE-01/02/03 + alltime/profile via real H2 round-trip (D-13..D-16)
 
 ### Phase 115: Guest Marking & Visibility
 **Goal**: Guest drivers are visually marked across all relevant surfaces — graphics, admin views, and public site — so operators and viewers can identify guest appearances at a glance; the exact visual treatment is chosen against a rendered reference
@@ -275,7 +279,7 @@ See: milestones/v1.15-ROADMAP.md for full details
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 113. Guest Assignment Foundation | 3/3 | Complete    | 2026-06-01 |
-| 114. Scoring & Personal Crediting | 0/TBD | Not started | - |
+| 114. Scoring & Personal Crediting | 0/4 | Planned | - |
 | 115. Guest Marking & Visibility | 0/TBD | Not started | - |
 
 ---
