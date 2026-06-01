@@ -23,6 +23,20 @@ findings:
   info: 4
   total: 10
 status: issues_found
+triage:
+  resolved:
+    - "CR-01 — fixed in 8ff7468c: re-aggregate when a kept guest's team_id changes (+ regression test)"
+    - "IN-01 — fixed in 8ff7468c: trimmed restated schema/convention Javadoc from RaceLineupRestorer + test"
+  accepted_no_action:
+    - "WR-01 — pre-existing delete-all+recreate pattern (verbatim from pre-phase saveLineup; ships in prod for roster re-edits). Not a 113 regression; tracked as pre-existing tech-debt to verify separately."
+    - "WR-04 — explicitly accepted in the plan threat model (T-113-06): malformed UUID → existing global exception handler, identical to driver_* parsing."
+    - "IN-03 — PSN ids are effectively unique; low priority."
+    - "IN-04 — pre-existing roster-checkbox template line, not changed by this phase."
+  open_decision:
+    - "WR-02 — off-roster guest enforcement (product/scope decision)"
+    - "WR-03 — server-side guest team-scope validation per D-07 (integrity/authz hardening)"
+    - "WR-05 — guest with unselected sub-team silently dropped + misleading success count (UX)"
+    - "IN-02 — guest-add-row spacing (Phase 115 visual polish)"
 ---
 
 # Phase 113: Code Review Report
