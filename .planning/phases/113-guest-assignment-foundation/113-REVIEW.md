@@ -22,21 +22,21 @@ findings:
   warning: 5
   info: 4
   total: 10
-status: issues_found
+status: resolved
 triage:
   resolved:
     - "CR-01 — fixed in 8ff7468c: re-aggregate when a kept guest's team_id changes (+ regression test)"
     - "IN-01 — fixed in 8ff7468c: trimmed restated schema/convention Javadoc from RaceLineupRestorer + test"
+    - "WR-01 — fixed: raceLineupRepository.flush() after deleteAll forces delete-before-insert ordering; IT givenExistingGuest_whenReSavedToOtherTeam proves same-driver re-insert (home→away) does not violate uk_race_lineup_driver"
+    - "WR-03 — fixed: validFieldingTeamIds(race) rejects guest team ids that are not the race's home/away (sub-)teams per D-07 (BusinessRuleException); + unit test givenGuestTeamNotInRace"
+    - "WR-04 — fixed: controller guards UUID.fromString in try/catch, skips malformed entries and surfaces an errorMessage flash (no raw 500); + IT givenMalformedGuestKey"
+    - "WR-05 — fixed: blank guest row's sub-team select defaults to the first sub-team (no silent-drop path); controller counts guest rows submitted without a team and reports them via errorMessage; + IT givenGuestRowWithoutTeam"
+    - "IN-02 — fixed: appended .guest-add-row { margin-top } to admin.css"
+    - "IN-04 — fixed: roster checkbox th:checked now compares the assigned team id (== entry.team.id), matching the sub-team th:selected idiom"
   accepted_no_action:
-    - "WR-01 — pre-existing delete-all+recreate pattern (verbatim from pre-phase saveLineup; ships in prod for roster re-edits). Not a 113 regression; tracked as pre-existing tech-debt to verify separately."
-    - "WR-04 — explicitly accepted in the plan threat model (T-113-06): malformed UUID → existing global exception handler, identical to driver_* parsing."
-    - "IN-03 — PSN ids are effectively unique; low priority."
-    - "IN-04 — pre-existing roster-checkbox template line, not changed by this phase."
-  open_decision:
-    - "WR-02 — off-roster guest enforcement (product/scope decision)"
-    - "WR-03 — server-side guest team-scope validation per D-07 (integrity/authz hardening)"
-    - "WR-05 — guest with unselected sub-team silently dropped + misleading success count (UX)"
-    - "IN-02 — guest-add-row spacing (Phase 115 visual polish)"
+    - "WR-02 — NOT enforced by design: CONTEXT domain states a guest is 'any existing driver in the system (not restricted to the season roster)'. Rejecting season-roster drivers as guests would regress that locked decision (a roster member of team A legitimately guesting for team B). The only unambiguous bad state (same driver twice in one race) is already prevented by the roster/guest dedup check + the V1 uk_race_lineup_driver UNIQUE constraint. Reopen only if the product rule changes."
+    - "IN-03 — PSN ids are effectively unique; resolveDriverId display-string match accepted as low priority."
+status_note: "All 1 critical + 5 warnings resolved; WR-02 accepted by-design (domain conflict). Re-run gate after fixes: clean verify -Pe2e BUILD SUCCESS (coverage met, SpotBugs 0)."
 ---
 
 # Phase 113: Code Review Report
