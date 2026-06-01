@@ -242,7 +242,10 @@ See: milestones/v1.15-ROADMAP.md for full details
   2. Admin can record a finishing position/result for the guest driver under the fielding team
   3. Admin can edit or remove an existing guest-driver assignment from a lineup or result
   4. The database persistently stores whether a lineup/result entry is a guest assignment, independent of season-roster membership (Flyway migration, H2 + MariaDB compatible, V1-V17 untouched)
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 113-01-PLAN.md — Data-model foundation: Flyway V18 is_guest column + RaceLineup entity field + backup restorer round-trip (GUEST-04)
+- [ ] 113-02-PLAN.md — Service layer: saveLineup guest overload + dedup + guest-removal result cascade + getGuestLineups/roster filter; results auto-derive (GUEST-02, GUEST-03)
+- [ ] 113-03-PLAN.md — Admin CRUD: controller guest_* parsing + race-lineup.html datalist Add-Guest block + prefill (GUEST-01, GUEST-03)
 
 ### Phase 114: Scoring & Personal Crediting
 **Goal**: A guest driver's race points count for the fielding team and are also credited to the guest driver personally in the season's driver-ranking, with no double-counting on repeated saves
@@ -271,7 +274,7 @@ See: milestones/v1.15-ROADMAP.md for full details
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 113. Guest Assignment Foundation | 0/TBD | Not started | - |
+| 113. Guest Assignment Foundation | 0/3 | Not started | - |
 | 114. Scoring & Personal Crediting | 0/TBD | Not started | - |
 | 115. Guest Marking & Visibility | 0/TBD | Not started | - |
 

@@ -620,21 +620,18 @@ class V18MigrationIT {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Sub-team hidden-field naming for guest rows (D-08)**
+> All three resolved during planning — see 113-02-PLAN.md (saveLineup overload, getDriverAssignments filter) and 113-03-PLAN.md (sub-team JS wiring in guest-lineup.js).
+
+1. **Sub-team hidden-field naming for guest rows (D-08)** — RESOLVED (113-03 Task 2: hidden field `name` set to `guest_<driverId>` on driver `change`, value driven by the `.guest-subteam` select `change`).
    - What we know: For sub-team teams, the guest must be assigned to a concrete sub-team. The `guest_<driverId>=teamId` param must carry the sub-team's ID, not the parent's.
    - What's unclear: If the driver is unknown at page-load time (new guest row), the hidden field `name` must be set dynamically by JS when the user selects a driver AND a sub-team. This requires JS coordination between two fields.
    - Recommendation: Planner designs the sub-team flow carefully. One approach: the hidden field name is always `guest_<driverId>` set on driver selection (`change` on datalist input); the value is set by the sub-team `<select>` `change` event. Both handlers must be wired.
 
-2. **Backward-compatible `saveLineup` signature for callers**
-   - What we know: `TestDataService` calls `raceLineupRepository.save(new RaceLineup(...))` directly — NOT via `saveLineup`. `DevDataSeeder` has no such call. So `saveLineup` callers are only `RaceLineupController`.
-   - What's unclear: Any future callers or tests that call `saveLineup` with 2 args.
-   - Recommendation: Provide a 2-arg overload that delegates to 3-arg with `Map.of()` for guests. This avoids touching any existing tests.
+2. **Backward-compatible `saveLineup` signature for callers** — RESOLVED (113-02 Task 1: new 3-arg overload carries guests; the existing 2-arg signature delegates with `Map.of()`, so `RaceLineupController` and existing tests stay green).
 
-3. **`getDriverAssignments` filtering**
-   - What we know: Currently returns ALL lineups (no guest-flag filter). After V18, guest entries would appear in the roster map.
-   - Recommendation: Add `.filter(rl -> !rl.isGuest())` in `getDriverAssignments`. Update the existing service unit test to verify this filter.
+3. **`getDriverAssignments` filtering** — RESOLVED (113-02 Task 1: `.filter(rl -> !rl.isGuest())` added before building the roster map; service unit test verifies guests never bleed into the roster map).
 
 ---
 
