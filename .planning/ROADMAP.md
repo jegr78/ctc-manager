@@ -15,6 +15,7 @@
 - :white_check_mark: **v1.13 Discord Integration & Carry-Forwards** — Phases 92-103 (shipped 2026-05-28)
 - :white_check_mark: **v1.14 Team Card Redesign & Data Safety** — Phases 104-105 (shipped 2026-05-29)
 - :white_check_mark: **v1.15 CI Optimisation & Race/Match Defaults** — Phases 106, 108-112 (shipped 2026-05-31)
+- **v1.17 Guest Drivers** — Phases 113-115 (in progress)
 
 ## Phases
 
@@ -224,7 +225,57 @@ See: milestones/v1.15-ROADMAP.md for full details
 
 </details>
 
+### v1.17 Guest Drivers (Phases 113-115)
+
+- [ ] **Phase 113: Guest Assignment Foundation** - Flyway migration + RaceLineup/RaceResult guest flag + admin CRUD (add, edit, remove guest drivers selectable from any driver in the system)
+- [ ] **Phase 114: Scoring & Personal Crediting** - Guest points flow to fielding team via existing aggregation; driver-ranking crediting for guests (including drivers without a SeasonDriver in that season); idempotent on every result save
+- [ ] **Phase 115: Guest Marking & Visibility** - Guest driver marking across all surfaces: Scorecard + Provisional-Scores + matchday-results graphics, admin matchday/race detail, driver-ranking (admin + public site), driver-profile public page; visual treatment decided against rendered reference
+
+## Phase Details
+
+### Phase 113: Guest Assignment Foundation
+**Goal**: Admins can add, edit, and remove guest-driver assignments in race lineups and results — any driver in the system is selectable, and the assignment is durably flagged as a guest entry in the data model
+**Depends on**: Nothing (first phase of v1.17)
+**Requirements**: GUEST-01, GUEST-02, GUEST-03, GUEST-04
+**Success Criteria** (what must be TRUE):
+  1. Admin can open a race lineup form and select any driver in the system (not restricted to the season's roster) as a guest, specifying the fielding team
+  2. Admin can record a finishing position/result for the guest driver under the fielding team
+  3. Admin can edit or remove an existing guest-driver assignment from a lineup or result
+  4. The database persistently stores whether a lineup/result entry is a guest assignment, independent of season-roster membership (Flyway migration, H2 + MariaDB compatible, V1-V17 untouched)
+**Plans**: TBD
+
+### Phase 114: Scoring & Personal Crediting
+**Goal**: A guest driver's race points count for the fielding team and are also credited to the guest driver personally in the season's driver-ranking, with no double-counting on repeated saves
+**Depends on**: Phase 113
+**Requirements**: SCORE-01, SCORE-02, SCORE-03
+**Success Criteria** (what must be TRUE):
+  1. After result save, the fielding team's match score and standings reflect the guest driver's earned points — computed through the existing `ScoringService.aggregateMatchScores(race)` aggregation with no separate points model
+  2. The guest driver appears in the season's driver-ranking with points earned across all races where they were a guest (additive to their own team races), even when the driver has no `SeasonDriver` entry in that season
+  3. Saving race results multiple times does not double-count guest points in either the team score or the personal driver-ranking (idempotent crediting handled in the service layer, no template/controller fallback)
+**Plans**: TBD
+
+### Phase 115: Guest Marking & Visibility
+**Goal**: Guest drivers are visually marked across all relevant surfaces — graphics, admin views, and public site — so operators and viewers can identify guest appearances at a glance; the exact visual treatment is chosen against a rendered reference
+**Depends on**: Phase 113, Phase 114
+**Requirements**: MARK-01, MARK-02, MARK-03, MARK-04, MARK-05, MARK-06
+**Success Criteria** (what must be TRUE):
+  1. The Scorecard graphic and the Provisional Scores graphic render a visible marker next to guest driver names (concrete treatment decided via `playwright-cli` visual approval against a rendered reference — not pre-specified)
+  2. The matchday-results and any further matchday graphics that render driver names also show the guest marker, so no graphic posts alongside others with unmarked guests
+  3. The admin race-detail and matchday-detail views show a visible indicator on lineup rows and result rows where the driver is a guest
+  4. The season driver-ranking (admin and public site) marks entries that include points earned as a guest driver
+  5. The public driver-profile page shows each guest race as a marked entry, identifying the fielding team
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 113. Guest Assignment Foundation | 0/TBD | Not started | - |
+| 114. Scoring & Personal Crediting | 0/TBD | Not started | - |
+| 115. Guest Marking & Visibility | 0/TBD | Not started | - |
+
+---
 
 | Milestone | Phases | Plans | Status | Shipped |
 | --------- | ------ | ----- | ------ | ------- |
@@ -241,3 +292,4 @@ See: milestones/v1.15-ROADMAP.md for full details
 | v1.13 Discord Integration & Carry-Forwards | 92-103 | 43 | Complete | 2026-05-28 |
 | v1.14 Team Card Redesign & Data Safety | 104-105 | 5 | Complete | 2026-05-29 |
 | v1.15 CI Optimisation & Race/Match Defaults | 106, 108-112 | 21 | Complete | 2026-05-31 |
+| v1.17 Guest Drivers | 113-115 | TBD | In progress | - |

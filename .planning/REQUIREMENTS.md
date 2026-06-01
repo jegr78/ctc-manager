@@ -55,28 +55,26 @@ Explicitly excluded for v1.17 to prevent scope creep.
 
 ## Traceability
 
-Filled by the roadmap.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GUEST-01 | — | Pending |
-| GUEST-02 | — | Pending |
-| GUEST-03 | — | Pending |
-| GUEST-04 | — | Pending |
-| SCORE-01 | — | Pending |
-| SCORE-02 | — | Pending |
-| SCORE-03 | — | Pending |
-| MARK-01 | — | Pending |
-| MARK-02 | — | Pending |
-| MARK-03 | — | Pending |
-| MARK-04 | — | Pending |
-| MARK-05 | — | Pending |
-| MARK-06 | — | Pending |
+| GUEST-01 | Phase 113 | Pending |
+| GUEST-02 | Phase 113 | Pending |
+| GUEST-03 | Phase 113 | Pending |
+| GUEST-04 | Phase 113 | Pending |
+| SCORE-01 | Phase 114 | Pending |
+| SCORE-02 | Phase 114 | Pending |
+| SCORE-03 | Phase 114 | Pending |
+| MARK-01 | Phase 115 | Pending |
+| MARK-02 | Phase 115 | Pending |
+| MARK-03 | Phase 115 | Pending |
+| MARK-04 | Phase 115 | Pending |
+| MARK-05 | Phase 115 | Pending |
+| MARK-06 | Phase 115 | Pending |
 
 **Coverage:**
 - v1.17 requirements: 13 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 13
+- Mapped to phases: 13
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-06-01*

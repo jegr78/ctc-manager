@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.17
 milestone_name: Guest Drivers
 status: planning
-last_updated: "2026-06-01T10:06:26.313Z"
+last_updated: "2026-06-01T00:00:00.000Z"
 last_activity: 2026-06-01
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,14 @@ See: .planning/PROJECT.md (updated 2026-05-31 after v1.15 milestone close)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Planning next milestone — v1.15 shipped 2026-05-31; run `/gsd-new-milestone` (after PR #132 squash-merge → release CI tags v1.15.0).
+**Current focus:** v1.17 Guest Drivers — roadmap created 2026-06-01; Phase 113 ready for discuss/plan.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 113 (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-01 — Milestone v1.17 started
+Status: Roadmap created — ready for `/gsd-discuss-phase 113`
+Last activity: 2026-06-01 — Roadmap created for v1.17
 
 ## Shipped Milestone
 
@@ -46,78 +46,60 @@ Last activity: 2026-06-01 — Milestone v1.17 started
 
 ## Baselines to Preserve
 
-- JaCoCo line coverage: **≥ ~89.42 %** (v1.14 baseline; gate 82 % in pom.xml)
-- Test count: **≥ 2416** (v1.14: 1772 Surefire + 529 Failsafe IT + 115 E2E)
-- CI E2E median: **17:39** (v1.14 baseline; Phase 106 targets a reduction)
-- `BackupSchema.SCHEMA_VERSION`: **2** (v1.13 Phase 101; no v1.15 schema changes anticipated except WO Flyway V17)
-- `EXPORT_ORDER` size: **26 entities** (only walkover flag may need Flyway V17 — not a new entity)
+- JaCoCo line coverage: **≥ ~89 %** (v1.15 baseline; gate 82 % in pom.xml)
+- Test count: **≥ 2472** (v1.15 baseline)
+- CI E2E median: **17:39** (v1.12 baseline; v1.15 target was reduction, actual 18-20 min warm)
+- `BackupSchema.SCHEMA_VERSION`: **2** (v1.13 Phase 101)
+- `EXPORT_ORDER` size: **26 entities** (v1.13 Phase 101; guest flag is a column on `RaceLineup`/`RaceResult`, not a new entity)
 - SpotBugs `BugInstance` count: **0** (blocking gate)
 - CodeQL gate-step: **exit 0** on new HIGH/CRITICAL
-- CodeQL open alerts: **29 `java/log-injection` (medium)** to be driven to **0** in Phase 111 (below the 7.0 gate, so they never blocked the build — closed via source fix, not suppression)
-- Flyway migrations: V1-V16 immutable; next is V17 (walkover flag, Phase 109)
+- Flyway migrations: V1-V17 immutable; next is V18 (guest flag, Phase 113)
 
 ## Accumulated Context
 
 ### Decisions
 
-Roadmap-level decisions for v1.15 (2026-05-30):
+Roadmap-level decisions for v1.17 (2026-06-01):
 
-- **5-phase structure** — 22 requirements across 5 natural delivery categories (CI, RACE, LINEUP, WO, LOBBY); one phase per category gives "standard" granularity (5-8 phases).
-- **CI first (D-CI-Independent)** — CI strand has zero shared surface with application strands; running it first cleans the pipeline before any Java work lands.
-- **LINEUP before WO (D-Graphic-Sequencing)** — Both phases modify graphic Thymeleaf templates. LINEUP-01..04 establishes the n/a placeholder pattern; WO-03 adds the "w/o" label on top of that stable baseline. Reversing the order would risk clobber on shared template files.
-- **LOBBY last + external-handoff gate (D-Lobby-Blocked)** — LOBBY-01..05 are blocked on the Claude-Design Lobby Settings HTML handoff. Phase 110 is explicitly labelled as requiring the handoff before execution begins (same pattern as Phase 105 CARD-01 in v1.14).
-- **WO reuses bye semantics (D-WO-Bye-Analogy)** — Per the out-of-scope table in REQUIREMENTS.md, a richer walkover model (dedicated points config, forfeit reasons) is out of scope; the implementation mirrors `Match.bye` auto-win logic.
-- **SEC-LOG last + source-fix (D-LogInjection-Last, 2026-05-30)** — Log-injection remediation runs as Phase 111 (after 106-110) so it also captures any log statements added by the feature phases. Strategy is per-callsite sanitization via a central `LogSanitizer` (strips CR/LF + control chars), fixing the CodeQL taint path at source rather than adding `query-filters` suppressions.
-- **Phase 107 removed — RACE-01..03 dropped (D-Race-Drop, 2026-05-30)** — The Phase 107 discuss surfaced that the three "prefill" targets do not map to a real re-entry problem in the current data model: scoring scheme is already inherited via `Matchday → SeasonPhase → RaceScoring` (no create-form dropdown, no per-race override field); `legs` is a `SeasonPhase` setting and a Race *is* a single leg (no legs field); Matchday has no scheduled date/time to inherit from (only `pickDeadline` + a `scheduledWeekend` label). User decision: remove Phase 107 entirely and drop RACE-01..03 permanently (not backlog). v1.15 now delivers 5 phases (106, 108, 109, 110, 111). Phase number 107 left as a gap per the integer-phase policy.
-
-### Blockers/Concerns
-
-- Phase 110 (Lobby Settings) handoff delivered 2026-05-31 → unblocked; context gathered (110-CONTEXT.md), ready for planning. Phases 108-109 complete.
-
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260531-suj | Link existing Discord match channel to a Match via Admin UI | 2026-05-31 | 886b99d9 | [260531-suj-bestehenden-discord-match-kanal-nachtr-g](./quick/260531-suj-bestehenden-discord-match-kanal-nachtr-g/) |
+- **3-phase structure (D-GuestPhase-Count)** — 13 requirements across 3 natural delivery boundaries: guest assignment data model (GUEST-01..04), scoring/crediting logic (SCORE-01..03), and visual marking across all surfaces (MARK-01..06). Standard granularity is 5-8 phases, but this milestone is tightly scoped — 3 phases reflects the natural dependency chain without artificial splitting. Matches the spirit of "let the work determine the phases."
+- **GUEST before SCORE before MARK (D-GuestDependencyChain)** — Hard sequential dependency: scoring logic requires a guest-identifiable data model; marking requires scoring to be correct so guests appear in rankings before marks are added to those rankings.
+- **All MARK requirements in one phase (D-MarkGrouped)** — MARK-01..06 span Thymeleaf graphic templates (Scorecard, Provisional Scores, matchday-results) and admin/site templates. Per the v1.15 D-Graphic-Sequencing pattern, template-touching work is grouped to avoid clobber across shared files. Splitting MARK into graphics vs. admin/site would create shared-template conflict risk with no benefit.
+- **Phase 115 is the UI phase (D-UIPhase)** — The concrete visual treatment of guest marking (asterisk, badge, origin-team label) is intentionally not pre-committed in REQUIREMENTS.md. Phase 115 executes the treatment decision against a rendered reference via `playwright-cli`, consistent with CLAUDE.md "Visual Verification." The `ui_phase: true` config flag applies.
+- **Flyway V18 in Phase 113 (D-FlywayContinuation)** — V1-V17 are immutable; the guest-assignment flag (whether a `RaceLineup`/`RaceResult` entry is a guest) needs a new additive migration V18. No existing migration is modified.
+- **No separate guest points model (D-NoSeparateGuestPoints)** — Guest scoring flows through `ScoringService.aggregateMatchScores(race)` unchanged — the fielding team receives points as with any driver. Only the driver-ranking crediting is additive (Phase 114). REQUIREMENTS.md Out-of-Scope table is authoritative.
 
 ### Phase Numbering
 
-Last phase shipped: **105** (v1.14 Carbon HUD Graphics Redesign). v1.15 spans phases **106-112** (integer phases, no insertions, no reset). **107 removed 2026-05-30** — number left as a gap (no renumbering); active phases are 106, 108, 109, 110, 111, 112.
+Last phase shipped: **112** (v1.15 Unused Import Cleanup). v1.17 spans phases **113-115** (continuing from 112; integer phases, no reset; 107 remains a gap from v1.15).
 
 ### Roadmap Evolution
 
-- 2026-05-29: v1.14 shipped (PR #131 squash-merged to master; release CI tagged v1.14.0).
-- 2026-05-30: v1.15 milestone started; REQUIREMENTS.md defined (22 requirements across CI/RACE/LINEUP/WO/LOBBY); ROADMAP.md created (5 phases 106-110, 22/22 coverage).
-- 2026-05-30: Phase 111 (Log-Injection Remediation, CodeQL CWE-117) added at end of v1.15 — 29 open `java/log-injection` alerts discovered in GitHub code scanning; SEC-LOG-01..04 added (now 6 phases, 26/26 coverage). Strategy: per-callsite sanitization via central `LogSanitizer` (user decision 2026-05-30).
-- 2026-05-30: Phase 107 (Race/Match Prefill Defaults) **removed** during discuss — RACE-01..03 dropped permanently (data-model mismatch: scoring/legs already inherited via `SeasonPhase`, no Matchday date to inherit). v1.15 now 5 phases (106, 108-111), 23/23 coverage on the remaining requirements.
-- 2026-05-31: Phase 112 (Unused Import Cleanup & Regression Guard) added at end of v1.15 — unused package imports discovered mid-milestone were not cleaned up; IMP-01..02 added (cleanup all `src/main`+`src/test` imports via OpenRewrite `RemoveUnusedImports`, plus a build-level guard so future phases cannot reintroduce them). v1.15 now 6 active phases (106, 108-112), 28/28 coverage. Runs last so the cleaned import set is final.
+- 2026-06-01: v1.17 milestone started; REQUIREMENTS.md defined (13 requirements across GUEST/SCORE/MARK); ROADMAP.md created (3 phases 113-115, 13/13 coverage).
 
 ## Deferred Items
 
-Carried forward from v1.13/v1.14 close (unchanged):
+Carried forward from v1.13/v1.14/v1.15 close (unchanged):
 
 | Category | Item | Resolution Plan |
 | -------- | ---- | --------------- |
 | future_req | DISC-FUTURE-01..05 — Inbound Discord, auto-trigger, settings-form, multi-guild, public-site webhook | Later milestone; requires deployment model change |
-| future_req | Per-season configurable team size — `driverSlots` field on `SeasonPhase`/`Season` (default 6) + Flyway migration + admin UI; graphics/scoring read the season value | Own phase (v1.15 backlog or later). Surfaced in Phase 108 discuss; Phase 108 uses a central constant so the later swap stays local |
+| future_req | Per-season configurable team size — `driverSlots` field on `SeasonPhase`/`Season` (default 6) + Flyway migration + admin UI | Own phase (v1.16 backlog or later). Surfaced in Phase 108 discuss |
 | tech_debt | String `.isEmpty()` audit (~10 callsites) | Case-by-case; per Phase 103 CONTEXT D-06 |
 | uat (carry) | UAT-02 legacy season visual smoke | Post-deploy operator action; cross-milestone per CLAUDE.md |
 | uat (carry) | QUAL-02 `local`-profile MariaDB manual smoke | Post-deploy operator action |
 | uat (carry) | UX-01 driver-import error-category badge screenshots | Post-deploy operator action |
 | tech_debt | Existing match-channels under old Phase-94 naming scheme | Potential future admin bulk-rename action; two-scheme coexistence accepted |
-| ✅ verified (2026-05-31) | **CI-05** warm-cache — CONFIRMED empirically: `docker-build` 0m20s/0m21s full-cache-hit runs + sublinear rebuilds (2–4 min vs ~6–10 min cold); `build-and-test` stable 18–20 min. See `docs/ci/v1.15-open-verify.md`. |
-| ✅ accepted config-sound (2026-05-31) | **CI-01/CI-02** docs-only — path filters verified correct by inspection; not empirically isolable on PR #132 because `pull_request` filters evaluate the cumulative base…head diff (which contains code). Manifests only on a wholly-docs-only PR. Throwaway PR deliberately skipped. See `docs/ci/v1.15-open-verify.md`. |
 
 ## Session Continuity
 
-**Last session:** 2026-05-31 — v1.15 milestone closed and archived.
+**Last session:** 2026-06-01 — v1.17 roadmap created (3 phases: 113 Guest Assignment Foundation, 114 Scoring & Personal Crediting, 115 Guest Marking & Visibility).
 
-**Stopped at:** v1.15 shipped — archives written (`milestones/v1.15-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`), ROADMAP collapsed, PROJECT evolved, REQUIREMENTS.md removed.
+**Stopped at:** Roadmap written — ready for Phase 113 planning.
 
-**Next action:** Squash-merge PR #132 with subject `feat(v1.15): ci optimisation & race/match defaults` (release CI tags v1.15.0). Then `/gsd-new-milestone`.
+**Next action:** `/gsd-discuss-phase 113` on branch `gsd/v1.17-guest-drivers`.
 
-**Branch:** `gsd/v1.15-ci-and-race-defaults` (merges to `master` at close)
+**Branch:** `gsd/v1.17-guest-drivers`
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- `/gsd-discuss-phase 113` — Guest Assignment Foundation (Flyway V18 + RaceLineup guest flag + admin CRUD)
