@@ -15,7 +15,7 @@
 - :white_check_mark: **v1.13 Discord Integration & Carry-Forwards** — Phases 92-103 (shipped 2026-05-28)
 - :white_check_mark: **v1.14 Team Card Redesign & Data Safety** — Phases 104-105 (shipped 2026-05-29)
 - :white_check_mark: **v1.15 CI Optimisation & Race/Match Defaults** — Phases 106, 108-112 (shipped 2026-05-31)
-- **v1.17 Guest Drivers** — Phases 113-115 (in progress)
+- **v1.17 Guest Drivers** — Phases 113-116 (in progress)
 
 ## Phases
 
@@ -225,11 +225,12 @@ See: milestones/v1.15-ROADMAP.md for full details
 
 </details>
 
-### v1.17 Guest Drivers (Phases 113-115)
+### v1.17 Guest Drivers (Phases 113-116)
 
 - [x] **Phase 113: Guest Assignment Foundation** - Flyway migration + RaceLineup/RaceResult guest flag + admin CRUD (add, edit, remove guest drivers selectable from any driver in the system) (completed 2026-06-01)
 - [x] **Phase 114: Scoring & Personal Crediting** - Guest points flow to fielding team via existing aggregation; driver-ranking crediting for guests (including drivers without a SeasonDriver in that season); idempotent on every result save
 - [x] **Phase 115: Guest Marking & Visibility** - Guest driver marking across all surfaces: Scorecard + Provisional-Scores + matchday-results graphics, admin matchday/race detail, driver-ranking (admin + public site), driver-profile public page; visual treatment decided against rendered reference (completed 2026-06-02)
+- [ ] **Phase 116: German Comment Sweep** - Replace German comments that crept in via two Claude-Design handoffs (v1.14/v1.15) with minimal English across templates, Java, pom.xml, yml, properties; reduce to the necessary minimum per the No-Comment-Pollution convention
 
 ## Phase Details
 
@@ -280,6 +281,17 @@ See: milestones/v1.15-ROADMAP.md for full details
 - [x] 115-06-PLAN.md — Visual approval gate (SC-1/SC-2): full verify -Pe2e + playwright-cli screenshots + user approval
 **UI hint**: yes
 
+### Phase 116: German Comment Sweep
+**Goal**: All source-level comments are in English and reduced to the necessary minimum — the German comments that crept in via two Claude-Design handoffs during v1.14/v1.15 are removed, restoring compliance with the project's English-only and No-Comment-Pollution conventions
+**Depends on**: Phase 115
+**Requirements**: TBD (run /gsd-plan-phase 116 to break down)
+**Success Criteria** (what must be TRUE):
+  1. A full-repository scan covers all comment-bearing source types — Thymeleaf templates, Java, pom.xml, YAML, and .properties files
+  2. Every German comment found is either translated to concise English or removed where it is redundant (per No-Comment-Pollution)
+  3. No behavioral change — only comments are touched; `./mvnw clean verify -Pe2e` stays green and coverage holds
+**Plans**: 0 plans (not yet planned)
+- [ ] TBD (run /gsd-plan-phase 116 to break down)
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -287,6 +299,7 @@ See: milestones/v1.15-ROADMAP.md for full details
 | 113. Guest Assignment Foundation | 3/3 | Complete    | 2026-06-01 |
 | 114. Scoring & Personal Crediting | 4/4 | Complete | 2026-06-01 |
 | 115. Guest Marking & Visibility | 6/6 | Complete   | 2026-06-02 |
+| 116. German Comment Sweep | 0/0 | Not planned | - |
 
 ---
 
@@ -305,4 +318,4 @@ See: milestones/v1.15-ROADMAP.md for full details
 | v1.13 Discord Integration & Carry-Forwards | 92-103 | 43 | Complete | 2026-05-28 |
 | v1.14 Team Card Redesign & Data Safety | 104-105 | 5 | Complete | 2026-05-29 |
 | v1.15 CI Optimisation & Race/Match Defaults | 106, 108-112 | 21 | Complete | 2026-05-31 |
-| v1.17 Guest Drivers | 113-115 | TBD | In progress | - |
+| v1.17 Guest Drivers | 113-116 | TBD | In progress | - |

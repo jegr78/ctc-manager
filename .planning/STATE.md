@@ -76,6 +76,7 @@ Last phase shipped: **112** (v1.15 Unused Import Cleanup). v1.17 spans phases **
 ### Roadmap Evolution
 
 - 2026-06-01: v1.17 milestone started; REQUIREMENTS.md defined (13 requirements across GUEST/SCORE/MARK); ROADMAP.md created (3 phases 113-115, 13/13 coverage).
+- 2026-06-02: Phase 116 added — German Comment Sweep: replace German comments (crept in via two Claude-Design handoffs in v1.14/v1.15) with minimal English across templates, Java, pom.xml, yml, properties.
 
 ## Deferred Items
 
