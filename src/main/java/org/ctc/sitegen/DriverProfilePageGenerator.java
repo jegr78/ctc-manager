@@ -2,11 +2,13 @@ package org.ctc.sitegen;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,7 +56,7 @@ public class DriverProfilePageGenerator {
     public void generate(GenerationContext ctx, SiteGeneratorService.GenerationResult result) throws IOException {
         var season = ctx.season();
         var seasonDrivers = seasonDriverRepository.findBySeasonId(season.getId());
-        var generatedDriverIds = new java.util.HashSet<java.util.UUID>();
+        var generatedDriverIds = new HashSet<UUID>();
 
         // showPhaseBreakdown is gated by season.phases.size() >= 2 (server-side flag).
         boolean seasonHasMultiplePhases =
@@ -80,7 +82,7 @@ public class DriverProfilePageGenerator {
 
         // Second pass: pure guests appear only in a RaceLineup (no SeasonDriver row) and would
         // otherwise have no profile page. Deduped against the SeasonDriver pass via the same set.
-        Map<java.util.UUID, Team> guestTeamByDriver = new java.util.LinkedHashMap<>();
+        Map<UUID, Team> guestTeamByDriver = new LinkedHashMap<>();
         for (var rl : seasonLineups) {
             Team parent = rl.getTeam().getParentOrSelf();
             guestTeamByDriver.merge(rl.getDriver().getId(), parent,
@@ -106,20 +108,15 @@ public class DriverProfilePageGenerator {
                 .filter(r -> r.getRace().getMatchday().getSeason().getId().equals(season.getId()))
                 .toList();
 
-        // Split results into a LinkedHashMap (REGULAR -> PLAYOFF -> PLACEMENT canonical order),
-        // filtered in Java on race.matchday.phase.phaseType (no dedicated repository method).
-        //
-        // Phase-participation detection runs against RaceLineup, NOT RaceResult: TestDataService
-        // creates PLAYOFF Race+RaceLineup but no RaceResult rows yet, so a RaceResult-only check
-        // would miss PLAYOFF participation. Lineups are the single source of truth for
-        // participation (per CLAUDE.md "RaceLineup is Source of Truth").
+        // Phase-participation detection runs against RaceLineup, not RaceResult: a driver can have
+        // a lineup in a phase without any result row yet, so a RaceResult-only check would miss it.
         boolean showPhaseBreakdown = seasonHasMultiplePhases;
         LinkedHashMap<PhaseType, List<RaceResult>> resultsByPhase = new LinkedHashMap<>();
         if (showPhaseBreakdown) {
             Set<PhaseType> participatedPhases = raceLineupRepository
                     .findByDriverIdAndRaceMatchdaySeasonId(driver.getId(), season.getId()).stream()
                     .map(rl -> rl.getRace().getMatchday().getPhase().getPhaseType())
-                    .collect(Collectors.toCollection(java.util.HashSet::new));
+                    .collect(Collectors.toCollection(HashSet::new));
             for (PhaseType pt : PHASE_ORDER) {
 				if (!participatedPhases.contains(pt)) {
 					continue;
@@ -127,8 +124,7 @@ public class DriverProfilePageGenerator {
                 var phaseResults = results.stream()
                         .filter(r -> r.getRace().getMatchday().getPhase().getPhaseType() == pt)
                         .toList();
-                // Always include the phase entry when the driver participated, even when the
-                // RaceResult list is empty (PLAYOFF results aren't seeded in test fixtures).
+                // Include the phase even when its result list is empty — the driver participated.
                 resultsByPhase.put(pt, phaseResults);
             }
             // Edge case: driver only participated in one phase even though season has >=2.

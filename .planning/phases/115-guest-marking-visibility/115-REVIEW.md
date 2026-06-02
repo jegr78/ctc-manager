@@ -120,6 +120,19 @@ No BLOCKER-level defects were proven. The findings below are quality/robustness 
 
 ---
 
+## Resolution (2026-06-02)
+
+All four warnings and the actionable info items were fixed in-milestone:
+
+- **WR-01 — RESOLVED.** Added `GraphicTemplateGuestRenderIT` (`@SpringBootTest @Tag("integration")`) that renders `provisional-scores-render`, `lineup-render`, and `results-render` through the real Spring `TemplateEngine` (record-component SpEL binding) with a mixed guest/non-guest row set, asserting exactly one `&#x2605;` / `guest-marker` per template. Closes the mocked-engine blind spot.
+- **WR-02 — RESOLVED.** Deleted the orphaned `templates/admin/fragments/guest-marker.html` (unreferenced; its parameterised-call form would trip the PLAT-07 guard).
+- **WR-03 — RESOLVED.** Guarded the numeric `<td>`s in both provisional tables on `${row.driverName != 'n/a'}`, so empty pad rows no longer print `0 0 0 0 0`.
+- **WR-04 — RESOLVED.** `buildContext` now applies the same `getRaces() == null` guard as `resolveRaceIndex` (one consistent assumption).
+- **IN-01 / IN-02 — RESOLVED.** Stripped Plan/Decision/version cross-refs and the repeated SeasonPhase comment from `DriverRankingService`, `DriverProfilePageGenerator`, `RaceGraphicServiceTest`, `RaceControllerCalendarTest`; kept genuine WHY notes.
+- **IN-04 — RESOLVED.** Replaced fully-qualified inline `java.util.*` types in `DriverProfilePageGenerator` with imports.
+- **IN-03 — ACCEPTED (no change).** The 8 near-identical `generate-*` handlers are duplication, not a defect; collapse deferred as an optional future refactor.
+- **IN-05 — ACCEPTED (no change).** Graphic templates legitimately cannot reference the `--guest` CSS variable (standalone Playwright documents); the `#f59e0b` ↔ `--guest` coupling is a known, documented consistency hazard.
+
 _Reviewed: 2026-06-02_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_

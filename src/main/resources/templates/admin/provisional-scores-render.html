@@ -134,13 +134,13 @@
                                 <span th:text="${row.driverName}"></span>
                                 <span class="guest-marker" th:if="${row.isGuest}" aria-label="Guest driver">&#x2605;</span>
                             </td>
-                            <td th:text="${row.position}"></td>
-                            <td th:text="${row.qualiPosition}"></td>
+                            <td th:text="${row.driverName != 'n/a' ? row.position : ''}"></td>
+                            <td th:text="${row.driverName != 'n/a' ? row.qualiPosition : ''}"></td>
                             <td><span class="fl-marker" th:if="${row.fastestLap}">FL</span></td>
-                            <td th:text="${row.ptsRace}"></td>
-                            <td th:text="${row.ptsQuali}"></td>
-                            <td th:text="${row.ptsFl}"></td>
-                            <td th:text="${row.total}"></td>
+                            <td th:text="${row.driverName != 'n/a' ? row.ptsRace : ''}"></td>
+                            <td th:text="${row.driverName != 'n/a' ? row.ptsQuali : ''}"></td>
+                            <td th:text="${row.driverName != 'n/a' ? row.ptsFl : ''}"></td>
+                            <td th:text="${row.driverName != 'n/a' ? row.total : ''}"></td>
                         </tr>
                     </tbody>
                     <tfoot>
@@ -182,13 +182,13 @@
                                 <span th:text="${row.driverName}"></span>
                                 <span class="guest-marker" th:if="${row.isGuest}" aria-label="Guest driver">&#x2605;</span>
                             </td>
-                            <td th:text="${row.position}"></td>
-                            <td th:text="${row.qualiPosition}"></td>
+                            <td th:text="${row.driverName != 'n/a' ? row.position : ''}"></td>
+                            <td th:text="${row.driverName != 'n/a' ? row.qualiPosition : ''}"></td>
                             <td><span class="fl-marker" th:if="${row.fastestLap}">FL</span></td>
-                            <td th:text="${row.ptsRace}"></td>
-                            <td th:text="${row.ptsQuali}"></td>
-                            <td th:text="${row.ptsFl}"></td>
-                            <td th:text="${row.total}"></td>
+                            <td th:text="${row.driverName != 'n/a' ? row.ptsRace : ''}"></td>
+                            <td th:text="${row.driverName != 'n/a' ? row.ptsQuali : ''}"></td>
+                            <td th:text="${row.driverName != 'n/a' ? row.ptsFl : ''}"></td>
+                            <td th:text="${row.driverName != 'n/a' ? row.total : ''}"></td>
                         </tr>
                     </tbody>
                     <tfoot>

@@ -115,9 +115,8 @@ public class DriverRankingService {
 	 * Calculates alltime driver ranking restricted to the given season IDs.
 	 * Used by the site generator to exclude Test seasons from public pages.
 	 *
-	 * <p><strong>Tracked Behavior Change (v1.9 / D-19):</strong> Aggregation now includes
-	 * PLAYOFF-matchup-linked race results, not just REGULAR-phase results. Multi-phase seasons'
-	 * drivers reflect all races they competed in across REGULAR + PLAYOFF + PLACEMENT phases.
+	 * <p>Aggregation includes PLAYOFF-matchup-linked race results, not just REGULAR-phase results,
+	 * so multi-phase seasons reflect all races a driver competed in across every phase.
 	 */
 	@Transactional(readOnly = true)
 	public List<DriverRanking> calculateAlltimeRanking(List<UUID> seasonIds) {

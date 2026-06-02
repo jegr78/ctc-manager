@@ -48,7 +48,6 @@ class RaceGraphicServiceTest {
 		var matchday = new Matchday();
 		matchday.setId(UUID.randomUUID());
 		matchday.setLabel("MD 1");
-		// Matchday is bound via SeasonPhase (Convenience-Getter exposes the season).
 		matchday.setPhase(new SeasonPhase(new Season("S"), PhaseType.REGULAR, PhaseLayout.LEAGUE, 0));
 		var match = new Match(matchday, homeTeam, awayTeam);
 		var race = new Race();
@@ -122,7 +121,6 @@ class RaceGraphicServiceTest {
 		var matchday = new Matchday();
 		matchday.setId(UUID.randomUUID());
 		matchday.setLabel("MD 1");
-		// Matchday is bound via SeasonPhase (Convenience-Getter exposes the season).
 		matchday.setPhase(new SeasonPhase(new Season("S"), PhaseType.REGULAR, PhaseLayout.LEAGUE, 0));
 		var match = new Match(matchday, homeTeam, awayTeam);
 		var race = new Race();
@@ -213,7 +211,6 @@ class RaceGraphicServiceTest {
 		var matchday = new Matchday();
 		matchday.setId(UUID.randomUUID());
 		matchday.setLabel("MD 1");
-		// Matchday is bound via SeasonPhase (Convenience-Getter exposes the season).
 		matchday.setPhase(new SeasonPhase(new Season("S"), PhaseType.REGULAR, PhaseLayout.LEAGUE, 0));
 		var match = new Match(matchday, homeTeam, awayTeam);
 		var race = new Race();

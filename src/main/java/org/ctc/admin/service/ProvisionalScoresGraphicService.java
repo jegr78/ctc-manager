@@ -153,7 +153,8 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 		ctx.setVariable("seasonYear", String.valueOf(season.getYear()));
 		ctx.setVariable("seasonName", season.getName());
 		ctx.setVariable("matchdayName", race.getMatchday().getLabel());
-		int totalRaces = race.getMatch() != null ? race.getMatch().getRaces().size() : 0;
+		int totalRaces = (race.getMatch() != null && race.getMatch().getRaces() != null)
+				? race.getMatch().getRaces().size() : 0;
 		ctx.setVariable("raceLabel", totalRaces > 1 ? "Race " + raceIndex : null);
 		ctx.setVariable("homeTeamName", homeTeam.getName());
 		ctx.setVariable("awayTeamName", awayTeam.getName());

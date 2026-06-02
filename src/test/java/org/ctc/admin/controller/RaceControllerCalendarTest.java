@@ -36,19 +36,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Focused tests for RaceController calendar-event surface — closes the JaCoCo
- * cold-spot identified in v1.12 COV-01 audit. Covers POST /create-calendar-event
- * (4 typed-catch arms + IllegalStateException + happy path) and the 3 GET
- * model attributes calendarAvailable / hasCalendarEvent / canCreateCalendarEvent.
+ * Tests for the RaceController calendar-event surface: POST /create-calendar-event
+ * (typed-catch arms + IllegalStateException + happy path) and the GET model
+ * attributes calendarAvailable / hasCalendarEvent / canCreateCalendarEvent.
  *
- * The defensive {@code catch (GoogleApiException e)} arm on the sealed base is
- * acknowledged unreachable from external tests (sealed permits forbid subclassing)
- * and not exercised here.
- *
- * GET tests use a separate standalone MockMvc with a noop view-resolver to
- * exercise the GET handler's model population without forcing Thymeleaf to
- * render the full race-detail template (which would require hydrating Race +
- * Matchday + Match + Track + Season — unrelated to COV-01).
+ * <p>GET tests use a standalone MockMvc with a noop view-resolver to exercise model
+ * population without rendering the full race-detail template.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
