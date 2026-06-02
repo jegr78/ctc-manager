@@ -20,7 +20,7 @@ import org.springframework.context.annotation.Primary;
  * production default whenever a test {@code @Import(Config.class)}-s this configuration.
  *
  * <p>{@code BackupImportRollbackIT} is the primary consumer — the configured target is row
- * {@code 500} of {@code race_results}, which is the largest fixture table on Saison 2023
+ * {@code 500} of {@code race_results}, which is the largest fixture table on Season 2023
  * (RESEARCH Assumption A1) and lands at the ~50 % mid-point of the restore stream so the
  * outer {@code @Transactional} boundary has wiped + partially-restored when the failure
  * fires. The wipe-rollback assertion battery in the IT verifies the entire DB returns to its
@@ -70,7 +70,7 @@ public class FailAtTableInjector implements RestoreFailureInjector {
      * Test-scope configuration that replaces the production
      * {@link org.ctc.backup.restore.NoopRestoreFailureInjector} bean with a
      * {@link FailAtTableInjector} targeting row 500 of {@code race_results} (~50 % mid-point of
-     * the largest restore table per RESEARCH Assumption A1 — Saison 2023 has ~1000 race-result
+     * the largest restore table per RESEARCH Assumption A1 — Season 2023 has ~1000 race-result
      * rows).
      *
      * <p><b>Bean-name override discipline:</b> the bean is declared with the same Spring bean

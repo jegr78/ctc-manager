@@ -53,7 +53,7 @@ class LegacyMigratedSeasonE2ETest extends PlaywrightConfig {
 	@Sql(scripts = "/sql/legacy-season-without-playoff.sql",
 			executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 	void givenLegacyMigratedSeasonWithoutPlayoff_thenRegularTabOnly() {
-		// (a) Saison-Detail auto-redirects to REGULAR phase URL (SeasonController D-08).
+		// (a) Season detail auto-redirects to the REGULAR phase URL (SeasonController D-08).
 		page.navigate(url("/admin/seasons/" + SEASON_WITHOUT_PLAYOFF_ID));
 		assertThat(page.locator("h1")).containsText("Test-Legacy-Season-2098");
 
@@ -95,7 +95,7 @@ class LegacyMigratedSeasonE2ETest extends PlaywrightConfig {
 	@Sql(scripts = "/sql/legacy-season-with-playoff.sql",
 			executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 	void givenLegacyMigratedSeasonWithPlayoff_thenRegularAndPlayoffTabs() {
-		// (a) Saison-Detail auto-redirects to REGULAR phase tab URL.
+		// (a) Season detail auto-redirects to the REGULAR phase tab URL.
 		page.navigate(url("/admin/seasons/" + SEASON_WITH_PLAYOFF_ID));
 		assertThat(page.locator("h1")).containsText("Test-Legacy-Season-2097");
 
@@ -140,7 +140,7 @@ class LegacyMigratedSeasonE2ETest extends PlaywrightConfig {
 		assertThat(page).hasURL(java.util.regex.Pattern.compile(
 				".*/admin/playoffs/" + PLAYOFF_WITH_PLAYOFF_ID + "(\\?.*)?$"));
 		assertThat(page.locator("h1")).containsText("Playoffs");
-		// The Saison toolbar dropdown lists the selected season name (proves seasonId resolved).
+		// The season toolbar dropdown lists the selected season name (proves seasonId resolved).
 		assertThat(page.locator("select[name='seasonId'] option[selected]"))
 				.containsText("Test-Legacy-Season-2097");
 	}

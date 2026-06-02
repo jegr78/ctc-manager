@@ -24,12 +24,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 /**
- * QUAL-02 E2E gate — exercises the full GROUPS-Saison workflow end-to-end.
+ * QUAL-02 E2E gate — exercises the full GROUPS-season workflow end-to-end.
  *
  * <p>Per a single {@code @Test} covers the entire ROADMAP-SC3 path:
- * Saison-anlegen → REGULAR-Phase auf GROUPS umschalten → 2 Groups anlegen → 4 Teams +
- * Roster-Zuweisung → Driver-Import (gemockter Sheet-Service) → Matchday/Race-Setup →
- * Race-Results UI-eintragen → per-group + combined-view Standings verifizieren.
+ * create season → switch the REGULAR phase to GROUPS → create 2 groups → 4 teams +
+ * roster assignment → driver import (mocked Sheet service) → matchday/race setup →
+ * enter race results via UI → verify per-group + combined-view standings.
  *
  * <p><b>Scope deviation (Rule 3, blocking issue):</b> The plan template assumed UI
  * affordances for group-bound matchday/race generation under
@@ -38,7 +38,7 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
  * binds matchdays to the REGULAR phase via {@code findRegularPhase}, and group-bound
  * matchday creation has no controller endpoint. The test therefore performs the
  * matchday/match/race/lineup setup via repositories (structural prerequisites without
- * a UI). The D-15 mandate ("UI-Klick-Eintragung für Race-Results") is honoured by
+ * a UI). The D-15 mandate ("enter race results via UI clicks") is honoured by
  * driving the {@code /admin/races/{id}/results} form via Playwright clicks for all
  * four races. UI-driven steps remain: season-create, layout-flip to GROUPS, group
  * creation, team creation, season-team add, roster assign, driver-import preview +

@@ -82,10 +82,10 @@ import static org.assertj.core.api.Assertions.*;
  * because the AFTER_COMMIT staging-cleanup (Plan 75-07 Step 4) never fires. The admin can
  * retry by simply re-invoking execute with the same staging-id.
  *
- * <p>The dev fixture is loaded once via {@code testDataService.seed()} (Saison 2023 + 2024 +
- * 2024-Empty + 2026 per its Javadoc; Saison 2023 IS the dev fixture per ROADMAP-locked
+ * <p>The dev fixture is loaded once via {@code testDataService.seed()} (Season 2023 + 2024 +
+ * 2024-Empty + 2026 per its Javadoc; Season 2023 IS the dev fixture per ROADMAP-locked
  * exception — no T-prefix isolation needed). Per-entity row counts reflect ALL seeded
- * seasons, not just Saison 2023.
+ * seasons, not just Season 2023.
  */
 @SpringBootTest
 @ActiveProfiles("dev")
@@ -139,9 +139,9 @@ class BackupImportRollbackIT {
 
     @BeforeAll
     void seedFixture() throws IOException {
-        // The single entry point seed() loads the full dev fixture (Saison 2023 + 2024 +
+        // The single entry point seed() loads the full dev fixture (Season 2023 + 2024 +
         // 2024-Empty + 2026 per TestDataService.java Javadoc). Per memory
-        // feedback_test_data_isolation.md, Saison 2023 IS the dev fixture per ROADMAP-locked
+        // feedback_test_data_isolation.md, Season 2023 IS the dev fixture per ROADMAP-locked
         // exception; per-entity row-count parity assertions reflect ALL seeded seasons.
         //
         // Flyway clean+migrate guarantees a fresh DB regardless of preceding test classes
@@ -204,7 +204,7 @@ class BackupImportRollbackIT {
             CapturedOutput output) throws Exception {
         // given — pre-state captured by @BeforeEach; sanity-check that the fixture is loud
         // enough for the 50 % mid-point injection to land mid-restore (race_results > 500 rows
-        // per RESEARCH Assumption A1 on Saison 2023; the cumulative dev fixture must satisfy
+        // per RESEARCH Assumption A1 on Season 2023; the cumulative dev fixture must satisfy
         // it strictly because the injection point is row 500).
         Long preRaceResults = preImportCounts.get("race_results");
         assertThat(preRaceResults)

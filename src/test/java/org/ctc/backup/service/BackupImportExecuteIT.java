@@ -44,7 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * the full export → stage → execute round trip. Asserts:
  * <ol>
  *   <li>{@link BackupImportResult#restoredTotal()} equals the sum of pre-export row counts
- *       across the entire seeded fixture (Saison 2023 + 2024 + 2024-Empty + 2026 — all four
+ *       across the entire seeded fixture (Season 2023 + 2024 + 2024-Empty + 2026 — all four
  *       seasons that {@code testDataService.seed()} creates per its Javadoc).</li>
  *   <li>For three sampled entities ({@code seasons}, {@code races}, {@code race_results}) the
  *       post-execute repository row count matches the pre-export count.</li>
