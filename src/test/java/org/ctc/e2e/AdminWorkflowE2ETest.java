@@ -56,7 +56,7 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
 		// given
 		page.navigate(url("/admin/seasons/new"));
 
-		// when — slim Season form (Phase 60 UI-01): no scoring/format/dates fields anymore;
+		// when — slim Season form: no scoring/format/dates fields anymore;
 		// scoring is configured per-phase via the Phase form.
 		page.getByRole(com.microsoft.playwright.options.AriaRole.TEXTBOX, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Name").setExact(true)).fill("E2E Season");
 		page.fill("#year", "2026");

@@ -32,8 +32,16 @@ findings:
   warning: 1
   info: 1
   total: 2
-status: issues_found
+status: resolved
 ---
+
+> **Resolution (2026-06-02):** WR-01 and IN-01 fixed (user-approved, in-milestone polish).
+> Stripped the `Phase N / Plan N —` class-Javadoc header markers (and the cited inline
+> markers) from the 9 touched test files, keeping the descriptive remainder; re-wrapped the
+> IN-01 OSIV comment to two lines. Comment-only — `./mvnw clean test-compile` green, build
+> guards + Checkstyle gate intact. Broader inline `Plan N`/`Phase N` cross-references that
+> carry actionable WHY were retained (per the WR-01 note); a full repo-wide marker sweep
+> (declined Option C) remains available as a dedicated future cleanup.
 
 # Phase 116: Code Review Report
 

@@ -25,7 +25,8 @@ spring:
       max-file-size: 100MB
       max-request-size: 100MB
   jpa:
-    # OSIV: the Hibernate session stays open until the end of the HTTP request so Thymeleaf can render lazy-loaded fields — a deliberate choice for this server-rendered admin app (no REST API).
+    # OSIV: the Hibernate session stays open until the end of the HTTP request so Thymeleaf
+    # can render lazy-loaded fields — deliberate choice for this server-rendered admin app (no REST API).
     open-in-view: true
     properties:
       hibernate:

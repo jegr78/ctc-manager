@@ -17,7 +17,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
- * Phase 75 / Plan 04 — Unit test for {@link RaceResultRestorer}.
+ * Unit test for {@link RaceResultRestorer}.
  *
  * <p>Hottest path of the entire restore on the Season-2023 fixture (~1000 rows).
  *

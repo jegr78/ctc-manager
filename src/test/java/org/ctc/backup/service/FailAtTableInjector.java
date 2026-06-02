@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 
 /**
- * Phase 75 / Plan 09 — test-only injector that throws
+ * Test-only injector that throws
  * {@link RestoreFailureSimulatedException} when the restore loop reaches a configured
  * {@code (tableName, rowIndex)} target.
  *

@@ -38,7 +38,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 75 / Plan 06 — happy-path IT for {@link BackupImportService#execute(UUID)}.
+ * Happy-path IT for {@link BackupImportService#execute(UUID)}.
  *
  * <p>Boots the {@code dev} profile (H2 in-memory + {@link TestDataService} fixture) and drives
  * the full export → stage → execute round trip. Asserts:

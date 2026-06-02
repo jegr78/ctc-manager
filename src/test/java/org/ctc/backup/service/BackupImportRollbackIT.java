@@ -44,7 +44,7 @@ import org.springframework.test.context.TestPropertySource;
 import static org.assertj.core.api.Assertions.*;
 
 /**
- * Phase 75 / Plan 09 — primary regression net for success-criterion-3 of the phase:
+ * Primary regression net for success-criterion-3 of the phase:
  *
  * <blockquote>
  * "A mid-restore-failure injection rolls back to the pre-import database state with no orphan

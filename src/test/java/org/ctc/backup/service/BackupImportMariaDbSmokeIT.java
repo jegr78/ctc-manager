@@ -38,14 +38,14 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 75 / Plan 10 — live MariaDB smoke IT for the QUAL-03 CI layer.
+ * Live MariaDB smoke IT for the QUAL-03 CI layer.
  *
  * <p>Boots the {@code local} profile against a real MariaDB:11 container provisioned via
  * Testcontainers. {@link DynamicPropertySource @DynamicPropertySource} overrides
  * {@code spring.datasource.url} / {@code username} / {@code password} so Flyway applies the
  * full V1..VN migration chain on the live engine before the {@link SpringBootTest @SpringBootTest}
- * context starts. {@code rewriteBatchedStatements=true} is appended to the JDBC URL (Phase 75
- * RESEARCH §10) so the production {@code JdbcTemplate.batchUpdate} 500-row batches compile to a
+ * context starts. {@code rewriteBatchedStatements=true} is appended to the JDBC URL so the
+ * production {@code JdbcTemplate.batchUpdate} 500-row batches compile to a
  * single multi-row INSERT on the wire.
  *
  * <p>The single test drives the full round-trip:
@@ -118,7 +118,7 @@ class BackupImportMariaDbSmokeIT {
 
     @DynamicPropertySource
     static void overrideJdbcUrl(DynamicPropertyRegistry registry) {
-        // Append the Phase 75 RESEARCH §10 batch-rewrite flag so the production
+        // Append the batch-rewrite flag so the production
         // JdbcTemplate.batchUpdate(500) calls compile to a single multi-row INSERT on
         // the wire — matching the application-local.yml shape (with rewriteBatchedStatements=true).
         registry.add("spring.datasource.url",

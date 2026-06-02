@@ -18,7 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 73-03 — full Spring-context IT for {@link BackupExportService}.
+ * Full Spring-context IT for {@link BackupExportService}.
  *
  * <p>Boots the {@code dev} profile so {@code DevDataSeeder} populates H2 with the
  * standard fixture (Season 2023 + 2024-3 + sub-teams + drivers + races). Drives the

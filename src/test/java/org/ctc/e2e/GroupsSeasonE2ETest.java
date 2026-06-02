@@ -34,7 +34,7 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
  * <p><b>Scope deviation (Rule 3, blocking issue):</b> The plan template assumed UI
  * affordances for group-bound matchday/race generation under
  * {@code /admin/season-phases/{phaseId}/groups/{groupId}/matchdays/generate}.
- * No such UI exists as of Phase 60 — the canonical {@link MatchdayController} only
+ * No such UI exists — the canonical {@link MatchdayController} only
  * binds matchdays to the REGULAR phase via {@code findRegularPhase}, and group-bound
  * matchday creation has no controller endpoint. The test therefore performs the
  * matchday/match/race/lineup setup via repositories (structural prerequisites without
