@@ -9,9 +9,7 @@
             font-weight: 600;
         }
 
-        /* --- Team-Variablen (datengetrieben) ---
-           accentVis / onPrimary werden idealerweise vom Service berechnet
-           (siehe Handoff). Fallback: roher Akzent bzw. Weiß. */
+        /* Team variables (data-driven): accentVis / onPrimary come from the service; fallback is the raw accent / white. */
         :root {
             --primary:    [[${primaryColor}]];
             --secondary:  [[${secondaryColor}]];
@@ -27,25 +25,22 @@
             width: 1080px; height: 1920px; overflow: hidden;
             font-family: 'Conthrax', -apple-system, sans-serif; color: #fff;
             position: relative;
-            /* sehr dunkle Primärfarbe (z. B. #000) auf sichtbare Helligkeit anheben, Farbton bleibt */
+            /* Lift a very dark primary (e.g. #000) to a visible lightness; hue stays */
             --primary-vis: oklch(from var(--primary) max(l, 0.62) c h);
             background: radial-gradient(135% 70% at 50% 28%,
                 color-mix(in srgb, var(--grad) 85%, #0a0a0e) 0%,
                 #0a0a0e 56%, #060608 100%);
         }
 
-        /* Carbon-Textur */
         .stripes { position: absolute; inset: 0; pointer-events: none;
             background: repeating-linear-gradient(118deg, transparent 0 74px, rgba(255,255,255,.016) 74px 76px); }
 
-        /* Teamfarben-Schienen + Akzent-Pinstripe (symmetrisch) */
         .rail { position: absolute; top: 0; bottom: 0; width: 26px;
             background: linear-gradient(180deg, var(--primary-vis), color-mix(in srgb, var(--primary-vis) 55%, #000)); }
         .rail-l { left: 0; } .rail-r { right: 0; }
         .pin { position: absolute; top: 0; bottom: 0; width: 6px; background: var(--accent-vis); opacity: .85; }
         .pin-l { left: 42px; } .pin-r { right: 42px; }
 
-        /* HUD-Rahmen mit abgeschrägten Ecken */
         .frame { position: absolute; inset: 74px 84px;
             border: 2px solid color-mix(in srgb, var(--accent-vis) 42%, transparent);
             clip-path: polygon(46px 0, 100% 0, 100% calc(100% - 46px), calc(100% - 46px) 100%, 0 100%, 0 46px); }
@@ -53,27 +48,25 @@
         .content { position: absolute; inset: 0; display: flex; flex-direction: column;
             align-items: center; padding: 148px 120px 150px; }
 
-        /* Rating — Parallelogramm, prominent oben */
         .rating { transform: skewX(-11deg);
             background: linear-gradient(180deg, var(--primary), color-mix(in srgb, var(--primary) 78%, #000));
             padding: 24px 64px 22px; display: flex; align-items: center; justify-content: center;
             box-shadow: 0 18px 44px rgba(0,0,0,.5), inset 0 0 0 2px color-mix(in srgb, var(--accent-vis) 35%, transparent); }
         .rating-number { transform: skewX(11deg); font-size: 130px; font-weight: 600;
             line-height: .88; letter-spacing: -5px; color: var(--on-primary);
-            /* dezente dunkle Kontur: hält weiße Zahl auch auf hellem primary lesbar (Fallback ohne Patch) */
+            /* Subtle dark outline: keeps the white number readable on a light primary (fallback without patch) */
             text-shadow: 0 1px 2px rgba(0,0,0,.40), 0 0 10px rgba(0,0,0,.22); }
 
-        /* Mitte: Logo + Name */
         .mid { flex: 1; display: flex; flex-direction: column; align-items: center;
             justify-content: center; gap: 60px; width: 100%; }
-        /* Querformat-Logo-Zone: fängt breite UND quadratische Logos ab */
+        /* Landscape logo zone: catches both wide AND square logos */
         .logo-wrap { position: relative; width: 860px; height: 480px;
             display: flex; align-items: center; justify-content: center; }
         .logo-glow { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
             width: 600px; height: 600px; border-radius: 50%;
             background: radial-gradient(circle, color-mix(in srgb, var(--primary) 34%, transparent) 0%, transparent 62%); }
-        /* Doppelte Kontur (dunkel + hell) + weiter Glow: Logo bleibt auf JEDEM Untergrund lesbar.
-           width/height:100% + contain: kleine Logos werden hoch-, große runterskaliert (Seitenverhältnis bleibt) */
+        /* Double outline (dark + light) + wide glow: keeps the logo readable on ANY background.
+           width/height:100% + contain: small logos scale up, large ones down (aspect ratio preserved) */
         .logo-wrap img { position: relative; width: 100%; height: 100%; object-fit: contain;
             filter: drop-shadow(0 0 3px rgba(0,0,0,.75)) drop-shadow(0 0 10px rgba(255,255,255,.55))
                     drop-shadow(0 0 22px rgba(255,255,255,.28)) drop-shadow(0 14px 26px rgba(0,0,0,.5)); }
@@ -85,7 +78,6 @@
         .sub { font-size: 25px; letter-spacing: 7px; padding: 11px 28px 11px 35px;
             border: 2px solid var(--accent-vis); color: var(--accent-vis); border-radius: 4px; text-transform: uppercase; }
 
-        /* Stats — HUD-Zeile mit Akzent-Klammern */
         .stats { position: relative; width: 100%; display: flex; align-items: center; justify-content: center; gap: 70px; }
         .stat { display: flex; flex-direction: column; align-items: center; gap: 14px; }
         .stat-l { font-size: 30px; letter-spacing: 8px; color: var(--accent-vis); padding-left: 8px; font-weight: 600; }
@@ -98,7 +90,6 @@
         .brk-l { left: 40px; border-left: 4px solid var(--accent-vis); }
         .brk-r { right: 40px; border-right: 4px solid var(--accent-vis); }
 
-        /* CTC-Signatur als dezente Liga-Marke unten (echtes CTC-Logo, weiß invertiert) */
         .ctc-mark { display: flex; align-items: center; justify-content: center; margin-top: 46px; opacity: .5; }
         .ctc-mark img { width: 64px; height: 64px; filter: invert(1); }
     </style>

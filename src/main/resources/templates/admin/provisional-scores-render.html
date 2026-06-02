@@ -27,7 +27,6 @@
         .header-left .year { font-size: 29px; font-weight: 700; color: #9a9aa6; margin-top: 6px; }
 
         .header-center { text-align: center; flex: 1; }
-        /* einzeilig — etwas kleiner, da längerer Titel */
         .header-center .scorecard-title { font-size: 40px; font-weight: 900; color: #f2f2f5; letter-spacing: 2px;
             white-space: nowrap; display: inline-flex; align-items: center; gap: 16px; }
         .header-center .scorecard-title::before, .header-center .scorecard-title::after {
@@ -37,7 +36,6 @@
         .header-right { flex: 1; display: flex; justify-content: flex-end; }
         .header-right img { width: 80px; height: 80px; object-fit: contain; }
 
-        /* Mittelteil — Carbon-Vignette, zwei gestapelte Blöcke */
         .main {
             flex: 1; position: relative; display: flex; flex-direction: column; justify-content: space-evenly;
             padding: 18px 46px; gap: 20px;
@@ -52,11 +50,9 @@
             border: 1px solid rgba(255,255,255,.05); border-left: 6px solid #f5c542;
             border-radius: 14px; padding: 16px 26px 16px 22px;
         }
-        /* HUD-Eckbracket oben rechts */
         .team-block::after { content: ''; position: absolute; top: 12px; right: 12px; width: 28px; height: 28px;
             border-top: 3px solid rgba(245,197,66,.5); border-right: 3px solid rgba(245,197,66,.5); }
 
-        /* Karten-Zelle mit Gold-Trennlinie (ohne Teamname) */
         .team-card-cell {
             flex: 0 0 196px; display: flex; flex-direction: column; align-items: center; justify-content: center;
             border-right: 2px solid rgba(245,197,66,.28); padding-right: 14px;
@@ -83,7 +79,7 @@
         :root { --guest: #f59e0b; }
         .guest-marker { color: var(--guest); font-size: 0.85em; margin-left: 4px; vertical-align: middle; }
 
-        /* Race-Chip rechts unten — nur bei mehr als einem Rennen (Service setzt raceLabel sonst null) */
+        /* Race chip bottom-right — only with more than one race (service sets raceLabel null otherwise) */
         .race-chip { position: absolute; right: 50px; bottom: 12px; font-size: 19px; font-weight: 700;
             letter-spacing: 3px; color: #f5c542; display: inline-flex; align-items: center; gap: 10px; text-transform: uppercase; }
         .race-chip::before { content: ''; width: 16px; height: 16px; border-left: 3px solid #f5c542; border-bottom: 3px solid #f5c542; }
@@ -206,7 +202,7 @@
             </div>
         </div>
 
-        <!-- nur anzeigen, wenn das Match mehr als ein Rennen hat (Service: raceLabel sonst null setzen) -->
+        <!-- Only shown when the match has more than one race (service sets raceLabel to null otherwise) -->
         <div class="race-chip" th:if="${raceLabel != null}" th:text="${raceLabel}"></div>
     </div>
 </body>

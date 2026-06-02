@@ -4,14 +4,14 @@ milestone: v1.17
 milestone_name: Guest Drivers
 status: executing
 stopped_at: Phase 115 UI-SPEC approved
-last_updated: "2026-06-01T18:13:51.072Z"
-last_activity: 2026-06-01 -- Phase 115 execution started
+last_updated: "2026-06-02T09:02:41.305Z"
+last_activity: 2026-06-02 -- Phase 116 execution started
 progress:
-  total_phases: 3
-  completed_phases: 2
-  total_plans: 13
-  completed_plans: 7
-  percent: 54
+  total_phases: 4
+  completed_phases: 3
+  total_plans: 16
+  completed_plans: 13
+  percent: 75
 ---
 
 # Project State
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-05-31 after v1.15 milestone close)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 115 — Guest Marking & Visibility
+**Current focus:** Phase 116 — german-comment-sweep
 
 ## Current Position
 
-Phase: 115 (Guest Marking & Visibility) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 115
-Last activity: 2026-06-01 -- Phase 115 execution started
+Phase: 116 (german-comment-sweep) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 116
+Last activity: 2026-06-02 -- Phase 116 execution started
 
 ## Shipped Milestone
 

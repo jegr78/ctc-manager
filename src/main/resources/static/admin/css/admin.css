@@ -392,7 +392,7 @@ select option {
 .match-none { background: #3a2e1a; }
 .match-fuzzy { background: #1a2a3a; }
 
-/* Google API error categories (Phase 91 / UX-01) */
+/* Google API error categories */
 .error-badge {
     display: inline-block;
     padding: 2px 8px;
@@ -2031,7 +2031,7 @@ a.season-header-title:hover {
 .results-total-value--away { color: var(--white); }
 .results-total-sep { color: var(--text-dim); }
 
-/* === Phase 60: Two-row tabs (Saison-Detail + Standings) === */
+/* Two-row tabs (season detail + standings) */
 
 /* Secondary tab row (Group sub-tabs) — D-29 */
 .tabs-secondary {

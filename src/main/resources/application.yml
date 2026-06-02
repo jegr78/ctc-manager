@@ -25,9 +25,7 @@ spring:
       max-file-size: 100MB
       max-request-size: 100MB
   jpa:
-    # OSIV: Hibernate-Session bleibt bis zum Ende des HTTP-Requests offen,
-    # damit Thymeleaf-Templates lazy-geladene Felder rendern koennen.
-    # Bewusste Entscheidung fuer diese Admin-Anwendung (kein REST-API).
+    # OSIV: the Hibernate session stays open until the end of the HTTP request so Thymeleaf can render lazy-loaded fields — a deliberate choice for this server-rendered admin app (no REST API).
     open-in-view: true
     properties:
       hibernate:
@@ -38,7 +36,7 @@ spring:
 
 logging:
   level:
-    # OSIV-Warnung unterdruecken (bewusst aktiviert, siehe spring.jpa.open-in-view)
+    # Suppress the OSIV warning (deliberately enabled — see spring.jpa.open-in-view)
     org.springframework.orm.jpa.support.OpenEntityManagerInViewInterceptor: ERROR
 
 server:
@@ -80,7 +78,7 @@ ctc:
       - name: "JeGr YT"
         url: "https://youtube.com/@jegr"
 
-# Actuator Health-Endpoint (fuer Docker Healthchecks)
+# Actuator health endpoint (for Docker healthchecks)
 management:
   endpoints:
     web:
