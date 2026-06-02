@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
-    <!-- Spring Boot Defaults (CONSOLE_LOG_PATTERN, Farben, etc.) -->
+    <!-- Spring Boot defaults (CONSOLE_LOG_PATTERN, colors, etc.) -->
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
-    <!-- Log-Verzeichnis: profil-abhaengig -->
+    <!-- Log directory: profile-dependent -->
     <springProfile name="docker | prod">
         <property name="LOG_DIR" value="/app/logs"/>
     </springProfile>
@@ -25,7 +25,7 @@
         </encoder>
     </appender>
 
-    <!-- File Appender mit Rolling Policy -->
+    <!-- File appender with rolling policy -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_DIR}/app.log</file>
         <encoder>
@@ -33,15 +33,15 @@
             <charset>UTF-8</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <!-- Taegliche Rotation mit Groessen-Split -->
+            <!-- Daily rotation with size-based split -->
             <fileNamePattern>${LOG_DIR}/archived/app.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <!-- Max Groesse pro Datei bevor Split innerhalb eines Tages -->
+            <!-- Max size per file before splitting within a day -->
             <maxFileSize>50MB</maxFileSize>
-            <!-- Archive aelter als 7 Tage loeschen -->
+            <!-- Delete archives older than 7 days -->
             <maxHistory>7</maxHistory>
-            <!-- Gesamtlimit ueber alle archivierten Dateien -->
+            <!-- Total size cap across all archived files -->
             <totalSizeCap>500MB</totalSizeCap>
-            <!-- Beim Start alte Archive aufraeumen -->
+            <!-- Clean up old archives on startup -->
             <cleanHistoryOnStart>true</cleanHistoryOnStart>
         </rollingPolicy>
     </appender>

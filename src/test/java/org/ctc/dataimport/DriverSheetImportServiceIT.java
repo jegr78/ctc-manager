@@ -246,7 +246,7 @@ class DriverSheetImportServiceIT {
                 .findBySeasonIdAndDriverId(season2023.getId(), newDriver.getId()))
                 .isPresent();
 
-        // then — PhaseTeam count UNCHANGED — Roster pflege bleibt Phase 60
+        // then — PhaseTeam count UNCHANGED — roster maintenance adds no phase teams
         int phaseTeamCountAfter = phaseTeamRepository.findByPhaseId(regular2023.getId()).size();
         assertThat(phaseTeamCountAfter).isEqualTo(phaseTeamCountBefore);
         // Specifically: no new PhaseTeam for the orphan team
