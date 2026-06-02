@@ -289,8 +289,10 @@ See: milestones/v1.15-ROADMAP.md for full details
   1. A full-repository scan covers all comment-bearing source types — Thymeleaf templates, Java, pom.xml, YAML, and .properties files
   2. Every German comment found is either translated to concise English or removed where it is redundant (per No-Comment-Pollution)
   3. No behavioral change — only comments are touched; `./mvnw clean verify -Pe2e` stays green and coverage holds
-**Plans**: 0 plans (not yet planned)
-- [ ] TBD (run /gsd-plan-phase 116 to break down)
+**Plans**: 3 plans
+- [ ] 116-01-PLAN.md — Sweep main-source comments: admin Thymeleaf templates (CLEAN-01) + application.yml & admin.css (CLEAN-02)
+- [ ] 116-02-PLAN.md — Sweep test-source comments incl. "Saison"→"Season" prose fixes (CLEAN-03)
+- [ ] 116-03-PLAN.md — Repo-wide German-comment re-scan + single full clean build (CLEAN-04)
 
 ## Progress
 
@@ -299,7 +301,7 @@ See: milestones/v1.15-ROADMAP.md for full details
 | 113. Guest Assignment Foundation | 3/3 | Complete    | 2026-06-01 |
 | 114. Scoring & Personal Crediting | 4/4 | Complete | 2026-06-01 |
 | 115. Guest Marking & Visibility | 6/6 | Complete   | 2026-06-02 |
-| 116. German Comment Sweep | 0/0 | Not planned | - |
+| 116. German Comment Sweep | 0/3 | Not started | - |
 
 ---
 
