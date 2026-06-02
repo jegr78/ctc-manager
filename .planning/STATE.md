@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.17
 milestone_name: Guest Drivers
-status: completed
-stopped_at: Phase 115 UI-SPEC approved
-last_updated: "2026-06-02T09:45:30.521Z"
-last_activity: 2026-06-02 -- Phase 116 marked complete
+status: shipped
+stopped_at: v1.17 milestone close (PR + squash-merge pending CI)
+last_updated: "2026-06-02T15:00:00.000Z"
+last_activity: 2026-06-02 -- v1.17 Guest Drivers SHIPPED (archived; PR/merge pending)
 progress:
   total_phases: 4
   completed_phases: 4
@@ -18,43 +18,43 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-31 after v1.15 milestone close)
+See: .planning/PROJECT.md (updated 2026-06-02 after v1.17 milestone close)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 116 — german-comment-sweep
+**Current focus:** v1.17 Guest Drivers SHIPPED — next milestone TBD via `/gsd-new-milestone`
 
 ## Current Position
 
-Phase: 116 — COMPLETE
-Plan: 1 of 3
-Status: Phase 116 complete
-Last activity: 2026-06-02 -- Phase 116 marked complete
+Milestone: v1.17 Guest Drivers — SHIPPED 2026-06-02 (archived)
+Phase: 116 — COMPLETE (all 4 phases 113-116 complete)
+Status: milestone archived; PR + squash-merge into `master` pending CI
+Last activity: 2026-06-02 -- v1.17 SHIPPED
 
 ## Shipped Milestone
 
-**v1.15 CI Optimisation & Race/Match Defaults** — SHIPPED 2026-05-31 — Branch: `gsd/v1.15-ci-and-race-defaults` (PR #132)
+**v1.17 Guest Drivers** — SHIPPED 2026-06-02 — Branch: `gsd/v1.17-guest-drivers` (PR + squash-merge pending CI)
 
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
-| 106 | CI Pipeline Optimisation | CI-01..06 | Complete (CI-03/04/06 ✓; CI-05 ✓ verified; CI-01/02 ✓ config-sound) |
-| ~~107~~ | ~~Race/Match Prefill Defaults~~ | ~~RACE-01..03~~ | **Removed 2026-05-30** (RACE-01..03 dropped) |
-| 108 | Missing-Driver n/a Rendering | LINEUP-01..04 | Complete (LINEUP-01..04 ✓; 108-REVIEW.md resolved — WR-01 fixed) |
-| 109 | Walkover Handling | WO-01..04 | Complete (109-01..05 ✓; WO-01..04 ✓; 2 review passes resolved; verify -Pe2e green) |
-| 110 | Lobby Settings Graphic | LOBBY-01..05 | Complete (110-01..05 ✓; 110-REVIEW.md resolved; verify -Pe2e green) |
-| 111 | Log-Injection Remediation (CodeQL CWE-117) | SEC-LOG-01..04 | Complete (111-01..03 ✓; SEC-LOG-01..04 ✓; 29→0 java/log-injection on PR ref; 111-REVIEW.md resolved — 5 findings fixed; verify -Pe2e green) |
-| 112 | Unused Import Cleanup & Regression Guard | IMP-01..02 | Complete (112-01 ✓; IMP-01/02 ✓; Checkstyle UnusedImports gate bound to validate; verify -Pe2e green) |
+| 113 | Guest Assignment Foundation | GUEST-01..04 | Complete (Flyway V18 `is_guest` + RaceLineup flag + admin CRUD; REVIEW + VALIDATION + auto-UAT 4/4) |
+| 114 | Scoring & Personal Crediting | SCORE-01..03 | Complete (fielding-team aggregation + unified driver-ranking crediting incl. pure guests, idempotent; REVIEW + VALIDATION) |
+| 115 | Guest Marking & Visibility | MARK-01..06 | Complete (`--guest` token + `hasGuestAppearance` across 3 graphics + admin + rankings + profile; REVIEW + VALIDATION + visual gate) |
+| 116 | German Comment Sweep | CLEAN-01..04 | Complete (German comments → English repo-wide, comments-only; REVIEW PASS + VALIDATION manual-only + UAT 4/4) |
+
+*Prior shipped milestone: v1.15 CI Optimisation & Race/Match Defaults (Phases 106, 108-112) — see `milestones/v1.15-*` + MILESTONES.md.*
 
 ## Baselines to Preserve
 
-- JaCoCo line coverage: **≥ ~89 %** (v1.15 baseline; gate 82 % in pom.xml)
-- Test count: **≥ 2472** (v1.15 baseline)
-- CI E2E median: **17:39** (v1.12 baseline; v1.15 target was reduction, actual 18-20 min warm)
+- JaCoCo line coverage: **≥ ~89 %** (v1.17 baseline **89.88 %**; gate 82 % in pom.xml)
+- Test count: **≥ 2530** (v1.17 baseline; was 2472 at v1.15)
+- CI E2E median: **17:39** (v1.12 baseline; warm runs settle 18-20 min)
 - `BackupSchema.SCHEMA_VERSION`: **2** (v1.13 Phase 101)
-- `EXPORT_ORDER` size: **26 entities** (v1.13 Phase 101; guest flag is a column on `RaceLineup`/`RaceResult`, not a new entity)
+- `EXPORT_ORDER` size: **26 entities** (v1.13 Phase 101; the v1.17 guest flag is a column on `RaceLineup`, not a new entity)
 - SpotBugs `BugInstance` count: **0** (blocking gate)
 - CodeQL gate-step: **exit 0** on new HIGH/CRITICAL
-- Flyway migrations: V1-V17 immutable; next is V18 (guest flag, Phase 113)
+- Flyway migrations: V1-**V18** immutable (V18 = guest `is_guest`, Phase 113); next is **V19**
+- Checkstyle: **0** UnusedImports/RedundantImport violations (validate-gate); all source comments English-only (v1.17 CLEAN sweep)
 
 ## Accumulated Context
 
@@ -91,6 +91,13 @@ Carried forward from v1.13/v1.14/v1.15 close (unchanged):
 | uat (carry) | QUAL-02 `local`-profile MariaDB manual smoke | Post-deploy operator action |
 | uat (carry) | UX-01 driver-import error-category badge screenshots | Post-deploy operator action |
 | tech_debt | Existing match-channels under old Phase-94 naming scheme | Potential future admin bulk-rename action; two-scheme coexistence accepted |
+
+Acknowledged at v1.17 close (2026-06-02) — both verified complete, scanner format quirks only (not real debt):
+
+| Category | Item | Status |
+| -------- | ---- | ------ |
+| quick_task | 260531-suj — Link existing Discord channel | Complete (PLAN+SUMMARY+CONTEXT+AUTO-UAT 4/4, executed 2026-05-31); audit-open mislabeled "missing" due to quick-task format lacking a top-level status field |
+| uat | 113-AUTO-UAT.md | Complete (4/4 passed, 0 failed); audit-open reported "unknown" due to AUTO-UAT format parse quirk |
 
 ## Session Continuity
 
