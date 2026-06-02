@@ -21,6 +21,7 @@ public class RaceGraphicService {
     private final RaceAttachmentRepository raceAttachmentRepository;
     private final LineupGraphicService lineupGraphicService;
     private final ResultsGraphicService resultsGraphicService;
+    private final ProvisionalScoresGraphicService provisionalScoresGraphicService;
     private final SettingsGraphicService settingsGraphicService;
     private final LobbySettingsGraphicService lobbySettingsGraphicService;
     private final OverlayGraphicService overlayGraphicService;
@@ -33,6 +34,11 @@ public class RaceGraphicService {
     @Transactional
     public void generateResults(UUID raceId) {
         generateAndSaveGraphic(raceId, "Results", resultsGraphicService::generateResults);
+    }
+
+    @Transactional
+    public void generateProvisional(UUID raceId) {
+        generateAndSaveGraphic(raceId, "Provisional", provisionalScoresGraphicService::generateProvisionalFile);
     }
 
     @Transactional

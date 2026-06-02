@@ -112,6 +112,7 @@ class RaceControllerCalendarTest {
 				homeAwayRace(), 0, 0, Map.of(), Map.of(),
 				false, false, false, false,
 				false, false, false,
+				false, false,
 				false, false, false,
 				false, false,
 				calendarAvailable, hasCalendarEvent, canCreateCalendarEvent,

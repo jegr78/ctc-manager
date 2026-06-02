@@ -81,6 +81,8 @@ public class RaceController {
 		model.addAttribute("canGenerateResults", data.canGenerateResults());
 		model.addAttribute("resultsMissing", data.resultsMissing());
 		model.addAttribute("resultsExist", data.resultsExist());
+		model.addAttribute("canGenerateProvisional", data.canGenerateProvisional());
+		model.addAttribute("provisionalExists", data.provisionalExists());
 		model.addAttribute("canGenerateSettings", data.canGenerateSettings());
 		model.addAttribute("settingsMissing", data.settingsMissing());
 		model.addAttribute("settingsExist", data.settingsExist());
@@ -316,6 +318,17 @@ public class RaceController {
 		try {
 			raceGraphicService.generateResults(id);
 			redirectAttributes.addFlashAttribute("successMessage", "Results graphic generated");
+		} catch (RuntimeException e) {
+			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+		}
+		return "redirect:/admin/races/" + id;
+	}
+
+	@PostMapping("/{id}/generate-provisional")
+	public String generateProvisional(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+		try {
+			raceGraphicService.generateProvisional(id);
+			redirectAttributes.addFlashAttribute("successMessage", "Provisional scores graphic generated");
 		} catch (RuntimeException e) {
 			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
 		}

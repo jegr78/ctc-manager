@@ -122,6 +122,8 @@ public class RaceService {
 				.anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/lineup.png"));
 		boolean resultsGraphicExists = race.getAttachments().stream()
 				.anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/results.png"));
+		boolean provisionalGraphicExists = race.getAttachments().stream()
+				.anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/provisional.png"));
 		boolean hasResults = !race.getResults().isEmpty();
 
 		boolean settingsGraphicExists = race.getAttachments().stream()
@@ -148,6 +150,7 @@ public class RaceService {
 				!hasLineup, !hasHomeCard || !hasAwayCard, lineupExists,
 				hasResults && hasHomeCard && hasAwayCard && !resultsGraphicExists,
 				!hasResults, resultsGraphicExists,
+				hasResults && hasHomeCard && hasAwayCard && !provisionalGraphicExists, provisionalGraphicExists,
 				hasAllSettings && hasHomeCard && hasAwayCard && !settingsGraphicExists,
 				!hasAllSettings, settingsGraphicExists,
 				hasMatch && !overlayExists, overlayExists,
@@ -355,6 +358,7 @@ public class RaceService {
 	                             boolean canGenerateLineup,
 	                             boolean lineupMissing, boolean cardsMissing, boolean lineupExists,
 	                             boolean canGenerateResults, boolean resultsMissing, boolean resultsExist,
+	                             boolean canGenerateProvisional, boolean provisionalExists,
 	                             boolean canGenerateSettings, boolean settingsMissing, boolean settingsExist,
 	                             boolean canGenerateOverlay, boolean overlayExists,
 	                             boolean calendarAvailable, boolean hasCalendarEvent,

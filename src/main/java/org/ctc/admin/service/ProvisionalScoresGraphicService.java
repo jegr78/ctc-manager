@@ -43,6 +43,46 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 		this.screenshotter = screenshotter;
 	}
 
+	public String generateProvisionalFile(Race race) throws IOException {
+		if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
+			throw new BusinessRuleException("Walkover match has no provisional scores");
+		}
+		if (race.getResults().isEmpty()) {
+			throw new IllegalStateException("No results for this race");
+		}
+		Team homeTeam = race.getHomeTeam();
+		Team awayTeam = race.getAwayTeam();
+		if (homeTeam == null) {
+			throw new IllegalStateException("Race has no home team");
+		}
+		if (awayTeam == null) {
+			throw new IllegalStateException("Race has no away team");
+		}
+
+		Context ctx = buildContext(race, resolveRaceIndex(race), homeTeam, awayTeam);
+		String html = renderTemplate(ctx);
+		Path raceDir = uploadDir.resolve("races").resolve(race.getId().toString());
+		Files.createDirectories(raceDir);
+		Path outputFile = raceDir.resolve("provisional.png");
+		renderScreenshot(html, outputFile);
+		log.info("Generated provisional scores graphic file for race {}", race.getId());
+		return "/uploads/races/" + race.getId() + "/provisional.png";
+	}
+
+	private int resolveRaceIndex(Race race) {
+		var match = race.getMatch();
+		if (match == null || match.getRaces() == null) {
+			return 1;
+		}
+		var races = match.getRaces();
+		for (int i = 0; i < races.size(); i++) {
+			if (race.getId() != null && race.getId().equals(races.get(i).getId())) {
+				return i + 1;
+			}
+		}
+		return 1;
+	}
+
 	public byte[] generateProvisional(Race race, int raceIndex) throws IOException {
 		if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
 			throw new BusinessRuleException("Walkover match has no provisional scores");
