@@ -35,10 +35,10 @@ Requirements for the v1.17 milestone. Each maps to roadmap phases.
 
 German comments crept in via two Claude-Design handoffs during v1.14/v1.15, violating CLAUDE.md "Language" (comments must be English) and "No Comment Pollution". This group restores compliance. Comments only — behavior is untouched.
 
-- [ ] **CLEAN-01**: All German comments in Thymeleaf templates are replaced with concise English, or removed where redundant.
-- [ ] **CLEAN-02**: All German comments in non-template source resources (`application.yml`, `admin.css`, and any other `*.yml`/`*.properties`/`pom.xml`/`*.sql`) are English; any banned Phase/Plan/Task markers found in the same comment are removed.
-- [ ] **CLEAN-03**: All German comments in test sources are English (including the misused word "Saison" → "Season" to match the actual fixture name `Season 2023`); legitimate German string literals and proper nouns (track names like `Nürburgring`, the `SiteSlugger` transliteration map, test-data assertion pairs) are left untouched.
-- [ ] **CLEAN-04**: A repository-wide scan confirms no German comments remain across `html/java/xml/yml/yaml/properties/css/sql`, and `./mvnw clean verify -Pe2e` stays green with coverage held (no behavioral change — comments only).
+- [x] **CLEAN-01**: All German comments in Thymeleaf templates are replaced with concise English, or removed where redundant.
+- [x] **CLEAN-02**: All German comments in non-template source resources (`application.yml`, `admin.css`, and any other `*.yml`/`*.properties`/`pom.xml`/`*.sql`) are English; any banned Phase/Plan/Task markers found in the same comment are removed.
+- [x] **CLEAN-03**: All German comments in test sources are English (including the misused word "Saison" → "Season" to match the actual fixture name `Season 2023`); legitimate German string literals and proper nouns (track names like `Nürburgring`, the `SiteSlugger` transliteration map, test-data assertion pairs) are left untouched.
+- [x] **CLEAN-04**: A repository-wide scan confirms no German comments remain across `html/java/xml/yml/yaml/properties/css/sql`, and `./mvnw clean verify -Pe2e` stays green with coverage held (no behavioral change — comments only).
 
 ## Future Requirements
 
@@ -79,10 +79,10 @@ Explicitly excluded for v1.17 to prevent scope creep.
 | MARK-04 | Phase 115 | Complete |
 | MARK-05 | Phase 115 | Complete |
 | MARK-06 | Phase 115 | Complete |
-| CLEAN-01 | Phase 116 | Pending |
-| CLEAN-02 | Phase 116 | Pending |
-| CLEAN-03 | Phase 116 | Pending |
-| CLEAN-04 | Phase 116 | Pending |
+| CLEAN-01 | Phase 116 | Complete |
+| CLEAN-02 | Phase 116 | Complete |
+| CLEAN-03 | Phase 116 | Complete |
+| CLEAN-04 | Phase 116 | Complete |
 
 **Coverage:**
 - v1.17 requirements: 13 total
