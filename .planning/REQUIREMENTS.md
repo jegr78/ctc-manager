@@ -16,18 +16,18 @@ Requirements for the v1.17 milestone. Each maps to roadmap phases.
 
 ### SCORE — Scoring & Personal Crediting
 
-- [ ] **SCORE-01**: A guest driver's race points count normally toward the **fielding team's** match score and standings, via the existing `ScoringService.aggregateMatchScores(race)` aggregation — no separate points model for guests.
-- [ ] **SCORE-02**: A guest driver's earned points are **additionally credited to that driver personally in the season's driver-ranking**, additive to their own team races — including drivers who have no roster entry (`SeasonDriver`) in that season.
-- [ ] **SCORE-03**: Guest crediting is recomputed consistently on every result save (no double-counting; root cause handled in the service, no template/controller fallback calculations per CLAUDE.md "No Fallback Calculations").
+- [x] **SCORE-01**: A guest driver's race points count normally toward the **fielding team's** match score and standings, via the existing `ScoringService.aggregateMatchScores(race)` aggregation — no separate points model for guests.
+- [x] **SCORE-02**: A guest driver's earned points are **additionally credited to that driver personally in the season's driver-ranking**, additive to their own team races — including drivers who have no roster entry (`SeasonDriver`) in that season.
+- [x] **SCORE-03**: Guest crediting is recomputed consistently on every result save (no double-counting; root cause handled in the service, no template/controller fallback calculations per CLAUDE.md "No Fallback Calculations").
 
 ### MARK — Marking & Visibility
 
-- [ ] **MARK-01**: Guest drivers are marked on the **Scorecard** (race scoring) graphic.
-- [ ] **MARK-02**: Guest drivers are marked on the **Provisional Scores** graphic.
-- [ ] **MARK-03**: Guest drivers are marked on the further **matchday graphics** (e.g. match-results / matchday-result), so guests are not unmarked when those graphics post alongside the Scorecard.
-- [ ] **MARK-04**: Guest assignments are marked in the **admin matchday/race detail** view (lineup + results).
-- [ ] **MARK-05**: The season **driver-ranking** (admin + public site) marks the guest appearance.
-- [ ] **MARK-06**: The public **driver-profile** page shows the guest race as a marked entry (which team fielded the driver).
+- [x] **MARK-01**: Guest drivers are marked on the **Scorecard** (race scoring) graphic.
+- [x] **MARK-02**: Guest drivers are marked on the **Provisional Scores** graphic.
+- [x] **MARK-03**: Guest drivers are marked on the further **matchday graphics** (e.g. match-results / matchday-result), so guests are not unmarked when those graphics post alongside the Scorecard.
+- [x] **MARK-04**: Guest assignments are marked in the **admin matchday/race detail** view (lineup + results).
+- [x] **MARK-05**: The season **driver-ranking** (admin + public site) marks the guest appearance.
+- [x] **MARK-06**: The public **driver-profile** page shows the guest race as a marked entry (which team fielded the driver).
 
 > The concrete visual treatment of the guest marking (`*` after the name, a "Gast"/origin-team badge, …) is decided in the UI phase against a rendered reference (see CLAUDE.md "Visual Verification with `playwright-cli`") — it is intentionally not pre-committed here.
 
@@ -61,15 +61,15 @@ Explicitly excluded for v1.17 to prevent scope creep.
 | GUEST-02 | Phase 113 | Complete |
 | GUEST-03 | Phase 113 | Complete |
 | GUEST-04 | Phase 113 | Complete |
-| SCORE-01 | Phase 114 | Pending |
-| SCORE-02 | Phase 114 | Pending |
-| SCORE-03 | Phase 114 | Pending |
-| MARK-01 | Phase 115 | Pending |
-| MARK-02 | Phase 115 | Pending |
-| MARK-03 | Phase 115 | Pending |
-| MARK-04 | Phase 115 | Pending |
-| MARK-05 | Phase 115 | Pending |
-| MARK-06 | Phase 115 | Pending |
+| SCORE-01 | Phase 114 | Complete |
+| SCORE-02 | Phase 114 | Complete |
+| SCORE-03 | Phase 114 | Complete |
+| MARK-01 | Phase 115 | Complete |
+| MARK-02 | Phase 115 | Complete |
+| MARK-03 | Phase 115 | Complete |
+| MARK-04 | Phase 115 | Complete |
+| MARK-05 | Phase 115 | Complete |
+| MARK-06 | Phase 115 | Complete |
 
 **Coverage:**
 - v1.17 requirements: 13 total
