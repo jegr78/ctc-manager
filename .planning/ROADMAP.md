@@ -229,7 +229,7 @@ See: milestones/v1.15-ROADMAP.md for full details
 
 - [x] **Phase 113: Guest Assignment Foundation** - Flyway migration + RaceLineup/RaceResult guest flag + admin CRUD (add, edit, remove guest drivers selectable from any driver in the system) (completed 2026-06-01)
 - [x] **Phase 114: Scoring & Personal Crediting** - Guest points flow to fielding team via existing aggregation; driver-ranking crediting for guests (including drivers without a SeasonDriver in that season); idempotent on every result save
-- [ ] **Phase 115: Guest Marking & Visibility** - Guest driver marking across all surfaces: Scorecard + Provisional-Scores + matchday-results graphics, admin matchday/race detail, driver-ranking (admin + public site), driver-profile public page; visual treatment decided against rendered reference
+- [x] **Phase 115: Guest Marking & Visibility** - Guest driver marking across all surfaces: Scorecard + Provisional-Scores + matchday-results graphics, admin matchday/race detail, driver-ranking (admin + public site), driver-profile public page; visual treatment decided against rendered reference (completed 2026-06-02)
 
 ## Phase Details
 
@@ -277,7 +277,7 @@ See: milestones/v1.15-ROADMAP.md for full details
 - [x] 115-03-PLAN.md — Admin detail (MARK-04): race-detail guestDriverMap + matchday-detail chip marker + sub-team label
 - [x] 115-04-PLAN.md — Ranking (MARK-05): DriverRanking.hasGuestAppearance across all paths + admin standings + both site rankings
 - [x] 115-05-PLAN.md — Profile (MARK-06): DriverProfileRow + guest marker + "as guest for <team>" sub-label
-- [ ] 115-06-PLAN.md — Visual approval gate (SC-1/SC-2): full verify -Pe2e + playwright-cli screenshots + user approval
+- [x] 115-06-PLAN.md — Visual approval gate (SC-1/SC-2): full verify -Pe2e + playwright-cli screenshots + user approval
 **UI hint**: yes
 
 ## Progress
@@ -286,7 +286,7 @@ See: milestones/v1.15-ROADMAP.md for full details
 |-------|----------------|--------|-----------|
 | 113. Guest Assignment Foundation | 3/3 | Complete    | 2026-06-01 |
 | 114. Scoring & Personal Crediting | 4/4 | Complete | 2026-06-01 |
-| 115. Guest Marking & Visibility | 5/6 | In Progress|  |
+| 115. Guest Marking & Visibility | 6/6 | Complete   | 2026-06-02 |
 
 ---
 
