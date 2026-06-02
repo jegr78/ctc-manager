@@ -19,8 +19,8 @@
                     <tr th:each="r, i : ${driverRanking}">
                         <td class="font-bold text-white" th:text="${i.count}"></td>
                         <td class="font-bold">
-                            <span class="guest-marker" th:if="${r.hasGuestAppearance}" aria-label="Guest driver">&#x2605;</span>
                             <a class="entity-link" th:href="${driverSlugMap.get(r.driver.id)}" th:text="${r.driver.psnId}"></a>
+                            <span class="guest-marker" th:if="${r.hasGuestAppearance}" aria-label="Guest driver">&#x2605;</span>
                         </td>
                         <td class="text-dim" th:text="${driverTeamsMap.containsKey(r.driver.id) ? #strings.listJoin(driverTeamsMap.get(r.driver.id), ', ') : '-'}"></td>
                         <td class="text-center" th:text="${r.racesCount}"></td>

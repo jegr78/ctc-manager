@@ -48,6 +48,18 @@
             </small>
         </span>
 
+        <!-- Provisional Button -->
+        <form th:if="${canGenerateProvisional}" th:action="@{/admin/races/{id}/generate-provisional(id=${race.id})}" method="post">
+            <button type="submit" class="btn btn-primary">Generate Provisional Graphic</button>
+        </form>
+        <span th:if="${!canGenerateProvisional && !provisionalExists}" class="btn-with-hint">
+            <button class="btn btn-secondary" disabled>Generate Provisional Graphic</button>
+            <small class="text-dim">
+                <span th:if="${resultsMissing}">No results entered.</span>
+                <span th:if="${cardsMissing}">Team cards missing.</span>
+            </small>
+        </span>
+
         <!-- Settings Button -->
         <form th:if="${canGenerateSettings}" th:action="@{/admin/races/{id}/generate-settings(id=${race.id})}" method="post">
             <button type="submit" class="btn btn-primary">Generate Settings Graphic</button>
@@ -169,8 +181,8 @@
                                       th:text="${driverTeamMap != null ? driverTeamMap[result.driver.id] : '?'}"></span>
                             </td>
                             <td>
-                                <span class="guest-marker" th:if="${guestDriverMap != null and guestDriverMap[result.driver.id]}" aria-label="Guest driver">&#x2605;</span>
                                 <a th:href="@{/admin/drivers/{id}(id=${result.driver.id})}" class="detail-link" th:text="${result.driver.psnId}"></a>
+                                <span class="guest-marker" th:if="${guestDriverMap != null and guestDriverMap[result.driver.id]}" aria-label="Guest driver">&#x2605;</span>
                             </td>
                             <td class="td-center td-numeric" th:text="${result.qualiPosition}"></td>
                             <td class="td-right td-numeric" th:text="${result.pointsRace}"></td>

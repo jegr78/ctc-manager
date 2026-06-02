@@ -32,8 +32,8 @@
                 <tbody>
                     <tr th:each="row : ${profileRows}">
                         <td>
-                            <span class="guest-marker" th:if="${row.guest}" aria-label="Guest driver">&#x2605;</span>
                             <span th:text="${row.result.race.matchday.label}"></span>
+                            <span class="guest-marker" th:if="${row.guest}" aria-label="Guest driver">&#x2605;</span>
                             <span class="guest-label" th:if="${row.guest}">as guest for <span th:text="${row.fieldingTeamName}"></span></span>
                         </td>
                         <td>
@@ -72,8 +72,8 @@
                 <tbody>
                     <tr th:each="row : ${entry.value}">
                         <td>
-                            <span class="guest-marker" th:if="${row.guest}" aria-label="Guest driver">&#x2605;</span>
                             <span th:text="${row.result.race.matchday.label}"></span>
+                            <span class="guest-marker" th:if="${row.guest}" aria-label="Guest driver">&#x2605;</span>
                             <span class="guest-label" th:if="${row.guest}">as guest for <span th:text="${row.fieldingTeamName}"></span></span>
                         </td>
                         <td>

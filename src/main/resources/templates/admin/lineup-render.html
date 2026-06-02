@@ -63,7 +63,7 @@
 
         .empty-slot { opacity: 0.32; }
         .empty-slot .driver-name { color: #6a6a73; }
-        .guest-marker { color: #f59e0b; font-size: 0.85em; margin-right: 4px; vertical-align: middle; }
+        .guest-marker { color: #f59e0b; font-size: 0.85em; margin-left: 4px; vertical-align: middle; }
 
         .footer .position { flex: 1; font-size: 56px; font-weight: 900; color: #f2f2f5; }
         .footer .position:last-child { text-align: right; }
@@ -99,13 +99,11 @@
         <div class="pairings">
             <div class="pairing" th:each="p : ${pairings}">
                 <div class="driver-info home" th:classappend="${p.homeDriver == 'n/a'} ? 'empty-slot' : ''">
-                    <span class="guest-marker" th:if="${p.homeIsGuest}" aria-label="Guest driver">&#x2605;</span>
-                    <span class="driver-name" th:text="${p.homeDriver}"></span>
+                    <span class="driver-name"><span th:text="${p.homeDriver}"></span><span class="guest-marker" th:if="${p.homeIsGuest}" aria-label="Guest driver">&#x2605;</span></span>
                     <span class="driver-nickname" th:text="'(' + ${p.homeNickname} + ')'" th:if="${p.homeDriver != 'n/a'}"></span>
                 </div>
                 <div class="driver-info away" th:classappend="${p.awayDriver == 'n/a'} ? 'empty-slot' : ''">
-                    <span class="driver-name" th:text="${p.awayDriver}"></span>
-                    <span class="guest-marker" th:if="${p.awayIsGuest}" aria-label="Guest driver">&#x2605;</span>
+                    <span class="driver-name"><span th:text="${p.awayDriver}"></span><span class="guest-marker" th:if="${p.awayIsGuest}" aria-label="Guest driver">&#x2605;</span></span>
                     <span class="driver-nickname" th:text="'(' + ${p.awayNickname} + ')'" th:if="${p.awayDriver != 'n/a'}"></span>
                 </div>
             </div>

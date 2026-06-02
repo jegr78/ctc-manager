@@ -1092,7 +1092,7 @@ a.season-tag:hover {
 .guest-marker {
     color: var(--guest);
     font-size: 12px;
-    margin-right: 4px;
+    margin-left: 4px;
     vertical-align: middle;
     line-height: 1;
 }
