@@ -80,7 +80,8 @@
         .fl-marker { color: #f5c542; font-size: 20px; }
 
         .provisional-table tr.empty-slot td { color: #5f5f68; }
-        .guest-marker { color: #f59e0b; font-size: 0.85em; margin-left: 4px; vertical-align: middle; }
+        :root { --guest: #f59e0b; }
+        .guest-marker { color: var(--guest); font-size: 0.85em; margin-left: 4px; vertical-align: middle; }
 
         /* Race-Chip rechts unten — nur bei mehr als einem Rennen (Service setzt raceLabel sonst null) */
         .race-chip { position: absolute; right: 50px; bottom: 12px; font-size: 19px; font-weight: 700;

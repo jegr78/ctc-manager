@@ -66,7 +66,8 @@
 
         .empty-slot { opacity: 0.32; }
         .empty-slot .driver-name { color: #6a6a73; }
-        .guest-marker { color: #f59e0b; font-size: 0.85em; margin-left: 4px; vertical-align: middle; }
+        :root { --guest: #f59e0b; }
+        .guest-marker { color: var(--guest); font-size: 0.85em; margin-left: 4px; vertical-align: middle; }
 
         .footer .team-total { flex: 1; font-size: 56px; font-weight: 900; color: #f2f2f5; }
         .footer .team-total.winner { text-decoration: underline; text-decoration-color: #f5c542; text-underline-offset: 12px; text-decoration-thickness: 6px; }

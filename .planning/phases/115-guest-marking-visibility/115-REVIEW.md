@@ -130,8 +130,8 @@ All four warnings and the actionable info items were fixed in-milestone:
 - **WR-04 — RESOLVED.** `buildContext` now applies the same `getRaces() == null` guard as `resolveRaceIndex` (one consistent assumption).
 - **IN-01 / IN-02 — RESOLVED.** Stripped Plan/Decision/version cross-refs and the repeated SeasonPhase comment from `DriverRankingService`, `DriverProfilePageGenerator`, `RaceGraphicServiceTest`, `RaceControllerCalendarTest`; kept genuine WHY notes.
 - **IN-04 — RESOLVED.** Replaced fully-qualified inline `java.util.*` types in `DriverProfilePageGenerator` with imports.
-- **IN-03 — ACCEPTED (no change).** The 8 near-identical `generate-*` handlers are duplication, not a defect; collapse deferred as an optional future refactor.
-- **IN-05 — ACCEPTED (no change).** Graphic templates legitimately cannot reference the `--guest` CSS variable (standalone Playwright documents); the `#f59e0b` ↔ `--guest` coupling is a known, documented consistency hazard.
+- **IN-03 — RESOLVED.** The duplicated try/catch/flash/redirect body of the six `generate-*` handlers was extracted into a private `generateGraphic(id, generation, successMessage, redirectAttributes)` helper; each `@PostMapping` URL and method is unchanged (no breaking change), behavior identical. The full `{kind}`-dispatch the reviewer floated was rejected because it would change the URLs and reduce per-handler explicitness.
+- **IN-05 — RESOLVED.** Each of the three graphic render templates now declares `:root { --guest: #f59e0b; }` and binds `.guest-marker { color: var(--guest); }`, so the guest colour is a named token in the graphic context (consistent with how the page CSS expresses it) rather than a bare inline hex.
 
 _Reviewed: 2026-06-02_
 _Reviewer: Claude (gsd-code-reviewer)_
