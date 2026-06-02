@@ -49,7 +49,6 @@
         .team-card-container img { max-height: 100%; max-width: 100%; object-fit: contain;
             border: 3px solid #fff; border-radius: 16px; box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 16px 44px rgba(0,0,0,.55); }
 
-        /* Fahrer-Zeilen + HUD-Eckbrackets */
         .results { flex: 1; position: relative; display: flex; flex-direction: column; justify-content: space-around; padding: 24px 44px; }
         .results::before, .results::after { content: ''; position: absolute; width: 36px; height: 36px; border: 3px solid rgba(245,197,66,.55); }
         .results::before { top: 0; left: 8px; border-right: 0; border-bottom: 0; }
@@ -66,6 +65,8 @@
 
         .empty-slot { opacity: 0.32; }
         .empty-slot .driver-name { color: #6a6a73; }
+        :root { --guest: #f59e0b; }
+        .guest-marker { color: var(--guest); font-size: 0.85em; margin-left: 4px; vertical-align: middle; }
 
         .footer .team-total { flex: 1; font-size: 56px; font-weight: 900; color: #f2f2f5; }
         .footer .team-total.winner { text-decoration: underline; text-decoration-color: #f5c542; text-underline-offset: 12px; text-decoration-thickness: 6px; }
@@ -96,13 +97,13 @@
         <div class="results">
             <div class="result-row" th:each="row : ${resultRows}">
                 <div class="driver-info home" th:classappend="${row.homeDriver == 'n/a'} ? 'empty-slot' : ''">
-                    <span class="driver-name" th:text="${row.homeDriver}"></span>
+                    <span class="driver-name"><span th:text="${row.homeDriver}"></span><span class="guest-marker" th:if="${row.homeIsGuest}" aria-label="Guest driver">&#x2605;</span></span>
                     <span class="driver-nickname" th:text="'(' + ${row.homeNickname} + ')'" th:if="${row.homeDriver != 'n/a'}"></span>
                 </div>
                 <span class="points" th:classappend="${(row.homeDriver != 'n/a' and homeIsWinner ? 'winner ' : '') + (row.homeDriver == 'n/a' ? 'empty-slot' : '')}" th:text="${row.homeDriver != 'n/a' ? row.homePoints : 0}"></span>
                 <span class="points" th:classappend="${(row.awayDriver != 'n/a' and awayIsWinner ? 'winner ' : '') + (row.awayDriver == 'n/a' ? 'empty-slot' : '')}" th:text="${row.awayDriver != 'n/a' ? row.awayPoints : 0}"></span>
                 <div class="driver-info away" th:classappend="${row.awayDriver == 'n/a'} ? 'empty-slot' : ''">
-                    <span class="driver-name" th:text="${row.awayDriver}"></span>
+                    <span class="driver-name"><span th:text="${row.awayDriver}"></span><span class="guest-marker" th:if="${row.awayIsGuest}" aria-label="Guest driver">&#x2605;</span></span>
                     <span class="driver-nickname" th:text="'(' + ${row.awayNickname} + ')'" th:if="${row.awayDriver != 'n/a'}"></span>
                 </div>
             </div>

@@ -73,6 +73,7 @@ public class RaceController {
 		model.addAttribute("homeTotal", data.homeTotal());
 		model.addAttribute("awayTotal", data.awayTotal());
 		model.addAttribute("driverTeamMap", data.driverTeamMap());
+		model.addAttribute("guestDriverMap", data.guestDriverMap());
 		model.addAttribute("canGenerateLineup", data.canGenerateLineup());
 		model.addAttribute("lineupMissing", data.lineupMissing());
 		model.addAttribute("cardsMissing", data.cardsMissing());
@@ -80,6 +81,8 @@ public class RaceController {
 		model.addAttribute("canGenerateResults", data.canGenerateResults());
 		model.addAttribute("resultsMissing", data.resultsMissing());
 		model.addAttribute("resultsExist", data.resultsExist());
+		model.addAttribute("canGenerateProvisional", data.canGenerateProvisional());
+		model.addAttribute("provisionalExists", data.provisionalExists());
 		model.addAttribute("canGenerateSettings", data.canGenerateSettings());
 		model.addAttribute("settingsMissing", data.settingsMissing());
 		model.addAttribute("settingsExist", data.settingsExist());
@@ -301,53 +304,38 @@ public class RaceController {
 
 	@PostMapping("/{id}/generate-lineup")
 	public String generateLineup(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-		try {
-			raceGraphicService.generateLineup(id);
-			redirectAttributes.addFlashAttribute("successMessage", "Lineup graphic generated");
-		} catch (RuntimeException e) {
-			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-		}
-		return "redirect:/admin/races/" + id;
+		return generateGraphic(id, () -> raceGraphicService.generateLineup(id), "Lineup graphic generated", redirectAttributes);
 	}
 
 	@PostMapping("/{id}/generate-results")
 	public String generateResults(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-		try {
-			raceGraphicService.generateResults(id);
-			redirectAttributes.addFlashAttribute("successMessage", "Results graphic generated");
-		} catch (RuntimeException e) {
-			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-		}
-		return "redirect:/admin/races/" + id;
+		return generateGraphic(id, () -> raceGraphicService.generateResults(id), "Results graphic generated", redirectAttributes);
+	}
+
+	@PostMapping("/{id}/generate-provisional")
+	public String generateProvisional(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+		return generateGraphic(id, () -> raceGraphicService.generateProvisional(id), "Provisional scores graphic generated", redirectAttributes);
 	}
 
 	@PostMapping("/{id}/generate-settings")
 	public String generateSettings(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-		try {
-			raceGraphicService.generateSettings(id);
-			redirectAttributes.addFlashAttribute("successMessage", "Settings graphic generated");
-		} catch (RuntimeException e) {
-			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-		}
-		return "redirect:/admin/races/" + id;
+		return generateGraphic(id, () -> raceGraphicService.generateSettings(id), "Settings graphic generated", redirectAttributes);
 	}
 
 	@PostMapping("/{id}/generate-lobby-settings")
 	public String generateLobbySettings(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-		try {
-			raceGraphicService.generateLobbySettings(id);
-			redirectAttributes.addFlashAttribute("successMessage", "Lobby settings graphic generated");
-		} catch (RuntimeException e) {
-			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-		}
-		return "redirect:/admin/races/" + id;
+		return generateGraphic(id, () -> raceGraphicService.generateLobbySettings(id), "Lobby settings graphic generated", redirectAttributes);
 	}
 
 	@PostMapping("/{id}/generate-overlay")
 	public String generateOverlay(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+		return generateGraphic(id, () -> raceGraphicService.generateOverlay(id), "Overlay graphic generated", redirectAttributes);
+	}
+
+	private String generateGraphic(UUID id, Runnable generation, String successMessage, RedirectAttributes redirectAttributes) {
 		try {
-			raceGraphicService.generateOverlay(id);
-			redirectAttributes.addFlashAttribute("successMessage", "Overlay graphic generated");
+			generation.run();
+			redirectAttributes.addFlashAttribute("successMessage", successMessage);
 		} catch (RuntimeException e) {
 			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
 		}

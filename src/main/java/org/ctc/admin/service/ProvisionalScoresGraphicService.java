@@ -10,8 +10,10 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Race;
+import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.RaceResult;
 import org.ctc.domain.model.Team;
+import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.service.ScoringService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,15 +29,58 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 	private static final String CUSTOM_TEMPLATE_FILE = "provisional-scores-template.html";
 
 	private final ScoringService scoringService;
+	private final RaceLineupRepository raceLineupRepository;
 	private final PlaywrightScreenshotter screenshotter;
 
 	public ProvisionalScoresGraphicService(TemplateEngine templateEngine,
 	                                       ScoringService scoringService,
+	                                       RaceLineupRepository raceLineupRepository,
 	                                       @Value("${app.upload-dir:uploads}") String uploadDir,
 	                                       PlaywrightScreenshotter screenshotter) {
 		super(templateEngine, uploadDir);
 		this.scoringService = scoringService;
+		this.raceLineupRepository = raceLineupRepository;
 		this.screenshotter = screenshotter;
+	}
+
+	public String generateProvisionalFile(Race race) throws IOException {
+		if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
+			throw new BusinessRuleException("Walkover match has no provisional scores");
+		}
+		if (race.getResults().isEmpty()) {
+			throw new IllegalStateException("No results for this race");
+		}
+		Team homeTeam = race.getHomeTeam();
+		Team awayTeam = race.getAwayTeam();
+		if (homeTeam == null) {
+			throw new IllegalStateException("Race has no home team");
+		}
+		if (awayTeam == null) {
+			throw new IllegalStateException("Race has no away team");
+		}
+
+		Context ctx = buildContext(race, resolveRaceIndex(race), homeTeam, awayTeam);
+		String html = renderTemplate(ctx);
+		Path raceDir = uploadDir.resolve("races").resolve(race.getId().toString());
+		Files.createDirectories(raceDir);
+		Path outputFile = raceDir.resolve("provisional.png");
+		renderScreenshot(html, outputFile);
+		log.info("Generated provisional scores graphic file for race {}", race.getId());
+		return "/uploads/races/" + race.getId() + "/provisional.png";
+	}
+
+	private int resolveRaceIndex(Race race) {
+		var match = race.getMatch();
+		if (match == null || match.getRaces() == null) {
+			return 1;
+		}
+		var races = match.getRaces();
+		for (int i = 0; i < races.size(); i++) {
+			if (race.getId() != null && race.getId().equals(races.get(i).getId())) {
+				return i + 1;
+			}
+		}
+		return 1;
 	}
 
 	public byte[] generateProvisional(Race race, int raceIndex) throws IOException {
@@ -68,7 +113,9 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 		List<ProvisionalRow> homeRows = new ArrayList<>();
 		List<ProvisionalRow> awayRows = new ArrayList<>();
 		for (RaceResult result : race.getResults()) {
-			ProvisionalRow row = toRow(result);
+			boolean isGuest = raceLineupRepository.findByRaceIdAndDriverId(raceId, result.getDriver().getId())
+					.map(RaceLineup::isGuest).orElse(false);
+			ProvisionalRow row = toRow(result, isGuest);
 			if (scoringService.isDriverInTeam(result, raceId, homeTeamId)) {
 				homeRows.add(row);
 			} else {
@@ -106,7 +153,8 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 		ctx.setVariable("seasonYear", String.valueOf(season.getYear()));
 		ctx.setVariable("seasonName", season.getName());
 		ctx.setVariable("matchdayName", race.getMatchday().getLabel());
-		int totalRaces = race.getMatch() != null ? race.getMatch().getRaces().size() : 0;
+		int totalRaces = (race.getMatch() != null && race.getMatch().getRaces() != null)
+				? race.getMatch().getRaces().size() : 0;
 		ctx.setVariable("raceLabel", totalRaces > 1 ? "Race " + raceIndex : null);
 		ctx.setVariable("homeTeamName", homeTeam.getName());
 		ctx.setVariable("awayTeamName", awayTeam.getName());
@@ -131,10 +179,10 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 	}
 
 	private ProvisionalRow emptyRow() {
-		return new ProvisionalRow("n/a", 0, 0, false, 0, 0, 0, 0);
+		return new ProvisionalRow("n/a", 0, 0, false, 0, 0, 0, 0, false);
 	}
 
-	private ProvisionalRow toRow(RaceResult result) {
+	private ProvisionalRow toRow(RaceResult result, boolean isGuest) {
 		String driverName = result.getDriver() != null ? result.getDriver().getPsnId() : "?";
 		return new ProvisionalRow(
 				driverName,
@@ -144,7 +192,8 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 				result.getPointsRace(),
 				result.getPointsQuali(),
 				result.getPointsFl(),
-				result.getPointsTotal());
+				result.getPointsTotal(),
+				isGuest);
 	}
 
 	private String renderTemplate(Context ctx) throws IOException {
@@ -187,6 +236,6 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 	}
 
 	public record ProvisionalRow(String driverName, int position, int qualiPosition, boolean fastestLap,
-	                              int ptsRace, int ptsQuali, int ptsFl, int total) {
+	                              int ptsRace, int ptsQuali, int ptsFl, int total, boolean isGuest) {
 	}
 }

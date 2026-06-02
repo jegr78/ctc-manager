@@ -15,6 +15,7 @@
 - :white_check_mark: **v1.13 Discord Integration & Carry-Forwards** — Phases 92-103 (shipped 2026-05-28)
 - :white_check_mark: **v1.14 Team Card Redesign & Data Safety** — Phases 104-105 (shipped 2026-05-29)
 - :white_check_mark: **v1.15 CI Optimisation & Race/Match Defaults** — Phases 106, 108-112 (shipped 2026-05-31)
+- :white_check_mark: **v1.17 Guest Drivers** — Phases 113-116 (shipped 2026-06-02)
 
 ## Phases
 
@@ -224,7 +225,19 @@ See: milestones/v1.15-ROADMAP.md for full details
 
 </details>
 
-## Progress
+<details>
+<summary>v1.17 Guest Drivers (Phases 113-116) -- SHIPPED 2026-06-02</summary>
+
+- [x] Phase 113: Guest Assignment Foundation (3/3 plans) -- completed 2026-06-01 — Flyway V18 `is_guest` column + RaceLineup guest flag + admin CRUD (any driver selectable as guest) (GUEST-01..04)
+- [x] Phase 114: Scoring & Personal Crediting (4/4 plans) -- completed 2026-06-01 — guest points to fielding team via existing aggregation + unified driver-ranking crediting incl. pure guests; idempotent on save (SCORE-01..03)
+- [x] Phase 115: Guest Marking & Visibility (6/6 plans) -- completed 2026-06-02 — `--guest` token + `hasGuestAppearance` drive guest marking across 3 graphics, admin race/matchday detail, admin + public rankings, public driver-profile; visual-approval gate (MARK-01..06)
+- [x] Phase 116: German Comment Sweep (3/3 plans) -- completed 2026-06-02 — German comments removed/translated across templates, config, CSS, XML, Java, tests ("Saison"→"Season"); repo-wide scan zero; comments-only, no behavioral change (CLEAN-01..04)
+
+See: milestones/v1.17-ROADMAP.md for full details
+
+</details>
+
+---
 
 | Milestone | Phases | Plans | Status | Shipped |
 | --------- | ------ | ----- | ------ | ------- |
@@ -241,3 +254,4 @@ See: milestones/v1.15-ROADMAP.md for full details
 | v1.13 Discord Integration & Carry-Forwards | 92-103 | 43 | Complete | 2026-05-28 |
 | v1.14 Team Card Redesign & Data Safety | 104-105 | 5 | Complete | 2026-05-29 |
 | v1.15 CI Optimisation & Race/Match Defaults | 106, 108-112 | 21 | Complete | 2026-05-31 |
+| v1.17 Guest Drivers | 113-116 | 16 | Complete | 2026-06-02 |

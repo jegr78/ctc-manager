@@ -893,6 +893,26 @@ public class TestDataService {
 		raceLineupRepository.save(new RaceLineup(race2, tdb3, testBravo2));
 		raceLineupRepository.save(new RaceLineup(race2, tdb4, testBravo2));
 
+		var tdDualRole = driver("Test_DualRole_1", "Test DualRole Driver 1");
+		var tdGuest = driver("Test_Guest_1", "Test Guest Driver 1");
+
+		seasonDriverRepository.save(new SeasonDriver(testSeason1, tdDualRole, testAlpha));
+		raceLineupRepository.save(new RaceLineup(race1, tdDualRole, testBravo1, true));
+		raceLineupRepository.save(new RaceLineup(race2, tdGuest, testBravo2, true));
+
+		seedGuestRaceResults(race1, scorings.raceScoring(), List.of(
+				new RaceResult(race1, tda1, 1, 1, false),
+				new RaceResult(race1, tda2, 3, 3, false),
+				new RaceResult(race1, tdb1, 2, 2, false),
+				new RaceResult(race1, tdb2, 4, 4, false),
+				new RaceResult(race1, tdDualRole, 5, 5, false)));
+		seedGuestRaceResults(race2, scorings.raceScoring(), List.of(
+				new RaceResult(race2, tda1, 1, 1, false),
+				new RaceResult(race2, tda2, 2, 2, false),
+				new RaceResult(race2, tdb3, 3, 3, false),
+				new RaceResult(race2, tdb4, 4, 4, false),
+				new RaceResult(race2, tdGuest, 5, 5, false)));
+
 		// Test-Season 2025: T-ALF vs T-BRV (multi-season test)
 		var testSeason2 = createSeason("Test-Season 2025", 2025, 98, "Test", scorings);
 		List.of(testAlpha, testBravo).forEach(testSeason2::addTeam);
@@ -918,8 +938,20 @@ public class TestDataService {
 		raceLineupRepository.save(new RaceLineup(race3, tda1, testAlpha));
 		raceLineupRepository.save(new RaceLineup(race3, tda2, testAlpha));
 
-		log.info("Created test data: {} test-teams, {} test-drivers, {} races, {} lineups",
-				4, 6, raceRepository.count(), raceLineupRepository.count());
+		log.info("Created test data: {} test-teams, {} test-drivers, {} races, {} lineups, {} results",
+				4, 8, raceRepository.count(), raceLineupRepository.count(), raceResultRepository.count());
+	}
+
+	private void seedGuestRaceResults(Race race, RaceScoring raceScoring, List<RaceResult> results) {
+		raceResultRepository.saveAll(results);
+		scoringService.calculatePoints(results, raceScoring);
+		raceResultRepository.saveAll(results);
+		raceResultRepository.flush();
+
+		entityManager.detach(race);
+		var reloadedRace = raceRepository.findById(race.getId()).orElseThrow();
+		scoringService.aggregateMatchScores(reloadedRace);
+		matchRepository.save(reloadedRace.getMatch());
 	}
 
 	private void seedPlayoffs() {

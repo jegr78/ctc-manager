@@ -2,16 +2,22 @@ package org.ctc.sitegen;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.PhaseType;
+import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.RaceResult;
+import org.ctc.domain.model.Season;
+import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceResultRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
@@ -49,85 +55,126 @@ public class DriverProfilePageGenerator {
 
     public void generate(GenerationContext ctx, SiteGeneratorService.GenerationResult result) throws IOException {
         var season = ctx.season();
-        var outPath = ctx.outPath();
         var seasonDrivers = seasonDriverRepository.findBySeasonId(season.getId());
-        var generatedDriverIds = new java.util.HashSet<java.util.UUID>();
+        var generatedDriverIds = new HashSet<UUID>();
 
         // showPhaseBreakdown is gated by season.phases.size() >= 2 (server-side flag).
         boolean seasonHasMultiplePhases =
                 seasonPhaseService.findAllPhases(season.getId()).size() >= 2;
+
+        // Season lineups (team eager-loaded via @EntityGraph) are fetched once and reused for both
+        // the guest team resolution and the per-race guest marker lookup (no per-result query).
+        var seasonLineups = raceLineupRepository.findByRaceMatchdaySeasonId(season.getId());
+        Map<String, RaceLineup> guestLookup = new LinkedHashMap<>();
+        for (var rl : seasonLineups) {
+            if (rl.isGuest()) {
+                guestLookup.put(rl.getRace().getId() + ":" + rl.getDriver().getId(), rl);
+            }
+        }
 
         for (var sd : seasonDrivers) {
             var driver = sd.getDriver();
 			if (!generatedDriverIds.add(driver.getId())) {
 				continue;
 			}
-            var team = sd.getTeam();
-            var results = raceResultRepository.findByDriverId(driver.getId()).stream()
-                    .filter(r -> r.getRace().getMatchday().getSeason().getId().equals(season.getId()))
-                    .toList();
-
-            // Split results into a LinkedHashMap (REGULAR -> PLAYOFF -> PLACEMENT canonical order),
-            // filtered in Java on race.matchday.phase.phaseType (no dedicated repository method).
-            //
-            // Phase-participation detection runs against RaceLineup, NOT RaceResult: TestDataService
-            // creates PLAYOFF Race+RaceLineup but no RaceResult rows yet, so a RaceResult-only check
-            // would miss PLAYOFF participation. Lineups are the single source of truth for
-            // participation (per CLAUDE.md "RaceLineup is Source of Truth").
-            boolean showPhaseBreakdown = seasonHasMultiplePhases;
-            LinkedHashMap<PhaseType, List<RaceResult>> resultsByPhase = new LinkedHashMap<>();
-            if (showPhaseBreakdown) {
-                Set<PhaseType> participatedPhases = raceLineupRepository
-                        .findByDriverIdAndRaceMatchdaySeasonId(driver.getId(), season.getId()).stream()
-                        .map(rl -> rl.getRace().getMatchday().getPhase().getPhaseType())
-                        .collect(Collectors.toCollection(java.util.HashSet::new));
-                for (PhaseType pt : PHASE_ORDER) {
-					if (!participatedPhases.contains(pt)) {
-						continue;
-					}
-                    var phaseResults = results.stream()
-                            .filter(r -> r.getRace().getMatchday().getPhase().getPhaseType() == pt)
-                            .toList();
-                    // Always include the phase entry when the driver participated, even when the
-                    // RaceResult list is empty (PLAYOFF results aren't seeded in test fixtures).
-                    resultsByPhase.put(pt, phaseResults);
-                }
-                // Edge case: driver only participated in one phase even though season has >=2.
-                // Fall back to showPhaseBreakdown=false to keep SC4 byte-identity for that driver.
-                if (resultsByPhase.size() < 2) {
-                    showPhaseBreakdown = false;
-                    resultsByPhase = new LinkedHashMap<>();
-                }
-            }
-
-            var context = new Context(Locale.ENGLISH);
-            context.setVariable("season", season);
-            context.setVariable("driver", driver);
-            context.setVariable("team", team);
-            context.setVariable("results", results);
-            int total = results.stream().mapToInt(RaceResult::getPointsTotal).sum();
-            context.setVariable("totalRaces", results.size());
-            context.setVariable("totalPoints", total);
-            context.setVariable("averagePoints", results.isEmpty() ? 0.0 : (double) total / results.size());
-            context.setVariable("bestPosition", results.isEmpty() ? null :
-                    results.stream().mapToInt(RaceResult::getPosition).min().orElse(0));
-
-            context.setVariable("currentPage", "driver");
-            context.setVariable("seasonSlug", siteSlugger.slugify(season.getDisplayLabel()));
-            context.setVariable("seasonName", season.getName());
-            context.setVariable("hasPlayoff", ctx.hasPlayoff());
-            context.setVariable("playoffSeasonSlug", ctx.playoffSeasonSlug());
-            context.setVariable("breadcrumbCurrent", driver.getPsnId());
-            context.setVariable("pageTitle", driver.getPsnId());
-            context.setVariable("showPhaseBreakdown", showPhaseBreakdown);
-            context.setVariable("resultsByPhase", resultsByPhase);
-            context.setVariable("phaseHeadings", PHASE_HEADINGS);
-
-            var dir = outPath.resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel())).resolve("driver");
-            Files.createDirectories(dir);
-            templateWriter.write("site/driver-profile", context, dir.resolve(siteSlugger.slugify(driver.getPsnId()) + ".html"),
-                    ctx.activeSeasonSlug(), ctx.activeSeasonName());
-            result.incrementPages();
+            writeDriverProfile(ctx, season, driver, sd.getTeam(), seasonHasMultiplePhases, guestLookup, result);
         }
+
+        // Second pass: pure guests appear only in a RaceLineup (no SeasonDriver row) and would
+        // otherwise have no profile page. Deduped against the SeasonDriver pass via the same set.
+        Map<UUID, Team> guestTeamByDriver = new LinkedHashMap<>();
+        for (var rl : seasonLineups) {
+            Team parent = rl.getTeam().getParentOrSelf();
+            guestTeamByDriver.merge(rl.getDriver().getId(), parent,
+                    (a, b) -> a.getId().compareTo(b.getId()) <= 0 ? a : b);
+        }
+        for (var driver : seasonLineups.stream().map(RaceLineup::getDriver).distinct().toList()) {
+            if (!generatedDriverIds.add(driver.getId())) {
+                continue;
+            }
+            Team team = guestTeamByDriver.get(driver.getId());
+            if (team == null) {
+                continue;
+            }
+            writeDriverProfile(ctx, season, driver, team, seasonHasMultiplePhases, guestLookup, result);
+        }
+    }
+
+    private void writeDriverProfile(GenerationContext ctx, Season season, Driver driver, Team team,
+                                    boolean seasonHasMultiplePhases,
+                                    Map<String, RaceLineup> guestLookup,
+                                    SiteGeneratorService.GenerationResult result) throws IOException {
+        var results = raceResultRepository.findByDriverId(driver.getId()).stream()
+                .filter(r -> r.getRace().getMatchday().getSeason().getId().equals(season.getId()))
+                .toList();
+
+        // Phase-participation detection runs against RaceLineup, not RaceResult: a driver can have
+        // a lineup in a phase without any result row yet, so a RaceResult-only check would miss it.
+        boolean showPhaseBreakdown = seasonHasMultiplePhases;
+        LinkedHashMap<PhaseType, List<RaceResult>> resultsByPhase = new LinkedHashMap<>();
+        if (showPhaseBreakdown) {
+            Set<PhaseType> participatedPhases = raceLineupRepository
+                    .findByDriverIdAndRaceMatchdaySeasonId(driver.getId(), season.getId()).stream()
+                    .map(rl -> rl.getRace().getMatchday().getPhase().getPhaseType())
+                    .collect(Collectors.toCollection(HashSet::new));
+            for (PhaseType pt : PHASE_ORDER) {
+				if (!participatedPhases.contains(pt)) {
+					continue;
+				}
+                var phaseResults = results.stream()
+                        .filter(r -> r.getRace().getMatchday().getPhase().getPhaseType() == pt)
+                        .toList();
+                // Include the phase even when its result list is empty — the driver participated.
+                resultsByPhase.put(pt, phaseResults);
+            }
+            // Edge case: driver only participated in one phase even though season has >=2.
+            // Fall back to showPhaseBreakdown=false to keep SC4 byte-identity for that driver.
+            if (resultsByPhase.size() < 2) {
+                showPhaseBreakdown = false;
+                resultsByPhase = new LinkedHashMap<>();
+            }
+        }
+
+        var context = new Context(Locale.ENGLISH);
+        context.setVariable("season", season);
+        context.setVariable("driver", driver);
+        context.setVariable("team", team);
+        context.setVariable("profileRows", results.stream().map(r -> toProfileRow(r, guestLookup)).toList());
+        int total = results.stream().mapToInt(RaceResult::getPointsTotal).sum();
+        context.setVariable("totalRaces", results.size());
+        context.setVariable("totalPoints", total);
+        context.setVariable("averagePoints", results.isEmpty() ? 0.0 : (double) total / results.size());
+        context.setVariable("bestPosition", results.isEmpty() ? null :
+                results.stream().mapToInt(RaceResult::getPosition).min().orElse(0));
+
+        context.setVariable("currentPage", "driver");
+        context.setVariable("seasonSlug", siteSlugger.slugify(season.getDisplayLabel()));
+        context.setVariable("seasonName", season.getName());
+        context.setVariable("hasPlayoff", ctx.hasPlayoff());
+        context.setVariable("playoffSeasonSlug", ctx.playoffSeasonSlug());
+        context.setVariable("breadcrumbCurrent", driver.getPsnId());
+        context.setVariable("pageTitle", driver.getPsnId());
+        context.setVariable("showPhaseBreakdown", showPhaseBreakdown);
+        LinkedHashMap<PhaseType, List<DriverProfileRow>> profileRowsByPhase = new LinkedHashMap<>();
+        resultsByPhase.forEach((pt, list) ->
+                profileRowsByPhase.put(pt, list.stream().map(r -> toProfileRow(r, guestLookup)).toList()));
+        context.setVariable("profileRowsByPhase", profileRowsByPhase);
+        context.setVariable("phaseHeadings", PHASE_HEADINGS);
+
+        var dir = ctx.outPath().resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel())).resolve("driver");
+        Files.createDirectories(dir);
+        templateWriter.write("site/driver-profile", context, dir.resolve(siteSlugger.slugify(driver.getPsnId()) + ".html"),
+                ctx.activeSeasonSlug(), ctx.activeSeasonName());
+        result.incrementPages();
+    }
+
+    private DriverProfileRow toProfileRow(RaceResult result, Map<String, RaceLineup> guestLookup) {
+        RaceLineup lineup = guestLookup.get(result.getRace().getId() + ":" + result.getDriver().getId());
+        return lineup != null
+                ? new DriverProfileRow(result, true, lineup.getTeam().getShortName())
+                : new DriverProfileRow(result, false, null);
+    }
+
+    public record DriverProfileRow(RaceResult result, boolean guest, String fieldingTeamName) {
     }
 }

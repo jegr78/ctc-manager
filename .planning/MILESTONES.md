@@ -1,5 +1,24 @@
 # Milestones
 
+## v1.17 Guest Drivers (Shipped: 2026-06-02)
+
+**Phases completed:** 4 phases (113-116), 16 plans, 17/17 requirements satisfied (GUEST ×4 + SCORE ×3 + MARK ×6 + CLEAN ×4)
+**Tests:** **2530 tests** passing (1851 Surefire + 563 Failsafe IT + 116 Playwright E2E; 0 failures / 0 errors / 5 skipped; Δ+58 vs v1.15 2472); JaCoCo line coverage **89.88 %** (gate 82 %; held vs v1.15 ~89 %)
+**Timeline:** 2 days (2026-06-01 → 2026-06-02)
+**Branch:** `gsd/v1.17-guest-drivers`
+**Audit verdict:** passed — 17/17 requirements, 4/4 phases, integration 13/13 connections wired, 1/1 E2E flow complete, 0 blockers; Nyquist 3 compliant (113/114/115) + 1 manual-only sign-off (116, comments-only). See `milestones/v1.17-MILESTONE-AUDIT.md`.
+
+**Key accomplishments:**
+
+- Phase 113 — Guest Assignment Foundation (GUEST-01..04): Flyway V18 additive `is_guest` column (V1-V17 untouched, H2 + MariaDB) + `RaceLineup` guest flag as single source of truth + backup export/restore round-trip; service-layer `saveLineup` guest overload with dedup + guest-removal result cascade; admin race-lineup datalist Add-Guest CRUD — any driver in the system selectable as a guest for any team.
+- Phase 114 — Scoring & Personal Crediting (SCORE-01..03): guest points flow to the fielding team via the existing `ScoringService.aggregateMatchScores` (no separate points model); one unified attribution helper (home-team first → fielding-team fallback) credits the guest personally across all driver-ranking paths — including pure guests with no `SeasonDriver` row — idempotent on every result save (no template/controller fallback); regression IT suite `DriverRankingServiceGuestIT` + alltime/profile round-trip.
+- Phase 115 — Guest Marking & Visibility (MARK-01..06): a single `:root --guest` token + `hasGuestAppearance` flag drive the guest marker across the Scorecard, Provisional-Scores and Lineup/match-results graphics, admin race/matchday detail, the admin + public driver-rankings, and the public driver-profile ("as guest for &lt;team&gt;"); visual treatment user-approved against a rendered reference via playwright-cli.
+- Phase 116 — German Comment Sweep (CLEAN-01..04): German comments translated to concise English or removed across admin Thymeleaf templates, `application.yml`, `admin.css`, `logback-spring.xml`, one `src/main/java` Javadoc, and 10 test files ("Saison"→"Season" prose to match the `Season 2023` fixture); banned `Phase 60`/`Phase 91` + class-Javadoc Phase/Plan markers stripped from touched files; repo-wide closure scan reaches zero German comments; comments-only — `clean verify -Pe2e` green, coverage held, zero behavioral change. The 116-03 closure scan caught three stragglers the inventory missed (XML comments, a main-java Javadoc, a test marker).
+
+**Accepted tech debt / notes (non-blocking):** Phase 116 `nyquist_compliant: false` by deliberate manual-only sign-off (the zero-German-comment scan was not wired as a permanent build-guard — offered + declined; documented in `116-VALIDATION.md` as a future regression-fence option). ~25 inline `Plan N`/`Phase N` cross-references with actionable WHY retained in backup/E2E test Javadocs (full repo-wide marker purge deferred as an optional future cleanup). Carried-forward cross-milestone items unchanged (DISC-FUTURE-01..05, configurable team size, `.isEmpty()` audit, operator-action UATs — see STATE.md Deferred Items).
+
+---
+
 ## v1.15 CI Optimisation & Race/Match Defaults (Shipped: 2026-05-31)
 
 **Phases completed:** 6 phases (106, 108-112; 107 removed), 21 plans, 25/25 active requirements satisfied (CI ×6 + LINEUP ×4 + WO ×4 + LOBBY ×5 + SEC-LOG ×4 + IMP ×2; RACE-01..03 dropped)

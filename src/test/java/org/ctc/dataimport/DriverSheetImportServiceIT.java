@@ -32,7 +32,7 @@ import static org.mockito.Mockito.when;
  * Integration test for {@link DriverSheetImportService} preview→execute roundtrip.
  *
  * <p>Runs against the live Spring context with the consolidated 2023 GROUPS season
- * seeded by {@link org.ctc.admin.TestDataService} (delivered by Phase 59 Plan 03).
+ * seeded by {@link org.ctc.admin.TestDataService}.
  * {@link GoogleSheetsService} is replaced by a {@link MockitoBean} so no real Sheets
  * API call happens in CI.
  *
@@ -225,7 +225,7 @@ class DriverSheetImportServiceIT {
         String newPsn = "Phase59-IT-Execute-OrphanDriver";
         setupSheetsStub(Map.of("2023_S1", oneDataRow(newPsn, "Orphan Driver", "XYZ")));
 
-        // when — Phase 70 D-09: warning category removed; preview categorizes the orphan-team
+        // when — warning category removed; preview categorizes the orphan-team
         // row into NEW_DRIVER (team exists in teams table → resolveTeamByShortName returns it
         // → no UNKNOWN_TEAM_CODE) and execute proceeds, writing the SeasonDriver.
         DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
@@ -246,7 +246,7 @@ class DriverSheetImportServiceIT {
                 .findBySeasonIdAndDriverId(season2023.getId(), newDriver.getId()))
                 .isPresent();
 
-        // then — PhaseTeam count UNCHANGED — Roster pflege bleibt Phase 60
+        // then — PhaseTeam count UNCHANGED — roster maintenance adds no phase teams
         int phaseTeamCountAfter = phaseTeamRepository.findByPhaseId(regular2023.getId()).size();
         assertThat(phaseTeamCountAfter).isEqualTo(phaseTeamCountBefore);
         // Specifically: no new PhaseTeam for the orphan team

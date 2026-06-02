@@ -80,6 +80,7 @@ public class RaceService {
 		int homeTotal = 0;
 		int awayTotal = 0;
 		Map<UUID, String> driverTeamMap = null;
+		Map<UUID, Boolean> guestDriverMap = null;
 
 		if (!race.getResults().isEmpty() && race.getHomeTeam() != null) {
 			homeTotal = race.getResults().stream()
@@ -91,14 +92,17 @@ public class RaceService {
 
 			var sid = race.getMatchday().getSeason().getId();
 			driverTeamMap = new HashMap<>();
+			guestDriverMap = new HashMap<>();
 			for (var result : race.getResults()) {
-				var teamName = raceLineupRepository.findByRaceIdAndDriverId(race.getId(), result.getDriver().getId())
+				var lineup = raceLineupRepository.findByRaceIdAndDriverId(race.getId(), result.getDriver().getId());
+				var teamName = lineup
 						.map(rl -> rl.getTeam().getShortName())
 						.orElseGet(() -> result.getDriver().getSeasonDrivers().stream()
 								.filter(sd -> sd.getSeason().getId().equals(sid))
 								.map(sd -> sd.getTeam().getShortName())
 								.findFirst().orElse("?"));
 				driverTeamMap.put(result.getDriver().getId(), teamName);
+				guestDriverMap.put(result.getDriver().getId(), lineup.map(RaceLineup::isGuest).orElse(false));
 			}
 		}
 
@@ -118,6 +122,8 @@ public class RaceService {
 				.anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/lineup.png"));
 		boolean resultsGraphicExists = race.getAttachments().stream()
 				.anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/results.png"));
+		boolean provisionalGraphicExists = race.getAttachments().stream()
+				.anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/provisional.png"));
 		boolean hasResults = !race.getResults().isEmpty();
 
 		boolean settingsGraphicExists = race.getAttachments().stream()
@@ -139,11 +145,12 @@ public class RaceService {
 				&& race.getHomeTeam() != null
 				&& race.getAwayTeam() != null;
 
-		return new RaceDetailData(race, homeTotal, awayTotal, driverTeamMap,
+		return new RaceDetailData(race, homeTotal, awayTotal, driverTeamMap, guestDriverMap,
 				hasLineup && hasHomeCard && hasAwayCard && !lineupExists,
 				!hasLineup, !hasHomeCard || !hasAwayCard, lineupExists,
 				hasResults && hasHomeCard && hasAwayCard && !resultsGraphicExists,
 				!hasResults, resultsGraphicExists,
+				hasResults && hasHomeCard && hasAwayCard && !provisionalGraphicExists, provisionalGraphicExists,
 				hasAllSettings && hasHomeCard && hasAwayCard && !settingsGraphicExists,
 				!hasAllSettings, settingsGraphicExists,
 				hasMatch && !overlayExists, overlayExists,
@@ -347,9 +354,11 @@ public class RaceService {
 	}
 
 	public record RaceDetailData(Race race, int homeTotal, int awayTotal,
-	                             Map<UUID, String> driverTeamMap, boolean canGenerateLineup,
+	                             Map<UUID, String> driverTeamMap, Map<UUID, Boolean> guestDriverMap,
+	                             boolean canGenerateLineup,
 	                             boolean lineupMissing, boolean cardsMissing, boolean lineupExists,
 	                             boolean canGenerateResults, boolean resultsMissing, boolean resultsExist,
+	                             boolean canGenerateProvisional, boolean provisionalExists,
 	                             boolean canGenerateSettings, boolean settingsMissing, boolean settingsExist,
 	                             boolean canGenerateOverlay, boolean overlayExists,
 	                             boolean calendarAvailable, boolean hasCalendarEvent,

@@ -16,15 +16,18 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.ctc.discord.model.DiscordPostType;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.Race;
+import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.RaceResult;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.Team;
+import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.service.PhaseTestFixtures;
 import org.ctc.domain.service.ScoringService;
 import org.junit.jupiter.api.Test;
@@ -36,6 +39,7 @@ import org.thymeleaf.context.Context;
 class ProvisionalScoresGraphicServiceTest {
 
 	private final ScoringService scoringService = mock(ScoringService.class);
+	private final RaceLineupRepository raceLineupRepository = mock(RaceLineupRepository.class);
 	private final TemplateEngine templateEngine = mock(TemplateEngine.class);
 	private final PlaywrightScreenshotter screenshotter = mock(PlaywrightScreenshotter.class);
 
@@ -45,7 +49,7 @@ class ProvisionalScoresGraphicServiceTest {
 	private ProvisionalScoresGraphicService createService() {
 		when(templateEngine.process(anyString(), any(Context.class))).thenReturn("<html><body>provisional</body></html>");
 		when(screenshotter.apply(anyString())).thenReturn(new byte[]{0x01, 0x02, 0x03});
-		return new ProvisionalScoresGraphicService(templateEngine, scoringService, tempDir.toString(), screenshotter);
+		return new ProvisionalScoresGraphicService(templateEngine, scoringService, raceLineupRepository, tempDir.toString(), screenshotter);
 	}
 
 	private Race createValidRace(UUID seasonId, Team homeTeam, Team awayTeam, int homeDrivers, int awayDrivers) throws IOException {
@@ -231,6 +235,30 @@ class ProvisionalScoresGraphicServiceTest {
 		assertThat(ctx.getVariable("fontBase64")).isNotNull();
 		assertThat(ctx.getVariable("seasonYear")).isNotNull();
 		assertThat(ctx.getVariable("matchdayName")).isEqualTo("MD 1");
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	void givenGuestResult_whenBuildContext_thenProvisionalRowGuestFlagSet() throws IOException {
+		// given
+		var service = createService();
+		Team homeTeam = team("Home", "HOM");
+		Team awayTeam = team("Away", "AWY");
+		Race race = createValidRace(UUID.randomUUID(), homeTeam, awayTeam, 2, 2);
+		RaceResult firstHome = race.getResults().get(0);
+		when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), firstHome.getDriver().getId()))
+				.thenReturn(Optional.of(new RaceLineup(race, firstHome.getDriver(), homeTeam, true)));
+
+		// when
+		Context ctx = service.buildContext(race, 1, homeTeam, awayTeam);
+
+		// then
+		var homeRows = (List<ProvisionalScoresGraphicService.ProvisionalRow>) ctx.getVariable("homeRows");
+		var awayRows = (List<ProvisionalScoresGraphicService.ProvisionalRow>) ctx.getVariable("awayRows");
+		assertThat(homeRows.get(0).isGuest()).isTrue();
+		assertThat(homeRows.get(1).isGuest()).isFalse();
+		assertThat(awayRows.get(0).isGuest()).isFalse();
+		assertThat(homeRows.get(5).isGuest()).isFalse();
 	}
 
 	@Test

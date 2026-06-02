@@ -10,6 +10,12 @@
 
     <form th:action="@{/admin/races/{id}/lineup(id=${race.id})}" method="post">
 
+        <datalist id="guestDriverList">
+            <option th:each="d : ${allDrivers}"
+                    th:value="${d.psnId + ' (' + d.nickname + ')'}"
+                    th:attr="data-id=${d.id}"></option>
+        </datalist>
+
         <div th:each="entry : ${teamEntries}" class="card mb-md">
             <h2 th:text="${entry.team.shortName + ' — ' + entry.team.name}"></h2>
             <div th:if="${entry.drivers.isEmpty()}" class="empty-state empty-state--compact">
@@ -44,17 +50,46 @@
                             <input type="checkbox"
                                    th:name="'driver_' + ${sd.driver.id}"
                                    th:value="${entry.team.id}"
-                                   th:checked="${driverAssignments.containsKey(sd.driver.id)}">
+                                   th:checked="${driverAssignments.get(sd.driver.id) == entry.team.id}">
                         </td>
                     </tr>
                 </tbody>
             </table>
+
+            <div class="guest-section" th:attr="data-team-id=${entry.team.id}">
+                <h3>Guest Drivers</h3>
+                <div class="guest-row" th:each="gl : ${guestLineups}"
+                     th:if="${gl.team.parentOrSelf.id == entry.team.id}">
+                    <input type="text" class="guest-driver-input" list="guestDriverList"
+                           th:value="${gl.driver.psnId + ' (' + gl.driver.nickname + ')'}">
+                    <input type="hidden" class="guest-driver-id"
+                           th:name="'guest_' + ${gl.driver.id}" th:value="${gl.team.id}">
+                    <select th:if="${entry.hasSubTeams}" class="guest-subteam">
+                        <option th:each="sub : ${entry.subTeams}"
+                                th:value="${sub.id}" th:text="${sub.shortName}"
+                                th:selected="${gl.team.id == sub.id}"></option>
+                    </select>
+                    <button type="button" class="btn btn-sm guest-remove">Remove</button>
+                </div>
+                <div class="guest-row">
+                    <input type="text" class="guest-driver-input" list="guestDriverList">
+                    <input type="hidden" class="guest-driver-id" name="">
+                    <select th:if="${entry.hasSubTeams}" class="guest-subteam">
+                        <option th:each="sub : ${entry.subTeams}"
+                                th:value="${sub.id}" th:text="${sub.shortName}"></option>
+                    </select>
+                    <button type="button" class="btn btn-sm guest-remove">Remove</button>
+                </div>
+                <button type="button" class="btn btn-sm guest-add-row">Add another guest</button>
+            </div>
         </div>
 
         <div class="actions">
             <button type="submit" class="btn btn-primary">Save Lineup</button>
         </div>
     </form>
+
+    <script th:src="@{/admin/js/guest-lineup.js}"></script>
 </section>
 </body>
 </html>

@@ -28,6 +28,8 @@ class RaceGraphicServiceTest {
 	@Mock
 	private ResultsGraphicService resultsGraphicService;
 	@Mock
+	private ProvisionalScoresGraphicService provisionalScoresGraphicService;
+	@Mock
 	private SettingsGraphicService settingsGraphicService;
 	@Mock
 	private LobbySettingsGraphicService lobbySettingsGraphicService;
@@ -46,7 +48,6 @@ class RaceGraphicServiceTest {
 		var matchday = new Matchday();
 		matchday.setId(UUID.randomUUID());
 		matchday.setLabel("MD 1");
-		// Matchday is bound via SeasonPhase (Convenience-Getter exposes the season).
 		matchday.setPhase(new SeasonPhase(new Season("S"), PhaseType.REGULAR, PhaseLayout.LEAGUE, 0));
 		var match = new Match(matchday, homeTeam, awayTeam);
 		var race = new Race();
@@ -64,6 +65,35 @@ class RaceGraphicServiceTest {
 		verify(raceAttachmentRepository).save(argThat(att ->
 				"MD 1-HOM-AWY-Results".equals(att.getName())
 						&& att.getUrl().endsWith("/results.png")
+						&& att.getType() == AttachmentType.FILE));
+	}
+
+	@Test
+	void givenRace_whenGenerateProvisional_thenCreatesAttachment() throws Exception {
+		// given
+		var homeTeam = createTeam("HOM", "Home");
+		var awayTeam = createTeam("AWY", "Away");
+		var matchday = new Matchday();
+		matchday.setId(UUID.randomUUID());
+		matchday.setLabel("MD 1");
+		matchday.setPhase(new SeasonPhase(new Season("S"), PhaseType.REGULAR, PhaseLayout.LEAGUE, 0));
+		var match = new Match(matchday, homeTeam, awayTeam);
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		race.setMatchday(matchday);
+		race.setMatch(match);
+
+		when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+		when(provisionalScoresGraphicService.generateProvisionalFile(race))
+				.thenReturn("/uploads/races/" + race.getId() + "/provisional.png");
+
+		// when
+		service.generateProvisional(race.getId());
+
+		// then
+		verify(raceAttachmentRepository).save(argThat(att ->
+				"MD 1-HOM-AWY-Provisional".equals(att.getName())
+						&& att.getUrl().endsWith("/provisional.png")
 						&& att.getType() == AttachmentType.FILE));
 	}
 
@@ -91,7 +121,6 @@ class RaceGraphicServiceTest {
 		var matchday = new Matchday();
 		matchday.setId(UUID.randomUUID());
 		matchday.setLabel("MD 1");
-		// Matchday is bound via SeasonPhase (Convenience-Getter exposes the season).
 		matchday.setPhase(new SeasonPhase(new Season("S"), PhaseType.REGULAR, PhaseLayout.LEAGUE, 0));
 		var match = new Match(matchday, homeTeam, awayTeam);
 		var race = new Race();
@@ -182,7 +211,6 @@ class RaceGraphicServiceTest {
 		var matchday = new Matchday();
 		matchday.setId(UUID.randomUUID());
 		matchday.setLabel("MD 1");
-		// Matchday is bound via SeasonPhase (Convenience-Getter exposes the season).
 		matchday.setPhase(new SeasonPhase(new Season("S"), PhaseType.REGULAR, PhaseLayout.LEAGUE, 0));
 		var match = new Match(matchday, homeTeam, awayTeam);
 		var race = new Race();

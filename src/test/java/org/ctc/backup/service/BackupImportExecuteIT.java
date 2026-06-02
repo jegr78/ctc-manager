@@ -38,13 +38,13 @@ import org.springframework.test.context.DynamicPropertySource;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 75 / Plan 06 — happy-path IT for {@link BackupImportService#execute(UUID)}.
+ * Happy-path IT for {@link BackupImportService#execute(UUID)}.
  *
  * <p>Boots the {@code dev} profile (H2 in-memory + {@link TestDataService} fixture) and drives
  * the full export → stage → execute round trip. Asserts:
  * <ol>
  *   <li>{@link BackupImportResult#restoredTotal()} equals the sum of pre-export row counts
- *       across the entire seeded fixture (Saison 2023 + 2024 + 2024-Empty + 2026 — all four
+ *       across the entire seeded fixture (Season 2023 + 2024 + 2024-Empty + 2026 — all four
  *       seasons that {@code testDataService.seed()} creates per its Javadoc).</li>
  *   <li>For three sampled entities ({@code seasons}, {@code races}, {@code race_results}) the
  *       post-execute repository row count matches the pre-export count.</li>

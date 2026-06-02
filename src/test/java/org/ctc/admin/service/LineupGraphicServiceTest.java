@@ -90,6 +90,38 @@ class LineupGraphicServiceTest {
 	}
 
 	@Test
+	void givenGuestLineupEntry_whenBuildPairings_thenGuestFlagsSet() {
+		// given
+		var service = createService();
+		var homeTeam = new Team("Home", "HOM");
+		homeTeam.setId(UUID.randomUUID());
+		var awayTeam = new Team("Away", "AWY");
+		awayTeam.setId(UUID.randomUUID());
+
+		var race = new Race();
+		var homeGuest = new Driver();
+		homeGuest.setPsnId("HomeGuest");
+		var awayReg = new Driver();
+		awayReg.setPsnId("AwayReg");
+
+		var lineups = List.of(
+				new RaceLineup(race, homeGuest, homeTeam, true),
+				new RaceLineup(race, awayReg, awayTeam, false)
+		);
+
+		// when
+		var pairings = service.buildPairings(lineups, homeTeam, awayTeam);
+
+		// then
+		assertThat(pairings.get(0).homeDriver()).isEqualTo("HomeGuest");
+		assertThat(pairings.get(0).homeIsGuest()).isTrue();
+		assertThat(pairings.get(0).awayDriver()).isEqualTo("AwayReg");
+		assertThat(pairings.get(0).awayIsGuest()).isFalse();
+		assertThat(pairings.get(1).homeIsGuest()).isFalse();
+		assertThat(pairings.get(1).awayIsGuest()).isFalse();
+	}
+
+	@Test
 	void givenSubTeamLineup_whenBuildPairings_thenSubTeamDriverMatchedToParent() {
 		// given
 		var service = createService();

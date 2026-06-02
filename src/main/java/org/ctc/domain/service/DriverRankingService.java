@@ -5,7 +5,6 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.*;
-import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceResultRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
@@ -20,7 +19,6 @@ public class DriverRankingService {
 	private final RaceResultRepository raceResultRepository;
 	private final SeasonDriverRepository seasonDriverRepository;
 	private final SeasonPhaseService seasonPhaseService;
-	private final PhaseTeamRepository phaseTeamRepository;
 	private final RaceLineupRepository raceLineupRepository;
 
 	/**
@@ -37,7 +35,8 @@ public class DriverRankingService {
 	 */
 	@Transactional(readOnly = true)
 	public List<DriverRanking> calculateRankingForPhase(UUID phaseId) {
-		seasonPhaseService.findById(phaseId); // validate phase exists
+		var phase = seasonPhaseService.findById(phaseId);
+		UUID seasonId = phase.getSeason().getId();
 
 		List<RaceResult> regularResults = raceResultRepository.findByRaceMatchdayPhaseId(phaseId);
 		List<RaceResult> playoffResults = raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(phaseId);
@@ -49,11 +48,14 @@ public class DriverRankingService {
 		Map<UUID, DriverRanking> rankingMap = new LinkedHashMap<>();
 		for (RaceResult result : all) {
 			UUID driverId = result.getDriver().getId();
-			rankingMap.computeIfAbsent(driverId, id -> {
-				// Per-phase team: resolve via RaceLineup (Source of Truth)
-				Team team = resolveTeamFromLineup(driverId, result.getRace());
+			DriverRanking ranking = rankingMap.computeIfAbsent(driverId, id -> {
+				Team team = resolveAttributedTeam(result.getDriver(), seasonId, result.getRace().getId());
 				return new DriverRanking(result.getDriver(), team);
-			}).addResult(result);
+			});
+			ranking.addResult(result);
+			raceLineupRepository.findByRaceIdAndDriverId(result.getRace().getId(), driverId)
+					.filter(RaceLineup::isGuest)
+					.ifPresent(rl -> ranking.markGuestAppearance());
 		}
 
 		List<DriverRanking> rankings = new ArrayList<>(rankingMap.values());
@@ -64,32 +66,26 @@ public class DriverRankingService {
 
 	/**
 	 * Season-wide aggregation across all specified phases. REGULAR + PLAYOFF + PLACEMENT
-	 * results all contribute. Driver-team attribution uses the REGULAR-phase team (via
-	 * RaceLineup for that driver's season races); stand-ins without a REGULAR-phase
-	 * RaceLineup fall back to any season RaceLineup.
+	 * results all contribute. Driver-team attribution uses the unified home-first /
+	 * fallback-fielding policy: a rostered driver is attributed to their SeasonDriver team,
+	 * a pure guest to the fielding RaceLineup team (sub-team rolled up to parent).
 	 */
 	@Transactional(readOnly = true)
 	public List<DriverRanking> aggregateAcrossPhases(List<UUID> phaseIds, UUID seasonId) {
-		// PhaseTeam maps phase→team; driver→team comes from RaceLineup
-		Optional<SeasonPhase> regularPhaseOpt = seasonPhaseService.findByType(seasonId, PhaseType.REGULAR);
-		Set<UUID> regularPhaseTeamIds = regularPhaseOpt
-				.map(rp -> phaseTeamRepository.findByPhaseId(rp.getId()).stream()
-						.map(pt -> pt.getTeam().getId())
-						.collect(Collectors.toSet()))
-				.orElseGet(Set::of);
-
 		Map<UUID, DriverRanking> rankingMap = new LinkedHashMap<>();
 		for (UUID phaseId : phaseIds) {
 			for (DriverRanking phaseRanking : calculateRankingForPhase(phaseId)) {
 				UUID driverId = phaseRanking.getDriver().getId();
 				rankingMap.computeIfAbsent(driverId, id -> {
-					Team team = attributeTeamFromRegularOrLineup(
-							regularPhaseTeamIds, driverId, seasonId, phaseRanking.getDriver());
+					Team team = resolveAttributedTeam(phaseRanking.getDriver(), seasonId, null);
 					return new DriverRanking(phaseRanking.getDriver(), team);
 				});
 				// Merge phase results into season-wide ranking
 				DriverRanking merged = rankingMap.get(driverId);
 				phaseRanking.getRaceResults().forEach(merged::addResult);
+				if (phaseRanking.isHasGuestAppearance()) {
+					merged.markGuestAppearance();
+				}
 			}
 		}
 
@@ -119,9 +115,8 @@ public class DriverRankingService {
 	 * Calculates alltime driver ranking restricted to the given season IDs.
 	 * Used by the site generator to exclude Test seasons from public pages.
 	 *
-	 * <p><strong>Tracked Behavior Change (v1.9 / D-19):</strong> Aggregation now includes
-	 * PLAYOFF-matchup-linked race results, not just REGULAR-phase results. Multi-phase seasons'
-	 * drivers reflect all races they competed in across REGULAR + PLAYOFF + PLACEMENT phases.
+	 * <p>Aggregation includes PLAYOFF-matchup-linked race results, not just REGULAR-phase results,
+	 * so multi-phase seasons reflect all races a driver competed in across every phase.
 	 */
 	@Transactional(readOnly = true)
 	public List<DriverRanking> calculateAlltimeRanking(List<UUID> seasonIds) {
@@ -144,6 +139,22 @@ public class DriverRankingService {
 								.map(sd -> sd.getTeam().getParentOrSelf())
 								.orElse(null)));
 
+		// Pure guests have no SeasonDriver row — backfill from their own in-scope fielding race
+		// (deterministic: smallest race id), with sub-team→parent rollup. Scoping to a race that
+		// is actually in `results` keeps the team in the same season set as the points.
+		Map<UUID, UUID> guestRaceByDriver = new LinkedHashMap<>();
+		for (RaceResult result : results) {
+			UUID driverId = result.getDriver().getId();
+			if (driverTeamMap.containsKey(driverId)) {
+				continue;
+			}
+			guestRaceByDriver.merge(driverId, result.getRace().getId(),
+					(existing, candidate) -> existing.compareTo(candidate) <= 0 ? existing : candidate);
+		}
+		guestRaceByDriver.forEach((driverId, raceId) ->
+				raceLineupRepository.findByRaceIdAndDriverId(raceId, driverId)
+						.ifPresent(rl -> driverTeamMap.put(driverId, rl.getTeam().getParentOrSelf())));
+
 		Map<UUID, DriverRanking> rankingMap = new LinkedHashMap<>();
 
 		for (RaceResult result : results) {
@@ -151,6 +162,9 @@ public class DriverRankingService {
 			DriverRanking ranking = rankingMap.computeIfAbsent(driverId,
 					id -> new DriverRanking(result.getDriver(), driverTeamMap.get(id)));
 			ranking.addResult(result);
+			raceLineupRepository.findByRaceIdAndDriverId(result.getRace().getId(), driverId)
+					.filter(RaceLineup::isGuest)
+					.ifPresent(rl -> ranking.markGuestAppearance());
 		}
 
 		List<DriverRanking> rankings = new ArrayList<>(rankingMap.values());
@@ -161,44 +175,34 @@ public class DriverRankingService {
 	}
 
 	/**
-	 * Resolves team attribution from RaceLineup for the season, preferring REGULAR-phase
-	 * team members. Falls back to any season lineup if no REGULAR-phase lineup is found.
+	 * Unified team attribution for all ranking paths: home-first, then fallback fielding.
 	 *
-	 * @param regularPhaseTeamIds set of team IDs enrolled in the REGULAR phase — used to prefer
-	 *                            the REGULAR-phase team when a driver is in multiple teams
-	 * @param driverId            driver to look up
-	 * @param seasonId            season scope for the lookup
-	 * @param driver              entity reference (unused here, for caller readability)
-	 * @return the attributed team, or {@code null} if no lineup found
+	 * <ul>
+	 *   <li>A rostered driver is attributed to their {@code SeasonDriver} team (home-first).</li>
+	 *   <li>A pure guest (no {@code SeasonDriver}) is attributed to the fielding {@code RaceLineup}
+	 *       team — the specific race when {@code raceId} is given, otherwise any season lineup.</li>
+	 * </ul>
+	 *
+	 * <p>Sub-teams always roll up to their parent via {@link Team#getParentOrSelf()}.
+	 *
+	 * @param raceId the race to resolve the fielding lineup for, or {@code null} for the
+	 *               season-scoped lookup used by {@link #aggregateAcrossPhases}
+	 * @return the attributed parent team, or {@code null} if no roster or lineup exists
 	 */
-	private Team attributeTeamFromRegularOrLineup(Set<UUID> regularPhaseTeamIds,
-	                                               UUID driverId, UUID seasonId, Driver driver) {
-		List<RaceLineup> lineups = raceLineupRepository.findByDriverIdAndRaceMatchdaySeasonId(driverId, seasonId);
-		if (lineups.isEmpty()) {
-			return null;
+	private Team resolveAttributedTeam(Driver driver, UUID seasonId, UUID raceId) {
+		Optional<SeasonDriver> rostered = seasonDriverRepository.findBySeasonIdAndDriverId(seasonId, driver.getId());
+		if (rostered.isPresent()) {
+			return rostered.get().getTeam().getParentOrSelf();
 		}
-		return lineups.stream()
-				.filter(rl -> regularPhaseTeamIds.contains(rl.getTeam().getId()))
-				.findFirst()
-				.map(RaceLineup::getTeam)
-				.orElseGet(() -> lineups.get(0).getTeam());
-	}
-
-	/**
-	 * Resolves per-race team from RaceLineup (Source of Truth per CLAUDE.md
-	 * `feedback_racelineup_source_of_truth`). The first race result a driver has in the
-	 * phase fixes their per-phase team attribution; later races in the same phase keep
-	 * the same team because the result accumulator only triggers
-	 * {@code computeIfAbsent} once per driver.
-	 *
-	 * @return the driver's team for the specific race, or {@code null} if no RaceLineup
-	 *         row exists (e.g. test fixture race with results but no lineup — the season-
-	 *         wide aggregation in {@link #aggregateAcrossPhases} compensates via
-	 *         {@link #attributeTeamFromRegularOrLineup})
-	 */
-	private Team resolveTeamFromLineup(UUID driverId, Race race) {
-		return raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driverId)
-				.map(RaceLineup::getTeam)
+		if (raceId != null) {
+			Optional<RaceLineup> raceLineup = raceLineupRepository.findByRaceIdAndDriverId(raceId, driver.getId());
+			if (raceLineup.isPresent()) {
+				return raceLineup.get().getTeam().getParentOrSelf();
+			}
+		}
+		return raceLineupRepository.findByDriverIdAndRaceMatchdaySeasonId(driver.getId(), seasonId).stream()
+				.map(rl -> rl.getTeam().getParentOrSelf())
+				.min(Comparator.comparing(Team::getId))
 				.orElse(null);
 	}
 
@@ -218,6 +222,7 @@ public class DriverRankingService {
 		private int totalFlPoints;
 		private int racesCount;
 		private int bestPosition = Integer.MAX_VALUE;
+		private boolean hasGuestAppearance;
 		private final List<RaceResult> raceResults = new ArrayList<>();
 
 		public DriverRanking(Driver driver, Team team) {
@@ -235,6 +240,14 @@ public class DriverRankingService {
 				bestPosition = result.getPosition();
 			}
 			raceResults.add(result);
+		}
+
+		public void markGuestAppearance() {
+			this.hasGuestAppearance = true;
+		}
+
+		public boolean isHasGuestAppearance() {
+			return hasGuestAppearance;
 		}
 
 		public Driver getDriver() {

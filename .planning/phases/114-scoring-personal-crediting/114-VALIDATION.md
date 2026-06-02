@@ -1,0 +1,104 @@
+---
+phase: 114
+slug: scoring-personal-crediting
+status: executed
+nyquist_compliant: true
+wave_0_complete: true
+created: 2026-06-01
+---
+
+# Phase 114 — Validation Strategy
+
+> Per-phase validation contract for feedback sampling during execution.
+
+---
+
+## Test Infrastructure
+
+| Property | Value |
+|----------|-------|
+| **Framework** | JUnit 5 + Mockito + Spring Boot Test (H2), Failsafe `*IT` |
+| **Config file** | `pom.xml` (Surefire/Failsafe/JaCoCo) |
+| **Quick run command** | `./mvnw test -Dtest=DriverRankingServiceTest,ScoringServiceTest` |
+| **Full suite command** | `./mvnw clean verify` |
+| **Estimated runtime** | ~3–7 min full; ~30s targeted unit |
+
+---
+
+## Sampling Rate
+
+- **After every task commit:** Run targeted `-Dtest=<ClassName>` (Surefire) or `-Dit.test=<ClassName> -DfailIfNoTests=false` (Failsafe)
+- **After every plan wave:** Run `./mvnw clean verify`
+- **Before `/gsd-verify-work`:** Full suite (`./mvnw clean verify -Pe2e`) must be green at ≥82% line coverage
+- **Max feedback latency:** ~30 seconds (targeted unit)
+
+---
+
+## Per-Task Verification Map
+
+| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
+|---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
+| 114-01-T1 | 114-01 | 1 | SCORE-01/02/03 (D-11 fixture) | T-114-01 | dev-only seed | seed/IT | `./mvnw -Dit.test=DriverProfilePageGeneratorIT -DfailIfNoTests=false verify` | ✅ | ✅ green |
+| 114-01-T2 | 114-01 | 1 | SCORE-01/02/03 (D-12 dev,demo guest verify) | T-114-01 | dev-only log | seed/IT | `./mvnw clean test-compile && ./mvnw -Dit.test=DriverProfilePageGeneratorIT -DfailIfNoTests=false verify` | ✅ | ✅ green |
+| 114-01-T3 | 114-01 | 1 | SCORE-01/02/03 (scaffold) | T-114-01 | N/A | IT scaffold | `./mvnw -Dit.test=DriverRankingServiceGuestIT -DfailIfNoTests=false verify` | ✅ | ✅ green |
+| 114-02-T2 | 114-02 | 2 | SCORE-02 (D-01/02/03/04) | T-114-02 | N/A | unit | `./mvnw -Dtest=DriverRankingServiceTest test` | ✅ | ✅ green |
+| 114-02-T3 | 114-02 | 2 | SCORE-02 (unify impl) | T-114-02 | N/A | unit | `./mvnw -Dtest=DriverRankingServiceTest test` | ✅ | ✅ green |
+| 114-03-T1 | 114-03 | 2 | SCORE-02 (D-05 profile) | T-114-03 | N/A | sitegen IT | `./mvnw -Dit.test=DriverProfilePageGeneratorIT -DfailIfNoTests=false verify` | ✅ | ✅ green |
+| 114-03-T2 | 114-03 | 2 | SCORE-02 (D-05 profile GREEN) | T-114-03 | N/A | sitegen IT | `./mvnw -Dit.test=DriverProfilePageGeneratorIT -DfailIfNoTests=false verify` | ✅ | ✅ green |
+| 114-04-T1 | 114-04 | 3 | SCORE-01, SCORE-02 (D-13/D-14) | T-114-04 | N/A | IT | `./mvnw -Dit.test=DriverRankingServiceGuestIT -DfailIfNoTests=false verify` | ✅ | ✅ green |
+| 114-04-T2 | 114-04 | 3 | SCORE-03 (D-15) + alltime (D-16) | T-114-04 | N/A | IT | `./mvnw -Dit.test=DriverRankingServiceGuestIT -DfailIfNoTests=false verify` | ✅ | ✅ green |
+
+*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky · (per-task IDs assigned by planner)*
+
+---
+
+## Wave 0 Requirements
+
+- [x] Guest scenario in `TestDataService.seedRaceLineups` — dual-role guest (roster Team A + guest Team B) + pure guest (no SeasonDriver), `T-`/`Test_`/`Test-Season` prefixed, with RaceResults + aggregated match score (Plan 114-01 Task 1, D-11)
+- [x] `DevDataSeeder` (`@Profile("dev")`) verifies + logs the seeded guest example so `dev,demo` renders real guest data for `/gsd-auto-uat 114` and the Phase 115 visual reference (Plan 114-01 Task 2, D-12)
+- [x] `DriverRankingServiceGuestIT` with `@Tag("integration")` + four real regression tests (scaffold Plan 114-01 Task 3, bodies Plan 114-04)
+- [x] New unit test methods in `DriverRankingServiceTest` for D-01/D-02/D-03/D-04 (Plan 114-02 Task 2)
+- [x] New sitegen test in `DriverProfilePageGeneratorIT` for D-05 profile existence (Plan 114-03 Task 1)
+
+*Existing JUnit/Spring Boot Test infrastructure covers the framework; only fixtures + new test classes/methods are needed.*
+
+---
+
+## Manual-Only Verifications
+
+| Behavior | Requirement | Why Manual | Test Instructions |
+|----------|-------------|------------|-------------------|
+| Pure-guest driver-profile page renders with the guest race | SCORE-02 (D-05) | Public site-gen render smoke; data hook only (visual mark is Phase 115) | `/gsd-auto-uat 114` against `dev,demo` seed guest example (seeded via `TestDataService` + verified by `DevDataSeeder` per D-12, Plan 114-01 Task 2) |
+
+*All scoring/crediting behaviors have automated verification; only page-existence render smoke is UAT.*
+
+---
+
+## Validation Sign-Off
+
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (`DriverRankingServiceGuestIT` scaffold + `TestDataService` guest fixture + `DevDataSeeder` dev,demo guest verification in Plan 114-01)
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s (targeted unit)
+- [x] `nyquist_compliant: true` set in frontmatter
+
+**Approval:** Phase gate — `./mvnw clean verify -Pe2e` green at ≥82% line coverage; `-Dit.test=DriverRankingServiceGuestIT` exits 0. `wave_0_complete` flips to true after Plan 114-01 executes.
+
+---
+
+## Validation Audit 2026-06-01
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+Every requirement (SCORE-01/02/03) maps to an automated test that ran green in `./mvnw clean verify -Pe2e`:
+- **SCORE-01** (D-13) — `DriverRankingServiceGuestIT.givenGuestResultInRace_whenAggregateMatchScores_thenCountsForFieldingTeamScore`
+- **SCORE-02** — `DriverRankingServiceTest` (6 unit: D-01/02/03/04 + regression + additive), `DriverRankingServiceGuestIT.givenPureGuestWithNoSeasonDriver…` (D-14), `DriverProfilePageGeneratorIT.givenPureGuestDriver_whenGenerate_thenProfilePageExists` (D-05)
+- **SCORE-03** (D-15) — `DriverRankingServiceGuestIT.givenGuestResultSavedTwice_whenAggregateMatchScores_thenScoresAreIdempotent`; alltime edge (D-16) — `…givenPureGuestInAlltimeScope…`
+
+Stale `DriverProfilePageGeneratorTest` references corrected to `DriverProfilePageGeneratorIT` (renamed to a `@Tag("integration")` Failsafe IT during the code-review fix pass; commands updated to `-Dit.test=… verify`). No gaps to fill — **Nyquist-compliant**.
+</content>

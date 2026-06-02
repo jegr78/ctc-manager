@@ -294,6 +294,54 @@ class RaceServiceTest {
     }
 
     @Test
+    void givenGuestResult_whenGetRaceDetailData_thenGuestDriverMapFlagsGuest() {
+        // given
+        var homeTeam = createTeam("HOM", "Home");
+        var awayTeam = createTeam("AWY", "Away");
+        var season = new Season("Test Season 2026");
+        season.setId(UUID.randomUUID());
+        var matchday = new Matchday();
+        matchday.setId(UUID.randomUUID());
+        matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
+        var match = new Match(matchday, homeTeam, awayTeam);
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(match);
+
+        var guestDriver = new Driver("guestPsn", "GuestNick");
+        guestDriver.setId(UUID.randomUUID());
+        guestDriver.setSeasonDrivers(List.of());
+        var regularDriver = new Driver("regPsn", "RegNick");
+        regularDriver.setId(UUID.randomUUID());
+        regularDriver.setSeasonDrivers(List.of());
+
+        var r1 = new RaceResult(race, guestDriver, 1, 1, false);
+        r1.setPointsTotal(20);
+        var r2 = new RaceResult(race, regularDriver, 2, 2, false);
+        r2.setPointsTotal(17);
+        race.getResults().addAll(List.of(r1, r2));
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(scoringService.isDriverInTeam(eq(r1), any(), eq(homeTeam.getId()))).thenReturn(true);
+        when(scoringService.isDriverInTeam(eq(r2), any(), eq(homeTeam.getId()))).thenReturn(false);
+        when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), guestDriver.getId()))
+                .thenReturn(Optional.of(new RaceLineup(race, guestDriver, homeTeam, true)));
+        when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), regularDriver.getId()))
+                .thenReturn(Optional.of(new RaceLineup(race, regularDriver, awayTeam, false)));
+        when(raceLineupRepository.findByRaceId(race.getId()))
+                .thenReturn(List.of(new RaceLineup(race, guestDriver, homeTeam, true),
+                        new RaceLineup(race, regularDriver, awayTeam, false)));
+
+        // when
+        var data = service.getRaceDetailData(race.getId());
+
+        // then
+        assertThat(data.guestDriverMap()).containsEntry(guestDriver.getId(), true);
+        assertThat(data.guestDriverMap()).containsEntry(regularDriver.getId(), false);
+    }
+
+    @Test
     void givenRaceWithoutResults_whenGetRaceDetailData_thenFlagsResultsMissing() {
         // given
         var homeTeam = createTeam("HOM", "Home");

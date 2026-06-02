@@ -49,7 +49,6 @@
         .team-card-container img { max-height: 100%; max-width: 100%; object-fit: contain;
             border: 3px solid #fff; border-radius: 16px; box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 16px 44px rgba(0,0,0,.55); }
 
-        /* Pairings + HUD-Eckbrackets + Gold-Mittellinie */
         .pairings { flex: 1; position: relative; display: flex; flex-direction: column; justify-content: space-around; padding: 24px 44px; }
         .pairings::before, .pairings::after { content: ''; position: absolute; width: 36px; height: 36px; border: 3px solid rgba(245,197,66,.55); }
         .pairings::before { top: 0; left: 8px; border-right: 0; border-bottom: 0; }
@@ -63,6 +62,8 @@
 
         .empty-slot { opacity: 0.32; }
         .empty-slot .driver-name { color: #6a6a73; }
+        :root { --guest: #f59e0b; }
+        .guest-marker { color: var(--guest); font-size: 0.85em; margin-left: 4px; vertical-align: middle; }
 
         .footer .position { flex: 1; font-size: 56px; font-weight: 900; color: #f2f2f5; }
         .footer .position:last-child { text-align: right; }
@@ -98,11 +99,11 @@
         <div class="pairings">
             <div class="pairing" th:each="p : ${pairings}">
                 <div class="driver-info home" th:classappend="${p.homeDriver == 'n/a'} ? 'empty-slot' : ''">
-                    <span class="driver-name" th:text="${p.homeDriver}"></span>
+                    <span class="driver-name"><span th:text="${p.homeDriver}"></span><span class="guest-marker" th:if="${p.homeIsGuest}" aria-label="Guest driver">&#x2605;</span></span>
                     <span class="driver-nickname" th:text="'(' + ${p.homeNickname} + ')'" th:if="${p.homeDriver != 'n/a'}"></span>
                 </div>
                 <div class="driver-info away" th:classappend="${p.awayDriver == 'n/a'} ? 'empty-slot' : ''">
-                    <span class="driver-name" th:text="${p.awayDriver}"></span>
+                    <span class="driver-name"><span th:text="${p.awayDriver}"></span><span class="guest-marker" th:if="${p.awayIsGuest}" aria-label="Guest driver">&#x2605;</span></span>
                     <span class="driver-nickname" th:text="'(' + ${p.awayNickname} + ')'" th:if="${p.awayDriver != 'n/a'}"></span>
                 </div>
             </div>

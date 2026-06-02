@@ -6,11 +6,17 @@ import java.nio.file.Path;
 import java.util.List;
 import javax.sql.DataSource;
 import org.ctc.admin.TestDataService;
+import org.ctc.domain.model.RaceLineup;
+import org.ctc.domain.repository.DriverRepository;
+import org.ctc.domain.repository.RaceLineupRepository;
+import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.sitegen.model.GenerationContext;
 import org.flywaydb.core.Flyway;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.ctc.testsupport.SitegenTestDir;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +25,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -39,8 +46,9 @@ import static org.mockito.BDDMockito.given;
  */
 @SpringBootTest
 @ActiveProfiles("dev")
+@Tag("integration")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class DriverProfilePageGeneratorTest {
+class DriverProfilePageGeneratorIT {
 
     private static final List<String> PER_PHASE_HEADINGS = List.of(
             "Regular Season Results", "Playoff Results", "Placement Phase Results");
@@ -55,6 +63,11 @@ class DriverProfilePageGeneratorTest {
     @Autowired private SiteGeneratorService siteGeneratorService;
     @Autowired private TestDataService testDataService;
     @Autowired private DataSource dataSource;
+    @Autowired private DriverProfilePageGenerator driverProfilePageGenerator;
+    @Autowired private SeasonRepository seasonRepository;
+    @Autowired private SiteSlugger siteSlugger;
+    @Autowired private DriverRepository driverRepository;
+    @Autowired private RaceLineupRepository raceLineupRepository;
 
     @MockitoBean private YouTubeScraperService youTubeScraperService;
 
@@ -98,6 +111,65 @@ class DriverProfilePageGeneratorTest {
             assertThat(html).as("LEAGUE-only driver profile must not contain '%s'", heading)
                     .doesNotContain(heading);
         }
+    }
+
+    /**
+     * A pure guest — a driver who appears only in a RaceLineup for the season with no
+     * SeasonDriver row — must still get a public driver-profile page (D-05). Driven directly
+     * because the full SiteGeneratorService filters out "Test" seasons from the public site.
+     */
+    @Test
+    @Transactional(readOnly = true)
+    void givenPureGuestDriver_whenGenerate_thenProfilePageExists() throws IOException {
+        // given — Test-Season 2026 (year=2026, number=99) seeded with pure guest Test_Guest_1
+        var season = seasonRepository.findByYearAndNumber(2026, 99).getFirst();
+        var slug = siteSlugger.slugify(season.getDisplayLabel());
+        var ctx = new GenerationContext(tempDir, season, slug, season.getName(), false, null);
+        var result = new SiteGeneratorService.GenerationResult();
+
+        // when
+        driverProfilePageGenerator.generate(ctx, result);
+
+        // then — a profile page exists for the lineup-only guest
+        Path driverProfile = tempDir.resolve("season").resolve(slug)
+                .resolve("driver").resolve(siteSlugger.slugify("Test_Guest_1") + ".html");
+        assertThat(driverProfile).exists();
+        String html = Files.readString(driverProfile);
+        assertThat(html).contains("Test_Guest_1");
+    }
+
+    /**
+     * MARK-06: a guest race on the public driver-profile is marked with the star glyph and an
+     * inline "as guest for &lt;SubTeamName&gt;" sub-label naming the actual fielding sub-team.
+     */
+    @Test
+    @Transactional(readOnly = true)
+    void givenPureGuestDriver_whenGenerate_thenGuestRaceMarkedWithStarAndSubLabel() throws IOException {
+        // given
+        var season = seasonRepository.findByYearAndNumber(2026, 99).getFirst();
+        var slug = siteSlugger.slugify(season.getDisplayLabel());
+        var ctx = new GenerationContext(tempDir, season, slug, season.getName(), false, null);
+        var genResult = new SiteGeneratorService.GenerationResult();
+        var guest = driverRepository.findByPsnId("Test_Guest_1").orElseThrow();
+        // The actual fielding sub-team names, scoped to the season (same source the generator uses).
+        var guestSubTeams = raceLineupRepository.findByRaceMatchdaySeasonId(season.getId()).stream()
+                .filter(RaceLineup::isGuest)
+                .filter(rl -> rl.getDriver().getId().equals(guest.getId()))
+                .map(rl -> rl.getTeam().getShortName())
+                .distinct().toList();
+
+        // when
+        driverProfilePageGenerator.generate(ctx, genResult);
+
+        // then — star glyph + inline sub-label naming the actual fielding sub-team
+        Path profile = tempDir.resolve("season").resolve(slug)
+                .resolve("driver").resolve(siteSlugger.slugify("Test_Guest_1") + ".html");
+        String html = Files.readString(profile);
+        assertThat(html).contains("guest-marker");
+        assertThat(html).contains("&#x2605;");
+        assertThat(html).contains("as guest for");
+        assertThat(guestSubTeams).isNotEmpty();
+        assertThat(guestSubTeams).anyMatch(html::contains);
     }
 
     /**

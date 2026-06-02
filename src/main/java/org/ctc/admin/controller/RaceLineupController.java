@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.domain.service.DriverService;
 import org.ctc.domain.service.RaceLineupService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -21,6 +22,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class RaceLineupController {
 
 	private final RaceLineupService raceLineupService;
+	private final DriverService driverService;
 
 	@GetMapping("/{raceId}/lineup")
 	public String lineup(@PathVariable UUID raceId, Model model) {
@@ -36,6 +38,8 @@ public class RaceLineupController {
 		model.addAttribute("race", data.race());
 		model.addAttribute("teamEntries", teamEntries);
 		model.addAttribute("driverAssignments", raceLineupService.getDriverAssignments(raceId));
+		model.addAttribute("guestLineups", raceLineupService.getGuestLineups(raceId));
+		model.addAttribute("allDrivers", driverService.findAll());
 		return "admin/race-lineup";
 	}
 
@@ -43,18 +47,42 @@ public class RaceLineupController {
 	public String saveLineup(@PathVariable UUID raceId,
 	                         @RequestParam Map<String, String> params,
 	                         RedirectAttributes redirectAttributes) {
-		var driverTeamAssignments = new HashMap<UUID, UUID>();
+		var rosterAssignments = new HashMap<UUID, UUID>();
+		var guestAssignments = new HashMap<UUID, UUID>();
+		int malformed = 0;
+		int skippedGuests = 0;
 		for (var entry : params.entrySet()) {
-			if (!entry.getKey().startsWith("driver_") || !hasText(entry.getValue())) {
+			var key = entry.getKey();
+			boolean isRoster = key.startsWith("driver_");
+			boolean isGuest = key.startsWith("guest_");
+			if (!isRoster && !isGuest) {
 				continue;
 			}
-			UUID driverId = UUID.fromString(entry.getKey().substring("driver_".length()));
-			UUID teamId = UUID.fromString(entry.getValue());
-			driverTeamAssignments.put(driverId, teamId);
+			if (!hasText(entry.getValue())) {
+				if (isGuest) {
+					skippedGuests++;
+				}
+				continue;
+			}
+			try {
+				var prefix = isRoster ? "driver_" : "guest_";
+				UUID driverId = UUID.fromString(key.substring(prefix.length()));
+				UUID teamId = UUID.fromString(entry.getValue());
+				(isRoster ? rosterAssignments : guestAssignments).put(driverId, teamId);
+			} catch (IllegalArgumentException ex) {
+				malformed++;
+			}
 		}
 
-		int count = raceLineupService.saveLineup(raceId, driverTeamAssignments);
+		int count = raceLineupService.saveLineup(raceId, rosterAssignments, guestAssignments);
 		redirectAttributes.addFlashAttribute("successMessage", "Lineup saved: " + count + " drivers assigned");
+		if (skippedGuests > 0) {
+			redirectAttributes.addFlashAttribute("errorMessage",
+					skippedGuests + " guest row(s) skipped — no team selected");
+		} else if (malformed > 0) {
+			redirectAttributes.addFlashAttribute("errorMessage",
+					malformed + " entr(y/ies) skipped — invalid id");
+		}
 		return "redirect:/admin/races/" + raceId + "/lineup";
 	}
 }

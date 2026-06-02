@@ -162,6 +162,46 @@ class RaceFormDataServiceTest {
     }
 
     @Test
+    void givenLineupWithGuestEntry_whenGetResultsFormData_thenGuestAppearsInResultsForm() {
+        // given
+        var homeTeam = createTeam("HOM", "Home");
+        var awayTeam = createTeam("AWY", "Away");
+        var scoring = new RaceScoring("Test", "10,8,6", "3,2,1", 1);
+        var season = new Season();
+        season.setId(UUID.randomUUID());
+        var matchday = new Matchday();
+        matchday.setId(UUID.randomUUID());
+        var phase = PhaseTestFixtures.regularPhase(season, scoring, null);
+        phase.setRaceScoring(scoring);
+        matchday.setPhase(phase);
+        var match = new Match(matchday, homeTeam, awayTeam);
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(match);
+
+        var guestDriver = new Driver("guestPsn", "GuestNick");
+        guestDriver.setId(UUID.randomUUID());
+        guestDriver.setSeasonDrivers(List.of());
+        var guestLineup = new RaceLineup(race, guestDriver, homeTeam, true);
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of(guestLineup));
+
+        // when
+        var result = service.getResultsFormData(race.getId());
+
+        // then
+        assertThat(result.data().results())
+                .extracting(RaceService.RaceResultData::driverId)
+                .contains(guestDriver.getId());
+        assertThat(result.data().results())
+                .filteredOn(r -> r.driverId().equals(guestDriver.getId()))
+                .extracting(RaceService.RaceResultData::teamShortName)
+                .containsExactly(homeTeam.getShortName());
+    }
+
+    @Test
     void givenRaceWithExistingResults_whenGetResultsFormData_thenReturnsExistingResults() {
         // given
         var homeTeam = createTeam("HOM", "Home");
