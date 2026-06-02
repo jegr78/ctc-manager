@@ -284,7 +284,7 @@ See: milestones/v1.15-ROADMAP.md for full details
 ### Phase 116: German Comment Sweep
 **Goal**: All source-level comments are in English and reduced to the necessary minimum — the German comments that crept in via two Claude-Design handoffs during v1.14/v1.15 are removed, restoring compliance with the project's English-only and No-Comment-Pollution conventions
 **Depends on**: Phase 115
-**Requirements**: TBD (run /gsd-plan-phase 116 to break down)
+**Requirements**: CLEAN-01, CLEAN-02, CLEAN-03, CLEAN-04
 **Success Criteria** (what must be TRUE):
   1. A full-repository scan covers all comment-bearing source types — Thymeleaf templates, Java, pom.xml, YAML, and .properties files
   2. Every German comment found is either translated to concise English or removed where it is redundant (per No-Comment-Pollution)
