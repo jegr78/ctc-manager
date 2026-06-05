@@ -63,7 +63,8 @@ class BackupImportMultipartLimitIT {
                 + "Content-Type: application/zip" + CRLF
                 + CRLF).getBytes(StandardCharsets.UTF_8);
         byte[] partFooter = (CRLF + "--" + boundary + "--" + CRLF).getBytes(StandardCharsets.UTF_8);
-        // partFooter is never sent — it only contributes to the declared Content-Length.
+        // partFooter is only sent if the server accepts the full payload (regression path);
+        // on the expected early-reject path it only contributes to the declared Content-Length.
         long contentLength = partHeader.length + payloadLength + partFooter.length;
 
         // when — raw socket streaming the body in chunks, stopping as soon as the early 302
@@ -92,6 +93,12 @@ class BackupImportMultipartLimitIT {
                     int n = (int) Math.min(chunk.length, remaining);
                     out.write(chunk, 0, n);
                     remaining -= n;
+                }
+                if (remaining == 0) {
+                    // Regression path: the server accepted the full payload — complete the
+                    // request so the response carries a real status for the assertion below,
+                    // instead of the test dying in a 120s read timeout.
+                    out.write(partFooter);
                 }
                 out.flush();
             } catch (IOException earlyClose) {
