@@ -8,8 +8,9 @@ import org.junit.jupiter.api.io.TempDir;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * End-to-end verification of the {@code checkstyle-gate-guard} predicate emitted
- * by the {@code exec-maven-plugin} block in {@code pom.xml}.
+ * End-to-end verification of the {@code checkstyle-gate-guard} predicate in
+ * {@code scripts/guards/checkstyle-gate-guard.sh}, invoked by the
+ * {@code exec-maven-plugin} block in {@code pom.xml}.
  *
  * <p>Runs the SAME grep predicate Maven invokes during the {@code validate} phase
  * against synthetic {@code pom.xml} + {@code config/checkstyle.xml} files in a
@@ -21,8 +22,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class CheckstyleGateGuardPredicateTest {
 
-	/** Presence patterns the Maven guard greps; MUST stay in sync with the
-	 * {@code <argument><![CDATA[ ... ]]></argument>} value in {@code pom.xml}.
+	/** Presence patterns the Maven guard greps; MUST stay in sync with
+	 * {@code scripts/guards/checkstyle-gate-guard.sh}.
 	 * The {@code [[:space:]]*} between tag and value is what stops the guard's own
 	 * literals from self-satisfying the grep against the real pom.xml. */
 	private static final String FAIL_ON_VIOLATION_PATTERN = "<failOnViolation>[[:space:]]*true";
@@ -98,16 +99,20 @@ class CheckstyleGateGuardPredicateTest {
 	}
 
 	@Test
-	void givenPomXml_whenGuardPatternsExtracted_thenPresentInRealPom() throws Exception {
+	void givenGuardScript_whenGuardPatternsExtracted_thenPresentInScriptAndPomWiring() throws Exception {
+		String script = Files.readString(Path.of("scripts/guards/checkstyle-gate-guard.sh"));
 		String pom = Files.readString(Path.of("pom.xml"));
 
-		assertThat(pom)
-				.as("pom.xml must keep the checkstyle-gate-guard execution and its presence patterns in sync with this test")
-				.contains("checkstyle-gate-guard")
+		assertThat(script)
+				.as("scripts/guards/checkstyle-gate-guard.sh must keep its presence patterns in sync with this test")
 				.contains(FAIL_ON_VIOLATION_PATTERN)
 				.contains(INCLUDE_TEST_SOURCE_PATTERN)
 				.contains(UNUSED_IMPORTS_TOKEN)
 				.contains(REDUNDANT_IMPORT_TOKEN);
+		assertThat(pom)
+				.as("pom.xml must keep the checkstyle-gate-guard execution wired to the guard script")
+				.contains("checkstyle-gate-guard")
+				.contains("scripts/guards/checkstyle-gate-guard.sh");
 	}
 
 	private static void writeConfig(Path workdir, String pomContent, String checkstyleContent) throws Exception {
