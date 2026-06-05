@@ -1,10 +1,14 @@
 package org.ctc.backup.exception;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URI;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,8 +53,8 @@ class BackupImportMultipartLimitIT {
     @Test
     void given101MBMockMultipartFile_whenPostImportPreview_thenRedirectsToBackupWithErrorFlash()
             throws Exception {
-        // given — 101 MB + 1 byte payload, strictly above the 100 MB limit from Plan 01
-        byte[] payload = new byte[101 * 1024 * 1024 + 1];
+        // given — declared payload of 101 MB + 1 byte, strictly above the 100 MB limit from Plan 01
+        long payloadLength = 101L * 1024 * 1024 + 1;
         String boundary = UUID.randomUUID().toString().replace("-", "");
         String CRLF = "\r\n";
 
@@ -59,36 +63,70 @@ class BackupImportMultipartLimitIT {
                 + "Content-Type: application/zip" + CRLF
                 + CRLF).getBytes(StandardCharsets.UTF_8);
         byte[] partFooter = (CRLF + "--" + boundary + "--" + CRLF).getBytes(StandardCharsets.UTF_8);
-        long contentLength = partHeader.length + payload.length + partFooter.length;
+        // partFooter is only sent if the server accepts the full payload (regression path);
+        // on the expected early-reject path it only contributes to the declared Content-Length.
+        long contentLength = partHeader.length + payloadLength + partFooter.length;
 
-        // when — real HTTP via HttpURLConnection with redirect-following disabled
-        HttpURLConnection conn = (HttpURLConnection)
-                URI.create("http://localhost:" + port + "/admin/backup/import-preview")
-                        .toURL().openConnection();
-        conn.setInstanceFollowRedirects(false);
-        conn.setDoOutput(true);
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
-        conn.setFixedLengthStreamingMode(contentLength);
-        conn.setConnectTimeout(10_000);
-        conn.setReadTimeout(120_000);
+        // when — raw socket streaming the body in chunks, stopping as soon as the early 302
+        // arrives. HTTP clients keep writing the fixed-length body after the server has
+        // rejected and closed the connection; on Windows the resulting TCP RST discards the
+        // buffered response, so the redirect is only observable when the client stops writing.
+        int statusCode;
+        String location;
+        String responseBody;
+        try (Socket socket = new Socket("localhost", port)) {
+            socket.setSoTimeout(120_000);
+            OutputStream out = socket.getOutputStream();
+            InputStream in = socket.getInputStream();
+            out.write(("POST /admin/backup/import-preview HTTP/1.1" + CRLF
+                    + "Host: localhost:" + port + CRLF
+                    + "Content-Type: multipart/form-data; boundary=" + boundary + CRLF
+                    + "Content-Length: " + contentLength + CRLF
+                    + "Connection: close" + CRLF
+                    + CRLF).getBytes(StandardCharsets.UTF_8));
+            try {
+                out.write(partHeader);
 
-        try (OutputStream out = conn.getOutputStream()) {
-            out.write(partHeader);
-            out.write(payload);
-            out.write(partFooter);
-            out.flush();
-        }
-
-        int statusCode = conn.getResponseCode();
-        String location = conn.getHeaderField("Location");
-        String responseBody = "";
-        try (var in = conn.getErrorStream() != null ? conn.getErrorStream() : conn.getInputStream()) {
-            if (in != null) {
-                responseBody = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                byte[] chunk = new byte[64 * 1024];
+                long remaining = payloadLength;
+                while (remaining > 0 && in.available() == 0) {
+                    int n = (int) Math.min(chunk.length, remaining);
+                    out.write(chunk, 0, n);
+                    remaining -= n;
+                }
+                if (remaining == 0) {
+                    // Regression path: the server accepted the full payload — complete the
+                    // request so the response carries a real status for the assertion below,
+                    // instead of the test dying in a 120s read timeout.
+                    out.write(partFooter);
+                }
+                out.flush();
+            } catch (IOException earlyClose) {
+                // The server rejected and closed while we were still writing; the response
+                // may already be buffered locally — fall through and try to read it.
             }
+
+            String head = readResponseHead(in);
+            int statusLineEnd = head.indexOf(CRLF);
+            if (statusLineEnd < 0) {
+                throw new IOException("Truncated HTTP response head: \"" + head + "\"");
+            }
+            String statusLine = head.substring(0, statusLineEnd);
+            Matcher status = Pattern.compile("^HTTP/\\S+ (\\d{3})").matcher(statusLine);
+            if (!status.find()) {
+                throw new IOException("Malformed HTTP status line: \"" + statusLine + "\"");
+            }
+            statusCode = Integer.parseInt(status.group(1));
+            location = headerValue(head, "Location");
+            String declaredLength = headerValue(head, "Content-Length");
+            int bodyLength = declaredLength != null ? Integer.parseInt(declaredLength) : 0;
+            byte[] body = in.readNBytes(bodyLength);
+            if (body.length < bodyLength) {
+                throw new IOException("Response body truncated: expected " + bodyLength
+                        + " bytes, got " + body.length);
+            }
+            responseBody = new String(body, StandardCharsets.UTF_8);
         }
-        conn.disconnect();
 
         // then — Tomcat enforces the 100 MB limit; BackupUploadExceptionHandler produces Flash-redirect
         assertThat(statusCode)
@@ -103,6 +141,27 @@ class BackupImportMultipartLimitIT {
                 .doesNotContain("Servlet.service()")
                 .doesNotContain("java.lang.Throwable")
                 .doesNotContain("MaxUploadSizeExceededException");
+    }
+
+    private static String readResponseHead(InputStream in) throws IOException {
+        var head = new ByteArrayOutputStream();
+        int lastFour = 0;
+        int b;
+        while ((b = in.read()) != -1) {
+            head.write(b);
+            lastFour = (lastFour << 8) | b;
+            if (lastFour == 0x0D0A0D0A) {
+                break;
+            }
+        }
+        return head.toString(StandardCharsets.UTF_8);
+    }
+
+    private static String headerValue(String head, String name) {
+        return head.lines()
+                .filter(line -> line.regionMatches(true, 0, name + ":", 0, name.length() + 1))
+                .map(line -> line.substring(name.length() + 1).trim())
+                .findFirst().orElse(null);
     }
 
     @Test

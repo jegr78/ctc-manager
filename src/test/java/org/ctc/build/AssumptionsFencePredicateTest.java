@@ -10,8 +10,9 @@ import org.junit.jupiter.api.io.TempDir;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * End-to-end verification of the {@code assumptions-fence} predicate emitted
- * by the {@code exec-maven-plugin} block in {@code pom.xml}.
+ * End-to-end verification of the {@code assumptions-fence} predicate in
+ * {@code scripts/guards/assumptions-fence.sh}, invoked by the
+ * {@code exec-maven-plugin} block in {@code pom.xml}.
  *
  * <p>Runs the SAME bash grep predicate that Maven invokes during the
  * {@code validate} phase against synthetic source files in a {@link TempDir},
@@ -23,8 +24,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AssumptionsFencePredicateTest {
 
 	/** The regex the Maven exec-maven-plugin block runs; MUST stay byte-for-byte
-	 * identical to the {@code <argument><![CDATA[ grep -rE '...' ]]></argument>}
-	 * value in {@code pom.xml} (modulo bash-quoting). */
+	 * identical to the {@code grep -rE '...'} pattern in
+	 * {@code scripts/guards/assumptions-fence.sh} (modulo bash-quoting). */
 	private static final String FENCE_REGEX =
 			"^import\\s+(static\\s+)?org\\.junit\\.jupiter\\.api\\.Assumptions(\\.|;)";
 
@@ -64,15 +65,20 @@ class AssumptionsFencePredicateTest {
 	}
 
 	@Test
-	void givenPomXml_whenAssumptionsFenceRegexExtracted_thenMatchesFenceRegexConstant() throws Exception {
-		String pomContent = Files.readString(Path.of("pom.xml"));
+	void givenGuardScript_whenAssumptionsFenceRegexExtracted_thenMatchesFenceRegexConstant() throws Exception {
+		String scriptContent = Files.readString(Path.of("scripts/guards/assumptions-fence.sh"));
 		Pattern argument = Pattern.compile("grep\\s+-rE\\s+'(\\^import[^']+)'");
-		Matcher matcher = argument.matcher(pomContent);
+		Matcher matcher = argument.matcher(scriptContent);
 
 		assertThat(matcher.find())
-				.as("pom.xml must contain the assumptions-fence grep argument")
+				.as("scripts/guards/assumptions-fence.sh must contain the assumptions-fence grep argument")
 				.isTrue();
 		assertThat(matcher.group(1)).isEqualTo(FENCE_REGEX);
+
+		assertThat(Files.readString(Path.of("pom.xml")))
+				.as("pom.xml must keep the assumptions-fence execution wired to the guard script")
+				.contains("assumptions-fence")
+				.contains("scripts/guards/assumptions-fence.sh");
 	}
 
 	private static Process runGrep(Path searchRoot) throws Exception {

@@ -13,8 +13,11 @@ COPY pom.xml .
 RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
 
 # Source kopieren und bauen
-# config/ liefert checkstyle.xml (validate-phase Unused-Import-Gate) — ohne diese Datei bricht ./mvnw package ab.
+# config/ liefert checkstyle.xml (validate-phase Unused-Import-Gate), scripts/ die
+# validate-phase Build-Guards (exec-maven-plugin: bash scripts/guards/*.sh) — ohne
+# diese Verzeichnisse bricht ./mvnw package ab.
 COPY config config
+COPY scripts scripts
 COPY src src
 RUN ./mvnw package -DskipTests -B
 

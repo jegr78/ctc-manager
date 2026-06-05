@@ -35,9 +35,10 @@ class PathTraversalGuardTest {
 
     @Test
     void givenAbsoluteEntry_whenAssertWithin_thenThrowsPathTraversal(@TempDir Path tempDir) {
-        // given — Unix-shaped absolute path; CI runs on Ubuntu so this is reliable
+        // given — absolute path shaped for the current OS root (/etc/passwd on Unix, C:\etc\passwd on Windows)
+        String absoluteEntry = tempDir.toAbsolutePath().getRoot().resolve("etc").resolve("passwd").toString();
         // when / then
-        assertThatThrownBy(() -> assertWithin(tempDir, "/etc/passwd"))
+        assertThatThrownBy(() -> assertWithin(tempDir, absoluteEntry))
                 .isInstanceOf(BackupArchiveException.class)
                 .satisfies(ex -> {
                     BackupArchiveException bae = (BackupArchiveException) ex;
