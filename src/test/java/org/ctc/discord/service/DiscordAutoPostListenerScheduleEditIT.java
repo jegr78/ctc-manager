@@ -8,6 +8,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import org.ctc.TestHelper;
 import org.ctc.discord.event.MatchScheduleFieldsChangedEvent;
 import org.ctc.domain.model.Match;
@@ -15,9 +17,8 @@ import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.Team;
-import org.ctc.domain.repository.MatchRepository;
-import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceRepository;
+import org.ctc.domain.repository.TeamRepository;
 import org.ctc.domain.service.RaceService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,16 +60,15 @@ class DiscordAutoPostListenerScheduleEditIT {
 	RaceRepository raceRepository;
 
 	@Autowired
-	MatchRepository matchRepository;
-
-	@Autowired
-	RaceLineupRepository raceLineupRepository;
+	TeamRepository teamRepository;
 
 	@Autowired
 	TestHelper helper;
 
 	@Autowired
 	ApplicationEvents applicationEvents;
+
+	private final List<Fixture> fixtures = new ArrayList<>();
 
 	@BeforeEach
 	void resetWireMock() {
@@ -77,14 +77,20 @@ class DiscordAutoPostListenerScheduleEditIT {
 				.willReturn(okJson("{\"id\":\"bot-1\",\"username\":\"CTC-Bot\",\"discriminator\":\"0001\"}")));
 	}
 
+	// Scoped to this test's own fixture: the tests commit for real (AFTER_COMMIT events),
+	// and a repository-wide deleteAll() would wipe the seeded data shared by other ITs
+	// in the same Failsafe fork.
 	@AfterEach
-	void cleanupRaces() {
-		raceLineupRepository.deleteAll();
-		raceRepository.deleteAll();
-		matchRepository.deleteAll();
+	void cleanupFixtures() {
+		for (Fixture fx : fixtures) {
+			helper.deleteSeasonCascade(fx.season);
+			teamRepository.deleteAll(List.of(fx.home, fx.away));
+		}
+		fixtures.clear();
 	}
 
-	private record Fixture(Race race, Match match, LocalDateTime initialDateTime) {}
+	private record Fixture(Season season, Team home, Team away, Race race, Match match,
+			LocalDateTime initialDateTime) {}
 
 	private Fixture seedRaceWithDateTime(String prefix, LocalDateTime initialDateTime) {
 		Season season = helper.createSeason(prefix + "-Schedule-Season");
@@ -95,7 +101,9 @@ class DiscordAutoPostListenerScheduleEditIT {
 		Race race = helper.createRace(md, match);
 		race.setDateTime(initialDateTime);
 		raceRepository.save(race);
-		return new Fixture(race, match, initialDateTime);
+		Fixture fixture = new Fixture(season, home, away, race, match, initialDateTime);
+		fixtures.add(fixture);
+		return fixture;
 	}
 
 	@Test
