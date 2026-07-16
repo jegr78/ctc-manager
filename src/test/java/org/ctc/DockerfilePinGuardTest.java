@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -28,6 +29,14 @@ class DockerfilePinGuardTest {
 	private static final String DOCKERFILE_PATH = "Dockerfile";
 	private static final String FROM_PREFIX = "FROM eclipse-temurin:";
 	private static final String NOBLE_SUFFIX = "-noble";
+
+	// Match the pinned form regardless of the concrete version tag (e.g. "25-jdk-noble"
+	// or a Renovate-bumped "25.0.3_9-jdk-noble"), so a base-image version bump does not
+	// break the guard — only a drop of the -jdk/-jre or -noble pin does.
+	private static final Pattern BUILD_STAGE_PIN =
+			Pattern.compile("FROM eclipse-temurin:\\S+-jdk-noble AS build");
+	private static final Pattern RUNTIME_STAGE_PIN =
+			Pattern.compile("FROM eclipse-temurin:\\S+-jre-noble");
 
 	@Test
 	@DisplayName("givenDockerfile_whenInspectingFromLines_thenAllEclipseTemurinTagsArePinnedToNoble")
@@ -63,12 +72,14 @@ class DockerfilePinGuardTest {
 		// given
 		String content = Files.readString(Path.of(DOCKERFILE_PATH));
 
-		// when / then — the exact pinned forms shipped by Phase 78 must remain
+		// when / then — both stages must keep the -jdk-noble / -jre-noble pin (any version tag)
 		assertThat(content)
-				.as("Build stage must be pinned to eclipse-temurin:25-jdk-noble (Phase 78 PLAT-CI-01)")
-				.contains("FROM eclipse-temurin:25-jdk-noble AS build");
+				.as("Build stage must be pinned to eclipse-temurin:<version>-jdk-noble (Playwright 1.59.0 "
+						+ "does not support Ubuntu 26.04 / Plucky — see v1.10 Phase 78)")
+				.containsPattern(BUILD_STAGE_PIN);
 		assertThat(content)
-				.as("Runtime stage must be pinned to eclipse-temurin:25-jre-noble (Phase 78 PLAT-CI-01)")
-				.contains("FROM eclipse-temurin:25-jre-noble");
+				.as("Runtime stage must be pinned to eclipse-temurin:<version>-jre-noble (Playwright 1.59.0 "
+						+ "does not support Ubuntu 26.04 / Plucky — see v1.10 Phase 78)")
+				.containsPattern(RUNTIME_STAGE_PIN);
 	}
 }
