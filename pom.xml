@@ -300,6 +300,10 @@
 						     Playwright/macOS file-descriptor budgets ("Protocol error (Page.captureScreenshot)"
 						     flake). Tests that genuinely need rendered team cards can override per-class. -->
 						<app.seed.generate-team-cards>false</app.seed.generate-team-cards>
+						<!-- Force Hibernate SQL echo off in test forks: the dev profile (used by
+						     ~152 @ActiveProfiles("dev") tests) sets show-sql=true, which floods CI
+						     logs with multi-GB of formatted SQL. The dev runtime keeps show-sql on. -->
+						<spring.jpa.show-sql>false</spring.jpa.show-sql>
 					</systemPropertyVariables>
 					<!-- Tag-based test routing (see TESTING.md "Test Categorization"):
 					     Surefire runs only tests WITHOUT @Tag("integration") / @Tag("e2e") / @Tag("flaky").
@@ -347,6 +351,7 @@
 								<app.backup.staging-dir>data/${spring.profiles.active:dev}/backup-staging-fork-${surefire.forkNumber}</app.backup.staging-dir>
 								<app.backup.import-backups-dir>data/${spring.profiles.active:dev}/import-backups-fork-${surefire.forkNumber}</app.backup.import-backups-dir>
 								<app.seed.generate-team-cards>false</app.seed.generate-team-cards>
+								<spring.jpa.show-sql>false</spring.jpa.show-sql>
 							</systemPropertyVariables>
 							<!-- Tag-based test routing (see TESTING.md "Test Categorization"):
 							     run @Tag("integration") tests, exclude @Tag("e2e") and @Tag("flaky").
@@ -566,6 +571,7 @@
 									<groups>e2e</groups>
 									<systemPropertyVariables>
 										<app.seed.generate-team-cards>false</app.seed.generate-team-cards>
+										<spring.jpa.show-sql>false</spring.jpa.show-sql>
 									</systemPropertyVariables>
 								</configuration>
 							</execution>
