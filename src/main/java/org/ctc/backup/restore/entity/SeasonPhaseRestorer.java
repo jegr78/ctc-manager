@@ -76,12 +76,17 @@ public class SeasonPhaseRestorer implements EntityRestorer {
                     ps.setObject(10, nullableInt(row, "totalRounds"), Types.INTEGER);
                     ps.setInt(11, row.get("legs").asInt());
                     ps.setObject(12, nullableInt(row, "eventDurationMinutes"), Types.INTEGER);
-                    ps.setObject(13, UUID.fromString(row.get("raceScoring").asText()));
-                    ps.setObject(14, UUID.fromString(row.get("matchScoring").asText()));
+                    ps.setObject(13, nullableUuid(row, "raceScoring"));
+                    ps.setObject(14, nullableUuid(row, "matchScoring"));
                     ps.setTimestamp(15, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
                     ps.setTimestamp(16, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
                 });
         log.debug("SeasonPhaseRestorer: restored {} rows", rows.size());
+    }
+
+    private static UUID nullableUuid(JsonNode row, String field) {
+        JsonNode n = row.get(field);
+        return n == null || n.isNull() ? null : UUID.fromString(n.asText());
     }
 
     private static String nullableString(JsonNode row, String field) {
