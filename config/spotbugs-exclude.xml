@@ -274,7 +274,7 @@
     <Match>
         <Class name="org.ctc.domain.service.FileStorageService"/>
         <Method name="storeFromUrl"/>
-        <Bug pattern="SSRF_SPRING,SSRF"/>
+        <Bug pattern="SSRF_SPRING,SSRF,URLCONNECTION_SSRF_FD"/>
     </Match>
 
     <!-- FileStorageService path-traversal defenses: validatePathWithinUploadDir (line 156-162)
@@ -295,6 +295,123 @@
     <Match>
         <Class name="org.ctc.backup.service.BackupArchiveService"/>
         <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+
+    <!-- Paths.get() over an operator-configured @Value property (app.upload-dir,
+         app.backup.staging-dir, app.backup.import-backups-dir, google.*.credentials-path).
+         find-sec-bugs taints every externally-injected String, so a deployment property reads
+         like request input to it. None of these values is reachable from an HTTP request; they
+         are resolved once at bean construction from application-{profile}.yml or the
+         environment. Changing them requires the same privilege level as changing the JVM
+         command line. -->
+    <Match>
+        <Class name="org.ctc.admin.WebConfig"/>
+        <Method name="addResourceHandlers"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+    <Match>
+        <Class name="org.ctc.admin.service.AbstractGraphicService"/>
+        <Method name="&lt;init&gt;"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+    <Match>
+        <Class name="org.ctc.admin.service.TeamCardService"/>
+        <Method name="&lt;init&gt;"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+    <Match>
+        <Class name="org.ctc.backup.service.BackupExportService"/>
+        <Method name="initialize"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+    <Match>
+        <Class name="org.ctc.backup.service.BackupImportService"/>
+        <Method name="&lt;init&gt;"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+    <Match>
+        <Class name="org.ctc.discord.service.DiscordPostService"/>
+        <Method name="&lt;init&gt;"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+    <Match>
+        <Class name="org.ctc.dataimport.GoogleCalendarService"/>
+        <Method name="getCalendarClient"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+    <Match>
+        <Class name="org.ctc.dataimport.GoogleSheetsService"/>
+        <Method name="getSheetsClient"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+
+    <!-- PathTraversalGuard.assertWithin IS the path-traversal defense: the flagged
+         Paths.get(candidateEntryName) exists to detect and reject absolute entry names before
+         the normalize()/startsWith() containment check. Flagging the guard's own probe is
+         circular. See PathTraversalGuard.java:60-80. -->
+    <Match>
+        <Class name="org.ctc.backup.security.PathTraversalGuard"/>
+        <Method name="assertWithin"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+
+    <!-- TeamCardController.download / downloadAll resolve TeamCardService.getCardPath(), whose
+         last segment passes through sanitizeFilename() — everything outside [a-zA-Z0-9._-] becomes
+         '_', so no separator can survive and the resolved path stays one level below the
+         season-UUID directory. Traversal is structurally impossible.
+         See TeamCardService.java:182-198. -->
+    <Match>
+        <Class name="org.ctc.admin.controller.TeamCardController"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+
+    <!-- RaceAttachmentService.downloadAttachment resolves the stored /uploads/ URL and then
+         rejects anything escaping the upload directory via
+         file.startsWith(uploadDirPath) on the normalized path. find-sec-bugs reports the
+         resolve() before the guard runs. See RaceAttachmentService.java:86-95. -->
+    <Match>
+        <Class name="org.ctc.domain.service.RaceAttachmentService"/>
+        <Method name="downloadAttachment"/>
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+
+    <!-- ========== PREDICTABLE_RANDOM suppression ========== -->
+
+    <!-- DiscordRateLimitInterceptor.jitterMs spreads retry attempts across the configured
+         jitter window. The value is never a token, nonce, or identifier — an attacker who
+         predicts it learns only when a retry fires. A SecureRandom draw per retry would add
+         entropy-pool pressure for no security gain. See DiscordRateLimitInterceptor.java:140. -->
+    <Match>
+        <Class name="org.ctc.discord.DiscordRateLimitInterceptor"/>
+        <Method name="jitterMs"/>
+        <Bug pattern="PREDICTABLE_RANDOM"/>
+    </Match>
+
+    <!-- ========== NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE suppression ========== -->
+
+    <!-- BackupStagingCleanup.sweepStagingDir filters p.getFileName() on entries produced by
+         Files.list(stagingDir). A directory listing never yields a root path, so getFileName()
+         cannot return null. Same rationale as the BackupImportService entries above.
+         See BackupStagingCleanup.java:38-45. -->
+    <Match>
+        <Class name="org.ctc.backup.service.BackupStagingCleanup"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
+    <!-- ========== CRLF_INJECTION_LOGS detector suppression ========== -->
+
+    <!-- CWE-117 (log injection) is owned by CodeQL's java/log-injection query, which is
+         path-sensitive, recognises the LogSanitizer.sanitize() barrier, and currently reports
+         zero alerts. The find-sec-bugs CRLF detector has no such precision: it taints every
+         value reachable from a controller parameter and reports the whole log call, regardless
+         of argument type. All 34 findings on this codebase were triaged by hand and every one
+         of them logs a java.util.UUID, a primitive, or a Path derived from a UUID — none can
+         carry a line break. Keeping the detector enabled would mean a new suppression for
+         every future log statement that mentions an entity id, with no finding CodeQL does
+         not already cover. The genuinely user-controlled strings surfaced by this triage are
+         sanitized at their call sites; LogSanitizer remains the standard for new code. -->
+    <Match>
+        <Bug pattern="CRLF_INJECTION_LOGS"/>
     </Match>
 
 </FindBugsFilter>
