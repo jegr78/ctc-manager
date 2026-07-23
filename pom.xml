@@ -144,7 +144,7 @@
 		<dependency>
 			<groupId>com.github.spotbugs</groupId>
 			<artifactId>spotbugs-annotations</artifactId>
-			<version>4.9.8</version>
+			<version>4.10.3</version>
 			<scope>provided</scope>
 		</dependency>
 		<!-- Fuzzy String Matching -->
@@ -432,7 +432,7 @@
 			<plugin>
 				<groupId>com.github.spotbugs</groupId>
 				<artifactId>spotbugs-maven-plugin</artifactId>
-				<version>4.9.8.3</version>
+				<version>4.10.3.0</version>
 				<configuration>
 					<effort>Max</effort>
 					<threshold>Default</threshold>
