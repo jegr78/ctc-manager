@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import static org.ctc.util.LogSanitizer.sanitize;
+
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,12 +51,13 @@ public class RaceCalendarService {
 
 		if (race.hasCalendarEvent()) {
 			googleCalendarService.updateEvent(race.getCalendarEventId(), title, race.getDateTime(), durationMinutes);
-			log.info("Updated calendar event for race {}: {}", raceId, title);
+			log.info("Updated calendar event for race {}: {}", raceId, sanitize(title));
 		} else {
 			String eventId = googleCalendarService.createEvent(title, race.getDateTime(), durationMinutes);
 			race.setCalendarEventId(eventId);
 			raceRepository.save(race);
-			log.info("Created calendar event for race {}: {} (eventId: {})", raceId, title, eventId);
+			log.info("Created calendar event for race {}: {} (eventId: {})", raceId, sanitize(title),
+					sanitize(eventId));
 		}
 	}
 

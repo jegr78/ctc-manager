@@ -332,7 +332,7 @@ public class PlayoffService {
 		race = raceRepository.save(race);
 
 		log.info("Added leg {} to matchup {} (round: {})", legNumber, matchupId,
-				matchup.getRound().getLabel());
+				sanitize(matchup.getRound().getLabel()));
 		return race;
 	}
 
