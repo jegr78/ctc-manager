@@ -434,7 +434,8 @@ public class SeasonManagementService {
         seasonTeamRepository.save(predecessorSt);
 
         log.info("Replaced team {} with {} in season {} (effective {})",
-                predecessor.getShortName(), successor.getShortName(), season.getName(), replacedAt);
+                sanitize(predecessor.getShortName()), sanitize(successor.getShortName()),
+                sanitize(season.getName()), replacedAt);
 
         return predecessor.getShortName() + " → " + successor.getShortName();
     }

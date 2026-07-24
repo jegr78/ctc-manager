@@ -395,11 +395,8 @@ public class BackupArchiveService {
 											entryName, MAX_ENTRY_BYTES);
 								}
 							})) {
-						// Drain via discard buffer so the bomb defense fires on actual inflated bytes.
-						byte[] buf = new byte[8192];
-						while (limited.read(buf) != -1) {
-							/* discard */
-						}
+						// Drain into a sink so the bomb defense fires on actual inflated bytes.
+						limited.transferTo(OutputStream.nullOutputStream());
 						// limited.close() fires LongConsumer exactly once when try-with-resources exits.
 					}
 					uploadCount++;

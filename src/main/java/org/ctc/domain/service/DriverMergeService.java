@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import static org.ctc.util.LogSanitizer.sanitize;
+
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -93,7 +95,7 @@ public class DriverMergeService {
 					sd.getSeason().getId(), targetId);
 			if (conflict.isPresent()) {
 				log.info("Dropping duplicate SeasonDriver for season '{}' during merge of driver [{}] into [{}]",
-						sd.getSeason().getName(), sourceId, targetId);
+						sanitize(sd.getSeason().getName()), sourceId, targetId);
 				seasonDriverRepository.delete(sd);
 				seasonDriversDropped++;
 			} else {
@@ -153,7 +155,7 @@ public class DriverMergeService {
 		String sourcePsnId = source.getPsnId();
 		if (psnAliasRepository.existsByAliasIgnoreCase(sourcePsnId)) {
 			log.info("PSN alias '{}' already exists, skipping during merge of driver [{}] into [{}]",
-					sourcePsnId, sourceId, targetId);
+					sanitize(sourcePsnId), sourceId, targetId);
 		} else {
 			psnAliasRepository.save(new PsnAlias(target, sourcePsnId));
 			psnIdCreated = 1;
