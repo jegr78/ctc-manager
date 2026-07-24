@@ -112,7 +112,7 @@ public class StandingsViewService {
 		var driverRanking = driverRankingService.calculateRankingForPhase(resolvedPhase.getId());
 
 		log.debug("Standings for phase={} group={}: combinedView={} showBuchholz={} showGroupColumn={}",
-				resolvedPhase.getId(), group, combinedView, showBuchholz, showGroupColumn);
+				resolvedPhase.getId(), sanitize(group), combinedView, showBuchholz, showGroupColumn);
 
 		return new StandingsView(
 				seasons, false, selectedSeason, seasonId, allPhases, resolvedPhase, groups, group,

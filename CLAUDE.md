@@ -289,7 +289,8 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 
 ### Static Analysis (SpotBugs + find-sec-bugs)
 
-* **Gate:** `spotbugs-maven-plugin` 4.9.8.3 + `findsecbugs-plugin` 1.14.0 run on every `./mvnw verify` (Medium+HIGH findings block the build). No separate CI job — SpotBugs runs inside the existing `verify` step.
+* **Gate:** `spotbugs-maven-plugin` 4.10.3.0 + `findsecbugs-plugin` 1.14.0 run on every `./mvnw verify` (Medium+HIGH findings block the build). No separate CI job — SpotBugs runs inside the existing `verify` step.
+* **Minimum plugin version 4.10.1:** SpotBugs 4.9.8.x does not load the find-sec-bugs detector pack at all (fixed by spotbugs/spotbugs#4191). Never downgrade below 4.10.1 — the security patterns go silent without any build error. A `verify`-phase guard (`scripts/guards/findsecbugs-loaded-guard.sh`) fails the build if `target/spotbugsXml.xml` does not name the detector pack.
 * **Suppressions:** Live in `config/spotbugs-exclude.xml`. Every `<Match>` entry MUST have an XML rationale comment with a code-cross-reference to where the intentional pattern lives. No `@SuppressWarnings("all")` ever — use targeted `@SuppressFBWarnings({"SPECIFIC_CODE"}, justification="...")` in source or a `<Match>` entry in the filter file.
 * **`lombok.config` invariant:** `lombok.config` at project root sets `lombok.extern.findbugs.addSuppressFBWarnings=true`. Do NOT remove or modify the two SpotBugs-related lines without a new phase that re-baselines suppressions — removing them re-introduces ~40–80 `EI_EXPOSE_REP*` false positives from Lombok-generated entity getters.
 

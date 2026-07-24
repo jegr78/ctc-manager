@@ -537,6 +537,19 @@
 							</arguments>
 						</configuration>
 					</execution>
+					<!-- Bound to verify and declared after the spotbugs plugin so it reads the
+					     report that spotbugs-check just wrote. -->
+					<execution>
+						<id>findsecbugs-loaded-guard</id>
+						<phase>verify</phase>
+						<goals><goal>exec</goal></goals>
+						<configuration>
+							<executable>bash</executable>
+							<arguments>
+								<argument>scripts/guards/findsecbugs-loaded-guard.sh</argument>
+							</arguments>
+						</configuration>
+					</execution>
 				</executions>
 			</plugin>
 		</plugins>
