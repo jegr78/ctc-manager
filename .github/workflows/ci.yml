@@ -194,7 +194,7 @@ jobs:
 
       - name: Build Docker image (full multi-stage, no push)
         if: needs.changes.outputs.code == 'true'
-        uses: docker/build-push-action@v7.2.0
+        uses: docker/build-push-action@v7.3.0
         with:
           context: .
           push: false
