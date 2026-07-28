@@ -42,7 +42,7 @@ jobs:
 
     services:
       mariadb:
-        image: mariadb:11
+        image: mariadb:12
         env:
           MARIADB_DATABASE: ctcdb
           MARIADB_USER: ctc
