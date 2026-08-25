@@ -190,7 +190,7 @@ jobs:
 
       - name: Set up Docker Buildx
         if: needs.changes.outputs.code == 'true'
-        uses: docker/setup-buildx-action@v4.2.0
+        uses: docker/setup-buildx-action@v4.3.0
 
       - name: Build Docker image (full multi-stage, no push)
         if: needs.changes.outputs.code == 'true'
