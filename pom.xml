@@ -15,7 +15,7 @@
 	<description>Community Team Cup - Gran Turismo Racing League Manager</description>
 	<properties>
 		<java.version>25</java.version>
-		<playwright.version>1.61.0</playwright.version>
+		<playwright.version>1.62.0</playwright.version>
 		<lombok.version>1.18.46</lombok.version>
 		<!-- Spring Boot 4.0.x does NOT manage Testcontainers BOM. Pinned to 2.0.5: Testcontainers
 		     1.x sends Docker API 1.32 which is rejected by Docker Engine 29+ (requires API >= 1.40).
