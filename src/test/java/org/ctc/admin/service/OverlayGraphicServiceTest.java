@@ -26,6 +26,16 @@ class OverlayGraphicServiceTest {
 		return new OverlayGraphicService(null, null, null, tempDir.toString());
 	}
 
+	private OverlayGraphicService createServiceWithoutBrowser(TemplateEngine templateEngine,
+	                                                          StandingsService standingsService,
+	                                                          SeasonTeamRepository seasonTeamRepository) {
+		return new OverlayGraphicService(templateEngine, standingsService, seasonTeamRepository, tempDir.toString()) {
+			@Override
+			protected void renderScreenshotTransparent(String html, Path outputFile) {
+			}
+		};
+	}
+
 	@Test
 	void givenRaceWithNoTeams_whenGenerateOverlay_thenThrowsIllegalState() {
 		// given
@@ -94,7 +104,7 @@ class OverlayGraphicServiceTest {
 		var seasonTeamRepository = mock(SeasonTeamRepository.class);
 		var templateEngine = mock(TemplateEngine.class);
 		when(templateEngine.process(anyString(), any(Context.class))).thenReturn("<html></html>");
-		var service = new OverlayGraphicService(templateEngine, standingsService, seasonTeamRepository, tempDir.toString());
+		var service = createServiceWithoutBrowser(templateEngine, standingsService, seasonTeamRepository);
 
 		var season = new Season("Test", 2026, 1);
 		season.setId(UUID.randomUUID());
@@ -125,7 +135,7 @@ class OverlayGraphicServiceTest {
 		var seasonTeamRepository = mock(SeasonTeamRepository.class);
 		var templateEngine = mock(TemplateEngine.class);
 		when(templateEngine.process(anyString(), any(Context.class))).thenReturn("<html></html>");
-		var service = new OverlayGraphicService(templateEngine, standingsService, seasonTeamRepository, tempDir.toString());
+		var service = createServiceWithoutBrowser(templateEngine, standingsService, seasonTeamRepository);
 
 		var season = new Season("Test", 2026, 1);
 		season.setId(UUID.randomUUID());
