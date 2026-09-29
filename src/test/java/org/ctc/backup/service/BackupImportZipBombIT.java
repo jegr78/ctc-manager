@@ -7,15 +7,22 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.ctc.backup.exception.BackupArchiveException;
 import org.ctc.backup.exception.BackupArchiveException.Reason;
+import org.ctc.backup.exception.BackupImportException;
 import org.ctc.backup.schema.BackupSchema;
+import org.ctc.backup.schema.EntityRef;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -56,6 +63,9 @@ class BackupImportZipBombIT {
 
     @Value("${app.backup.staging-dir}")
     String stagingDirRaw;
+
+    @Value("${app.backup.import-backups-dir}")
+    String importBackupsDirRaw;
 
     Path stagingDir;
 
@@ -167,6 +177,97 @@ class BackupImportZipBombIT {
                 .isZero();
     }
 
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = {"data/teams.json", "notes/unknown.bin"})
+    void givenNonUploadEntryInflatingPastTheEntryLimit_whenStage_thenThrowsEntryTooLarge(String entryName)
+            throws Exception {
+        // given
+        byte[] zip = zipWith(entry(entryName, BackupImportLimits.MAX_ENTRY_BYTES + 1));
+        MockMultipartFile file = new MockMultipartFile("file", "entry-bomb.zip", "application/zip", zip);
+
+        // when / then
+        assertThatThrownBy(() -> service.stage(file))
+                .isInstanceOfSatisfying(BackupArchiveException.class, ex -> assertThat(ex.reason())
+                        .as("%s must obey the per-entry limit like uploads do", entryName)
+                        .isEqualTo(Reason.ENTRY_TOO_LARGE));
+    }
+
+    @Test
+    void givenManifestFollowedByOversizedTrailingContent_whenStage_thenThrowsEntryTooLarge() throws Exception {
+        // given
+        byte[] zip = zipWithManifestPadding(BackupImportLimits.MAX_ENTRY_BYTES + 1);
+        MockMultipartFile file = new MockMultipartFile("file", "manifest-bomb.zip", "application/zip", zip);
+
+        // when / then
+        assertThatThrownBy(() -> service.stage(file))
+                .isInstanceOfSatisfying(BackupArchiveException.class, ex -> assertThat(ex.reason())
+                        .isEqualTo(Reason.ENTRY_TOO_LARGE));
+    }
+
+    @Test
+    void givenUnknownEntriesExceedingTheTotalLimit_whenStage_thenThrowsTotalTooLarge() throws Exception {
+        // given
+        long perEntry = 45L * 1024 * 1024;
+        String[] names = new String[12];
+        for (int i = 0; i < 12; i++) {
+            names[i] = "extra/file-" + i + ".bin";
+        }
+        byte[] zip = zipWith(names, perEntry);
+        MockMultipartFile file = new MockMultipartFile("file", "total-bomb.zip", "application/zip", zip);
+
+        // when / then
+        assertThatThrownBy(() -> service.stage(file))
+                .isInstanceOfSatisfying(BackupArchiveException.class, ex -> assertThat(ex.reason())
+                        .as("12 x 45 MiB outside uploads/ must hit the 500 MiB total")
+                        .isEqualTo(Reason.TOTAL_TOO_LARGE));
+    }
+
+    @Test
+    void givenOversizedEntryPlacedInStagingAfterPreview_whenExecute_thenRejectedBeforeAutoBackup() throws Exception {
+        // given
+        UUID stagingId = UUID.randomUUID();
+        Files.write(stagingDir.resolve("upload-" + stagingId + ".zip"),
+                zipWith(entry("notes/unknown.bin", BackupImportLimits.MAX_ENTRY_BYTES + 1)));
+        long archivesBefore = countImportBackupDirs();
+
+        // when / then
+        assertThatThrownBy(() -> service.execute(stagingId))
+                .isInstanceOf(BackupImportException.class)
+                .cause()
+                .isInstanceOfSatisfying(BackupArchiveException.class, ex -> assertThat(ex.reason())
+                        .isEqualTo(Reason.ENTRY_TOO_LARGE));
+        assertThat(countImportBackupDirs()).as("no auto-backup directory may be created").isEqualTo(archivesBefore);
+    }
+
+    @Test
+    void givenOversizedDataEntry_whenRestoreReadsItDirectly_thenThrowsEntryTooLarge(@TempDir Path tmp)
+            throws Exception {
+        // given
+        String firstTable = backupSchema.getExportOrder().get(0).fileName();
+        Path zip = Files.write(tmp.resolve("restore-bomb.zip"),
+                zipWith(entry(firstTable, BackupImportLimits.MAX_ENTRY_BYTES + 1)));
+
+        // when / then
+        assertThatThrownBy(() -> service.restoreAll(zip, new LinkedHashMap<>()))
+                .isInstanceOfSatisfying(BackupArchiveException.class, ex -> assertThat(ex.reason())
+                        .as("restore must not trust the preview")
+                        .isEqualTo(Reason.ENTRY_TOO_LARGE));
+    }
+
+    @Test
+    void givenDataEntriesExceedingTheTotalLimit_whenRestoreReadsThem_thenThrowsTotalTooLarge(@TempDir Path tmp)
+            throws Exception {
+        // given
+        String[] names = backupSchema.getExportOrder().stream().limit(12).map(EntityRef::fileName)
+                .toArray(String[]::new);
+        Path zip = Files.write(tmp.resolve("restore-total-bomb.zip"), zipWith(names, 45L * 1024 * 1024));
+
+        // when / then
+        assertThatThrownBy(() -> service.restoreAll(zip, new LinkedHashMap<>()))
+                .isInstanceOfSatisfying(BackupArchiveException.class, ex -> assertThat(ex.reason())
+                        .isEqualTo(Reason.TOTAL_TOO_LARGE));
+    }
+
     // =========================================================================
     // Private fixture builders
     // =========================================================================
@@ -260,5 +361,64 @@ class BackupImportZipBombIT {
         zip.putNextEntry(new ZipEntry("manifest.json"));
         zip.write(manifestJson.getBytes(StandardCharsets.UTF_8));
         zip.closeEntry();
+    }
+
+    private long countImportBackupDirs() throws IOException {
+        Path root = Paths.get(importBackupsDirRaw).toAbsolutePath().normalize();
+        if (!Files.exists(root)) {
+            return 0;
+        }
+        try (var dirs = Files.list(root)) {
+            return dirs.count();
+        }
+    }
+
+    private record SizedEntry(String name, long inflatedBytes) {
+    }
+
+    private static SizedEntry entry(String name, long inflatedBytes) {
+        return new SizedEntry(name, inflatedBytes);
+    }
+
+    /** Manifest plus one JSON-array entry padded with whitespace to the given inflated size. */
+    private static byte[] zipWith(SizedEntry sized) throws IOException {
+        return zipWith(new String[]{sized.name()}, sized.inflatedBytes());
+    }
+
+    private static byte[] zipWith(String[] names, long inflatedBytesEach) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] padding = whitespaceArray(inflatedBytesEach);
+        try (ZipOutputStream zip = new ZipOutputStream(out)) {
+            writeValidManifest(zip);
+            for (String name : names) {
+                zip.putNextEntry(new ZipEntry(name));
+                zip.write(padding);
+                zip.closeEntry();
+            }
+        }
+        return out.toByteArray();
+    }
+
+    private static byte[] zipWithManifestPadding(long trailingBytes) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(out)) {
+            zip.putNextEntry(new ZipEntry("manifest.json"));
+            zip.write(("{\"schema_version\":1,\"app_version\":\"test\","
+                    + "\"export_date\":\"2026-05-12T00:00:00Z\",\"table_counts\":{}}").getBytes(StandardCharsets.UTF_8));
+            byte[] spaces = new byte[(int) trailingBytes];
+            Arrays.fill(spaces, (byte) ' ');
+            zip.write(spaces);
+            zip.closeEntry();
+        }
+        return out.toByteArray();
+    }
+
+    /** {@code [ ... ]} with spaces in between: valid JSON that only a size limit can stop. */
+    private static byte[] whitespaceArray(long totalBytes) {
+        byte[] bytes = new byte[(int) totalBytes];
+        Arrays.fill(bytes, (byte) ' ');
+        bytes[0] = '[';
+        bytes[bytes.length - 1] = ']';
+        return bytes;
     }
 }

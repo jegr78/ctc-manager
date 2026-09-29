@@ -47,6 +47,7 @@ import org.ctc.backup.exception.BackupArchiveException.Reason;
 import org.ctc.backup.exception.BackupImportException;
 import org.ctc.backup.exception.UploadsPreflightFailedException;
 import org.ctc.backup.exception.UploadsSwapPreflightException;
+import org.ctc.backup.io.LimitedInputStream;
 import org.ctc.backup.restore.EntityRestorer;
 import org.ctc.backup.restore.RestoreFailureInjector;
 import org.ctc.backup.schema.BackupManifest;
@@ -507,6 +508,7 @@ public class BackupImportService {
             // buildPreview).
             BackupManifest manifest = backupArchive.readManifest(staged);
             schemaVersion = manifest.schemaVersion();
+            backupArchive.assertEntryLimits(staged);
 
             Files.createDirectories(importBackupDir);
             try {
@@ -675,6 +677,7 @@ public class BackupImportService {
         // staging file while a JVM-internal ZipInputStream lifecycle is still settling,
         // and is a meaningful perf win on multi-entity fixtures.
         zipOpenCounter.incrementAndGet();
+        long[] inflatedBytes = new long[]{0L};
         try (ZipFile zf = new ZipFile(staged.toFile())) {
             for (EntityRef ref : backupSchema.getExportOrder()) {
                 String table = ref.tableName();
@@ -682,8 +685,12 @@ public class BackupImportService {
                 if (restorer == null) {
                     throw new IllegalStateException("No EntityRestorer wired for tableName=" + table);
                 }
-                long restored = restoreOneTable(zf, ref, restorer);
+                long restored = restoreOneTable(zf, ref, restorer, inflatedBytes);
                 restoredCounts.put(table, restored);
+                if (inflatedBytes[0] > BackupImportLimits.MAX_TOTAL_BYTES) {
+                    throw new BackupArchiveException(Reason.TOTAL_TOO_LARGE,
+                            "exceeded " + BackupImportLimits.MAX_TOTAL_BYTES + " bytes");
+                }
             }
         }
         log.info("Restore completed: {} tables, total rows restored={}", restoredCounts.size(),
@@ -700,7 +707,8 @@ public class BackupImportService {
      * the random-access {@link ZipFile#getEntry(String)} lookup, then stream the JSON
      * through {@link ZipFile#getInputStream(ZipEntry)} — no per-entity rescan.
      */
-    private long restoreOneTable(ZipFile zf, EntityRef ref, EntityRestorer restorer) throws IOException {
+    private long restoreOneTable(ZipFile zf, EntityRef ref, EntityRestorer restorer, long[] inflatedBytes)
+            throws IOException {
         String entryPath = ref.fileName();
         long totalRows = 0;
         List<JsonNode> batch = new ArrayList<>(RESTORE_BATCH_SIZE);
@@ -715,7 +723,8 @@ public class BackupImportService {
             return totalRows;
         }
 
-        try (InputStream entryStream = zf.getInputStream(entry)) {
+        try (InputStream entryStream = new LimitedInputStream(zf.getInputStream(entry),
+                BackupImportLimits.MAX_ENTRY_BYTES, bytes -> inflatedBytes[0] += bytes)) {
             JsonParser parser = backupObjectMapper.getFactory().createParser(entryStream);
             parser.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
             try {
@@ -868,6 +877,7 @@ public class BackupImportService {
 
         // Step 1: read and deserialize manifest (includes all hardening checks)
         BackupManifest manifest = backupArchive.readManifest(staged);
+        backupArchive.assertEntryLimits(staged);
 
         // Step 2: schema-version gate — BEFORE any DB read
         int backupVersion = manifest.schemaVersion();

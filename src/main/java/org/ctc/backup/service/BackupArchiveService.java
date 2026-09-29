@@ -412,6 +412,39 @@ public class BackupArchiveService {
 		return uploadCount;
 	}
 
+	/**
+	 * Inflates every entry of the ZIP, whatever its name, and rejects the archive when one entry
+	 * exceeds {@code MAX_ENTRY_BYTES}, all entries together exceed {@code MAX_TOTAL_BYTES}, the
+	 * archive holds more than {@code MAX_ENTRIES} entries or a name escapes the staging root.
+	 *
+	 * @throws BackupArchiveException with {@code ENTRY_TOO_LARGE}, {@code TOTAL_TOO_LARGE},
+	 *                                {@code TOO_MANY_ENTRIES} or a traversal reason
+	 */
+	public void assertEntryLimits(Path zipPath) throws BackupArchiveException {
+		Path stagingRoot = resolveStagingRoot(zipPath);
+		long[] inflatedAcc = new long[]{0L};
+		int entryCount = 0;
+
+		try (ZipInputStream zis = openZipInputStream(zipPath)) {
+			ZipEntry entry;
+			while ((entry = zis.getNextEntry()) != null) {
+				entryCount++;
+				if (!entry.isDirectory()) {
+					try (LimitedInputStream limited = new LimitedInputStream(
+							nonClosingView(zis), MAX_ENTRY_BYTES, finalBytes -> inflatedAcc[0] += finalBytes)) {
+						limited.transferTo(OutputStream.nullOutputStream());
+					}
+				}
+				assertEntrySafe(entry, stagingRoot, entryCount, inflatedAcc[0]);
+			}
+		} catch (BackupArchiveException ex) {
+			log.warn("Backup ZIP rejected by entry limits: reason={}, msg={}", ex.reason(), ex.getMessage());
+			throw ex;
+		} catch (IOException ex) {
+			throw new BackupArchiveException(Reason.MANIFEST_INVALID, "ZIP read failure", ex);
+		}
+	}
+
 	// =========================================================================
 	// Uploads extraction
 	// =========================================================================
