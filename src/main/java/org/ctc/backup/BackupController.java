@@ -15,9 +15,11 @@ import org.ctc.backup.dto.BackupImportResult;
 import org.ctc.backup.exception.AutoBackupBeforeImportException;
 import org.ctc.backup.exception.BackupArchiveException;
 import org.ctc.backup.exception.BackupImportException;
+import org.ctc.backup.exception.UploadsPreflightFailedException;
 import org.ctc.backup.exception.UploadsRestoreException;
 import org.ctc.backup.lock.ImportLockService;
 import org.ctc.backup.service.BackupArchiveService;
+import org.ctc.backup.service.BackupImportCoordinator;
 import org.ctc.backup.service.BackupImportService;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -54,6 +56,7 @@ public class BackupController {
 
 	private final BackupArchiveService backupArchiveService;
 	private final BackupImportService backupImportService;
+	private final BackupImportCoordinator backupImportCoordinator;
 	private final ImportLockService importLockService;
 
 	@GetMapping
@@ -192,7 +195,7 @@ public class BackupController {
 			}
 			try {
 				backupImportService.reparse(form.getStagingId());  // defense-in-depth re-validation
-				BackupImportResult result = backupImportService.execute(form.getStagingId());
+				BackupImportResult result = backupImportCoordinator.execute(form.getStagingId());
 				ra.addFlashAttribute("successMessage",
 						String.format("Import completed. %d rows restored across %d tables.",
 								result.restoredTotal(), result.entityCount()));
@@ -203,37 +206,32 @@ public class BackupController {
 				ra.addFlashAttribute("errorMessage",
 						"Backup archive failed safety checks (size or path) and was rejected.");
 			} catch (UploadsRestoreException ex) {
-				// Defensive catch: the AFTER_COMMIT listener is the real throw site and runs AFTER
-				// the controller's redirect response is built, so this clause is rarely hit in practice.
-				log.error("UploadsRestoreException reached controller path — unexpected; "
-						+ "stagingId={}", form.getStagingId(), ex);
+				log.error("Uploads restore failed after the database commit: stagingId={}, auditUuid={}",
+						form.getStagingId(), ex.getAuditUuid(), ex);
+				ra.addFlashAttribute("errorMessage", uploadsRestoreFailureMessage(ex));
+			} catch (UploadsPreflightFailedException ex) {
 				ra.addFlashAttribute("errorMessage",
-						"Import database succeeded but uploads restore failed and was reverted. "
-								+ "See logs. Audit-id: unknown.");
+						String.format("Import aborted — the uploads directory cannot be replaced: %s. "
+								+ "No database changes. Audit-id: %s.",
+								ex.getCause().getMessage(), auditIdText(ex)));
+				return new ModelAndView("redirect:/admin/backup");
 			} catch (AutoBackupBeforeImportException ex) {
 				// Auto-backup step runs BEFORE wipe — no rollback needed.
 				// This catch MUST appear BEFORE BackupImportException (parent type) per Java first-match-wins.
 				log.error("Pre-import auto-backup failed for stagingId={}, auditUuid={}",
 						form.getStagingId(), ex.getAuditUuid(), ex);
-				String auditIdText = ex.isAuditWritten()
-						? ex.getAuditUuid().toString()
-						: "unavailable (audit write failed; see logs for " + ex.getAuditUuid() + ")";
 				ra.addFlashAttribute("errorMessage",
 						String.format("Import aborted — pre-import auto-backup failed. "
-								+ "No database changes. Audit-id: %s.", auditIdText));
+								+ "No database changes. Audit-id: %s.", auditIdText(ex)));
 				return new ModelAndView("redirect:/admin/backup");
 			} catch (BackupImportException ex) {
-				// When audit-write itself failed (double-failure path), no data_import_audit row exists.
-				String auditIdText = ex.isAuditWritten()
-						? ex.getAuditUuid().toString()
-						: "unavailable (audit write failed; see logs for " + ex.getAuditUuid() + ")";
 				// Surface BackupArchiveException cause detail when present (e.g. SCHEMA_MISMATCH).
 				String causeDetail = ex.getCause() instanceof BackupArchiveException bae
 						? " (" + bae.reason() + ")"
 						: "";
 				ra.addFlashAttribute("errorMessage",
 						String.format("Import failed and was rolled back — see logs. Audit-id: %s%s.",
-								auditIdText, causeDetail));
+								auditIdText(ex), causeDetail));
 			}
 			// On success the AFTER_COMMIT listener deletes the staging file;
 			// on failure it survives so the operator can retry without re-uploading.
@@ -258,6 +256,22 @@ public class BackupController {
 	 * Routes a {@link BackupArchiveException} to the appropriate user-facing Flash string.
 	 * Exhaustive switch enforces coverage of all {@link BackupArchiveException.Reason} values.
 	 */
+	private static String auditIdText(BackupImportException ex) {
+		return ex.isAuditWritten()
+				? ex.getAuditUuid().toString()
+				: "unavailable (audit write failed; see logs for " + ex.getAuditUuid() + ")";
+	}
+
+	private static String uploadsRestoreFailureMessage(UploadsRestoreException ex) {
+		String recovery = ex.getRecoveryDir() == null
+				? "the latest auto-backup-before-import.zip in the import backups directory"
+				: ex.getRecoveryDir().resolve("auto-backup-before-import.zip").toString();
+		return String.format("Import incomplete — the database was restored, but the uploads were not replaced: %s. "
+						+ "Database and uploads no longer match. To return to the state before the import, "
+						+ "import %s. Audit-id: %s.",
+				ex.getMessage(), recovery, ex.getAuditUuid());
+	}
+
 	private String mapReason(BackupArchiveException ex) {
 		return switch (ex.reason()) {
 			case SCHEMA_MISMATCH -> ex.getMessage();

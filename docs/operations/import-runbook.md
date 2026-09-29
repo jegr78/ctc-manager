@@ -39,6 +39,17 @@ pre-import database state regardless of which step the import later failed in.
 4. Confirm the preview screen, then click `Execute Import`. The replace-all flow runs
    again, this time restoring the snapshot you just uploaded.
 
+**When the flash says "Import incomplete"** the database was restored but the uploads were
+not replaced, so both no longer match. The message names the exact recovery ZIP; import it as
+described above to return to the state before the import. The flash also says whether the
+previous uploads were put back or still sit in `<ts>/uploads-old/`.
+
+**When the flash says "the uploads directory cannot be replaced"** the preflight stopped the
+import before the auto-backup and the wipe; the database is unchanged. The swap renames the
+uploads directory into `<import-backups-dir>/<ts>/`, so the uploads directory must not be a mount
+point and must share a filesystem with `<import-backups-dir>`. Fix the layout (see the README
+section "Docker") and retry; the staged backup stays available.
+
 **When the app is DOWN** (process crashed mid-import, you want a clean recovery before
 restarting):
 

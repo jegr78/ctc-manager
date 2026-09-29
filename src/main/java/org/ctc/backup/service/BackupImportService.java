@@ -45,6 +45,8 @@ import org.ctc.backup.exception.AutoBackupBeforeImportException;
 import org.ctc.backup.exception.BackupArchiveException;
 import org.ctc.backup.exception.BackupArchiveException.Reason;
 import org.ctc.backup.exception.BackupImportException;
+import org.ctc.backup.exception.UploadsPreflightFailedException;
+import org.ctc.backup.exception.UploadsSwapPreflightException;
 import org.ctc.backup.restore.EntityRestorer;
 import org.ctc.backup.restore.RestoreFailureInjector;
 import org.ctc.backup.schema.BackupManifest;
@@ -155,6 +157,7 @@ public class BackupImportService {
     private final DataImportAuditService dataImportAuditService;
     private final ApplicationEventPublisher eventPublisher;
     private final BackupExecutedByResolver executedByResolver;
+    private final UploadsSwapPreflight uploadsSwapPreflight;
     private final Path stagingDir;
     private final Path importBackupsDir;
     private final Path uploadsTargetDir;
@@ -190,6 +193,7 @@ public class BackupImportService {
             DataImportAuditService dataImportAuditService,
             ApplicationEventPublisher eventPublisher,
             BackupExecutedByResolver executedByResolver,
+            UploadsSwapPreflight uploadsSwapPreflight,
             @Value("${app.backup.staging-dir}") String stagingDirRaw,
             @Value("${app.backup.import-backups-dir}") String importBackupsDirRaw,
             @Value("${app.upload-dir}") String uploadDirRaw
@@ -204,6 +208,7 @@ public class BackupImportService {
         this.dataImportAuditService = dataImportAuditService;
         this.eventPublisher = eventPublisher;
         this.executedByResolver = executedByResolver;
+        this.uploadsSwapPreflight = uploadsSwapPreflight;
         this.stagingDir = Paths.get(stagingDirRaw).toAbsolutePath().normalize();
         this.importBackupsDir = Paths.get(importBackupsDirRaw).toAbsolutePath().normalize();
         this.uploadsTargetDir = Paths.get(uploadDirRaw).toAbsolutePath().normalize();
@@ -501,6 +506,18 @@ public class BackupImportService {
             BackupManifest manifest = backupArchive.readManifest(staged);
             schemaVersion = manifest.schemaVersion();
 
+            Files.createDirectories(importBackupDir);
+            try {
+                uploadsSwapPreflight.check(uploadsTargetDir, importBackupDir);
+            } catch (UploadsSwapPreflightException preflightEx) {
+                log.error("Uploads swap preflight failed for staging-id {} — aborting import: {}",
+                        stagingId, preflightEx.getMessage());
+                tryDeleteEmptyDir(importBackupDir);
+                boolean auditWritten = tryRecordFailure(auditUuid, schemaVersion,
+                        sourceFilename, Map.of(), Map.of());
+                throw new UploadsPreflightFailedException(auditUuid, auditWritten, preflightEx);
+            }
+
             // Step 0.5: pre-import auto-backup.
             // Runs INSIDE the outer @Transactional(REQUIRED, READ_COMMITTED) — the read-only
             // BackupArchiveService.writeZip(...) joins this tx (no-op read-only join).
@@ -573,8 +590,8 @@ public class BackupImportService {
             // already recorded its own audit row + cleaned up its partial ZIP, and wrapping
             // it here would shadow the subclass-specific controller catch (superclass-first
             // exception matching).
-            if (t instanceof AutoBackupBeforeImportException ae) {
-                throw ae;
+            if (t instanceof AutoBackupBeforeImportException || t instanceof UploadsPreflightFailedException) {
+                throw (BackupImportException) t;
             }
             log.error("Import failed for staging-id {}: ", stagingId, t);
             boolean auditWritten = tryRecordFailure(auditUuid, schemaVersion, sourceFilename,
@@ -794,6 +811,14 @@ public class BackupImportService {
             Files.deleteIfExists(target);
         } catch (IOException io) {
             log.warn("Failed to delete partial auto-backup ZIP {}", target, io);
+        }
+    }
+
+    private static void tryDeleteEmptyDir(Path dir) {
+        try {
+            Files.deleteIfExists(dir);
+        } catch (IOException io) {
+            log.warn("Could not remove import backup directory {}: {}", dir, io.getMessage());
         }
     }
 
