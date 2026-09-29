@@ -57,7 +57,7 @@ v1.10 introduces a full database backup/restore feature accessible via `/admin/b
 ### Recovery
 
 If an import fails or you need to revert, see [`docs/operations/import-runbook.md`](docs/operations/import-runbook.md)
-for step-by-step recovery from `data/<profile>/import-backups/<ts>/`.
+for step-by-step recovery from `data/<profile>/import-backups/<ts>/` (containers: `/app/data/import-backups/<ts>/` in the `ctc-data` volume).
 
 > **Note (v1.11):** Recovery storage is now profile-isolated to `data/<profile>/import-backups/` (e.g., `data/dev/import-backups/` or `data/prod/import-backups/`). Pre-v1.11 artifacts under `data/.import-backups/` remain in place and are not migrated automatically.
 >
@@ -121,6 +121,29 @@ macOS and Windows include these dependencies natively — no extra setup needed.
 ### Docker
 
 The Dockerfile handles Chromium installation automatically during the build.
+
+Both Compose files keep all application state in named volumes, so recreating the `app`
+container loses nothing:
+
+| Volume | Mount | Content |
+|---|---|---|
+| `ctc-uploads` | `/app/uploads` | Uploaded images, attachments and custom graphic templates |
+| `ctc-site-output` | `/app/ctc-site-output` | Generated public website |
+| `ctc-data` | `/app/data` | Backup staging and pre-import recovery archives |
+| `ctc-logs` | `/app/logs` | Log files |
+
+The `docker` and `prod` profiles set these paths explicitly. Older `prod` images wrote
+uploads to `/app/data/dev/uploads` and the website to `/app/docs/site` inside the container
+layer. Save them before replacing such a container and copy them into the volume afterwards:
+
+```bash
+docker compose -f docker-compose.prod.yml cp app:/app/data/dev/uploads ./uploads-rescue
+docker compose -f docker-compose.prod.yml up -d   # with the new image
+docker compose -f docker-compose.prod.yml cp ./uploads-rescue/. app:/app/uploads/
+docker compose -f docker-compose.prod.yml exec -u root app chown -R ctc:ctc /app/uploads
+```
+
+The website does not need saving; the next generation run rebuilds it.
 
 ## Development
 

@@ -14,8 +14,18 @@ recovery; the in-app strings here MUST match the runtime UI verbatim.
 A successful or failed import attempt leaves a recovery ZIP at:
 
 ```
-data/.import-backups/<ts>/auto-backup-before-import.zip
+<import-backups-dir>/<ts>/auto-backup-before-import.zip
 ```
+
+`<import-backups-dir>` is `app.backup.import-backups-dir`:
+
+| Runtime | Path |
+|---|---|
+| `dev` / `local` (JVM on the host) | `data/<profile>/import-backups/` |
+| `docker` / `prod` container | `/app/data/import-backups/` (volume `ctc-data`) |
+
+Inside a container, run the commands below with `docker compose exec app …` or copy the
+ZIP out with `docker compose cp app:/app/data/import-backups/<ts>/auto-backup-before-import.zip .`.
 
 `<ts>` is the ISO instant of the import attempt with colons replaced by hyphens, e.g.
 `2026-05-14T17-30-42Z`. The ZIP is written BEFORE the wipe, so it captures the
@@ -23,9 +33,9 @@ pre-import database state regardless of which step the import later failed in.
 
 **When the app is UP** (DB is mutated, but you want to revert to the pre-import state):
 
-1. Identify the `<ts>` directory of the most recent import attempt — `ls -lt data/.import-backups/ | head`.
+1. Identify the `<ts>` directory of the most recent import attempt — `ls -lt <import-backups-dir> | head`.
 2. Navigate to `/admin/backup` in the browser.
-3. Click `Import Backup`, upload `data/.import-backups/<ts>/auto-backup-before-import.zip`.
+3. Click `Import Backup`, upload `<import-backups-dir>/<ts>/auto-backup-before-import.zip`.
 4. Confirm the preview screen, then click `Execute Import`. The replace-all flow runs
    again, this time restoring the snapshot you just uploaded.
 
@@ -45,7 +55,7 @@ restarting):
 Both Phase-75 and Phase-76 artifacts live under the same `<ts>` directory:
 
 ```
-data/.import-backups/<ts>/
+<import-backups-dir>/<ts>/
   auto-backup-before-import.zip    # Phase 76 — pre-wipe DB snapshot (recovery)
   uploads-old/                     # Phase 75 — previous uploads tree (recovery)
   uploads-new/                     # transient; cleaned up automatically (catch-block + AFTER_COMMIT)
@@ -56,11 +66,11 @@ after that window; the application never deletes them automatically. Example com
 
 ```bash
 # POSIX (macOS / Linux):
-find data/.import-backups -mindepth 1 -maxdepth 1 -type d -mtime +1 -exec rm -rf {} +
+find <import-backups-dir> -mindepth 1 -maxdepth 1 -type d -mtime +1 -exec rm -rf {} +
 ```
 
 ```powershell
-# Windows PowerShell (run from inside data/.import-backups/):
+# Windows PowerShell (run from inside <import-backups-dir>):
 Get-ChildItem -Directory | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-1) } | Remove-Item -Recurse -Force
 ```
 

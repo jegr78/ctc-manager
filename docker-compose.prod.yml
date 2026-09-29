@@ -8,7 +8,7 @@ services:
       DATABASE_PASSWORD: ${DATABASE_PASSWORD}
       SPRING_SECURITY_USER_NAME: ${CTC_ADMIN_USER}
       SPRING_SECURITY_USER_PASSWORD: ${CTC_ADMIN_PASSWORD}
-      # Discord integration (v1.13). Token is required for any Discord API call;
+      # Discord integration. Token is required for any Discord API call;
       # webhook URLs and snowflakes are persisted via /admin/discord-config UI
       # (no dev-seeder in the prod profile).
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
@@ -18,6 +18,7 @@ services:
     volumes:
       - ctc-uploads:/app/uploads
       - ctc-site-output:/app/ctc-site-output
+      - ctc-data:/app/data
       - ctc-logs:/app/logs
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
@@ -29,4 +30,5 @@ services:
 volumes:
   ctc-uploads:
   ctc-site-output:
+  ctc-data:
   ctc-logs:

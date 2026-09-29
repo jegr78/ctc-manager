@@ -17,6 +17,9 @@ spring:
 
 app:
   upload-dir: /app/uploads
+  backup:
+    staging-dir: /app/data/backup-staging
+    import-backups-dir: /app/data/import-backups
 
 ctc:
   site:
