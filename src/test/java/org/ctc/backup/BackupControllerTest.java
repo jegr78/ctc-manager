@@ -1,13 +1,18 @@
 package org.ctc.backup;
 
 import java.io.OutputStream;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.ctc.backup.dto.BackupImportPreview;
 import org.ctc.backup.dto.BackupImportResult;
 import org.ctc.backup.exception.BackupImportException;
+import org.ctc.backup.exception.UploadsPreflightFailedException;
+import org.ctc.backup.exception.UploadsRestoreException;
+import org.ctc.backup.exception.UploadsSwapPreflightException;
 import org.ctc.backup.service.BackupArchiveService;
+import org.ctc.backup.service.BackupImportCoordinator;
 import org.ctc.backup.service.BackupImportService;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
@@ -46,6 +51,9 @@ class BackupControllerTest {
 
 	@MockitoBean
 	private BackupImportService backupImportService;
+
+	@MockitoBean
+	private BackupImportCoordinator backupImportCoordinator;
 
 	@Test
 	void givenAuthenticatedUser_whenGetBackup_thenViewIsAdminBackupAndModelHasTitle() throws Exception {
@@ -96,7 +104,7 @@ class BackupControllerTest {
 		UUID stagingId = UUID.randomUUID();
 		UUID auditUuid = UUID.randomUUID();
 		BackupImportResult stubbed = new BackupImportResult(auditUuid, 17042L, 24);
-		when(backupImportService.execute(stagingId)).thenReturn(stubbed);
+		when(backupImportCoordinator.execute(stagingId)).thenReturn(stubbed);
 
 		// when / then
 		mockMvc.perform(post("/admin/backup/import-execute")
@@ -108,7 +116,7 @@ class BackupControllerTest {
 						"Import completed. 17042 rows restored across 24 tables."));
 
 		verify(backupImportService).reparse(stagingId);
-		verify(backupImportService).execute(stagingId);
+		verify(backupImportCoordinator).execute(stagingId);
 	}
 
 	@Test
@@ -116,7 +124,7 @@ class BackupControllerTest {
 		// given — service.execute() throws BackupImportException carrying a fixed audit UUID
 		UUID stagingId = UUID.randomUUID();
 		UUID specificAuditUuid = UUID.fromString("11111111-2222-3333-4444-555555555555");
-		when(backupImportService.execute(stagingId))
+		when(backupImportCoordinator.execute(stagingId))
 				.thenThrow(new BackupImportException(specificAuditUuid, new RuntimeException("simulated")));
 
 		// when / then — failure flash is rendered verbatim with the audit UUID
@@ -129,7 +137,47 @@ class BackupControllerTest {
 				.andExpect(redirectedUrl("/admin/backup"))
 				.andExpect(flash().attribute("errorMessage", expected));
 
-		verify(backupImportService).execute(stagingId);
+		verify(backupImportCoordinator).execute(stagingId);
+	}
+
+	@Test
+	void givenUploadsNotReplacedAfterCommit_whenExecutePost_thenIncompleteFlashNamesTheRecoveryArchive() throws Exception {
+		// given
+		UUID stagingId = UUID.randomUUID();
+		UUID auditUuid = UUID.fromString("22222222-3333-4444-5555-666666666666");
+		Path recoveryDir = Path.of("/app/data/import-backups/2026-09-30T08-00-00Z");
+		when(backupImportCoordinator.execute(stagingId))
+				.thenThrow(new UploadsRestoreException(auditUuid, recoveryDir, "moving the current uploads aside failed"));
+
+		// when / then
+		mockMvc.perform(post("/admin/backup/import-execute")
+						.param("stagingId", stagingId.toString())
+						.param("acknowledged", "true"))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(flash().attributeCount(1))
+				.andExpect(flash().attribute("errorMessage",
+						"Import incomplete — the database was restored, but the uploads were not replaced: "
+								+ "moving the current uploads aside failed. Database and uploads no longer match. "
+								+ "To return to the state before the import, import "
+								+ recoveryDir.resolve("auto-backup-before-import.zip") + ". Audit-id: " + auditUuid + "."));
+	}
+
+	@Test
+	void givenUploadsPreflightRejects_whenExecutePost_thenAbortFlashSaysNoDatabaseChanges() throws Exception {
+		// given
+		UUID stagingId = UUID.randomUUID();
+		UUID auditUuid = UUID.fromString("33333333-4444-5555-6666-777777777777");
+		when(backupImportCoordinator.execute(stagingId)).thenThrow(new UploadsPreflightFailedException(auditUuid, true,
+				new UploadsSwapPreflightException("/app/uploads is a mount point")));
+
+		// when / then
+		mockMvc.perform(post("/admin/backup/import-execute")
+						.param("stagingId", stagingId.toString())
+						.param("acknowledged", "true"))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(flash().attribute("errorMessage",
+						"Import aborted — the uploads directory cannot be replaced: /app/uploads is a mount point. "
+								+ "No database changes. Audit-id: " + auditUuid + "."));
 	}
 
 	@Test
@@ -158,7 +206,7 @@ class BackupControllerTest {
 				.andExpect(view().name("admin/backup-confirm"));
 
 		// then — execute MUST NEVER be invoked when binding fails
-		verify(backupImportService, never()).execute(any(UUID.class));
+		verify(backupImportCoordinator, never()).execute(any(UUID.class));
 		verify(backupImportService, times(1)).reparse(stagingId);
 	}
 }

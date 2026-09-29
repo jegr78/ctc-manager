@@ -41,12 +41,10 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * via its own {@code Propagation.REQUIRES_NEW} setting — Spring 6.1+ rule: {@code
  * @TransactionalEventListener} methods may not run in the outer (already-committed) transaction.
  *
- * <p><strong>AFTER_COMMIT swallows exceptions silently.</strong> The recovery path is best-effort
- * revert + loud ERROR log + {@code success=false} audit row, NOT exception propagation: a thrown
- * exception inside AFTER_COMMIT will not unwind the already-committed JPA transaction. The
- * {@link UploadsRestoreException} re-throws from Steps 1 and 2 surface the failure to any caller
- * that observes the listener's invocation context (none in production, but integration tests pin
- * this behaviour via Spring's {@code ApplicationEventMulticaster}).
+ * <p><strong>Spring swallows exceptions thrown here.</strong> The listener therefore records the
+ * swap outcome in {@link BackupImportOutcomeRegistry}; {@link BackupImportCoordinator} reads it
+ * right after the commit and turns a failed swap into an {@link UploadsRestoreException} for the
+ * caller. The re-throws from Steps 1 and 2 only mark the failure in the log.
  */
 @Slf4j
 @Component
@@ -54,12 +52,15 @@ public class BackupImportPostCommitListener {
 
     private final DataImportAuditService dataImportAuditService;
     private final BackupImportService backupImportService;
+    private final BackupImportOutcomeRegistry outcomeRegistry;
 
     public BackupImportPostCommitListener(
             DataImportAuditService dataImportAuditService,
-            BackupImportService backupImportService) {
+            BackupImportService backupImportService,
+            BackupImportOutcomeRegistry outcomeRegistry) {
         this.dataImportAuditService = dataImportAuditService;
         this.backupImportService = backupImportService;
+        this.outcomeRegistry = outcomeRegistry;
     }
 
     /**
@@ -93,6 +94,8 @@ public class BackupImportPostCommitListener {
             }
         } catch (IOException e) {
             log.error("AFTER_COMMIT Step 1 failed: uploads tree unchanged", e);
+            outcomeRegistry.record(event.auditUuid(), UploadsRestoreOutcome.failed(importBackupDir,
+                    "moving the current uploads aside failed (" + e + "); the uploads are unchanged"));
             recordResultBestEffort(event, /* success */ false);
             throw new UploadsRestoreException("Step 1 failed: move uploads -> uploads-old", e);
         }
@@ -101,9 +104,11 @@ public class BackupImportPostCommitListener {
         try {
             Files.move(uploadsNewDir, uploadsTarget, StandardCopyOption.ATOMIC_MOVE);
             uploadsRestoredFully = true;
+            outcomeRegistry.record(event.auditUuid(), UploadsRestoreOutcome.restored(importBackupDir));
             log.info("AFTER_COMMIT Step 2 complete: moved {} -> {}", uploadsNewDir, uploadsTarget);
         } catch (IOException e) {
             log.error("AFTER_COMMIT Step 2 failed: attempting Step-1 revert", e);
+            String uploadsState = "the previous uploads are still in " + uploadsOld;
             try {
                 if (Files.exists(uploadsOld)) {
                     // Defensive sweep: if Step 2 partially materialized uploadsTarget
@@ -120,14 +125,18 @@ public class BackupImportPostCommitListener {
                                 uploadsTarget, orphan);
                     }
                     Files.move(uploadsOld, uploadsTarget, StandardCopyOption.ATOMIC_MOVE);
+                    uploadsState = "the previous uploads were put back";
                     log.warn("Step-1 revert succeeded; uploads tree restored to pre-import state");
                 } else {
+                    uploadsState = "there were no previous uploads";
                     log.warn("Step-1 revert skipped: {} does not exist (Step 1 was a no-op)", uploadsOld);
                 }
             } catch (IOException revertEx) {
                 log.error("Step-1 revert ALSO failed - manual recovery required from {}",
                         importBackupDir, revertEx);
             }
+            outcomeRegistry.record(event.auditUuid(), UploadsRestoreOutcome.failed(importBackupDir,
+                    "installing the restored uploads failed (" + e + "); " + uploadsState));
             recordResultBestEffort(event, /* success */ false);
             throw new UploadsRestoreException("Step 2 failed: move uploads-new -> uploads", e);
         }

@@ -80,6 +80,9 @@ class BackupImportPostCommitIT {
     @Autowired
     TransactionTemplate transactionTemplate;
 
+    @Autowired
+    BackupImportOutcomeRegistry outcomeRegistry;
+
     /** Live {@code uploads/} target — moved away by Step 1, replaced by Step 2. */
     Path uploadsTarget;
 
@@ -169,6 +172,9 @@ class BackupImportPostCommitIT {
         assertThat(auditRow.get().isSuccess())
                 .as("Step 3: audit row success flag must be true")
                 .isTrue();
+        assertThat(outcomeRegistry.take(auditUuid))
+                .as("the coordinator must learn that the uploads are live")
+                .contains(UploadsRestoreOutcome.restored(importBackupDir));
     }
 
     @Test
@@ -215,6 +221,13 @@ class BackupImportPostCommitIT {
         assertThat(auditRow.get().isSuccess())
                 .as("Failure-path audit row success flag must be false")
                 .isFalse();
+        assertThat(outcomeRegistry.take(auditUuid))
+                .as("the coordinator must learn about the failed swap and the revert")
+                .hasValueSatisfying(outcome -> {
+                    assertThat(outcome.restored()).isFalse();
+                    assertThat(outcome.recoveryDir()).isEqualTo(importBackupDir);
+                    assertThat(outcome.failure()).endsWith("the previous uploads were put back");
+                });
 
         // ERROR log lines were emitted — Plan 08 flash-message recovery path depends on this.
         // Loud-fail contract: Step 2 failure + UploadsRestoreException both surface to stdout.
