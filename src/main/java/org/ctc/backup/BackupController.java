@@ -252,10 +252,6 @@ public class BackupController {
 		return "redirect:/admin/backup";
 	}
 
-	/**
-	 * Routes a {@link BackupArchiveException} to the appropriate user-facing Flash string.
-	 * Exhaustive switch enforces coverage of all {@link BackupArchiveException.Reason} values.
-	 */
 	private static String auditIdText(BackupImportException ex) {
 		return ex.isAuditWritten()
 				? ex.getAuditUuid().toString()
@@ -272,6 +268,10 @@ public class BackupController {
 				ex.getMessage(), recovery, ex.getAuditUuid());
 	}
 
+	/**
+	 * Routes a {@link BackupArchiveException} to the appropriate user-facing Flash string.
+	 * Exhaustive switch enforces coverage of all {@link BackupArchiveException.Reason} values.
+	 */
 	private String mapReason(BackupArchiveException ex) {
 		return switch (ex.reason()) {
 			case SCHEMA_MISMATCH -> ex.getMessage();

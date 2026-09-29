@@ -443,6 +443,8 @@ public class BackupImportService {
      *
      * @param stagingId UUID of the staged ZIP (from a previous {@link #stage} call)
      * @return a {@link BackupImportResult} carrying the audit-row UUID + restored counts
+     * @throws UploadsPreflightFailedException before any DB mutation when the uploads directory
+     *                                         cannot be swapped after the commit
      * @throws BackupImportException on any failure (catch-all rollback path)
      */
     @Transactional(
@@ -586,8 +588,8 @@ public class BackupImportService {
             // Error during the 1000-row restore still gets an audit row written via
             // REQUIRES_NEW before propagating. Spring's @Transactional rollback fires on
             // Error by default; the JVM-fatal contract is preserved by re-throwing Error
-            // unchanged. AutoBackupBeforeImportException is rethrown unchanged — Step 0.5
-            // already recorded its own audit row + cleaned up its partial ZIP, and wrapping
+            // unchanged. The preflight and auto-backup exceptions are rethrown unchanged — both
+            // already recorded their own audit row before any DB mutation, and wrapping
             // it here would shadow the subclass-specific controller catch (superclass-first
             // exception matching).
             if (t instanceof AutoBackupBeforeImportException || t instanceof UploadsPreflightFailedException) {
