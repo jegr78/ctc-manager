@@ -128,4 +128,19 @@ class LimitedInputStreamTest {
                 .isInstanceOf(BackupArchiveException.class)
                 .satisfies(ex -> assertThat(((BackupArchiveException) ex).reason()).isEqualTo(Reason.ENTRY_TOO_LARGE));
     }
+
+    @Test
+    void givenSkipPastLimit_whenSkipped_thenSkippedBytesCountTowardsTheLimit() {
+        // given
+        long[] captured = {-1L};
+        LimitedInputStream limited = new LimitedInputStream(new ByteArrayInputStream(new byte[1024]), 512L,
+                bytes -> captured[0] = bytes);
+
+        // when / then
+        assertThatThrownBy(() -> limited.skip(600))
+                .isInstanceOfSatisfying(BackupArchiveException.class, ex -> assertThat(ex.reason())
+                        .as("skip() must not bypass the limit")
+                        .isEqualTo(Reason.ENTRY_TOO_LARGE));
+        assertThat(captured[0]).isEqualTo(600L);
+    }
 }
