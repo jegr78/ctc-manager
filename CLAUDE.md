@@ -220,6 +220,8 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 * **Google Credentials:** `google.sheets.credentials-path` (default: `google-credentials.json`)
 * **Upload Dir:** `app.upload-dir` (default: `data/dev/uploads`)
 * **Site Output:** `ctc.site.output-dir` (default: `docs/site`)
+* **Backup Dirs:** `app.backup.staging-dir`, `app.backup.import-backups-dir` (default: `data/<profile>/…`)
+* **Container Paths:** `docker` and `prod` set all four paths to absolute locations inside the Compose volumes (`/app/uploads`, `/app/ctc-site-output`, `/app/data`); `ContainerStoragePathsTest` enforces it.
 
 ## CI/CD
 
