@@ -16,8 +16,6 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ctc-uploads:/app/uploads
-      - ctc-site-output:/app/ctc-site-output
       - ctc-data:/app/data
       - ctc-logs:/app/logs
     healthcheck:
@@ -28,7 +26,5 @@ services:
       start_period: 60s
 
 volumes:
-  ctc-uploads:
-  ctc-site-output:
   ctc-data:
   ctc-logs:

@@ -46,6 +46,52 @@ class ContainerStoragePathsTest {
 		}
 	}
 
+	@ParameterizedTest(name = "{0} with {1}")
+	@CsvSource({
+			"docker-compose.prod.yml, prod",
+			"docker-compose.yml, docker"})
+	void givenComposeFile_whenUploadsAreSwappedOnRestore_thenUploadsSitBelowTheVolumeRootThatHoldsTheRecoveryArchives(
+			String composeFile, String profile) throws IOException {
+		// given
+		List<String> mountTargets = mountTargets(appService(Path.of(composeFile)));
+		Map<String, Object> config = load(Path.of("src/main/resources/application-" + profile + ".yml"));
+		Path uploads = Path.of((String) lookup(config, "app.upload-dir"));
+		Path importBackups = Path.of((String) lookup(config, "app.backup.import-backups-dir"));
+
+		// when
+		Path uploadsVolume = mountTargets.stream()
+				.map(Path::of)
+				.filter(uploads::startsWith)
+				.findFirst()
+				.orElseThrow();
+
+		// then
+		assertThat(uploads)
+				.as("the restore renames %s, so it must not be the mount root itself", uploads)
+				.isNotEqualTo(uploadsVolume);
+		assertThat(importBackups.startsWith(uploadsVolume))
+				.as("%s must lie in the uploads volume %s so the swap stays a same-filesystem rename",
+						importBackups, uploadsVolume)
+				.isTrue();
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@CsvSource({"prod", "docker"})
+	void givenContainerProfile_whenUploadsAreServedOverHttp_thenNoBackupDirectoryLiesInsideThem(String profile)
+			throws IOException {
+		// given
+		Map<String, Object> config = load(Path.of("src/main/resources/application-" + profile + ".yml"));
+		Path uploads = Path.of((String) lookup(config, "app.upload-dir"));
+
+		// when / then
+		for (String property : List.of("app.backup.staging-dir", "app.backup.import-backups-dir", "ctc.site.output-dir")) {
+			Path path = Path.of((String) lookup(config, property));
+			assertThat(path.startsWith(uploads))
+					.as("%s=%s would be downloadable through /uploads/**", property, path)
+					.isFalse();
+		}
+	}
+
 	@SuppressWarnings("unchecked")
 	private static Map<String, Object> appService(Path composeFile) throws IOException {
 		Map<String, Object> services = (Map<String, Object>) load(composeFile).get("services");

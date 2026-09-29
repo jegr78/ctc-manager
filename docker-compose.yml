@@ -31,8 +31,6 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ctc-uploads:/app/uploads
-      - ctc-site-output:/app/ctc-site-output
       - ctc-data:/app/data
       - ctc-logs:/app/logs
     depends_on:
@@ -47,7 +45,5 @@ services:
 
 volumes:
   ctc-db-data:
-  ctc-uploads:
-  ctc-site-output:
   ctc-data:
   ctc-logs:

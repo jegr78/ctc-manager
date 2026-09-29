@@ -30,8 +30,8 @@ RUN groupadd -r ctc && useradd -r -g ctc ctc
 
 WORKDIR /app
 
-# Volume mount points; a fresh named volume inherits this ownership.
-RUN mkdir -p /app/uploads /app/ctc-site-output /app/data /app/logs && chown -R ctc:ctc /app
+# Volume mount points; a fresh named volume inherits this content and ownership.
+RUN mkdir -p /app/data/uploads /app/data/site /app/logs && chown -R ctc:ctc /app
 
 COPY --from=build --chown=ctc:ctc /build/target/ctc-manager-*.jar /app/ctc-manager.jar
 
