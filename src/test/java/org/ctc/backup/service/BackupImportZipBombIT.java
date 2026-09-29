@@ -277,11 +277,6 @@ class BackupImportZipBombIT {
      * {@code ZipEntry.setSize(Long.MAX_VALUE)} whose payload inflates to
      * {@code perEntryInflatedBytes} zeros (exceeds {@code MAX_ENTRY_BYTES}).
      *
-     * <p>The bomb entry is placed under {@code uploads/} so that
-     * {@code BackupArchiveService.countUploadFiles()} drains it through a
-     * {@code LimitedInputStream}, triggering the per-entry cap. Entries under {@code data/}
-     * are only drained by {@code countDataEntries()}, which is not called in the
-     * {@code stage()} preview pipeline.
      */
     private static byte[] inflationBombZip(long perEntryInflatedBytes, BackupSchema schema)
             throws IOException {
@@ -308,8 +303,7 @@ class BackupImportZipBombIT {
      * entries each inflating to {@code perEntryInflatedBytes} zeros.
      *
      * <p>Each entry stays under {@code MAX_ENTRY_BYTES}; the cumulative total exceeds
-     * {@code MAX_TOTAL_BYTES}. Placed under {@code uploads/} so
-     * {@code BackupArchiveService.countUploadFiles()} drains them.
+     * {@code MAX_TOTAL_BYTES}.
      */
     private static byte[] totalSizeBombZip(int entryCount, long perEntryInflatedBytes,
             BackupSchema schema) throws IOException {
