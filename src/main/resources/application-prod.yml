@@ -13,3 +13,13 @@ spring:
     show-sql: false
   flyway:
     locations: classpath:db/migration
+
+app:
+  upload-dir: /app/data/uploads
+  backup:
+    staging-dir: /app/data/backup-staging
+    import-backups-dir: /app/data/import-backups
+
+ctc:
+  site:
+    output-dir: /app/data/site

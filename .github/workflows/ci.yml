@@ -39,6 +39,7 @@ jobs:
               - 'rewrite.yml'
               - '.dockerignore'
               - 'Dockerfile'
+              - 'docker-compose*.yml'
               - '.github/workflows/**'
               - 'mvnw'
               - 'mvnw.cmd'

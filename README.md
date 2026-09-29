@@ -57,7 +57,7 @@ v1.10 introduces a full database backup/restore feature accessible via `/admin/b
 ### Recovery
 
 If an import fails or you need to revert, see [`docs/operations/import-runbook.md`](docs/operations/import-runbook.md)
-for step-by-step recovery from `data/<profile>/import-backups/<ts>/`.
+for step-by-step recovery from `data/<profile>/import-backups/<ts>/` (containers: `/app/data/import-backups/<ts>/` in the `ctc-data` volume).
 
 > **Note (v1.11):** Recovery storage is now profile-isolated to `data/<profile>/import-backups/` (e.g., `data/dev/import-backups/` or `data/prod/import-backups/`). Pre-v1.11 artifacts under `data/.import-backups/` remain in place and are not migrated automatically.
 >
@@ -121,6 +121,36 @@ macOS and Windows include these dependencies natively — no extra setup needed.
 ### Docker
 
 The Dockerfile handles Chromium installation automatically during the build.
+
+Both Compose files keep all application state in two named volumes, so recreating the `app`
+container loses nothing:
+
+| Volume | Mount | Content |
+|---|---|---|
+| `ctc-data` | `/app/data` | `uploads/` (images, attachments, custom graphic templates), `site/` (generated website), `backup-staging/`, `import-backups/` (pre-import recovery archives) |
+| `ctc-logs` | `/app/logs` | Log files |
+
+The `docker` and `prod` profiles point `app.upload-dir`, `ctc.site.output-dir` and both
+`app.backup.*` directories below `/app/data`. The uploads directory must not be a mount root:
+a backup import replaces it by renaming it next to the recovery archive.
+
+Upgrading from the earlier layout needs one copy of the uploads; the website is rebuilt by the
+next generation run.
+
+```bash
+# prod: older images kept uploads in the container layer, save them before replacing the container
+docker compose -f docker-compose.prod.yml cp app:/app/data/dev/uploads ./uploads-rescue
+docker compose -f docker-compose.prod.yml up -d   # with the new image
+docker compose -f docker-compose.prod.yml cp ./uploads-rescue/. app:/app/data/uploads/
+docker compose -f docker-compose.prod.yml exec -u root app chown -R ctc:ctc /app/data/uploads
+
+# docker: copy the former ctc-uploads volume into the new ctc-data volume
+docker compose up -d
+docker run --rm -v ctc-manager_ctc-uploads:/from:ro -v ctc-manager_ctc-data:/to alpine \
+  sh -c 'cp -a /from/. /to/uploads/'
+```
+
+The old `ctc-uploads` and `ctc-site-output` volumes stay on disk until you remove them.
 
 ## Development
 
