@@ -998,8 +998,8 @@ class CsvImportServiceTest {
 	}
 
 	@Test
-	void givenPlayoffMatchupNotFound_whenExecuteMultiRaceImport_thenThrowsValidationException() {
-		// Test that missing playoff matchup throws ValidationException
+	void givenPlayoffMatchupNotFound_whenExecuteMultiRaceImport_thenRejected() {
+		// given
 		when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 		when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
 
@@ -1014,8 +1014,8 @@ class CsvImportServiceTest {
 
 		// when/then
 		assertThatThrownBy(() -> csvImportService.executeImport(preview, Map.of(), Set.of(), false))
-				.isInstanceOf(ValidationException.class)
-				.hasMessageContaining("Playoff matchup not found");
+				.isInstanceOfSatisfying(ImportRejectedException.class, ex -> assertThat(ex.getErrors())
+						.containsExactly("The playoff matchup does not exist"));
 	}
 
 	@Test
