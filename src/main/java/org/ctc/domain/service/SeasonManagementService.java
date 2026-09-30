@@ -420,6 +420,24 @@ public class SeasonManagementService {
         if (predecessorSt.isReplaced()) {
             throw new IllegalStateException("Team " + predecessor.getShortName() + " already replaced");
         }
+        if (predecessor.getId().equals(successor.getId())) {
+            throw new IllegalStateException("A team cannot replace itself");
+        }
+        if (season.findSeasonTeam(successor).map(SeasonTeam::isReplaced).orElse(false)) {
+            throw new IllegalStateException(successor.getShortName() + " was already replaced and cannot become a successor");
+        }
+        var inheritedPlaces = new ArrayList<PhaseTeam>();
+        for (var phase : seasonPhaseRepository.findBySeasonIdOrderBySortIndex(seasonId)) {
+            var place = phaseTeamRepository.findByPhaseIdAndTeamId(phase.getId(), predecessor.getId());
+            if (place.isEmpty()) {
+                continue;
+            }
+            if (phaseTeamRepository.findByPhaseIdAndTeamId(phase.getId(), successor.getId()).isPresent()) {
+                throw new IllegalStateException(successor.getShortName() + " already holds a place in phase "
+                        + (phase.getLabel() != null ? phase.getLabel() : phase.getPhaseType().name()));
+            }
+            inheritedPlaces.add(place.get());
+        }
 
         if (!season.containsTeam(successor)) {
             season.addTeam(successor);
@@ -432,6 +450,8 @@ public class SeasonManagementService {
         predecessorSt.setSuccessor(successorSt);
         predecessorSt.setReplacedAt(replacedAt);
         seasonTeamRepository.save(predecessorSt);
+        // Standings resolve the predecessor's matches to the successor, so the successor takes each place.
+        inheritedPlaces.forEach(place -> place.setTeam(successor));
 
         log.info("Replaced team {} with {} in season {} (effective {})",
                 sanitize(predecessor.getShortName()), sanitize(successor.getShortName()),
