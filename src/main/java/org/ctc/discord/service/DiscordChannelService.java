@@ -12,6 +12,8 @@ import static org.springframework.util.StringUtils.hasText;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
+import jakarta.persistence.LockTimeoutException;
+import jakarta.persistence.PessimisticLockException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.Normalizer;
@@ -38,6 +40,7 @@ import org.ctc.discord.exception.DiscordAuthException;
 import org.ctc.discord.exception.DiscordTransientException;
 import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.PhaseType;
@@ -69,14 +72,12 @@ public class DiscordChannelService {
 
 	/**
 	 * Creates the match's Discord channel and webhook. The match row stays locked until the
-	 * association is stored, so a repeated or concurrent request for a linked match returns
-	 * {@code false} without creating a second channel.
+	 * association is stored, and a link waits for that lock too. A request for a match that is
+	 * already linked returns {@code false} without creating a second channel.
 	 */
 	@Transactional
 	public boolean createMatchChannel(Match requested) throws DiscordApiException {
-		Match match = entityManager.find(Match.class, requested.getId());
-		entityManager.flush();
-		entityManager.refresh(match, LockModeType.PESSIMISTIC_WRITE);
+		Match match = lockForChannelChange(requested);
 		if (match.getDiscordChannelId() != null) {
 			log.info("Match {} already has Discord channel {}; nothing created", match.getId(), match.getDiscordChannelId());
 			return false;
@@ -153,7 +154,8 @@ public class DiscordChannelService {
 	}
 
 	@Transactional
-	public void linkExistingChannel(Match match, String channelId) throws DiscordApiException {
+	public void linkExistingChannel(Match requested, String channelId) throws DiscordApiException {
+		Match match = lockForChannelChange(requested);
 		if (match.getDiscordChannelId() != null) {
 			throw new BusinessRuleException(
 					"Match already has a Discord channel linked: " + match.getDiscordChannelId());
@@ -178,6 +180,23 @@ public class DiscordChannelService {
 		// No ChannelCreatedEvent: linking a prepared channel must not auto-post Team Cards
 		// (DiscordAutoPostListener.onChannelCreated does) — the operator uses the explicit button.
 		log.info("Discord channel linked to match {} → channelId={}", match.getId(), sanitize(channelId));
+	}
+
+	private Match lockForChannelChange(Match requested) {
+		Match match = entityManager.find(Match.class, requested.getId());
+		if (match == null) {
+			throw new EntityNotFoundException("Match", requested.getId());
+		}
+		entityManager.flush();
+		try {
+			entityManager.refresh(match, LockModeType.PESSIMISTIC_WRITE);
+		} catch (jakarta.persistence.EntityNotFoundException _) {
+			throw new EntityNotFoundException("Match", requested.getId());
+		} catch (PessimisticLockException | LockTimeoutException _) {
+			throw new BusinessRuleException(
+					"Another request is changing this match's Discord channel. Reload the page and try again.");
+		}
+		return match;
 	}
 
 	private static String loadWebhookAvatar() {

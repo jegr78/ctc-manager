@@ -8,6 +8,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import java.nio.file.Files;
@@ -23,6 +24,8 @@ import org.ctc.discord.DiscordPermissions;
 import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.discord.repository.DiscordGlobalConfigRepository;
 import org.ctc.discord.repository.DiscordPostRepository;
+import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.Season;
@@ -149,6 +152,49 @@ class DiscordChannelServiceIdempotencyIT {
 				.containsExactlyInAnyOrder(true, false);
 		wm.verify(exactly(1), postRequestedFor(urlPathEqualTo(GUILD_CHANNELS)));
 		assertThat(stored().getDiscordChannelId()).as("channel id").isEqualTo("c-idem");
+	}
+
+	@Test
+	void givenChannelCreationInFlight_whenAnotherChannelIsLinked_thenTheLinkIsRejectedAndTheCreatedChannelStays() throws Exception {
+		// given
+		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c-link"))
+				.willReturn(okJson("{\"id\":\"c-link\",\"name\":\"prepared\",\"type\":0,\"parent_id\":\"cat-idem\"}")));
+		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c-link/webhooks"))
+				.willReturn(okJson("[{\"id\":\"w-link\",\"name\":\"CTC Manager\",\"channel_id\":\"c-link\","
+						+ "\"token\":\"tok-link\",\"url\":\"" + wm.baseUrl() + "/webhooks/w-link/tok-link\"}]")));
+		var pool = Executors.newSingleThreadExecutor();
+		var creation = pool.submit(() -> channelService.createMatchChannel(stored()));
+		long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+		while (wm.findAll(postRequestedFor(urlPathEqualTo(GUILD_CHANNELS))).isEmpty() && System.nanoTime() < deadline) {
+			Thread.sleep(10);
+		}
+
+		// when
+		Throwable linkFailure = catchThrowable(() -> channelService.linkExistingChannel(stored(), "c-link"));
+
+		// then
+		assertThat(creation.get(30, TimeUnit.SECONDS)).as("the creation stores its channel").isTrue();
+		pool.shutdown();
+		assertThat(linkFailure).as("link while the match gets a channel")
+				.isInstanceOf(BusinessRuleException.class)
+				.hasMessageContaining("already has a Discord channel");
+		assertThat(stored().getDiscordChannelId()).as("channel id").isEqualTo("c-idem");
+		assertThat(stored().getDiscordChannelWebhookUrl()).as("webhook url").isEqualTo(wm.baseUrl() + "/webhooks/1/tok-idem");
+	}
+
+	@Test
+	void givenDeletedMatch_whenChannelCreated_thenNotFoundAndNothingCreated() throws Exception {
+		// given
+		Match detached = stored();
+		matchRepository.delete(detached);
+
+		// when
+		Throwable failure = catchThrowable(() -> channelService.createMatchChannel(detached));
+
+		// then
+		assertThat(failure).as("create for a deleted match").isInstanceOf(EntityNotFoundException.class)
+				.hasMessageContaining("Match not found");
+		wm.verify(exactly(0), postRequestedFor(urlPathEqualTo(GUILD_CHANNELS)));
 	}
 
 	private Match stored() {
