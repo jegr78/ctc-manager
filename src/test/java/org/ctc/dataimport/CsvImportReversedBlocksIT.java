@@ -115,9 +115,37 @@ class CsvImportReversedBlocksIT {
 		assertThat(legs.getFirst().getHomeTeam().getId()).as("the new leg keeps its block order").isEqualTo(bravo.getId());
 	}
 
+	@Test
+	void givenTwoTeamsWhoseShortNamesDifferOnlyInSpelling_whenImported_thenTheyFormOnePairingOfBothTeams() throws Exception {
+		// given
+		var underscored = testHelper.createTeam("Test Spelling Underscore " + id, "Test_SP_" + id);
+		var spaced = testHelper.createTeam("Test Spelling Space " + id, "test sp " + id);
+		season.addTeam(underscored);
+		season.addTeam(spaced);
+		seasonRepository.save(season);
+		var underscoredDriver = testHelper.createDriver("Test_Spelling_" + id + "_U", "Test Spelling Underscore Driver");
+		var spacedDriver = testHelper.createDriver("Test_Spelling_" + id + "_S", "Test Spelling Space Driver");
+		testHelper.createSeasonDriver(season, underscoredDriver, underscored);
+		testHelper.createSeasonDriver(season, spacedDriver, spaced);
+
+		// when
+		csvImportService.executeImport(preview(underscored, spaced, underscoredDriver, spacedDriver),
+				Map.of(), Set.of(), false);
+
+		// then
+		var match = singleMatch();
+		assertThat(match.getHomeTeam().getId()).as("home is the underscored team").isEqualTo(underscored.getId());
+		assertThat(match.getAwayTeam().getId()).as("away is the spaced team, not a self-match").isEqualTo(spaced.getId());
+	}
+
 	private CsvImportService.ImportPreview preview(Team first, Team second) throws Exception {
-		Driver firstDriver = first.equals(alpha) ? alphaDriver : bravoDriver;
-		Driver secondDriver = first.equals(alpha) ? bravoDriver : alphaDriver;
+		return first.equals(alpha)
+				? preview(first, second, alphaDriver, bravoDriver)
+				: preview(first, second, bravoDriver, alphaDriver);
+	}
+
+	private CsvImportService.ImportPreview preview(Team first, Team second, Driver firstDriver, Driver secondDriver)
+			throws Exception {
 		String csv = """
 				Team,PSN ID,Position,Quali,FL
 				%s,%s,1,1,true

@@ -152,7 +152,7 @@ public class CsvImportService {
 
 		for (int raceIndex = 0; raceIndex < previews.size(); raceIndex++) {
 			var preview = previews.get(raceIndex);
-			var grouped = groupByTeamPair(preview.getRows());
+			var grouped = groupByTeamPair(preview.getRows(), seasonTeams);
 
 			for (var entry : grouped.entrySet()) {
 				var teamPair = entry.getKey();
@@ -171,7 +171,7 @@ public class CsvImportService {
 		for (var entry : byTeamPairAndRaceIndex.entrySet()) {
 			// The first leg's block order orients a new pairing; later legs may list the teams reversed.
 			var firstLegRows = entry.getValue().get(Collections.min(entry.getValue().keySet()));
-			var teamNames = firstLegRows.isEmpty() ? List.of(entry.getKey()) : blockOrder(firstLegRows);
+			var teamNames = firstLegRows.isEmpty() ? List.of(entry.getKey()) : pairingTeams(firstLegRows, seasonTeams);
 			var homeTeam = findTeamFlexible(teamNames.getFirst(), seasonTeams);
 			var awayTeam = teamNames.size() > 1 ? findTeamFlexible(teamNames.get(1), seasonTeams) : null;
 
@@ -439,25 +439,34 @@ public class CsvImportService {
 	}
 
 	/** Keys a scorecard by its two teams regardless of block order, so A/B and B/A are one pairing. */
-	private Map<String, List<ImportRow>> groupByTeamPair(List<ImportRow> rows) {
-		var teams = blockOrder(rows);
-		if (teams.size() == 2) {
-			var key = teams.stream().map(CsvImportService::pairingName).sorted().collect(Collectors.joining("|"));
-			return Map.of(key, rows);
+	private Map<String, List<ImportRow>> groupByTeamPair(List<ImportRow> rows, List<Team> seasonTeams) {
+		var blocks = blockOrder(rows, seasonTeams);
+		if (blocks.size() == 2) {
+			return Map.of(blocks.keySet().stream().sorted().collect(Collectors.joining("|")), rows);
 		}
 		// Fallback: group all under first team
-		return Map.of(teams.isEmpty() ? "UNKNOWN" : teams.getFirst(), rows);
+		return Map.of(blocks.isEmpty() ? "UNKNOWN" : blocks.firstEntry().getKey(), rows);
 	}
 
-	/** Team names in the order their blocks appear, collapsing spelling variants of one team. */
-	private static List<String> blockOrder(List<ImportRow> rows) {
-		var byPairingName = new LinkedHashMap<String, String>();
-		rows.forEach(row -> byPairingName.putIfAbsent(pairingName(row.teamShortName()), row.teamShortName()));
-		return List.copyOf(byPairingName.values());
+	/** The pairing's two teams in block order, or only the first team when the scorecard is no pairing. */
+	private List<String> pairingTeams(List<ImportRow> rows, List<Team> seasonTeams) {
+		var names = List.copyOf(blockOrder(rows, seasonTeams).values());
+		return names.size() == 2 ? names : names.subList(0, 1);
 	}
 
-	private static String pairingName(String teamShortName) {
-		return teamShortName.replace('_', ' ').toLowerCase(Locale.ROOT);
+	/**
+	 * Team names in the order their blocks appear, keyed by the resolved team so spelling variants of
+	 * one team collapse while different teams with similar short names stay apart.
+	 */
+	private LinkedHashMap<String, String> blockOrder(List<ImportRow> rows, List<Team> seasonTeams) {
+		var byTeam = new LinkedHashMap<String, String>();
+		rows.forEach(row -> byTeam.putIfAbsent(teamKey(row.teamShortName(), seasonTeams), row.teamShortName()));
+		return byTeam;
+	}
+
+	private String teamKey(String teamShortName, List<Team> seasonTeams) {
+		var team = findTeamFlexible(teamShortName, seasonTeams);
+		return team != null ? team.getId().toString() : teamShortName.replace('_', ' ').toLowerCase(Locale.ROOT);
 	}
 
 	private Optional<Match> findPairing(Matchday matchday, Team home, Team away) {
@@ -521,12 +530,12 @@ public class CsvImportService {
 			return false;
 		}
 
-		var teams = blockOrder(preview.getRows());
+		var seasonTeams = season.getTeams();
+		var teams = List.copyOf(blockOrder(preview.getRows(), seasonTeams).values());
 		if (teams.size() < 2) {
 			return false;
 		}
 
-		var seasonTeams = season.getTeams();
 		var homeTeam = findTeamFlexible(teams.get(0), seasonTeams);
 		var awayTeam = findTeamFlexible(teams.get(1), seasonTeams);
 		if (homeTeam == null || awayTeam == null) {
