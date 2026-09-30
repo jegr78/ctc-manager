@@ -55,10 +55,8 @@ public class ScoringService {
 	}
 
 	/**
-	 * Re-derive Match home/away (or PlayoffMatchup) scores from the persisted legs of
-	 * {@code race}'s match, even when {@code race} itself has no results. Used by
-	 * {@code RaceService.saveResults} when the operator clears a race so the parent
-	 * score doesn't stay stale.
+	 * Re-derives the scores of {@code race}'s match or playoff matchup from its persisted legs,
+	 * even when {@code race} itself has no results. Call it after removing result rows.
 	 */
 	@Transactional
 	public void recomputeMatchScoresFromAllLegs(Race race) {
