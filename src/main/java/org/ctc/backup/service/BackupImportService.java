@@ -133,6 +133,10 @@ public class BackupImportService {
      */
     static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2));
 
+    /** Tables an older schema version never exported; they may be absent when the manifest announces no rows. */
+    static final Map<Integer, Set<String>> TABLES_ABSENT_IN_SCHEMA = Map.of(
+            1, Set.of("discord_global_config", "discord_post"));
+
     /** Batch size for the JSON-stream-to-batchUpdate accumulator. */
     private static final int RESTORE_BATCH_SIZE = 500;
 
@@ -509,6 +513,7 @@ public class BackupImportService {
             BackupManifest manifest = backupArchive.readManifest(staged);
             schemaVersion = manifest.schemaVersion();
             backupArchive.assertEntryLimits(staged);
+            assertDataMatchesManifest(staged, manifest);
 
             Files.createDirectories(importBackupDir);
             try {
@@ -716,10 +721,8 @@ public class BackupImportService {
         // CodeQL FP: java/path-injection — assertEntrySafe + PathTraversalGuard.assertWithin defense not traceable; see docs/security/sast-acceptance.md
         ZipEntry entry = zf.getEntry(entryPath);
         if (entry == null) {
-            // Absent data files for an entity are not a hard error — an exported empty array is
-            // semantically equivalent. The restorer is simply not invoked and the count is 0.
-            log.warn("Backup ZIP has no data entry for table={} (entryPath={}) — possible corruption or schema regression",
-                    ref.tableName(), entryPath);
+            // Only tables an older schema never exported get here; assertDataMatchesManifest rejects the rest.
+            log.info("Backup ZIP has no data entry for table={} (entryPath={})", ref.tableName(), entryPath);
             return totalRows;
         }
 
@@ -888,6 +891,8 @@ public class BackupImportService {
                             backupVersion, SUPPORTED_SCHEMA_VERSIONS));
         }
 
+        assertDataMatchesManifest(staged, manifest);
+
         // Step 3: count upload files
         int uploadFileCount = backupArchive.countUploadFiles(staged);
 
@@ -917,6 +922,32 @@ public class BackupImportService {
         return new BackupImportPreview(stagingId, originalFilename, fileSizeBytes,
                 backupVersion, currentVersion, schemaMatches, entityCounts,
                 uploadFileCount, totalImportedRows);
+    }
+
+    /**
+     * Rejects an archive whose data files do not carry exactly the rows its manifest announces,
+     * so a stripped or tampered backup never reaches the wipe.
+     */
+    private void assertDataMatchesManifest(Path staged, BackupManifest manifest) throws BackupArchiveException {
+        Map<String, Long> actualCounts = backupArchive.countDataEntries(staged);
+        Set<String> absentInSchema = TABLES_ABSENT_IN_SCHEMA.getOrDefault(manifest.schemaVersion(), Set.of());
+        List<String> problems = new ArrayList<>();
+        for (EntityRef ref : backupSchema.getExportOrder()) {
+            String table = ref.tableName();
+            long announced = manifest.tableCounts().getOrDefault(table, 0L);
+            Long actual = actualCounts.get(table);
+            if (actual == null) {
+                if (!absentInSchema.contains(table) || announced != 0) {
+                    problems.add(table + ": data file missing");
+                }
+            } else if (actual != announced) {
+                problems.add(table + ": manifest announces " + announced + " rows, data file has " + actual);
+            }
+        }
+        if (!problems.isEmpty()) {
+            throw new BackupArchiveException(Reason.DATA_MISMATCH,
+                    "Backup data does not match its manifest: " + String.join("; ", problems));
+        }
     }
 
     /**

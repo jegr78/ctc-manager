@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.UUID;
 import org.ctc.backup.dto.BackupImportPreview;
 import org.ctc.backup.dto.BackupImportResult;
+import org.ctc.backup.exception.BackupArchiveException;
+import org.ctc.backup.exception.BackupArchiveException.Reason;
 import org.ctc.backup.exception.BackupImportException;
 import org.ctc.backup.exception.UploadsPreflightFailedException;
 import org.ctc.backup.exception.UploadsRestoreException;
@@ -21,6 +23,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -178,6 +181,20 @@ class BackupControllerTest {
 				.andExpect(flash().attribute("errorMessage",
 						"Import aborted — the uploads directory cannot be replaced: /app/uploads is a mount point. "
 								+ "No database changes. Audit-id: " + auditUuid + "."));
+	}
+
+	@Test
+	void givenDataMismatch_whenPreviewPost_thenFlashNamesTheMismatchedTables() throws Exception {
+		// given
+		String message = "Backup data does not match its manifest: cars: data file missing";
+		when(backupImportService.stage(any())).thenThrow(new BackupArchiveException(Reason.DATA_MISMATCH, message));
+
+		// when / then
+		mockMvc.perform(MockMvcRequestBuilders.multipart("/admin/backup/import-preview")
+						.file(new MockMultipartFile("file", "stripped.zip", "application/zip", new byte[]{1})))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/admin/backup"))
+				.andExpect(flash().attribute("errorMessage", message));
 	}
 
 	@Test

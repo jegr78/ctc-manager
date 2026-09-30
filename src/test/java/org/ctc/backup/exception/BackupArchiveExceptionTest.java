@@ -9,8 +9,8 @@ class BackupArchiveExceptionTest {
 
     @Test
     void givenEachReason_whenConstruct_thenReasonAndMessagePropagate() {
-        // given — enforces exactly 8 Reason values; any accidental addition or removal fails here
-        assertThat(Reason.values()).hasSize(8);
+        // given
+        assertThat(Reason.values()).as("an added or removed Reason needs a controller mapping").hasSize(9);
 
         // when / then — loop over every value; each must round-trip correctly
         for (Reason reason : Reason.values()) {
