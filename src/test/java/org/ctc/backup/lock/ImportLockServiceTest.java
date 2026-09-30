@@ -4,6 +4,7 @@ import java.util.concurrent.*;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Surefire unit tests for {@link ImportLockService}.
@@ -115,5 +116,13 @@ class ImportLockServiceTest {
         future.get(5, TimeUnit.SECONDS);
         executor.shutdown();
         assertThat(service.isLocked()).isFalse();
+    }
+
+    @Test
+    void givenNonPositiveDrainTimeout_whenCreated_thenRejected() {
+        // when / then
+        assertThatThrownBy(() -> new ImportLockService(java.time.Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("app.backup.writer-drain-timeout must be positive");
     }
 }
