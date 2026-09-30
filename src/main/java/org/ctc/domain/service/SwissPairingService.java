@@ -49,7 +49,7 @@ public class SwissPairingService {
 		if (!matchdays.isEmpty()) {
 			var lastMatchday = matchdays.get(matchdays.size() - 1);
 			var lastRaces = raceRepository.findByMatchdayId(lastMatchday.getId());
-			if (!lastRaces.stream().allMatch(SwissPairingService::hasOutcome)) {
+			if (!allPairingsDecided(lastRaces)) {
 				throw new IllegalStateException("Current round has incomplete races");
 			}
 		}
@@ -133,15 +133,31 @@ public class SwissPairingService {
 
 		var lastMatchday = matchdays.get(matchdays.size() - 1);
 		var lastRaces = raceRepository.findByMatchdayId(lastMatchday.getId());
-		return lastRaces.stream().allMatch(SwissPairingService::hasOutcome);
+		return allPairingsDecided(lastRaces);
 	}
 
-	/** A bye, a walkover, results or aggregated scores decide a pairing, as in the standings. */
-	private static boolean hasOutcome(Race race) {
-		return race.isBye()
-				|| race.getMatch() != null && race.getMatch().getWalkoverTeam() != null
-				|| !race.getResults().isEmpty()
-				|| race.getHomeScore() != null && race.getAwayScore() != null;
+	private static boolean allPairingsDecided(List<Race> races) {
+		var legsByMatch = races.stream()
+				.filter(race -> race.getMatch() != null)
+				.collect(Collectors.groupingBy(race -> race.getMatch().getId()));
+		return legsByMatch.values().stream().allMatch(legs -> isDecided(legs.getFirst().getMatch(), legs))
+				&& races.stream().filter(race -> race.getMatch() == null)
+						.allMatch(race -> race.isBye() || !race.getResults().isEmpty());
+	}
+
+	/**
+	 * A bye, a walkover, results on every leg, or a quick score without any leg results decides a
+	 * pairing, as in the standings.
+	 */
+	private static boolean isDecided(Match match, List<Race> legs) {
+		if (match.isBye() || match.getWalkoverTeam() != null) {
+			return true;
+		}
+		if (legs.stream().noneMatch(leg -> leg.getResults().isEmpty())) {
+			return true;
+		}
+		return legs.stream().allMatch(leg -> leg.getResults().isEmpty())
+				&& match.getHomeScore() != null && match.getAwayScore() != null;
 	}
 
 	private List<Matchday> getMatchdaysForPhaseGroup(UUID phaseId, UUID groupId) {

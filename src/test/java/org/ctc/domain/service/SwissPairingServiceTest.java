@@ -32,6 +32,8 @@ class SwissPairingServiceTest {
 	@Autowired
 	private SeasonManagementService seasonManagementService;
 	@Autowired
+	private RaceService raceService;
+	@Autowired
 	private EntityManager entityManager;
 	@Autowired
 	private TeamRepository teamRepository;
@@ -204,6 +206,47 @@ class SwissPairingServiceTest {
 	}
 
 	@Test
+	void givenTwoLegPairingsWithOnlyTheFirstLegScored_whenNextRoundRequested_thenRejected() {
+		// given
+		regularPhase.setLegs(2);
+		seasonPhaseRepository.save(regularPhase);
+		addTeams(4);
+		var md1 = swissPairingService.generateNextRound(regularPhase.getId(), null);
+		raceRepository.findByMatchdayId(md1.getId()).stream()
+				.filter(race -> !race.hasTeamOverrides())
+				.forEach(this::addDummyResults);
+
+		// when / then
+		assertThat(swissPairingService.isCurrentRoundComplete(regularPhase.getId(), null))
+				.as("an unplayed second leg keeps its pairing open").isFalse();
+		assertThatThrownBy(() -> swissPairingService.generateNextRound(regularPhase.getId(), null))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessage("Current round has incomplete races");
+	}
+
+	@Test
+	void givenTwoLegPairingsQuickScored_whenRoundViewAndNextRoundRequested_thenOnePairingCardAndTheRoundIsComplete() {
+		// given
+		regularPhase.setLegs(2);
+		seasonPhaseRepository.save(regularPhase);
+		addTeams(4);
+		var md1 = swissPairingService.generateNextRound(regularPhase.getId(), null);
+		entityManager.flush();
+		entityManager.clear();
+		var before = seasonManagementService.getSwissRoundData(season.getId()).pairings().get(md1.getId());
+		assertThat(before).as("one card per pairing, not per leg").hasSize(2);
+		before.forEach(pairing -> assertThat(raceRepository.findById(pairing.quickScoreRaceId()).orElseThrow()
+				.hasTeamOverrides()).as("the quick score goes to the leg in the pairing's orientation").isFalse());
+
+		// when
+		before.forEach(pairing -> raceService.quickScore(pairing.quickScoreRaceId(), 3, 1));
+
+		// then
+		assertThat(swissPairingService.isCurrentRoundComplete(regularPhase.getId(), null))
+				.as("a quick-scored pairing without leg results is decided").isTrue();
+	}
+
+	@Test
 	void givenTwoLegPhaseWithOddTeams_whenRoundGenerated_thenTheByeHasASingleRace() {
 		// given
 		regularPhase.setLegs(2);
@@ -255,9 +298,11 @@ class SwissPairingServiceTest {
 		entityManager.clear();
 
 		// when / then
-		assertThat(seasonManagementService.getSwissRoundData(season.getId()).walkovers())
-				.as("the round view shows the walkover instead of a score form")
-				.containsEntry(races.get(0).getId(), walkoverMatch.getAwayTeam().getId());
+		assertThat(seasonManagementService.getSwissRoundData(season.getId()).pairings().get(md1.getId()))
+				.as("the round view offers no quick score for the walkover")
+				.filteredOn(pairing -> pairing.match().getId().equals(walkoverMatch.getId()))
+				.singleElement()
+				.satisfies(pairing -> assertThat(pairing.quickScoreRaceId()).as("quick-score leg").isNull());
 		assertThat(swissPairingService.isCurrentRoundComplete(regularPhase.getId(), null))
 				.as("a walkover with null scores and no results completes its pairing").isTrue();
 		var md2 = swissPairingService.generateNextRound(regularPhase.getId(), null);

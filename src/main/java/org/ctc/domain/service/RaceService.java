@@ -263,8 +263,8 @@ public class RaceService {
 			throw new BusinessRuleException("A walkover match has no score");
 		}
 		if (race.getMatch() != null) {
-			race.getMatch().setHomeScore(homeScore);
-			race.getMatch().setAwayScore(awayScore);
+			race.getMatch().setHomeScore(race.hasTeamOverrides() ? awayScore : homeScore);
+			race.getMatch().setAwayScore(race.hasTeamOverrides() ? homeScore : awayScore);
 			raceRepository.save(race);
 			scoringService.aggregateMatchScores(race);
 		}

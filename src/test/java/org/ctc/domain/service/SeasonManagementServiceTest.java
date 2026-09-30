@@ -42,8 +42,6 @@ class SeasonManagementServiceTest {
     @Mock
     private MatchScoringRepository matchScoringRepository;
     @Mock
-    private ScoringService scoringService;
-    @Mock
     private SeasonPhaseService seasonPhaseService;
     @Mock
     private MatchdayRepository matchdayRepository;
@@ -691,8 +689,11 @@ class SeasonManagementServiceTest {
 
         // then
         assertThat(result.season()).isEqualTo(season);
-        assertThat(result.raceScores()).containsKey(race.getId());
-        assertThat(result.raceScores().get(race.getId())).isEqualTo(new int[]{10, 8});
+        assertThat(result.pairings().get(matchday.getId())).as("one scored pairing").singleElement()
+                .satisfies(pairing -> {
+                    assertThat(pairing.match()).as("match").isEqualTo(match);
+                    assertThat(pairing.quickScoreRaceId()).as("no quick score once scored").isNull();
+                });
     }
 
     @Nested

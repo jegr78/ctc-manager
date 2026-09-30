@@ -170,6 +170,19 @@ class ScoreReaggregationIT {
 	}
 
 	@Test
+	void givenReversedLeg_whenQuickScored_thenTheScoreIsStoredInTheMatchOrientation() {
+		// given
+		var reversedLeg = createMatchWithLegs(2).get(1);
+
+		// when
+		raceService.quickScore(reversedLeg.getId(), 3, 1);
+
+		// then
+		assertThat(stored()).extracting(Match::getHomeScore, Match::getAwayScore)
+				.as("the reversed leg's home team is the match's away team").containsExactly(1, 3);
+	}
+
+	@Test
 	void givenWalkoverMatch_whenQuickScored_thenRejectedAndTheWalkoverStays() {
 		// given
 		var leg = createMatchWithLegs(1).getFirst();
