@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -100,7 +101,6 @@ class MatchdayServiceTest {
         var seasonId = UUID.randomUUID();
         var season = new Season();
         season.setId(seasonId);
-        // saveMatchday delegates to seasonPhaseService.findRegularPhase to bind phase.
         var regular = PhaseTestFixtures.regularPhase(season, null, null);
         when(seasonPhaseService.findRegularPhase(seasonId)).thenReturn(regular);
 
@@ -124,12 +124,9 @@ class MatchdayServiceTest {
         var matchdayId = UUID.randomUUID();
         var season = new Season();
         season.setId(seasonId);
-        // saveMatchday delegates to seasonPhaseService.findRegularPhase to bind phase.
         var regular = PhaseTestFixtures.regularPhase(season, null, null);
-        when(seasonPhaseService.findRegularPhase(seasonId)).thenReturn(regular);
-        var existing = new Matchday();
+        var existing = new Matchday(regular, "Old", 1);
         existing.setId(matchdayId);
-        existing.setLabel("Old");
 
         when(seasonRepository.findById(seasonId)).thenReturn(Optional.of(season));
         when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(existing));
@@ -141,7 +138,8 @@ class MatchdayServiceTest {
         // then
         assertThat(result.getLabel()).isEqualTo("Updated");
         assertThat(result.getSortIndex()).isEqualTo(5);
-        assertThat(result.getSeason()).isEqualTo(season);
+        assertThat(result.getPhase()).as("an edit keeps the phase").isSameAs(regular);
+        verifyNoInteractions(seasonPhaseService);
     }
 
 

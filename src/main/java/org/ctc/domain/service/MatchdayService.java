@@ -91,17 +91,18 @@ public class MatchdayService {
     public Matchday saveMatchday(String label, int sortIndex, UUID seasonId, UUID matchdayId) {
         var season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
-        var regular = seasonPhaseService.findRegularPhase(season.getId());
 
         Matchday matchday;
         if (matchdayId != null) {
             matchday = matchdayRepository.findById(matchdayId)
                     .orElseThrow(() -> new EntityNotFoundException("Matchday", matchdayId));
+            if (!matchday.getSeason().getId().equals(season.getId())) {
+                throw new BusinessRuleException("A matchday cannot move to another season");
+            }
             matchday.setLabel(label);
             matchday.setSortIndex(sortIndex);
-            matchday.setPhase(regular);
         } else {
-            matchday = new Matchday(regular, label, sortIndex);
+            matchday = new Matchday(seasonPhaseService.findRegularPhase(season.getId()), label, sortIndex);
         }
 
         matchdayRepository.save(matchday);
