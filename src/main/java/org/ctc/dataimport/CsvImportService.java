@@ -137,10 +137,12 @@ public class CsvImportService {
 		var season = seasonRepository.findById(metadata.seasonId()).orElseThrow(
 				() -> new ValidationException("Season not found in CSV import: " + metadata.seasonId()));
 
-		var raceScoring = seasonPhaseService.findRegularPhase(season.getId()).getRaceScoring();
-
 		// Resolve or create matchday
 		var matchday = findOrCreateMatchday(season, metadata);
+		var raceScoring = targetPhase(metadata, matchday).getRaceScoring();
+		if (raceScoring == null) {
+			throw new ImportRejectedException(List.of("The target phase has no race scoring"));
+		}
 
 		// Group all rows from all previews by team pair
 		var seasonTeams = season.getTeams();
@@ -389,6 +391,17 @@ public class CsvImportService {
 			}
 		}
 		return null;
+	}
+
+	/** Playoff imports score with the playoff phase; every other import with its matchday's phase. */
+	private SeasonPhase targetPhase(ImportMetadata metadata, Matchday matchday) {
+		if (metadata.isPlayoff()) {
+			return playoffMatchupRepository.findById(metadata.playoffMatchupId())
+					.orElseThrow(() -> new ValidationException(
+							"Playoff matchup not found in CSV import: " + metadata.playoffMatchupId()))
+					.getRound().getPlayoff().getPhase();
+		}
+		return matchday.getPhase();
 	}
 
 	private Matchday findOrCreateMatchday(Season season, ImportMetadata metadata) {

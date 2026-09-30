@@ -32,6 +32,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Imports the same scorecard into phases with different points tables and reads the stored
@@ -126,6 +127,21 @@ class CsvImportPhaseScoringIT {
 		// then
 		assertThat(pointsOf(homeDriver)).as("winner: 50 race + 5 quali + 7 fastest lap").isEqualTo(62);
 		assertThat(pointsOf(awayDriver)).as("runner-up: 30 race + 4 quali").isEqualTo(34);
+	}
+
+	@Test
+	void givenTargetPhaseWithoutScoring_whenImported_thenRejectedWithoutFallingBackToRegular() {
+		// given
+		var placement = seasonPhaseService.create(season.getId(), PhaseType.PLACEMENT, PhaseLayout.LEAGUE, 5,
+				"Placement", null, regular.getMatchScoring(), SeasonFormat.LEAGUE, null, null, null, 1, null);
+		var matchday = matchdayRepository.save(new Matchday(placement, "Test_PhaseScoring NS " + id, 60));
+
+		// when / then
+		assertThatThrownBy(() -> importScorecard(
+				new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId())))
+				.isInstanceOf(org.ctc.dataimport.exception.ImportRejectedException.class)
+				.satisfies(ex -> assertThat(((org.ctc.dataimport.exception.ImportRejectedException) ex).getErrors())
+						.containsExactly("The target phase has no race scoring"));
 	}
 
 	private void importScorecard(CsvImportService.ImportMetadata metadata) throws Exception {
