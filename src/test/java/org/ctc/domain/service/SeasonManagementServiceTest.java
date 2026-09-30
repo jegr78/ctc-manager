@@ -681,6 +681,11 @@ class SeasonManagementServiceTest {
 		if (!season.getPhases().contains(phase)) {
 			season.getPhases().add(phase);
 		}
+        var playoffPhase = org.ctc.domain.service.PhaseTestFixtures.playoffPhase(season, "Test_Swiss-Playoff", null, null);
+        var playoffMatchday = new Matchday(playoffPhase, "Test_Swiss-Playoff-MD", 100);
+        playoffMatchday.setId(UUID.randomUUID());
+        playoffPhase.getMatchdays().add(playoffMatchday);
+        season.getPhases().add(playoffPhase);
 
         when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
@@ -689,6 +694,7 @@ class SeasonManagementServiceTest {
 
         // then
         assertThat(result.season()).isEqualTo(season);
+        assertThat(result.rounds()).as("Swiss rounds without the playoff matchday").containsExactly(matchday);
         assertThat(result.pairings().get(matchday.getId())).as("one scored pairing").singleElement()
                 .satisfies(pairing -> {
                     assertThat(pairing.match()).as("match").isEqualTo(match);

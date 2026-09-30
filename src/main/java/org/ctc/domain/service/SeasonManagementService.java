@@ -41,8 +41,8 @@ public class SeasonManagementService {
                                      List<Track> allTracks, List<RaceScoring> allRaceScorings,
                                      List<MatchScoring> allMatchScorings) {}
 
-    /** The Swiss pairings of each matchday, keyed by matchday id. */
-    public record SwissRoundData(Season season, Map<UUID, List<SwissPairing>> pairings) {}
+    /** The regular phase's matchdays as Swiss rounds, and their pairings keyed by matchday id. */
+    public record SwissRoundData(Season season, List<Matchday> rounds, Map<UUID, List<SwissPairing>> pairings) {}
 
     /**
      * One Swiss pairing in match orientation. {@code quickScoreRaceId} is the leg that takes a quick
@@ -261,8 +261,11 @@ public class SeasonManagementService {
     @Transactional(readOnly = true)
     public SwissRoundData getSwissRoundData(UUID seasonId) {
         var season = findById(seasonId);
+        var rounds = season.getMatchdays().stream()
+                .filter(md -> md.getPhase().getPhaseType() == PhaseType.REGULAR)
+                .toList();
         Map<UUID, List<SwissPairing>> pairings = new HashMap<>();
-        for (var md : season.getMatchdays()) {
+        for (var md : rounds) {
             var mdPairings = new ArrayList<SwissPairing>();
             for (var match : md.getMatches()) {
                 var legs = match.getRaces();
@@ -275,7 +278,7 @@ public class SeasonManagementService {
             }
             pairings.put(md.getId(), mdPairings);
         }
-        return new SwissRoundData(season, pairings);
+        return new SwissRoundData(season, rounds, pairings);
     }
 
     /**

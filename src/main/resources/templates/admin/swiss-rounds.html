@@ -16,7 +16,7 @@
         </div>
     </div>
 
-    <th:block th:each="md, iter : ${season.matchdays}">
+    <th:block th:each="md, iter : ${rounds}">
         <div class="card">
             <h2 th:text="${md.label}"></h2>
             <div th:if="${!md.matches.isEmpty()}" class="swiss-grid">
@@ -75,7 +75,7 @@
 
     <!-- Show pending rounds -->
     <th:block th:if="${totalRounds != null}">
-        <div th:each="i : ${#numbers.sequence(season.matchdays.size() + 1, totalRounds)}" class="card">
+        <div th:each="i : ${#numbers.sequence(rounds.size() + 1, totalRounds)}" class="card">
             <h2 th:text="'Round ' + ${i}"></h2>
             <div class="empty-state" style="padding:16px;color:var(--accent);"><p>matches pending</p></div>
         </div>
