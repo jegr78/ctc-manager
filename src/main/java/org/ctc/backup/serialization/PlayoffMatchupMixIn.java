@@ -36,5 +36,8 @@ public abstract class PlayoffMatchupMixIn {
     abstract Team getWinner();
 
     @JsonIdentityReference(alwaysAsId = true)
+    abstract Team getWalkoverTeam();
+
+    @JsonIdentityReference(alwaysAsId = true)
     abstract PlayoffMatchup getNextMatchup();
 }

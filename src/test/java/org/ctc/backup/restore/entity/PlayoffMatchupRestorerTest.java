@@ -58,6 +58,8 @@ class PlayoffMatchupRestorerTest {
                     "nextMatchup": "22222222-2222-2222-2222-222222222222",
                     "homeScore": 3,
                     "awayScore": 1,
+                    "bye": true,
+                    "walkoverTeam": "cccccccc-cccc-cccc-cccc-cccccccccccc",
                     "createdAt": "2024-01-15T10:30:00",
                     "updatedAt": "2024-02-20T11:45:00"
                 }
@@ -156,12 +158,14 @@ class PlayoffMatchupRestorerTest {
         PreparedStatement ps = mock(PreparedStatement.class);
         setterCaptor.getValue().setValues(ps, row);
 
-        // Pass 1 column order: id (1), round_id (2), team1_id (3), team2_id (4),
-        // winner_id (5), bracket_position (6), home_score (7), away_score (8),
-        // created_at (9), updated_at (10) — next_matchup_id is hard-coded NULL in SQL
+        // Pass 1 column order: id (1), round_id (2), team1_id (3), team2_id (4), winner_id (5),
+        // bracket_position (6), home_score (7), away_score (8), decision_reason (9), decision_history (10),
+        // bye (11), walkover_team_id (12), created_at (13), updated_at (14); next_matchup_id is NULL in SQL
         verify(ps).setNull(3, java.sql.Types.OTHER);
         verify(ps).setNull(4, java.sql.Types.OTHER);
         verify(ps).setNull(5, java.sql.Types.OTHER);
+        verify(ps).setBoolean(11, false);
+        verify(ps).setNull(12, java.sql.Types.OTHER);
     }
 
     @Test
@@ -178,6 +182,8 @@ class PlayoffMatchupRestorerTest {
                     "winner": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
                     "homeScore": 3,
                     "awayScore": 1,
+                    "bye": true,
+                    "walkoverTeam": "cccccccc-cccc-cccc-cccc-cccccccccccc",
                     "createdAt": "2024-01-15T10:30:00",
                     "updatedAt": "2024-02-20T11:45:00"
                 }
@@ -204,6 +210,8 @@ class PlayoffMatchupRestorerTest {
         verify(ps).setInt(6, 0);
         verify(ps).setInt(7, 3);
         verify(ps).setInt(8, 1);
+        verify(ps).setBoolean(11, true);
+        verify(ps).setObject(eq(12), eq(UUID.fromString("cccccccc-cccc-cccc-cccc-cccccccccccc")));
     }
 
     @Test
