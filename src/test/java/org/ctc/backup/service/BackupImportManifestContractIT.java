@@ -33,6 +33,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
@@ -126,11 +127,12 @@ class BackupImportManifestContractIT {
 		});
 
 		// when
-		var preview = stage(zip);
+		var preview = new BackupImportPreview[1];
+		assertThatCode(() -> preview[0] = stage(zip)).as("v1 never exported the Discord tables").doesNotThrowAnyException();
 
 		// then
-		assertThat(preview.schemaVersion()).as("schema version").isEqualTo(1);
-		backupImportService.deleteStagingFile(preview.stagingId());
+		assertThat(preview[0].schemaVersion()).as("schema version").isEqualTo(1);
+		backupImportService.deleteStagingFile(preview[0].stagingId());
 	}
 
 	@Test
