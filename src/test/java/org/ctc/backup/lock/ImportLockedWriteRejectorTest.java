@@ -164,6 +164,7 @@ class ImportLockedWriteRejectorTest {
     @Test
     void givenAsyncRedispatchOfAnAdmittedWriter_whenPreHandled_thenNotCountedAgain() throws Exception {
         // given
+        when(importLockService.tryEnterWriter()).thenReturn(true);
         HttpServletRequest req = mockRequest("POST", "/admin/backup/export");
         when(req.getAttribute(Mockito.anyString())).thenReturn(Boolean.TRUE);
 
