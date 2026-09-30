@@ -278,8 +278,8 @@ public class RaceService {
 	}
 
 	/**
-	 * Rejects a change of the race's effective teams or phase for playoff races, and for regular
-	 * races once any leg of the pairing has results; changes nothing.
+	 * Rejects a change of the race's effective teams or phase for playoff races, and a change of
+	 * teams, matchday or phase once any leg of the pairing has results; changes nothing.
 	 */
 	private String validatePairingChange(Race race, Matchday matchday, Team homeTeam, Team awayTeam) {
 		if (race.getId() == null) {
@@ -287,15 +287,16 @@ public class RaceService {
 		}
 		boolean teamsChanged = !sameTeam(race.getHomeTeam(), homeTeam) || !sameTeam(race.getAwayTeam(), awayTeam);
 		boolean phaseChanged = !race.getMatchday().getPhase().getId().equals(matchday.getPhase().getId());
-		if (!teamsChanged && !phaseChanged) {
+		boolean matchdayChanged = !race.getMatchday().getId().equals(matchday.getId());
+		if (!teamsChanged && !phaseChanged && !matchdayChanged) {
 			return null;
 		}
-		if (race.getPlayoffMatchup() != null) {
+		if (race.getPlayoffMatchup() != null && (teamsChanged || phaseChanged)) {
 			return "The teams and phase of a playoff race come from its playoff matchup";
 		}
 		var legs = race.getMatch() != null ? raceRepository.findByMatchId(race.getMatch().getId()) : List.of(race);
 		if (legs.stream().anyMatch(leg -> !leg.getResults().isEmpty())) {
-			return "Teams and phase cannot change after results were entered";
+			return "Teams, matchday and phase cannot change after results were entered";
 		}
 		return null;
 	}

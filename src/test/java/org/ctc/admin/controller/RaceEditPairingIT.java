@@ -139,7 +139,7 @@ class RaceEditPairingIT {
 
 		// when
 		save(leg2.getId(), matchday, charlie, alpha)
-				.andExpect(flash().attribute("errorMessage", "Teams and phase cannot change after results were entered"));
+				.andExpect(flash().attribute("errorMessage", "Teams, matchday and phase cannot change after results were entered"));
 
 		// then
 		assertPairing(alpha, bravo);
@@ -155,7 +155,23 @@ class RaceEditPairingIT {
 
 		// when
 		save(leg1.getId(), otherPhaseMatchday, alpha, bravo)
-				.andExpect(flash().attribute("errorMessage", "Teams and phase cannot change after results were entered"));
+				.andExpect(flash().attribute("errorMessage", "Teams, matchday and phase cannot change after results were entered"));
+
+		// then
+		transactionTemplate.executeWithoutResult(status ->
+				assertThat(raceRepository.findById(leg1.getId()).orElseThrow().getMatchday().getId())
+						.isEqualTo(matchday.getId()));
+	}
+
+	@Test
+	void givenScoredLeg1_whenLeg1MovesToAnotherMatchdayOfThePhase_thenRejected() throws Exception {
+		// given
+		addResult(leg1);
+		var laterMatchday = testHelper.createMatchdayInRegularPhase(season, "Test_Pairing MD2 " + id, 2);
+
+		// when
+		save(leg1.getId(), laterMatchday, alpha, bravo)
+				.andExpect(flash().attribute("errorMessage", "Teams, matchday and phase cannot change after results were entered"));
 
 		// then
 		transactionTemplate.executeWithoutResult(status ->
