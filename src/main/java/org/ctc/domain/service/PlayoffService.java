@@ -239,9 +239,71 @@ public class PlayoffService {
 		appendHistory(matchup, "REOPENED", previousWinner, reopenReason);
 		matchup.setWinner(null);
 		matchup.setDecisionReason(null);
+		matchup.setBye(false);
+		matchup.setWalkoverTeam(null);
 		playoffMatchupRepository.save(matchup);
 		revokeAdvancement(matchup, previousWinner);
 		log.info("Matchup {} reopened, previous winner {}", matchupId, previousWinner.getShortName());
+	}
+
+	/**
+	 * Advances the only team of a matchup without legs on a bye. Rejected while the open slot still
+	 * waits for the winner of an earlier matchup.
+	 */
+	@Transactional
+	public void declareBye(UUID matchupId) {
+		PlayoffMatchup matchup = findMatchup(matchupId);
+		requireUndecided(matchup);
+		String rejection = byeRejection(matchup, raceRepository.findByPlayoffMatchupId(matchupId));
+		if (rejection != null) {
+			throw new IllegalStateException(rejection);
+		}
+		Team team = matchup.getTeam1() != null ? matchup.getTeam1() : matchup.getTeam2();
+		matchup.setBye(true);
+		decide(matchup, team, null, "BYE");
+		log.info("Matchup {} decided as a bye for {}", matchupId, team.getShortName());
+	}
+
+	/** Decides a matchup without results for the opponent of the team that forfeits it. */
+	@Transactional
+	public void declareWalkover(UUID matchupId, UUID forfeitingTeamId, String reason) {
+		PlayoffMatchup matchup = findMatchup(matchupId);
+		requireUndecided(matchup);
+		String rejection = walkoverRejection(matchup, raceRepository.findByPlayoffMatchupId(matchupId));
+		if (rejection != null) {
+			throw new IllegalStateException(rejection);
+		}
+		boolean team1Forfeits = matchup.getTeam1().getId().equals(forfeitingTeamId);
+		if (!team1Forfeits && !matchup.getTeam2().getId().equals(forfeitingTeamId)) {
+			throw new IllegalArgumentException("The forfeiting team must be one of the matchup participants");
+		}
+		Team forfeiter = team1Forfeits ? matchup.getTeam1() : matchup.getTeam2();
+		Team winner = team1Forfeits ? matchup.getTeam2() : matchup.getTeam1();
+		matchup.setWalkoverTeam(forfeiter);
+		decide(matchup, winner, normalizedReason(reason), "WALKOVER");
+		log.info("Matchup {} decided by walkover, {} forfeits", matchupId, forfeiter.getShortName());
+	}
+
+	private String byeRejection(PlayoffMatchup matchup, List<Race> legs) {
+		if ((matchup.getTeam1() == null) == (matchup.getTeam2() == null)) {
+			return "A bye needs exactly one team in the matchup";
+		}
+		if (!legs.isEmpty()) {
+			return "A matchup with legs cannot be a bye";
+		}
+		boolean firstSlotOpen = matchup.getTeam1() == null;
+		boolean awaitsFeeder = playoffMatchupRepository.findByRoundPlayoffId(matchup.getRound().getPlayoff().getId()).stream()
+				.anyMatch(feeder -> feeder.getNextMatchup() != null
+						&& feeder.getNextMatchup().getId().equals(matchup.getId())
+						&& feedsFirstSlot(feeder) == firstSlotOpen);
+		return awaitsFeeder ? "The open slot waits for the winner of an earlier matchup" : null;
+	}
+
+	private static String walkoverRejection(PlayoffMatchup matchup, List<Race> legs) {
+		if (!matchup.isReady()) {
+			return "A walkover needs both teams in the matchup";
+		}
+		return allLegsUnscored(legs) ? null : "A walkover needs a matchup without results";
 	}
 
 	private PlayoffMatchup findMatchup(UUID matchupId) {
@@ -290,9 +352,13 @@ public class PlayoffService {
 	}
 
 	private void decide(PlayoffMatchup matchup, Team winner, String reason) {
+		decide(matchup, winner, reason, "DECIDED");
+	}
+
+	private void decide(PlayoffMatchup matchup, Team winner, String reason, String action) {
 		matchup.setWinner(winner);
 		matchup.setDecisionReason(reason);
-		appendHistory(matchup, "DECIDED", winner, reason);
+		appendHistory(matchup, action, winner, reason);
 		playoffMatchupRepository.save(matchup);
 
 		PlayoffMatchup next = matchup.getNextMatchup();
@@ -409,7 +475,10 @@ public class PlayoffService {
 				.orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", matchupId));
 		var legs = raceRepository.findByPlayoffMatchupId(matchupId);
 		var playoff = matchup.getRound().getPlayoff();
-		return new MatchupDetailData(matchup, legs, playoff);
+		boolean undecided = !matchup.isComplete();
+		return new MatchupDetailData(matchup, legs, playoff,
+				undecided && byeRejection(matchup, legs) == null,
+				undecided && walkoverRejection(matchup, legs) == null);
 	}
 
 	@Transactional
@@ -479,6 +548,7 @@ public class PlayoffService {
 	                              List<Season> allSeasons, UUID selectedSeasonId) {
 	}
 
-	public record MatchupDetailData(PlayoffMatchup matchup, List<Race> legs, Playoff playoff) {
+	public record MatchupDetailData(PlayoffMatchup matchup, List<Race> legs, Playoff playoff,
+	                                boolean byeAllowed, boolean walkoverAllowed) {
 	}
 }

@@ -16,6 +16,7 @@ import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonTeam;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.PhaseTeamRepository;
+import org.ctc.domain.repository.PlayoffMatchupRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.RaceResultRepository;
 import org.ctc.domain.repository.SeasonRepository;
@@ -32,7 +33,8 @@ class StandingsServiceStalenessSnapshotTest {
 				mock(SeasonPhaseService.class),
 				mock(PhaseTeamRepository.class),
 				mock(RaceResultRepository.class),
-				seasonTeamRepository);
+				seasonTeamRepository,
+				mock(PlayoffMatchupRepository.class));
 	}
 
 	private DiscordPost postUpdatedAt(LocalDateTime when) {

@@ -15,6 +15,8 @@ public interface PlayoffMatchupRepository extends JpaRepository<PlayoffMatchup, 
 	@EntityGraph(attributePaths = {"team1", "team2", "winner", "round"})
 	List<PlayoffMatchup> findByRoundPlayoffId(UUID playoffId);
 
+	List<PlayoffMatchup> findByRoundPlayoffPhaseIdAndWinnerIsNotNull(UUID phaseId);
+
 	/**
 	 * Full-table finder used by {@code BackupExportService}.
 	 *

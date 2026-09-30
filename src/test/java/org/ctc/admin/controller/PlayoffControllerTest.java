@@ -250,6 +250,49 @@ class PlayoffControllerTest {
                 .andExpect(flash().attribute("errorMessage", "Seeding is frozen once a playoff matchup has results or a winner"));
     }
 
+    @Test
+    void givenMatchupWithOneSeededTeam_whenPageShownAndByeDeclared_thenTheCardLeadsToTheBye() throws Exception {
+        // given
+        var playoff = playoffService.createPlayoff(season.getId(), "Bye Test", 4);
+        var matchup = playoff.getRounds().get(0).getMatchups().get(0);
+        playoffSeedingService.seedTeam(matchup.getId(), season.getTeams().get(0).getId(), 1);
+
+        // when / then
+        mockMvc.perform(get("/admin/playoffs/matchup/" + matchup.getId()))
+                .andExpect(model().attribute("byeAllowed", true))
+                .andExpect(model().attribute("walkoverAllowed", false))
+                .andExpect(content().string(containsString("Advance on a bye")));
+        mockMvc.perform(post("/admin/playoffs/matchup/" + matchup.getId() + "/bye"))
+                .andExpect(redirectedUrl("/admin/playoffs/matchup/" + matchup.getId()))
+                .andExpect(flash().attribute("successMessage", "Matchup decided as a bye"));
+        mockMvc.perform(post("/admin/playoffs/matchup/" + matchup.getId() + "/bye"))
+                .andExpect(flash().attribute("errorMessage", "Error: The matchup is already decided. Reopen it first"));
+    }
+
+    @Test
+    void givenMatchupWithBothTeams_whenWalkoverDeclared_thenANonParticipantIsRejectedAndAParticipantForfeits()
+            throws Exception {
+        // given
+        var playoff = playoffService.createPlayoff(season.getId(), "Walkover Test", 4);
+        var matchup = playoff.getRounds().get(0).getMatchups().get(0);
+        var teams = season.getTeams();
+        playoffSeedingService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
+        playoffSeedingService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
+
+        // when / then
+        mockMvc.perform(get("/admin/playoffs/matchup/" + matchup.getId()))
+                .andExpect(model().attribute("walkoverAllowed", true))
+                .andExpect(model().attribute("byeAllowed", false));
+        mockMvc.perform(post("/admin/playoffs/matchup/" + matchup.getId() + "/walkover")
+                        .param("forfeitingTeamId", teams.get(2).getId().toString()))
+                .andExpect(flash().attribute("errorMessage",
+                        "Error: The forfeiting team must be one of the matchup participants"));
+        mockMvc.perform(post("/admin/playoffs/matchup/" + matchup.getId() + "/walkover")
+                        .param("forfeitingTeamId", teams.get(1).getId().toString()).param("reason", "No show"))
+                .andExpect(redirectedUrl("/admin/playoffs/matchup/" + matchup.getId()))
+                .andExpect(flash().attribute("successMessage", "Matchup decided by walkover"));
+    }
+
     private org.ctc.domain.model.PlayoffMatchup decidedMatchup(String name) {
         var playoff = playoffService.createPlayoff(season.getId(), name, 4);
         var matchup = playoff.getRounds().get(0).getMatchups().get(0);

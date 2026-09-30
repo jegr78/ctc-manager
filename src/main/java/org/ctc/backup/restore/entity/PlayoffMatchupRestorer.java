@@ -38,6 +38,8 @@ import org.springframework.stereotype.Component;
  *   <li>{@code home_score} (INT, nullable)</li>
  *   <li>{@code away_score} (INT, nullable)</li>
  *   <li>{@code decision_reason} (VARCHAR(500), nullable) and {@code decision_history} (TEXT, nullable), V19</li>
+ *   <li>{@code bye} (BOOLEAN NOT NULL) and {@code walkover_team_id} (UUID, nullable FK), V20; absent in older
+ *   backups, which restore as {@code false} and {@code NULL}</li>
  *   <li>{@code created_at}, {@code updated_at} (TIMESTAMP)</li>
  * </ul>
  *
@@ -55,8 +57,8 @@ public class PlayoffMatchupRestorer implements EntityRestorer {
     private static final String INSERT_SQL_PASS1 =
             "INSERT INTO playoff_matchups (id, round_id, team1_id, team2_id, winner_id, "
                     + "next_matchup_id, bracket_position, home_score, away_score, decision_reason, "
-                    + "decision_history, created_at, updated_at) "
-                    + "VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)";
+                    + "decision_history, bye, walkover_team_id, created_at, updated_at) "
+                    + "VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     /**
      * Pass-2 UPDATE binds {@code next_matchup_id} from the JSON, scoped by {@code id}.
@@ -90,8 +92,10 @@ public class PlayoffMatchupRestorer implements EntityRestorer {
             setNullableInt(ps, 8, row, "awayScore");
             setNullableString(ps, 9, row, "decisionReason");
             setNullableString(ps, 10, row, "decisionHistory");
-            ps.setTimestamp(11, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
-            ps.setTimestamp(12, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
+            ps.setBoolean(11, row.path("bye").asBoolean(false));
+            setNullableUuid(ps, 12, row, "walkoverTeam");
+            ps.setTimestamp(13, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
+            ps.setTimestamp(14, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
         });
 
         // Pass 2: UPDATE next_matchup_id for the subset with a non-null nextMatchup reference

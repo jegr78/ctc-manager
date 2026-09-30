@@ -19,7 +19,36 @@
 
     <div th:if="${matchup.winner != null}" class="alert alert-success">
         Winner: <strong th:text="${matchup.winner.shortName}"></strong>
+        <span th:if="${matchup.bye}" class="badge badge-inactive">Bye</span>
+        <span th:if="${matchup.walkoverTeam != null}" class="badge badge-inactive" th:text="|w/o ${matchup.walkoverTeam.shortName}|"></span>
         <span th:if="${matchup.decisionReason != null}" class="text-dim" th:text="|Reason: ${matchup.decisionReason}|"></span>
+    </div>
+
+    <div th:if="${byeAllowed}" class="card">
+        <h2>Bye</h2>
+        <p class="text-dim">The matchup has only one team and no earlier matchup feeds the open slot.</p>
+        <form th:action="@{/admin/playoffs/matchup/{id}/bye(id=${matchup.id})}" method="post"
+              onsubmit="return confirm('Advance the team on a bye?')">
+            <button type="submit" class="btn btn-secondary">Advance on a bye</button>
+        </form>
+    </div>
+
+    <div th:if="${walkoverAllowed}" class="card">
+        <h2>Walkover</h2>
+        <p class="text-dim">Decides the matchup for the opponent of the team that forfeits it. Only possible before any leg has results.</p>
+        <form th:action="@{/admin/playoffs/matchup/{id}/walkover(id=${matchup.id})}" method="post"
+              onsubmit="return confirm('Decide the matchup by walkover?')">
+            <div class="form-group">
+                <label for="walkoverReason">Reason</label>
+                <input id="walkoverReason" type="text" name="reason" maxlength="500">
+            </div>
+            <div class="actions">
+                <button type="submit" name="forfeitingTeamId" th:value="${matchup.team1.id}"
+                        class="btn btn-secondary" th:text="|${matchup.team1.shortName} forfeits|"></button>
+                <button type="submit" name="forfeitingTeamId" th:value="${matchup.team2.id}"
+                        class="btn btn-secondary" th:text="|${matchup.team2.shortName} forfeits|"></button>
+            </div>
+        </form>
     </div>
 
     <div th:if="${matchup.winner != null}" class="card">

@@ -175,6 +175,8 @@ public class PlayoffController {
         model.addAttribute("matchup", data.matchup());
         model.addAttribute("legs", data.legs());
         model.addAttribute("playoff", data.playoff());
+        model.addAttribute("byeAllowed", data.byeAllowed());
+        model.addAttribute("walkoverAllowed", data.walkoverAllowed());
         return "admin/playoff-matchup";
     }
 
@@ -218,6 +220,31 @@ public class PlayoffController {
             redirectAttributes.addFlashAttribute("errorMessage", "Error: " + e.getMessage());
             return "redirect:/admin/playoffs/matchup/" + matchupId;
         }
+    }
+
+    @PostMapping("/matchup/{matchupId}/bye")
+    public String declareBye(@PathVariable UUID matchupId, RedirectAttributes redirectAttributes) {
+        try {
+            playoffService.declareBye(matchupId);
+            redirectAttributes.addFlashAttribute("successMessage", "Matchup decided as a bye");
+        } catch (EntityNotFoundException | IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Error: " + e.getMessage());
+        }
+        return "redirect:/admin/playoffs/matchup/" + matchupId;
+    }
+
+    @PostMapping("/matchup/{matchupId}/walkover")
+    public String declareWalkover(@PathVariable UUID matchupId,
+                                  @RequestParam UUID forfeitingTeamId,
+                                  @RequestParam(required = false) String reason,
+                                  RedirectAttributes redirectAttributes) {
+        try {
+            playoffService.declareWalkover(matchupId, forfeitingTeamId, reason);
+            redirectAttributes.addFlashAttribute("successMessage", "Matchup decided by walkover");
+        } catch (EntityNotFoundException | IllegalArgumentException | IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Error: " + e.getMessage());
+        }
+        return "redirect:/admin/playoffs/matchup/" + matchupId;
     }
 
     @PostMapping("/matchup/{matchupId}/reopen")
