@@ -18,6 +18,8 @@ public interface PhaseTeamRepository extends JpaRepository<PhaseTeam, UUID> {
 
     boolean existsByPhaseSeasonId(UUID seasonId);
 
+    boolean existsByPhaseSeasonIdAndTeamId(UUID seasonId, UUID teamId);
+
     /**
      * Full-table finder used by {@code BackupExportService}.
      *

@@ -334,8 +334,8 @@ public class SeasonManagementService {
 
     /**
      * Removes a team from a season with sub-team constraint check.
-     * Strict guard: refuses removal if any PhaseTeam in the season references the team.
-     * Auto-removes the parent team if no more sub-teams remain.
+     * Refuses removal while the team itself holds a place in a phase of the season. Auto-removes the
+     * parent team once no sub-team remains, unless the parent still holds a phase place.
      */
     @Transactional
     public String removeTeamFromSeason(UUID seasonId, UUID teamId) {
@@ -344,7 +344,7 @@ public class SeasonManagementService {
         var team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new EntityNotFoundException("Team", teamId));
 
-        if (phaseTeamRepository.existsByPhaseSeasonId(seasonId)) {
+        if (phaseTeamRepository.existsByPhaseSeasonIdAndTeamId(seasonId, teamId)) {
             throw new BusinessRuleException(
                     "Cannot remove team from season: team is still assigned to one or more phase rosters. " +
                     "Remove it from all phases first.");
@@ -365,7 +365,7 @@ public class SeasonManagementService {
             var parent = team.getParentTeam();
             boolean hasOtherSubs = season.getTeams().stream()
                     .anyMatch(t -> t.isSubTeam() && t.getParentOrSelf().getId().equals(parent.getId()));
-            if (!hasOtherSubs) {
+            if (!hasOtherSubs && !phaseTeamRepository.existsByPhaseSeasonIdAndTeamId(seasonId, parent.getId())) {
                 season.removeTeam(parent);
                 log.info("Auto-removed parent team {} from season {} (no sub-teams left)",
                         parent.getShortName(), season.getName());
