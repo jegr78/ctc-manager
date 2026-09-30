@@ -274,7 +274,7 @@ public class BackupController {
 	 */
 	private String mapReason(BackupArchiveException ex) {
 		return switch (ex.reason()) {
-			case SCHEMA_MISMATCH -> ex.getMessage();
+			case SCHEMA_MISMATCH, DATA_MISMATCH -> ex.getMessage();
 			case PATH_TRAVERSAL, ENTRY_TOO_LARGE, TOTAL_TOO_LARGE, TOO_MANY_ENTRIES,
 					MANIFEST_MISSING, MANIFEST_INVALID, NOT_A_ZIP
 					-> "Backup archive failed safety checks (size or path) and was rejected.";
