@@ -157,7 +157,7 @@ All FK columns get indexes per project FK-index convention. Snowflake IDs stored
 ### 3.4 Security
 
 - **Bot-Token** in `application-local.yml` / env-var `DISCORD_BOT_TOKEN`; never committed; never logged.
-- **Webhook-URL secrets in DB**: `@ToString.Exclude` on `Match.discordChannelWebhookUrl`; log pattern masks `https://discord.com/api/webhooks/[^/\s]+/[^/\s]+`.
+- **Webhook-URL secrets in DB**: `@ToString.Exclude` on `Match.discordChannelWebhookUrl`; log pattern masks `https?://[^/\s]+(/api)?(/v[0-9]+)?/webhooks/[^/\s]+/[^/\s]+`; the webhook client logs only redacted URLs.
 - **SSRF whitelist** `app.discord.allowed-hosts=discord.com` applied to all outbound calls (analog to v1.5 SSRF pattern).
 - **CSRF tokens** on all `POST /admin/discord/**` endpoints (Phase 30 pattern).
 - **Mass-assignment defense:** new `DiscordConfigForm` DTO; `MatchForm` extended with new fields via DTO, not direct entity-binding.

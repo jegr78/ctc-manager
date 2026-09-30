@@ -995,8 +995,7 @@ public class DiscordPostService {
 	static WebhookCredentials parseWebhookUrl(String webhookUrl) {
 		Matcher matcher = WEBHOOK_URL_PATTERN.matcher(webhookUrl);
 		if (!matcher.matches()) {
-			throw new IllegalArgumentException(
-					"Discord webhook URL does not match expected shape: " + webhookUrl);
+			throw new IllegalArgumentException("Discord webhook URL does not match expected shape");
 		}
 		return new WebhookCredentials(matcher.group(1), matcher.group(2));
 	}

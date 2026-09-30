@@ -6,7 +6,11 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import java.util.List;
 import org.ctc.discord.dto.WebhookPayload;
@@ -15,6 +19,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
@@ -65,5 +70,38 @@ class DiscordLogMaskingIT {
 		assertThat(out.getAll())
 				.doesNotContain(WEBHOOK_URL_TOKEN_FRAGMENT)
 				.contains("***/***");
+	}
+
+	@Test
+	void givenVersionedWebhookUrl_whenExecuteFailsAndTheExceptionIsLogged_thenTheTokenIsMaskedEverywhere(
+			CapturedOutput out) {
+		// given
+		wm.stubFor(post(urlPathMatching("/api/v10/webhooks/.*"))
+				.willReturn(aResponse().withStatus(500)));
+		String webhookUrl = wm.baseUrl() + "/api/v10/webhooks/998/" + WEBHOOK_URL_TOKEN_FRAGMENT;
+
+		var clientLogger = (Logger) LoggerFactory.getLogger(DiscordWebhookClient.class);
+		var events = new ListAppender<ILoggingEvent>();
+		events.start();
+		clientLogger.addAppender(events);
+
+		// when
+		Throwable thrown;
+		try {
+			thrown = catchThrowable(() -> webhookClient.execute(webhookUrl, new WebhookPayload("hi", List.of())));
+		} finally {
+			clientLogger.detachAppender(events);
+		}
+		LoggerFactory.getLogger(DiscordLogMaskingIT.class).warn("Webhook call failed for " + webhookUrl, thrown);
+
+		// then
+		assertThat(thrown).isInstanceOf(DiscordTransientException.class);
+		assertThat(events.list).extracting(ILoggingEvent::getFormattedMessage)
+				.as("the client must not hand the token to any appender")
+				.isNotEmpty()
+				.noneMatch(message -> message.contains(WEBHOOK_URL_TOKEN_FRAGMENT));
+		assertThat(out.getAll())
+				.contains("Discord webhook execute failed for", "Webhook call failed for")
+				.doesNotContain(WEBHOOK_URL_TOKEN_FRAGMENT);
 	}
 }

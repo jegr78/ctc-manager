@@ -64,7 +64,7 @@ public class DiscordWebhookClient {
 					.retrieve()
 					.body(WebhookMessage.class));
 		} catch (DiscordApiException e) {
-			log.warn("Discord webhook execute failed for {}: {}", webhookUrl, e.category());
+			log.warn("Discord webhook execute failed for {}: {}", DiscordWebhookUrls.redact(webhookUrl), e.category());
 			throw e;
 		}
 	}

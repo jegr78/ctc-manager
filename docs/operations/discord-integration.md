@@ -512,10 +512,11 @@ tokens leaving the JVM should not happen at all).
   enable on the next page render. The disabled-state is purely server-side
   rendered via Thymeleaf `th:disabled` — no JavaScript involved.
 
-### Log lines contain the literal string `***/api/webhooks/***/***`
+### Log lines contain the literal string `https://***/webhooks/***/***`
 
 - This is expected. The Logback `%replace` mask redacts every webhook URL that
-  appears in any log line (T-93-02 mitigation surface c). If you see an
+  appears in any log line, with or without `/api` and a `/vN` version
+  (T-93-02 mitigation surface c). If you see an
   **unmasked** webhook URL anywhere in the logs, that is a regression — file
   an issue immediately and revert the Logback change.
 
