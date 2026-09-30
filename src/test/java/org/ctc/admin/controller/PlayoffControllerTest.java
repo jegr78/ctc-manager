@@ -236,6 +236,31 @@ class PlayoffControllerTest {
     }
 
     @Test
+    void givenDecidedMatchup_whenSeedingPageShown_thenItIsFrozenWithoutSaveOrAutoSeed() throws Exception {
+        // given
+        var playoffId = decidedMatchup("Frozen Page Test").getRound().getPlayoff().getId();
+
+        // when / then
+        mockMvc.perform(get("/admin/playoffs/" + playoffId + "/seed"))
+                .andExpect(model().attribute("seedingFrozen", true))
+                .andExpect(content().string(containsString("data-testid=\"seeding-frozen\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Save Seeding"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Auto-Seed by Number"))));
+    }
+
+    @Test
+    void givenOpenPlayoff_whenSeedingPageShown_thenSaveAndAutoSeedAreOffered() throws Exception {
+        // given
+        var playoff = playoffService.createPlayoff(season.getId(), "Open Seed Page Test", 4);
+
+        // when / then
+        mockMvc.perform(get("/admin/playoffs/" + playoff.getId() + "/seed"))
+                .andExpect(model().attribute("seedingFrozen", false))
+                .andExpect(content().string(containsString("Save Seeding")))
+                .andExpect(content().string(containsString("Auto-Seed by Number")));
+    }
+
+    @Test
     void givenDecidedMatchup_whenSeedingSaved_thenErrorFlashOnTheSeedingPage() throws Exception {
         // given
         var matchup = decidedMatchup("Frozen Seed Test");

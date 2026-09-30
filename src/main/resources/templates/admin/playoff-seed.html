@@ -7,11 +7,16 @@
         <h1 th:text="'Seeding — ' + ${playoff.name}"></h1>
     </div>
 
+    <div th:if="${seedingFrozen}" class="alert alert-warning" data-testid="seeding-frozen">
+        Seeding is frozen because a playoff matchup has results or a winner.
+    </div>
+
     <!-- Seed Numbers -->
     <div class="card">
         <h2>Seed Numbers</h2>
-        <p class="text-dim mb-sm">Assign a seed number to each team. Used for graphics and auto-seeding the bracket.</p>
+        <p class="text-dim mb-sm">Assign a seed number to each team. Used for graphics and auto-seeding the bracket. An empty slot is cleared on save.</p>
         <form th:action="@{/admin/playoffs/{id}/seed(id=${playoff.id})}" method="post">
+            <fieldset th:disabled="${seedingFrozen}" class="fieldset-plain">
             <input type="hidden" name="playoffId" th:value="${playoff.id}">
             <table>
                 <thead>
@@ -51,15 +56,16 @@
                     </tr>
                 </tbody>
             </table>
+            </fieldset>
             <div class="actions mt-md">
-                <button type="submit" class="btn btn-primary">Save Seeding</button>
+                <button th:if="${!seedingFrozen}" type="submit" class="btn btn-primary">Save Seeding</button>
                 <a th:href="@{/admin/playoffs(seasonId=${playoff.season.id})}" class="btn btn-secondary">Back</a>
             </div>
         </form>
     </div>
 
     <!-- Auto-Seed -->
-    <div class="card">
+    <div th:if="${!seedingFrozen}" class="card">
         <h2>Auto-Seed Bracket</h2>
         <p class="text-dim mb-sm">Automatically assign teams to matchups based on their seed numbers (1 vs N, 2 vs N-1, etc.).</p>
         <form th:action="@{/admin/playoffs/{id}/auto-seed(id=${playoff.id})}" method="post">

@@ -260,6 +260,7 @@ class PlayoffSeedingServiceTest {
 			);
 
 			when(playoffMatchupRepository.findById(matchupId)).thenReturn(Optional.of(matchup));
+			when(playoffRepository.findById(playoffId)).thenReturn(Optional.of(playoff));
 			when(teamRepository.findById(team1.getId())).thenReturn(Optional.of(team1));
 			when(playoffMatchupRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -271,17 +272,22 @@ class PlayoffSeedingServiceTest {
 		}
 
 		@Test
-		void givenSeedEntryWithNullTeamId_whenSaveSeed_thenEntrySkipped() {
+		void givenSeedEntryWithNullTeamId_whenSaveSeed_thenTheSlotIsClearedAndSeedNumbersRemoved() {
 			// given
-			var seeds = List.of(
-					new PlayoffSeedingService.SeedEntry(UUID.randomUUID(), 1, null, null)
-			);
+			var matchupId = UUID.randomUUID();
+			var matchup = new PlayoffMatchup(new PlayoffRound(playoff, "Final", 0), 0);
+			matchup.setId(matchupId);
+			matchup.setTeam1(team1);
+			when(playoffMatchupRepository.findById(matchupId)).thenReturn(Optional.of(matchup));
+			when(playoffRepository.findById(playoffId)).thenReturn(Optional.of(playoff));
+			when(playoffMatchupRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
 			// when
-			playoffSeedingService.saveSeed(playoffId, seeds);
+			playoffSeedingService.saveSeed(playoffId, List.of(new PlayoffSeedingService.SeedEntry(matchupId, 1, null, null)));
 
-			// then — no matchup lookup should occur
-			verify(playoffMatchupRepository, never()).findById(any());
+			// then
+			assertThat(matchup.getTeam1()).as("cleared slot").isNull();
+			verify(playoffSeedRepository).deleteByPlayoffId(playoffId);
 		}
 	}
 
