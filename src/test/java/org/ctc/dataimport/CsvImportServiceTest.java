@@ -3,6 +3,7 @@ package org.ctc.dataimport;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.*;
+import org.ctc.dataimport.exception.ImportRejectedException;
 import org.ctc.domain.exception.ValidationException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
@@ -366,12 +367,10 @@ class CsvImportServiceTest {
 		preview.addRow(row1);
 		preview.addRow(row2);
 
-		// when
-		var result = csvImportService.executeImport(preview, Map.of(), Set.of(), false);
-
-		// then
-		assertThat(result.hasErrors()).isTrue();
-		assertThat(result.getErrors().getFirst()).contains("Match already exists");
+		// when / then
+		assertThatThrownBy(() -> csvImportService.executeImport(preview, Map.of(), Set.of(), false))
+				.isInstanceOfSatisfying(ImportRejectedException.class, ex -> assertThat(ex.getErrors())
+						.singleElement().asString().contains("Match already exists"));
 	}
 
 	@Test
@@ -594,12 +593,10 @@ class CsvImportServiceTest {
 
 		// No confirmation for fuzzy match, not in createNewDrivers
 
-		// when
-		var result = csvImportService.executeImport(preview, Map.of(), Set.of(), false);
-
-		// then
-		assertThat(result.hasErrors()).isTrue();
-		assertThat(result.getErrors().getFirst()).contains("could not be assigned");
+		// when / then
+		assertThatThrownBy(() -> csvImportService.executeImport(preview, Map.of(), Set.of(), false))
+				.isInstanceOfSatisfying(ImportRejectedException.class, ex -> assertThat(ex.getErrors())
+						.anySatisfy(err -> assertThat(err).contains("could not be assigned")));
 	}
 
 
@@ -775,12 +772,10 @@ class CsvImportServiceTest {
 
 		var previews = List.of(race1Preview, race2Preview);
 
-		// when
-		var result = csvImportService.executeMultiRaceImport(previews, Map.of(), Set.of(), false);
-
-		// then
-		assertThat(result.hasErrors()).isTrue();
-		assertThat(result.getErrors()).anySatisfy(err -> assertThat(err).contains("Match already exists"));
+		// when / then
+		assertThatThrownBy(() -> csvImportService.executeMultiRaceImport(previews, Map.of(), Set.of(), false))
+				.isInstanceOfSatisfying(ImportRejectedException.class, ex -> assertThat(ex.getErrors())
+						.anySatisfy(err -> assertThat(err).contains("Match already exists")));
 		// No new races should be created
 		verify(raceRepository, never()).save(any(Race.class));
 	}
@@ -847,7 +842,7 @@ class CsvImportServiceTest {
 
 
 	@Test
-	void givenPreviewWithEmptyRowsList_whenExecuteMultiRaceImport_thenAddsError() {
+	void givenPreviewWithEmptyRowsList_whenExecuteMultiRaceImport_thenRejected() {
 		// given
 		when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 		when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
@@ -855,11 +850,10 @@ class CsvImportServiceTest {
 		var metadata = new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId());
 		var emptyPreview = new CsvImportService.ImportPreview(metadata);
 
-		// when
-		var result = csvImportService.executeMultiRaceImport(List.of(emptyPreview), Map.of(), Set.of(), false);
-
-		// then - should handle gracefully
-		assertThat(result).isNotNull();
+		// when / then
+		assertThatThrownBy(() -> csvImportService.executeMultiRaceImport(List.of(emptyPreview), Map.of(), Set.of(), false))
+				.isInstanceOfSatisfying(ImportRejectedException.class, ex -> assertThat(ex.getErrors())
+						.containsExactly("Team not found: UNKNOWN"));
 	}
 
 	@Test
@@ -1035,11 +1029,10 @@ class CsvImportServiceTest {
 		var preview = new CsvImportService.ImportPreview(metadata);
 		preview.addRow(row);
 
-		var result = csvImportService.executeImport(preview, Map.of(), Set.of(), false);
-
-		// Should have error about team not found
-		assertThat(result.hasErrors()).isTrue();
-		assertThat(result.getErrors()).anySatisfy(err -> assertThat(err).contains("Team not found"));
+		// when / then
+		assertThatThrownBy(() -> csvImportService.executeImport(preview, Map.of(), Set.of(), false))
+				.isInstanceOfSatisfying(ImportRejectedException.class, ex -> assertThat(ex.getErrors())
+						.anySatisfy(err -> assertThat(err).contains("Team not found")));
 	}
 
 	@Test
@@ -1062,11 +1055,59 @@ class CsvImportServiceTest {
 	}
 
 	@Test
-	void givenEmptyPreviewsList_whenExecuteMultiRaceImport_thenReturnsErrorResult() {
-		// Test that empty previews list returns error
-		var result = csvImportService.executeMultiRaceImport(List.of(), Map.of(), Set.of(), false);
+	void givenEmptyPreviewsList_whenExecuteMultiRaceImport_thenRejected() {
+		// when / then
+		assertThatThrownBy(() -> csvImportService.executeMultiRaceImport(List.of(), Map.of(), Set.of(), false))
+				.isInstanceOfSatisfying(ImportRejectedException.class, ex -> assertThat(ex.getErrors())
+						.containsExactly("No previews provided for import"));
+	}
 
-		assertThat(result.hasErrors()).isTrue();
-		assertThat(result.getErrors()).anySatisfy(err -> assertThat(err).contains("No previews provided"));
+	@Test
+	void givenPreviewsWithParseErrors_whenExecuteMultiRaceImport_thenRejectedWithEveryErrorBeforeAnyLookup() {
+		// given
+		var metadata = new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId());
+		var race1 = new CsvImportService.ImportPreview(metadata);
+		race1.addError("Row 3: Too few columns");
+		var race2 = new CsvImportService.ImportPreview(metadata);
+		race2.addError("Row 5: Invalid value for Quali: x");
+
+		// when / then
+		assertThatThrownBy(() -> csvImportService.executeMultiRaceImport(List.of(race1, race2), Map.of(), Set.of(), false))
+				.isInstanceOfSatisfying(ImportRejectedException.class, ex -> assertThat(ex.getErrors())
+						.containsExactly("Race 1: Row 3: Too few columns", "Race 2: Row 5: Invalid value for Quali: x"));
+		verifyNoInteractions(seasonRepository, matchRepository, raceRepository, driverRepository);
+	}
+
+	@Test
+	void givenPreviewsWithDifferentMetadata_whenExecuteMultiRaceImport_thenRejected() {
+		// given
+		var race1 = new CsvImportService.ImportPreview(
+				new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId()));
+		var race2 = new CsvImportService.ImportPreview(
+				new CsvImportService.ImportMetadata(season.getId(), "Other MD", null, null, null, null));
+
+		// when / then
+		assertThatThrownBy(() -> csvImportService.executeMultiRaceImport(List.of(race1, race2), Map.of(), Set.of(), false))
+				.isInstanceOfSatisfying(ImportRejectedException.class, ex -> assertThat(ex.getErrors())
+						.containsExactly("Race 2: import metadata differs from race 1"));
+	}
+
+	@Test
+	void givenConfirmedFuzzyMatchForDeletedDriver_whenExecuteImport_thenRejected() {
+		// given
+		setupCommonMocks();
+		var deletedDriverId = UUID.randomUUID();
+		when(driverRepository.findById(deletedDriverId)).thenReturn(Optional.empty());
+		var metadata = new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId());
+		var preview = new CsvImportService.ImportPreview(metadata);
+		preview.addRow(new CsvImportService.ImportRow("BRV", "driver1_psm", 1, 1, false,
+				DriverMatchingService.MatchResult.fuzzy("driver1_psm", driver1, 0.9)));
+		preview.addRow(new CsvImportService.ImportRow("CRL", "driver2_psn", 2, 2, false,
+				DriverMatchingService.MatchResult.exact("driver2_psn", driver2)));
+
+		// when / then
+		assertThatThrownBy(() -> csvImportService.executeImport(preview, Map.of("driver1_psm", deletedDriverId), Set.of(), false))
+				.isInstanceOfSatisfying(ImportRejectedException.class, ex -> assertThat(ex.getErrors())
+						.contains("Confirmed driver no longer exists for: driver1_psm"));
 	}
 }
