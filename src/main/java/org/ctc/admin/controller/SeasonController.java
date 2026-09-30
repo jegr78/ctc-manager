@@ -298,6 +298,7 @@ public class SeasonController {
 		Integer totalRounds = regular.getTotalRounds();
 		model.addAttribute("season", data.season());
 		model.addAttribute("raceScores", data.raceScores());
+		model.addAttribute("walkovers", data.walkovers());
 		model.addAttribute("totalRounds", totalRounds);
 		model.addAttribute("currentRound", swissPairingService.getCurrentRound(regular.getId(), null));
 		model.addAttribute("canGenerateNext",

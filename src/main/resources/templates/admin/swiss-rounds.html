@@ -33,8 +33,18 @@
                                 <span class="swiss-score" th:text="${raceScores[race.id][1]}"></span>
                             </div>
                         </th:block>
+                        <th:block th:if="${walkovers[race.id] != null}">
+                            <div class="swiss-team">
+                                <span th:text="${race.homeTeam.shortName}"></span>
+                                <span th:if="${walkovers[race.id] == race.homeTeam.id}" class="match-wo">w/o</span>
+                            </div>
+                            <div class="swiss-team">
+                                <span th:text="${race.awayTeam.shortName}"></span>
+                                <span th:if="${walkovers[race.id] == race.awayTeam.id}" class="match-wo">w/o</span>
+                            </div>
+                        </th:block>
                         <!-- Quick Score form -->
-                        <th:block th:if="${raceScores[race.id] == null}">
+                        <th:block th:if="${raceScores[race.id] == null and walkovers[race.id] == null}">
                             <form th:action="@{/admin/races/{id}/quick-score(id=${race.id})}" method="post" class="quick-score-form">
                                 <input type="hidden" name="returnUrl" th:value="@{/admin/seasons/{id}/swiss(id=${season.id})}">
                                 <div class="swiss-team">

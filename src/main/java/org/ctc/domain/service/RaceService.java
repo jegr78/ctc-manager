@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.service.TeamCardService;
 import org.ctc.discord.event.MatchScheduleFieldsChangedEvent;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.springframework.context.ApplicationEventPublisher;
@@ -258,6 +259,9 @@ public class RaceService {
 	@Transactional
 	public String quickScore(UUID raceId, int homeScore, int awayScore) {
 		var race = raceRepository.findById(raceId).orElseThrow();
+		if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
+			throw new BusinessRuleException("A walkover match has no score");
+		}
 		if (race.getMatch() != null) {
 			race.getMatch().setHomeScore(homeScore);
 			race.getMatch().setAwayScore(awayScore);
