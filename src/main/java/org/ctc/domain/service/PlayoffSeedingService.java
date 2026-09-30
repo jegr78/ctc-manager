@@ -78,16 +78,24 @@ public class PlayoffSeedingService {
 		Map<UUID, Integer> seedNumbers = playoffSeedRepository.findByPlayoffId(playoffId).stream()
 				.collect(Collectors.toMap(s -> s.getTeam().getId(), PlayoffSeed::getSeed));
 
-		return new SeedingData(playoff, bracket, firstRound, teams, seededTeamIds, seedNumbers);
+		return new SeedingData(playoff, bracket, firstRound, teams, seededTeamIds, seedNumbers,
+				isSeedingFrozen(playoffId));
 	}
 
+	/**
+	 * Saves the seeding form: every submitted slot takes its team, and an empty slot is cleared.
+	 * The seed numbers are replaced by the submitted ones, so an all-empty form removes them.
+	 */
 	@Transactional
 	public void saveSeed(UUID playoffId, List<SeedEntry> seeds) {
 		requireSeedingOpen(playoffId);
 		for (var entry : seeds) {
-			if (entry.teamId() != null) {
-				seedTeam(entry.matchupId(), entry.teamId(), entry.slot());
+			var matchup = entry.matchupId() == null ? null : playoffMatchupRepository.findById(entry.matchupId()).orElse(null);
+			if (matchup == null || !matchup.getRound().getPlayoff().getId().equals(playoffId)
+					|| matchup.getRound().getRoundIndex() != 0) {
+				throw new IllegalArgumentException("The seeding slot does not belong to this playoff");
 			}
+			seedTeam(entry.matchupId(), entry.teamId(), entry.slot());
 		}
 
 		Map<UUID, Integer> teamSeeds = new LinkedHashMap<>();
@@ -96,9 +104,7 @@ public class PlayoffSeedingService {
 				teamSeeds.put(entry.teamId(), entry.seedNumber());
 			}
 		}
-		if (!teamSeeds.isEmpty()) {
-			saveSeedNumbers(playoffId, teamSeeds);
-		}
+		saveSeedNumbers(playoffId, teamSeeds);
 
 		log.info("Seeding saved for playoff {}", playoffId);
 	}
@@ -180,6 +186,10 @@ public class PlayoffSeedingService {
 		int[] matchupOrder = buildBracketOrder(matchups.size());
 
 		int seededTeamCount = sortedTeams.size();
+		if (seededTeamCount < matchups.size() * 2) {
+			throw new IllegalStateException("Auto-seeding needs seed numbers for all %d teams, found %d"
+					.formatted(matchups.size() * 2, seededTeamCount));
+		}
 		for (int i = 0; i < matchups.size() && i < matchupOrder.length; i++) {
 			int seedIdx = matchupOrder[i];
 			var matchup = matchups.get(i);
@@ -263,12 +273,15 @@ public class PlayoffSeedingService {
 	}
 
 	private void requireSeedingOpen(UUID playoffId) {
-		boolean started = playoffMatchupRepository.findByRoundPlayoffId(playoffId).stream()
-				.anyMatch(matchup -> matchup.isComplete() || raceRepository.findByPlayoffMatchupId(matchup.getId()).stream()
-						.anyMatch(race -> !race.getResults().isEmpty()));
-		if (started) {
+		if (isSeedingFrozen(playoffId)) {
 			throw new IllegalStateException("Seeding is frozen once a playoff matchup has results or a winner");
 		}
+	}
+
+	private boolean isSeedingFrozen(UUID playoffId) {
+		return playoffMatchupRepository.findByRoundPlayoffId(playoffId).stream()
+				.anyMatch(matchup -> matchup.isComplete() || raceRepository.findByPlayoffMatchupId(matchup.getId()).stream()
+						.anyMatch(race -> !race.getResults().isEmpty()));
 	}
 
 	public record SeedEntry(UUID matchupId, int slot, UUID teamId, Integer seedNumber) {
@@ -276,6 +289,6 @@ public class PlayoffSeedingService {
 
 	public record SeedingData(Playoff playoff, PlayoffBracketViewService.PlayoffBracketView bracketView,
 	                          PlayoffRound firstRound, List<Team> teams,
-	                          Set<UUID> seededTeamIds, Map<UUID, Integer> seedNumbers) {
+	                          Set<UUID> seededTeamIds, Map<UUID, Integer> seedNumbers, boolean seedingFrozen) {
 	}
 }

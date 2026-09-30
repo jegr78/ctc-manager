@@ -139,6 +139,7 @@ public class PlayoffController {
         model.addAttribute("teams", data.teams());
         model.addAttribute("seededTeamIds", data.seededTeamIds());
         model.addAttribute("seedNumbers", data.seedNumbers());
+        model.addAttribute("seedingFrozen", data.seedingFrozen());
         return "admin/playoff-seed";
     }
 
@@ -161,7 +162,7 @@ public class PlayoffController {
                 .toList();
         try {
             playoffSeedingService.saveSeed(id, seeds);
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
             return "redirect:/admin/playoffs/" + id + "/seed";
         }
