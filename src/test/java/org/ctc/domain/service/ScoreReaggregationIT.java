@@ -105,6 +105,8 @@ class ScoreReaggregationIT {
 		var leg = createMatchWithLegs(1).getFirst();
 		score(leg);
 		var homeBefore = stored().getHomeScore();
+		assertThat(raceRepository.findById(leg.getId()).orElseThrow().getResults())
+				.as("fixture: the race's results are already loaded when the merge runs").hasSize(2);
 
 		// when
 		driverMergeService.merge(awayDriver.getId(), homeDriver.getId());
@@ -130,6 +132,28 @@ class ScoreReaggregationIT {
 	}
 
 	@Test
+	void givenScoredGuest_whenRemovedFromTheLineup_thenHisPointsLeaveTheAggregate() {
+		// given
+		var leg = createMatchWithLegs(1).getFirst();
+		var managed = raceRepository.findById(leg.getId()).orElseThrow();
+		raceLineupRepository.save(new RaceLineup(managed, homeDriver, home));
+		raceLineupRepository.save(new RaceLineup(managed, awayDriver, away, true));
+		raceService.saveResults(leg.getId(), List.of(
+				new RaceService.RaceResultData(homeDriver.getId(), homeDriver.getPsnId(), null, 1, 1, true),
+				new RaceService.RaceResultData(awayDriver.getId(), awayDriver.getPsnId(), null, 2, 2, false)));
+		var homeBefore = stored().getHomeScore();
+		assertThat(raceRepository.findById(leg.getId()).orElseThrow().getResults())
+				.as("fixture: the race's results are already loaded when the lineup is saved").hasSize(2);
+
+		// when
+		raceLineupService.saveLineup(leg.getId(), Map.of(homeDriver.getId(), home.getId()), Map.of());
+
+		// then
+		assertThat(stored()).extracting(Match::getHomeScore, Match::getAwayScore)
+				.as("the removed guest's result no longer counts").containsExactly(homeBefore, 0);
+	}
+
+	@Test
 	void givenQuickScoredMatch_whenAnUnscoredLegIsDeleted_thenTheQuickScoreStays() {
 		// given
 		var legs = createMatchWithLegs(2);
@@ -139,8 +163,8 @@ class ScoreReaggregationIT {
 		raceService.deleteRace(legs.get(1).getId());
 
 		// then
-		assertThat(List.of(stored().getHomeScore(), stored().getAwayScore()))
-				.as("a leg without results must not reset a quick score").isEqualTo(List.of(3, 1));
+		assertThat(stored()).extracting(Match::getHomeScore, Match::getAwayScore)
+				.as("a leg without results must not reset a quick score").containsExactly(3, 1);
 	}
 
 	@Test
@@ -156,8 +180,8 @@ class ScoreReaggregationIT {
 		driverMergeService.merge(awayDriver.getId(), homeDriver.getId());
 
 		// then
-		assertThat(List.of(stored().getHomeScore(), stored().getAwayScore()))
-				.as("a merge touching only lineups must not reset a quick score").isEqualTo(List.of(3, 1));
+		assertThat(stored()).extracting(Match::getHomeScore, Match::getAwayScore)
+				.as("a merge touching only lineups must not reset a quick score").containsExactly(3, 1);
 	}
 
 	private List<Race> createMatchWithLegs(int legs) {
