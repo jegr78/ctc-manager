@@ -127,6 +127,9 @@ class CsvImportPhaseScoringIT {
 		// then
 		assertThat(pointsOf(homeDriver)).as("winner: 50 race + 5 quali + 7 fastest lap").isEqualTo(62);
 		assertThat(pointsOf(awayDriver)).as("runner-up: 30 race + 4 quali").isEqualTo(34);
+		var race = raceRepository.findByPlayoffMatchupId(matchup.getId()).getFirst();
+		assertThat(race.getMatchday().getPhase().getId()).as("the leg's matchday lives in the playoff phase, so a later "
+				+ "result edit scores it the same way").isEqualTo(playoff.getPhase().getId());
 	}
 
 	@Test
