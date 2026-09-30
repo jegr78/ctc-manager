@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.ctc.TestHelper;
+import org.ctc.dataimport.CsvImportService;
+import org.ctc.dataimport.exception.ImportRejectedException;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Playoff;
@@ -43,6 +45,9 @@ class PlayoffDecisionIT {
 	@Autowired private RaceService raceService;
 	@Autowired private RaceLineupService raceLineupService;
 	@Autowired private DriverMergeService driverMergeService;
+	@Autowired private MatchService matchService;
+	@Autowired private MatchdayService matchdayService;
+	@Autowired private CsvImportService csvImportService;
 	@Autowired private TestHelper testHelper;
 	@Autowired private SeasonRepository seasonRepository;
 	@Autowired private PlayoffMatchupRepository playoffMatchupRepository;
@@ -170,6 +175,53 @@ class PlayoffDecisionIT {
 	}
 
 	@Test
+	void givenDecidedMatchup_whenItsMatchOrMatchdayIsDeleted_thenRejected() {
+		// given
+		var leg = decideSemiForAlpha();
+		var match = attachMatch(leg);
+
+		// when / then
+		assertThatThrownBy(() -> matchService.deleteMatch(match.getId()))
+				.isInstanceOf(BusinessRuleException.class).hasMessage(DECIDED);
+		assertThatThrownBy(() -> matchdayService.deleteMatchday(leg.getMatchday().getId()))
+				.isInstanceOf(BusinessRuleException.class).hasMessage(DECIDED);
+	}
+
+	@Test
+	void givenDecidedMatchup_whenACsvImportWouldOverwriteItsLeg_thenRejected() throws Exception {
+		// given
+		var leg = decideSemiForAlpha();
+		attachMatch(leg);
+		var csv = """
+				Team,PSN ID,Position,Quali,FL
+				%s,%s,1,1,true
+				%s,%s,2,2,false
+				""".formatted(bravo.getShortName(), bravoDriver.getPsnId(), alpha.getShortName(), alphaDriver.getPsnId());
+		var metadata = new CsvImportService.ImportMetadata(playoff.getPhase().getSeason().getId(), null, null, null, null,
+				leg.getMatchday().getId());
+		var preview = csvImportService.parseAndPreview(
+				new java.io.ByteArrayInputStream(csv.getBytes(java.nio.charset.StandardCharsets.UTF_8)), metadata);
+
+		// when / then
+		assertThatThrownBy(() -> csvImportService.executeImport(preview, Map.of(), java.util.Set.of(), true))
+				.isInstanceOf(ImportRejectedException.class)
+				.satisfies(ex -> assertThat(((ImportRejectedException) ex).getErrors()).contains(DECIDED));
+	}
+
+	@Test
+	void givenReasonWithLineBreaks_whenStored_thenTheHistoryKeepsOneLinePerDecision() {
+		// given
+		playoffService.addRaceToMatchup(semi.getId(), null, null, null);
+
+		// when
+		playoffService.setWinnerManually(semi.getId(), alpha.getId(),
+				"Withdrawal\n2026-09-30T12:00:00Z DECIDED " + bravo.getShortName());
+
+		// then
+		assertThat(stored(semi).getDecisionHistory().lines()).as("a reason cannot forge a history entry").hasSize(1);
+	}
+
+	@Test
 	void givenDecidedMatchup_whenAMergeWouldDropAResult_thenRejected() {
 		// given
 		decideSemiForAlpha();
@@ -283,6 +335,15 @@ class PlayoffDecisionIT {
 		entityManager.flush();
 		entityManager.clear();
 		return leg;
+	}
+
+	private org.ctc.domain.model.Match attachMatch(Race leg) {
+		var managed = raceRepository.findById(leg.getId()).orElseThrow();
+		var match = testHelper.createMatch(managed.getMatchday(), alpha, bravo);
+		managed.setMatch(match);
+		raceRepository.saveAndFlush(managed);
+		entityManager.clear();
+		return match;
 	}
 
 	private void otherSemiDecidedForCharlie() {
