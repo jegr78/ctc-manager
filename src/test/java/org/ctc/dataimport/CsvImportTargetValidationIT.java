@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
 /**
@@ -195,7 +196,8 @@ class CsvImportTargetValidationIT {
 				new Matchday(matchup.getRound().getPlayoff().getPhase(), "Test_Target PMD " + id, 100));
 
 		// when
-		importScorecard(metadata(null, matchup.getId(), playoffMatchday.getId()));
+		assertThatCode(() -> importScorecard(metadata(null, matchup.getId(), playoffMatchday.getId())))
+				.as("the reversed listing is accepted").doesNotThrowAnyException();
 
 		// then
 		var races = raceRepository.findByPlayoffMatchupId(matchup.getId());
@@ -272,8 +274,9 @@ class CsvImportTargetValidationIT {
 				%s,%s,2,2,false
 				""".formatted(subTeam.getShortName(), subDriver.getPsnId(), away.getShortName(), awayDriver.getPsnId());
 
-		// when
-		importCsv(csv, metadata("Test_Target PO " + id, matchup.getId(), null), false);
+		// when / then
+		assertThatCode(() -> importCsv(csv, metadata("Test_Target PO " + id, matchup.getId(), null), false))
+				.as("the sub-team scorecard is accepted").doesNotThrowAnyException();
 
 		// then
 		assertThat(raceRepository.findByPlayoffMatchupId(matchup.getId())).as("a sub-team plays for its parent team")
