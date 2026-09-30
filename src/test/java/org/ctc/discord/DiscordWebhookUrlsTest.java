@@ -13,6 +13,7 @@ class DiscordWebhookUrlsTest {
 			"https://discord.com/api/webhooks/123/SyntheticToken_abc-123 | https://discord.com/api/webhooks/123/***",
 			"https://discord.com/api/v10/webhooks/123/SyntheticToken_abc-123 | https://discord.com/api/v10/webhooks/123/***",
 			"https://discordapp.com/webhooks/123/SyntheticToken_abc-123?wait=true | https://discordapp.com/webhooks/123/***?wait=true",
+			"https://discord.com/API/Webhooks/123/SyntheticToken_abc-123 | https://discord.com/API/Webhooks/123/***",
 			"not a webhook url | not a webhook url"})
 	void givenWebhookUrl_whenRedacted_thenOnlyTheTokenIsHidden(String url, String expected) {
 		// when / then

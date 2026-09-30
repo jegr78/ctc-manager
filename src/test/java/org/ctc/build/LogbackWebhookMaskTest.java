@@ -41,7 +41,8 @@ class LogbackWebhookMaskTest {
 			"https://discord.com/api/v10/webhooks/123/" + TOKEN,
 			"https://discord.com/v9/webhooks/123/" + TOKEN,
 			"https://discordapp.com/webhooks/123/" + TOKEN,
-			"https://discord.com/api/v10/webhooks/123/" + TOKEN + "?wait=true&thread_id=5"})
+			"https://discord.com/api/v10/webhooks/123/" + TOKEN + "?wait=true&thread_id=5",
+			"HTTPS://Discord.com/API/V10/Webhooks/123/" + TOKEN})
 	void givenAcceptedWebhookUrl_whenLoggedInMessageOrExceptionText_thenTheTokenIsMasked(String url) throws IOException {
 		// given
 		var rule = rules(Path.of("src/main/resources/logback-spring.xml")).getFirst();

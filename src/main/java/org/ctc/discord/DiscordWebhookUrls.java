@@ -4,7 +4,7 @@ import java.util.regex.Pattern;
 
 public final class DiscordWebhookUrls {
 
-	private static final Pattern TOKEN = Pattern.compile("(/webhooks/[^/?#\\s]+/)[^/?#\\s]+");
+	private static final Pattern TOKEN = Pattern.compile("(/webhooks/[^/?#\\s]+/)[^/?#\\s]+", Pattern.CASE_INSENSITIVE);
 
 	private DiscordWebhookUrls() {
 	}

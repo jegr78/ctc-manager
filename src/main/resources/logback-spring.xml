@@ -20,7 +20,7 @@
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %replace(%m%n%wEx){'https?://[^/\s]+(/api)?(/v[0-9]+)?/webhooks/[^/\s]+/[^/\s]+', 'https://***/webhooks/***/***'}</pattern>
+            <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %replace(%m%n%wEx){'(?i)https?://[^/\s]+(/api)?(/v[0-9]+)?/webhooks/[^/\s]+/[^/\s]+', 'https://***/webhooks/***/***'}</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>
@@ -29,7 +29,7 @@
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_DIR}/app.log</file>
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%15.15t] %-40.40logger{39} : %replace(%m%n%wEx){'https?://[^/\s]+(/api)?(/v[0-9]+)?/webhooks/[^/\s]+/[^/\s]+', 'https://***/webhooks/***/***'}</pattern>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%15.15t] %-40.40logger{39} : %replace(%m%n%wEx){'(?i)https?://[^/\s]+(/api)?(/v[0-9]+)?/webhooks/[^/\s]+/[^/\s]+', 'https://***/webhooks/***/***'}</pattern>
             <charset>UTF-8</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">

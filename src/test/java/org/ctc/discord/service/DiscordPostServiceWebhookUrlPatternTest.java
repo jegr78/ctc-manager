@@ -66,10 +66,11 @@ class DiscordPostServiceWebhookUrlPatternTest {
 	}
 
 	@Test
-	void givenNonNumericId_whenParse_thenThrows() {
+	void givenNonNumericId_whenParse_thenThrowsWithoutEchoingTheToken() {
 		assertThatThrownBy(() -> DiscordPostService.parseWebhookUrl(
-				"https://discord.com/api/webhooks/abc/token"))
-				.isInstanceOf(IllegalArgumentException.class);
+				"https://discord.com/api/webhooks/abc/SyntheticToken_abc-123"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.message().as("the error page renders this message").doesNotContain("SyntheticToken_abc-123");
 	}
 
 	@Test
