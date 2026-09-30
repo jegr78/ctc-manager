@@ -49,11 +49,7 @@ public class SwissPairingService {
 		if (!matchdays.isEmpty()) {
 			var lastMatchday = matchdays.get(matchdays.size() - 1);
 			var lastRaces = raceRepository.findByMatchdayId(lastMatchday.getId());
-			boolean allComplete = lastRaces.stream()
-					.allMatch(r -> r.isBye()
-							|| !r.getResults().isEmpty()
-							|| (r.getHomeScore() != null && r.getAwayScore() != null));
-			if (!allComplete) {
+			if (!lastRaces.stream().allMatch(SwissPairingService::hasOutcome)) {
 				throw new IllegalStateException("Current round has incomplete races");
 			}
 		}
@@ -137,10 +133,15 @@ public class SwissPairingService {
 
 		var lastMatchday = matchdays.get(matchdays.size() - 1);
 		var lastRaces = raceRepository.findByMatchdayId(lastMatchday.getId());
-		return lastRaces.stream()
-				.allMatch(r -> r.isBye()
-						|| !r.getResults().isEmpty()
-						|| (r.getHomeScore() != null && r.getAwayScore() != null));
+		return lastRaces.stream().allMatch(SwissPairingService::hasOutcome);
+	}
+
+	/** A bye, a walkover, results or aggregated scores decide a pairing, as in the standings. */
+	private static boolean hasOutcome(Race race) {
+		return race.isBye()
+				|| race.getMatch() != null && race.getMatch().getWalkoverTeam() != null
+				|| !race.getResults().isEmpty()
+				|| race.getHomeScore() != null && race.getAwayScore() != null;
 	}
 
 	private List<Matchday> getMatchdaysForPhaseGroup(UUID phaseId, UUID groupId) {

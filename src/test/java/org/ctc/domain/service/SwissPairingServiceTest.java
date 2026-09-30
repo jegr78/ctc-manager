@@ -26,6 +26,8 @@ class SwissPairingServiceTest {
 	@Autowired
 	private MatchRepository matchRepository;
 	@Autowired
+	private MatchService matchService;
+	@Autowired
 	private TeamRepository teamRepository;
 	@Autowired
 	private DriverRepository driverRepository;
@@ -167,6 +169,39 @@ class SwissPairingServiceTest {
 			assertFalse(firstRoundPairs.contains(pair),
 					"Rematch: " + race.getHomeTeam().getShortName() + " vs " + race.getAwayTeam().getShortName());
 		}
+	}
+
+	@Test
+	void givenRoundWithAWalkoverAndAScoredRace_whenGenerateNextRound_thenTheNextRoundIsCreated() {
+		// given
+		addTeams(4);
+		var md1 = swissPairingService.generateNextRound(regularPhase.getId(), null);
+		var races = raceRepository.findByMatchdayId(md1.getId());
+		var walkoverMatch = races.get(0).getMatch();
+		matchService.updateWalkover(walkoverMatch.getId(), walkoverMatch.getAwayTeam().getId());
+		addDummyResults(races.get(1));
+
+		// when / then
+		assertThat(swissPairingService.isCurrentRoundComplete(regularPhase.getId(), null))
+				.as("a walkover with null scores and no results completes its pairing").isTrue();
+		var md2 = swissPairingService.generateNextRound(regularPhase.getId(), null);
+		assertThat(raceRepository.findByMatchdayId(md2.getId())).as("round 2 pairings").hasSize(2);
+	}
+
+	@Test
+	void givenRoundWithAWalkoverAndAnUnplayedRace_whenGenerateNextRound_thenRejected() {
+		// given
+		addTeams(4);
+		var md1 = swissPairingService.generateNextRound(regularPhase.getId(), null);
+		var walkoverMatch = raceRepository.findByMatchdayId(md1.getId()).get(0).getMatch();
+		matchService.updateWalkover(walkoverMatch.getId(), walkoverMatch.getHomeTeam().getId());
+
+		// when / then
+		assertThat(swissPairingService.isCurrentRoundComplete(regularPhase.getId(), null))
+				.as("the unplayed pairing keeps the round open").isFalse();
+		assertThatThrownBy(() -> swissPairingService.generateNextRound(regularPhase.getId(), null))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessage("Current round has incomplete races");
 	}
 
 	@Test
@@ -414,44 +449,43 @@ class SwissPairingServiceTest {
 	}
 
 	private void addDummyResults(UUID matchdayId) {
-		var races = raceRepository.findByMatchdayId(matchdayId);
-		for (var race : races) {
-			if (race.isBye()) {
-				continue;
-			}
+		raceRepository.findByMatchdayId(matchdayId).stream()
+				.filter(race -> !race.isBye())
+				.forEach(this::addDummyResults);
+	}
 
-			var homeDriver = driverRepository.save(new Driver(
-					"sh_" + UUID.randomUUID().toString().substring(0, 8), "Home Driver"));
-			seasonDriverRepository.save(new SeasonDriver(season, homeDriver, race.getHomeTeam()));
+	private void addDummyResults(Race race) {
+		var homeDriver = driverRepository.save(new Driver(
+				"sh_" + UUID.randomUUID().toString().substring(0, 8), "Home Driver"));
+		seasonDriverRepository.save(new SeasonDriver(season, homeDriver, race.getHomeTeam()));
 
-			var awayDriver = driverRepository.save(new Driver(
-					"sa_" + UUID.randomUUID().toString().substring(0, 8), "Away Driver"));
-			seasonDriverRepository.save(new SeasonDriver(season, awayDriver, race.getAwayTeam()));
+		var awayDriver = driverRepository.save(new Driver(
+				"sa_" + UUID.randomUUID().toString().substring(0, 8), "Away Driver"));
+		seasonDriverRepository.save(new SeasonDriver(season, awayDriver, race.getAwayTeam()));
 
-			var hr = new RaceResult();
-			hr.setRace(race);
-			hr.setDriver(homeDriver);
-			hr.setPosition(1);
-			hr.setQualiPosition(1);
-			hr.setPointsTotal(20);
-			race.getResults().add(hr);
+		var hr = new RaceResult();
+		hr.setRace(race);
+		hr.setDriver(homeDriver);
+		hr.setPosition(1);
+		hr.setQualiPosition(1);
+		hr.setPointsTotal(20);
+		race.getResults().add(hr);
 
-			var ar = new RaceResult();
-			ar.setRace(race);
-			ar.setDriver(awayDriver);
-			ar.setPosition(2);
-			ar.setQualiPosition(2);
-			ar.setPointsTotal(10);
-			race.getResults().add(ar);
+		var ar = new RaceResult();
+		ar.setRace(race);
+		ar.setDriver(awayDriver);
+		ar.setPosition(2);
+		ar.setQualiPosition(2);
+		ar.setPointsTotal(10);
+		race.getResults().add(ar);
 
-			// Set scores on the Match
-			if (race.getMatch() != null) {
-				race.getMatch().setHomeScore(20);
-				race.getMatch().setAwayScore(10);
-			}
-
-			raceRepository.save(race);
+		// Set scores on the Match
+		if (race.getMatch() != null) {
+			race.getMatch().setHomeScore(20);
+			race.getMatch().setAwayScore(10);
 		}
+
+		raceRepository.save(race);
 	}
 
 	private String pairKey(UUID a, UUID b) {
