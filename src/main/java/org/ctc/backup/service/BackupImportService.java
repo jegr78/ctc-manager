@@ -480,10 +480,10 @@ public class BackupImportService {
             throw new BackupImportException(auditUuid, auditWritten, missing);
         }
 
-        // <ts> directory for atomic move-triple — computed ONCE here and shared by the
-        // auto-backup ZIP path (Step 0.5) and the uploads-old/ sibling (AFTER_COMMIT listener).
+        // Shared by the auto-backup ZIP (Step 0.5) and the uploads-old/ sibling (AFTER_COMMIT listener).
+        // The audit-id suffix keeps imports within the same second apart.
         String ts = clock.instant().truncatedTo(ChronoUnit.SECONDS).toString().replace(":", "-");
-        Path importBackupDir = importBackupsDir.resolve(ts);
+        Path importBackupDir = importBackupsDir.resolve(ts + "-" + auditUuid.toString().substring(0, 8));
         // Target ZIP for the pre-import auto-backup (runs BEFORE any DB mutation).
         Path autoBackupZip = importBackupDir.resolve("auto-backup-before-import.zip");
 
@@ -520,7 +520,8 @@ public class BackupImportService {
             backupArchive.assertEntryLimits(staged);
             assertDataMatchesManifest(staged, manifest);
 
-            Files.createDirectories(importBackupDir);
+            Files.createDirectories(importBackupsDir);
+            Files.createDirectory(importBackupDir);  // fails rather than sharing a directory with another import
             try {
                 uploadsSwapPreflight.check(uploadsTargetDir, importBackupDir);
             } catch (UploadsSwapPreflightException preflightEx) {
@@ -539,7 +540,6 @@ public class BackupImportService {
             // a no-op. A distinct AutoBackupBeforeImportException is thrown so the controller
             // can flash a semantically correct "no DB changes" message.
             try {
-                Files.createDirectories(importBackupDir);
                 try (OutputStream out = Files.newOutputStream(autoBackupZip,
                         StandardOpenOption.CREATE_NEW)) {
                     backupArchive.writeZip(out, Instant.now());
