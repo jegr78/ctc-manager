@@ -46,6 +46,8 @@ class StandingsServiceTest {
 
     @Mock private PhaseTeamRepository phaseTeamRepository;
 
+    @Mock private PlayoffMatchupRepository playoffMatchupRepository;
+
     @InjectMocks
     private StandingsService standingsService;
 
@@ -924,73 +926,50 @@ class StandingsServiceTest {
     }
 
 
-    /**
-     * D-19 TRACKED BEHAVIOR CHANGE: calculateAlltimeStandings must aggregate across ALL phases
-     * (REGULAR + PLAYOFF + PLACEMENT), not just REGULAR-only.
-     *
-     * <p>RED gate: today's implementation of calculateAlltimeStandings resolves only the REGULAR
-     * phase. The test expects the PLAYOFF-phase points to be included in the alltime total.
-     * The assertion will FAIL until D-19 is implemented.
-     */
     @Test
-    void givenSeasonWithPlayoffPhase_whenCalculateAlltimeStandings_thenIncludesPlayoffPoints() {
-        // given — season with REGULAR phase (3pts TNR) and PLAYOFF phase (3pts TNR)
-        var rs = new RaceScoring("D19-RS", "20,15,10", "3,2,1", 2);
+    void givenSeasonWithPlayoffPhase_whenCalculateAlltimeStandings_thenDecidedMatchupsCountInsteadOfPlayoffMatchRows() {
+        // given
+        var rs = new RaceScoring("Test_Alltime-RS", "20,15,10", "3,2,1", 2);
         rs.setId(UUID.randomUUID());
-        var ms = new MatchScoring("D19-MS", 3, 1, 0);
+        var ms = new MatchScoring("Test_Alltime-MS", 3, 1, 0);
         ms.setId(UUID.randomUUID());
-
-        var regularPhaseD19 = PhaseTestFixtures.regularPhase(season, rs, ms);
-        var playoffPhaseD19 = PhaseTestFixtures.playoffPhase(season, "D19-Test-Playoff", rs, ms);
-
-        var teamD19 = new Team("D19-Test-TeamA", "D19A");
-        teamD19.setId(UUID.randomUUID());
-        var teamD19b = new Team("D19-Test-TeamB", "D19B");
-        teamD19b.setId(UUID.randomUUID());
-
-        // REGULAR: teamD19 beats teamD19b 70:46 → 3 match points for teamD19
-        var mdRegular = new Matchday(regularPhaseD19, "D19-MD-Regular", 1);
-        var matchRegular = createMatchWithScore(mdRegular, teamD19, teamD19b, 70, 46);
-
-        // PLAYOFF: teamD19 beats teamD19b again → 3 more match points
-        var mdPlayoff = new Matchday(playoffPhaseD19, "D19-MD-Playoff", 1);
-        var matchPlayoff = createMatchWithScore(mdPlayoff, teamD19, teamD19b, 80, 50);
-
-        // PhaseTeam setup: both phases have both teams enrolled
-        var ptRegularA = PhaseTestFixtures.assignTeam(regularPhaseD19, teamD19, null);
-        var ptRegularB = PhaseTestFixtures.assignTeam(regularPhaseD19, teamD19b, null);
-        var ptPlayoffA = PhaseTestFixtures.assignTeam(playoffPhaseD19, teamD19, null);
-        var ptPlayoffB = PhaseTestFixtures.assignTeam(playoffPhaseD19, teamD19b, null);
-
-        // findAllPhases returns BOTH phases (this is what D-19 uses)
-        when(seasonPhaseService.findAllPhases(season.getId()))
-                .thenReturn(List.of(regularPhaseD19, playoffPhaseD19));
-
-        // findById for each phase
-        when(seasonPhaseService.findById(regularPhaseD19.getId())).thenReturn(regularPhaseD19);
-        when(seasonPhaseService.findById(playoffPhaseD19.getId())).thenReturn(playoffPhaseD19);
-
-        // Matches per phase
-        when(matchRepository.findByMatchdayPhaseId(regularPhaseD19.getId())).thenReturn(List.of(matchRegular));
-        when(matchRepository.findByMatchdayPhaseId(playoffPhaseD19.getId())).thenReturn(List.of(matchPlayoff));
-
-        // PhaseTeam rosters
-        when(phaseTeamRepository.findByPhaseId(regularPhaseD19.getId())).thenReturn(List.of(ptRegularA, ptRegularB));
-        when(phaseTeamRepository.findByPhaseId(playoffPhaseD19.getId())).thenReturn(List.of(ptPlayoffA, ptPlayoffB));
+        var regularPhase = PhaseTestFixtures.regularPhase(season, rs, ms);
+        var playoffPhase = PhaseTestFixtures.playoffPhase(season, "Test_Alltime-Playoff", rs, ms);
+        var teamA = new Team("Test_Alltime-TeamA", "TAA");
+        teamA.setId(UUID.randomUUID());
+        var teamB = new Team("Test_Alltime-TeamB", "TAB");
+        teamB.setId(UUID.randomUUID());
+        var matchRegular = createMatchWithScore(new Matchday(regularPhase, "Test_Alltime-MD-Regular", 1), teamA, teamB, 70, 46);
+        var playoffMatchRow = createMatchWithScore(new Matchday(playoffPhase, "Test_Alltime-MD-Playoff", 1), teamA, teamB, 80, 50);
+        var matchup = new PlayoffMatchup();
+        matchup.setTeam1(teamA);
+        matchup.setTeam2(teamB);
+        matchup.setWinner(teamA);
+        matchup.setHomeScore(80);
+        matchup.setAwayScore(50);
+        when(seasonPhaseService.findAllPhases(season.getId())).thenReturn(List.of(regularPhase, playoffPhase));
+        when(seasonPhaseService.findById(regularPhase.getId())).thenReturn(regularPhase);
+        when(seasonPhaseService.findById(playoffPhase.getId())).thenReturn(playoffPhase);
+        when(matchRepository.findByMatchdayPhaseId(regularPhase.getId())).thenReturn(List.of(matchRegular));
+        when(matchRepository.findByMatchdayPhaseId(playoffPhase.getId())).thenReturn(List.of(playoffMatchRow));
+        when(phaseTeamRepository.findByPhaseId(regularPhase.getId())).thenReturn(List.of(
+                PhaseTestFixtures.assignTeam(regularPhase, teamA, null), PhaseTestFixtures.assignTeam(regularPhase, teamB, null)));
+        when(phaseTeamRepository.findByPhaseId(playoffPhase.getId())).thenReturn(List.of(
+                PhaseTestFixtures.assignTeam(playoffPhase, teamA, null), PhaseTestFixtures.assignTeam(playoffPhase, teamB, null)));
+        when(playoffMatchupRepository.findByRoundPlayoffPhaseIdAndWinnerIsNotNull(playoffPhase.getId()))
+                .thenReturn(List.of(matchup));
 
         // when
         var alltime = standingsService.calculateAlltimeStandings(List.of(season));
 
-        // then — D19A should have 6 points (3 from REGULAR + 3 from PLAYOFF)
-        // TODAY this assertion FAILS: calculateAlltimeStandings only calls calculateStandings(seasonId)
-        // → REGULAR-only → 3 points. After D-19 implementation it returns 6.
-        var teamD19Standing = alltime.stream()
-                .filter(s -> s.getTeam().getId().equals(teamD19.getId()))
+        // then
+        var standing = alltime.stream()
+                .filter(s -> s.getTeam().getId().equals(teamA.getId()))
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("D19A team not found in alltime standings"));
-
-        assertThat(teamD19Standing.getPoints())
-                .as("D-19: alltime points must include REGULAR (3) + PLAYOFF (3) = 6")
-                .isEqualTo(6);
+                .orElseThrow(() -> new AssertionError("TAA not found in alltime standings"));
+        assertThat(standing.getPlayed()).as("one regular match and one playoff matchup, not the playoff match row")
+                .isEqualTo(2);
+        assertThat(standing.getPoints()).as("3 regular + 3 playoff win points").isEqualTo(6);
+        assertThat(standing.getPointsFor()).as("70 regular + 80 playoff").isEqualTo(150);
     }
 }

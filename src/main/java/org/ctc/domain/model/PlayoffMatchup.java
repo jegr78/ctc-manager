@@ -15,7 +15,7 @@ import lombok.ToString;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = {"round", "team1", "team2", "winner", "nextMatchup", "races"})
+@ToString(exclude = {"round", "team1", "team2", "winner", "walkoverTeam", "nextMatchup", "races"})
 public class PlayoffMatchup extends BaseEntity {
 
 	@Id
@@ -49,6 +49,13 @@ public class PlayoffMatchup extends BaseEntity {
 	private Integer homeScore;
 
 	private Integer awayScore;
+
+	@Column(nullable = false)
+	private boolean bye;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "walkover_team_id")
+	private Team walkoverTeam;
 
 	@Column(name = "decision_reason", length = 500)
 	private String decisionReason;

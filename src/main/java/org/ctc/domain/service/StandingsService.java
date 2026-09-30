@@ -10,6 +10,7 @@ import org.ctc.domain.model.*;
 import org.ctc.discord.model.DiscordPost;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.PhaseTeamRepository;
+import org.ctc.domain.repository.PlayoffMatchupRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.RaceResultRepository;
 import org.ctc.domain.repository.SeasonRepository;
@@ -29,6 +30,7 @@ public class StandingsService {
 	private final PhaseTeamRepository phaseTeamRepository;
 	private final RaceResultRepository raceResultRepository;
 	private final SeasonTeamRepository seasonTeamRepository;
+	private final PlayoffMatchupRepository playoffMatchupRepository;
 
 	private static final int WALKOVER_TEAM_POSITIONS = 6;
 
@@ -251,8 +253,8 @@ public class StandingsService {
 	 * Calculates alltime standings restricted to the given seasons.
 	 * Used by the site generator to exclude Test seasons from public pages.
 	 *
-	 * <p>Aggregation spans ALL phases of each season (REGULAR + PLAYOFF + PLACEMENT). Multi-phase
-	 * seasons contribute their full points total to the alltime standings.
+	 * <p>Aggregation spans ALL phases of each season (REGULAR + PLAYOFF + PLACEMENT). A PLAYOFF phase
+	 * contributes each decided playoff matchup as one game, see {@link #playoffStandings(SeasonPhase)}.
 	 */
 	@Transactional(readOnly = true)
 	public List<TeamStanding> calculateAlltimeStandings(List<Season> seasons) {
@@ -260,7 +262,9 @@ public class StandingsService {
 
 		for (Season season : seasons) {
 			for (SeasonPhase phase : seasonPhaseService.findAllPhases(season.getId())) {
-				List<TeamStanding> phaseStandings = calculateStandings(phase.getId(), null);
+				List<TeamStanding> phaseStandings = phase.getPhaseType() == PhaseType.PLAYOFF
+						? playoffStandings(phase)
+						: calculateStandings(phase.getId(), null);
 				if (phaseStandings.isEmpty()) {
 					continue;
 				}
@@ -283,6 +287,44 @@ public class StandingsService {
 
 		log.debug("Calculated alltime standings: {} teams across {} seasons", result.size(), seasons.size());
 		return result;
+	}
+
+	/**
+	 * One game per decided playoff matchup. The declared winner takes the phase's win points and the
+	 * loser its loss points, while points for and against stay the summed race points of all legs. A
+	 * bye is a win with 0:0 race points. A walkover credits the regular walkover score once and gives
+	 * the forfeiting team no match points.
+	 */
+	private List<TeamStanding> playoffStandings(SeasonPhase phase) {
+		var matchScoring = phase.getMatchScoring();
+		Map<UUID, TeamStanding> standings = new HashMap<>();
+		for (PlayoffMatchup matchup : playoffMatchupRepository.findByRoundPlayoffPhaseIdAndWinnerIsNotNull(phase.getId())) {
+			var winner = standings.computeIfAbsent(matchup.getWinner().getId(), id -> new TeamStanding(matchup.getWinner()));
+			winner.addWin();
+			winner.addMatchPoints(matchScoring.getPointsWin());
+			boolean winnerIsTeam1 = matchup.getTeam1() != null && matchup.getWinner().getId().equals(matchup.getTeam1().getId());
+			Team loserTeam = winnerIsTeam1 ? matchup.getTeam2() : matchup.getTeam1();
+			if (matchup.isBye() || loserTeam == null) {
+				continue;
+			}
+			var loser = standings.computeIfAbsent(loserTeam.getId(), id -> new TeamStanding(loserTeam));
+			loser.addLoss();
+			if (matchup.getWalkoverTeam() != null) {
+				int walkoverScore = fullTeamRaceScore(phase.getRaceScoring());
+				loser.setHasWalkover(true);
+				loser.addPointsAgainst(walkoverScore);
+				winner.addPointsFor(walkoverScore);
+				continue;
+			}
+			loser.addMatchPoints(matchScoring.getPointsLoss());
+			int team1Points = matchup.getHomeScore() != null ? matchup.getHomeScore() : 0;
+			int team2Points = matchup.getAwayScore() != null ? matchup.getAwayScore() : 0;
+			winner.addPointsFor(winnerIsTeam1 ? team1Points : team2Points);
+			winner.addPointsAgainst(winnerIsTeam1 ? team2Points : team1Points);
+			loser.addPointsFor(winnerIsTeam1 ? team2Points : team1Points);
+			loser.addPointsAgainst(winnerIsTeam1 ? team1Points : team2Points);
+		}
+		return List.copyOf(standings.values());
 	}
 
 	/**
