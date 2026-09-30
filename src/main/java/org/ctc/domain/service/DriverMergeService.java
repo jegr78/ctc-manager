@@ -2,12 +2,17 @@ package org.ctc.domain.service;
 
 import static org.ctc.util.LogSanitizer.sanitize;
 
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.PsnAlias;
+import org.ctc.domain.model.Race;
 import org.ctc.domain.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +27,7 @@ public class DriverMergeService {
 	private final RaceLineupRepository raceLineupRepository;
 	private final RaceResultRepository raceResultRepository;
 	private final PsnAliasRepository psnAliasRepository;
+	private final ScoringService scoringService;
 
 	@Transactional(readOnly = true)
 	public MergePreview previewMerge(UUID sourceId, UUID targetId) {
@@ -109,7 +115,10 @@ public class DriverMergeService {
 		var raceLineups = raceLineupRepository.findByDriverId(sourceId);
 		int raceLineupsReassigned = 0;
 		int raceLineupsDropped = 0;
+		Map<UUID, Race> affectedRaces = new LinkedHashMap<>();
+		Set<UUID> racesWithDroppedResults = new HashSet<>();
 		for (var rl : raceLineups) {
+			affectedRaces.putIfAbsent(rl.getRace().getId(), rl.getRace());
 			var conflict = raceLineupRepository.findByRaceIdAndDriverId(
 					rl.getRace().getId(), targetId);
 			if (conflict.isPresent()) {
@@ -129,11 +138,14 @@ public class DriverMergeService {
 		int raceResultsReassigned = 0;
 		int raceResultsDropped = 0;
 		for (var rr : raceResults) {
+			affectedRaces.putIfAbsent(rr.getRace().getId(), rr.getRace());
 			var conflict = raceResultRepository.findByRaceIdAndDriverId(
 					rr.getRace().getId(), targetId);
 			if (conflict.isPresent()) {
 				log.info("Dropping duplicate RaceResult for race [{}] during merge of driver [{}] into [{}]",
 						rr.getRace().getId(), sourceId, targetId);
+				rr.getRace().getResults().remove(rr);
+				racesWithDroppedResults.add(rr.getRace().getId());
 				raceResultRepository.delete(rr);
 				raceResultsDropped++;
 			} else {
@@ -163,6 +175,14 @@ public class DriverMergeService {
 
 		// Delete source driver — safe because all FKs are reassigned.
 		driverRepository.delete(source);
+		driverRepository.flush();
+		affectedRaces.values().forEach(race -> {
+			if (racesWithDroppedResults.contains(race.getId())) {
+				scoringService.recomputeMatchScoresFromAllLegs(race);
+			} else {
+				scoringService.aggregateMatchScores(race);
+			}
+		});
 
 		var result = new MergeResult(
 				seasonDriversReassigned,

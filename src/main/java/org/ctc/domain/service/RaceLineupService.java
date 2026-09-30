@@ -115,9 +115,6 @@ public class RaceLineupService {
 		var droppedGuestDriverIds = priorGuestTeams.keySet().stream()
 				.filter(driverId -> !guestAssignments.containsKey(driverId))
 				.toList();
-		boolean keptGuestTeamChanged = guestAssignments.entrySet().stream()
-				.anyMatch(entry -> priorGuestTeams.containsKey(entry.getKey())
-						&& !entry.getValue().equals(priorGuestTeams.get(entry.getKey())));
 
 		raceLineupRepository.deleteAll(existing);
 		raceLineupRepository.flush();
@@ -140,11 +137,19 @@ public class RaceLineupService {
 			count++;
 		}
 
+		boolean resultsDropped = false;
 		for (var driverId : droppedGuestDriverIds) {
-			raceResultRepository.findByRaceIdAndDriverId(raceId, driverId)
-					.ifPresent(raceResultRepository::delete);
+			var dropped = raceResultRepository.findByRaceIdAndDriverId(raceId, driverId);
+			if (dropped.isPresent()) {
+				race.getResults().remove(dropped.get());
+				raceResultRepository.delete(dropped.get());
+				resultsDropped = true;
+			}
 		}
-		if (!droppedGuestDriverIds.isEmpty() || keptGuestTeamChanged) {
+		raceLineupRepository.flush();
+		if (resultsDropped) {
+			scoringService.recomputeMatchScoresFromAllLegs(race);
+		} else {
 			scoringService.aggregateMatchScores(race);
 		}
 

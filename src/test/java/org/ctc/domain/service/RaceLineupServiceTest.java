@@ -15,8 +15,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import org.ctc.domain.exception.BusinessRuleException;
@@ -264,7 +264,7 @@ class RaceLineupServiceTest {
 		ArgumentCaptor<RaceLineup> captor = ArgumentCaptor.forClass(RaceLineup.class);
 		verify(raceLineupRepository).save(captor.capture());
 		assertThat(captor.getValue().isGuest()).isTrue();
-		verifyNoInteractions(scoringService);
+		verify(scoringService).aggregateMatchScores(race);
 	}
 
 	@Test
@@ -294,7 +294,7 @@ class RaceLineupServiceTest {
 		ArgumentCaptor<RaceLineup> captor = ArgumentCaptor.forClass(RaceLineup.class);
 		verify(raceLineupRepository).save(captor.capture());
 		assertThat(captor.getValue().isGuest()).isFalse();
-		verifyNoInteractions(scoringService);
+		verify(scoringService).aggregateMatchScores(race);
 	}
 
 	@Test
@@ -322,11 +322,11 @@ class RaceLineupServiceTest {
 
 		// then
 		verify(raceResultRepository).delete(orphanResult);
-		verify(scoringService).aggregateMatchScores(race);
+		verify(scoringService).recomputeMatchScoresFromAllLegs(race);
 	}
 
 	@Test
-	void givenGuestStillPresent_whenSaveLineup_thenNoResultDeleteAndNoReaggregation() {
+	void givenGuestStillPresent_whenSaveLineup_thenNoResultDeletedButScoresReaggregated() {
 		// given
 		var raceId = UUID.randomUUID();
 		var guestId = UUID.randomUUID();
@@ -351,7 +351,8 @@ class RaceLineupServiceTest {
 		service.saveLineup(raceId, Map.of(), Map.of(guestId, teamId));
 
 		// then
-		verifyNoInteractions(scoringService);
+		verify(raceResultRepository, never()).delete(any());
+		verify(scoringService).aggregateMatchScores(race);
 	}
 
 	@Test
@@ -401,7 +402,7 @@ class RaceLineupServiceTest {
 		// when / then
 		assertThatThrownBy(() -> service.saveLineup(raceId, Map.of(), Map.of(guestId, foreignTeamId)))
 				.isInstanceOf(BusinessRuleException.class);
-		verify(raceLineupRepository, org.mockito.Mockito.never()).deleteAll(any());
+		verify(raceLineupRepository, never()).deleteAll(any());
 	}
 
 	private Race raceWithTeams(UUID raceId, Team homeTeam, Team awayTeam) {
@@ -431,7 +432,7 @@ class RaceLineupServiceTest {
 		assertThatThrownBy(() ->
 				service.saveLineup(raceId, Map.of(driverId, teamId), Map.of(driverId, teamId)))
 				.isInstanceOf(BusinessRuleException.class);
-		verify(raceLineupRepository, org.mockito.Mockito.never()).deleteAll(any());
+		verify(raceLineupRepository, never()).deleteAll(any());
 	}
 
 	@Test
