@@ -28,7 +28,6 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
@@ -41,6 +40,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  *       {@code preview.schemaMatches() == true}, execute leaves Discord tables empty
  *       and surfaces the {@code DiscordGlobalConfigService.getOrInitialize()} self-heal
  *       contract as the only path that introduces a row.</li>
+ *   <li>v2 manifest without the Discord JSON entries — refused with {@code DATA_MISMATCH}.</li>
  *   <li>v3 (and higher) manifests — refused with {@code SCHEMA_MISMATCH}.</li>
  *   <li>v0 (and lower) manifests — refused with {@code SCHEMA_MISMATCH}.</li>
  * </ul>
@@ -172,15 +172,15 @@ class BackupLenientV1AcceptanceIT {
     }
 
     @Test
-    void givenV2ManifestZipBuiltLikeV1_whenStage_thenSchemaMatchesIsTrue() throws Exception {
-        // given — sanity check the upper accepted bound
+    void givenV2ManifestZipWithoutTheDiscordTables_whenStage_thenRejectedAsDataMismatch() throws Exception {
+        // given
         MockMultipartFile file = wrapAsMultipart(buildSyntheticZip(2, V1_TABLES_24));
 
         // when / then
-        assertThatCode(() -> {
-            BackupImportPreview preview = backupImportService.stage(file);
-            assertThat(preview.schemaMatches()).isTrue();
-        }).doesNotThrowAnyException();
+        assertThatThrownBy(() -> backupImportService.stage(file))
+                .isInstanceOfSatisfying(BackupArchiveException.class, ex -> assertThat(ex.reason())
+                        .as("only v1 may omit the Discord tables")
+                        .isEqualTo(BackupArchiveException.Reason.DATA_MISMATCH));
     }
 
     private Path buildSyntheticZip(int schemaVersion, List<String> tables) throws IOException {

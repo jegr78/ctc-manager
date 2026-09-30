@@ -74,7 +74,16 @@ public class BackupArchiveException extends RuntimeException {
          * Thrown by {@code BackupImportService.stage()} when the first four bytes are
          * not {@code 0x50 0x4B 0x03 0x04}.
          */
-        NOT_A_ZIP
+        NOT_A_ZIP,
+
+        /**
+         * A required {@code data/*.json} entry is missing, or its row count differs from the
+         * manifest's {@code table_counts}.
+         */
+        DATA_MISMATCH,
+
+        /** Two entries in the archive share one name. */
+        DUPLICATE_ENTRY
     }
 
     private final Reason reason;

@@ -13,9 +13,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -34,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.ctc.backup.service.BackupImportLimits.*;
+import static org.ctc.util.LogSanitizer.sanitize;
 
 /**
  * Stateless ZIP plumbing for the backup export and import pipeline.
@@ -253,6 +256,9 @@ public class BackupArchiveService {
 
 			try {
 				BackupManifest manifest = backupObjectMapper.readValue(limited, BackupManifest.class);
+				if (manifest.tableCounts() == null) {
+					throw new BackupArchiveException(Reason.MANIFEST_INVALID, "manifest.json has no table_counts");
+				}
 				// Note: limited is NOT closed here — ZipInputStream manages entry lifecycle.
 				// The LongConsumer fires when limited.close() is called, which happens
 				// implicitly when the try-with-resources closes the ZipInputStream.
@@ -424,11 +430,16 @@ public class BackupArchiveService {
 		Path stagingRoot = resolveStagingRoot(zipPath);
 		long[] inflatedAcc = new long[]{0L};
 		int entryCount = 0;
+		Set<String> names = new HashSet<>();
 
 		try (ZipInputStream zis = openZipInputStream(zipPath)) {
 			ZipEntry entry;
 			while ((entry = zis.getNextEntry()) != null) {
 				entryCount++;
+				if (!names.add(entry.getName())) {
+					throw new BackupArchiveException(Reason.DUPLICATE_ENTRY,
+							"duplicate entry: " + sanitize(entry.getName()));
+				}
 				if (!entry.isDirectory()) {
 					try (LimitedInputStream limited = new LimitedInputStream(
 							nonClosingView(zis), MAX_ENTRY_BYTES, finalBytes -> inflatedAcc[0] += finalBytes)) {
