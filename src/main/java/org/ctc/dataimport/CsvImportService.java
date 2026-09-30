@@ -10,6 +10,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -132,11 +133,9 @@ public class CsvImportService {
 		rejectInvalidPreviews(previews);
 
 		var metadata = previews.get(0).getMetadata();
-		rejectForeignOrDecidedTarget(metadata);
-
-		// Resolve season
 		var season = seasonRepository.findById(metadata.seasonId()).orElseThrow(
 				() -> new ValidationException("Season not found in CSV import: " + metadata.seasonId()));
+		rejectInvalidTarget(season, metadata, previews);
 
 		// Resolve or create matchday
 		var matchday = findOrCreateMatchday(season, metadata);
@@ -304,22 +303,60 @@ public class CsvImportService {
 		}
 	}
 
-	private void rejectForeignOrDecidedTarget(ImportMetadata metadata) {
-		if (metadata.isPlayoff()) {
-			playoffMatchupRepository.findById(metadata.playoffMatchupId())
-					.filter(PlayoffMatchup::isComplete)
-					.ifPresent(matchup -> {
-						throw new ImportRejectedException(List.of(PlayoffDecisionGuard.DECIDED));
-					});
+	/** Rejects metadata that points outside the season or at a playoff matchup the scorecards do not belong to. */
+	private void rejectInvalidTarget(Season season, ImportMetadata metadata, List<ImportPreview> previews) {
+		var errors = new ArrayList<String>();
+		var matchday = metadata.hasMatchdayId() ? matchdayRepository.findById(metadata.matchdayId()).orElse(null) : null;
+		if (matchday != null && !matchday.getSeason().getId().equals(season.getId())) {
+			errors.add("The matchday does not belong to the selected season");
 		}
-		if (!metadata.hasMatchdayId()) {
+		if (!metadata.isPlayoff()) {
+			if (matchday != null && matchday.getPhase().getPhaseType() == PhaseType.PLAYOFF) {
+				errors.add("A playoff matchday needs a playoff matchup");
+			}
+			rejectIfAny(errors);
 			return;
 		}
-		matchdayRepository.findById(metadata.matchdayId())
-				.filter(matchday -> !matchday.getSeason().getId().equals(metadata.seasonId()))
-				.ifPresent(matchday -> {
-					throw new ImportRejectedException(List.of("The matchday does not belong to the selected season"));
-				});
+		var matchup = playoffMatchupRepository.findById(metadata.playoffMatchupId()).orElse(null);
+		if (matchup == null) {
+			errors.add("The playoff matchup does not exist");
+			rejectIfAny(errors);
+			return;
+		}
+		if (matchup.isComplete()) {
+			throw new ImportRejectedException(List.of(PlayoffDecisionGuard.DECIDED));
+		}
+		var playoffPhase = matchup.getRound().getPlayoff().getPhase();
+		if (!playoffPhase.getSeason().getId().equals(season.getId())) {
+			errors.add("The playoff matchup does not belong to the selected season");
+		} else {
+			errors.addAll(foreignPairings(matchup, previews, season.getTeams()));
+		}
+		if (matchday != null && !matchday.getPhase().getId().equals(playoffPhase.getId())) {
+			errors.add("The matchday does not belong to the playoff matchup's phase");
+		}
+		rejectIfAny(errors);
+	}
+
+	private List<String> foreignPairings(PlayoffMatchup matchup, List<ImportPreview> previews, List<Team> seasonTeams) {
+		var participants = Stream.of(matchup.getTeam1(), matchup.getTeam2())
+				.filter(Objects::nonNull).map(Team::getId).collect(Collectors.toSet());
+		var errors = new LinkedHashSet<String>();
+		for (var preview : previews) {
+			var names = List.copyOf(blockOrder(preview.getRows(), seasonTeams).values());
+			var teamIds = names.stream().map(name -> findTeamFlexible(name, seasonTeams))
+					.filter(Objects::nonNull).map(Team::getId).collect(Collectors.toSet());
+			if (teamIds.size() == names.size() && !teamIds.equals(participants)) {
+				errors.add("The scorecard teams " + String.join(" and ", names) + " are not the teams of the playoff matchup");
+			}
+		}
+		return List.copyOf(errors);
+	}
+
+	private static void rejectIfAny(List<String> errors) {
+		if (!errors.isEmpty()) {
+			throw new ImportRejectedException(errors);
+		}
 	}
 
 	private Driver resolveDriver(ImportRow row, Map<String, UUID> confirmedMatches,
