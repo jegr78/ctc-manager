@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -46,6 +47,32 @@ class MatchControllerLinkChannelTest {
 	@BeforeEach
 	void setUp() {
 		fixture = testHelper.createFullSeasonFixture("Test_Link");
+	}
+
+	@Test
+	void givenAlreadyLinkedMatch_whenCreateDiscordChannel_thenTheExistingChannelIsReported() throws Exception {
+		// given
+		var matchId = fixture.match().getId();
+		when(discordChannelService.createMatchChannel(any())).thenReturn(false);
+
+		// when
+		mockMvc.perform(post("/admin/matches/" + matchId + "/create-discord-channel"))
+				// then
+				.andExpect(redirectedUrl("/admin/matches/" + matchId))
+				.andExpect(flash().attribute("successMessage", "The match already has a Discord channel."));
+	}
+
+	@Test
+	void givenUnlinkedMatch_whenCreateDiscordChannel_thenTheNewChannelIsReported() throws Exception {
+		// given
+		var matchId = fixture.match().getId();
+		when(discordChannelService.createMatchChannel(any())).thenReturn(true);
+
+		// when
+		mockMvc.perform(post("/admin/matches/" + matchId + "/create-discord-channel"))
+				// then
+				.andExpect(redirectedUrl("/admin/matches/" + matchId))
+				.andExpect(flash().attribute("successMessage", "Discord channel created."));
 	}
 
 	@Test
