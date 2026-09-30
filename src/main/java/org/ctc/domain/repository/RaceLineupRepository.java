@@ -30,6 +30,8 @@ public interface RaceLineupRepository extends JpaRepository<RaceLineup, UUID> {
 	@Query("SELECT rl FROM RaceLineup rl WHERE rl.race.matchday.phase.season.id = :seasonId")
 	List<RaceLineup> findByRaceMatchdaySeasonId(UUID seasonId);
 
+	boolean existsByRaceMatchdayPhaseSeasonIdAndTeamId(UUID seasonId, UUID teamId);
+
 	/**
 	 * Returns RaceLineup entries for a specific driver in a specific season.
 	 * Used to attribute stand-in drivers who have no REGULAR-phase PhaseTeam row.

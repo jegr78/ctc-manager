@@ -80,6 +80,41 @@ class SeasonTeamRemovalIT {
 	}
 
 	@Test
+	void givenUnrosteredTeamWithAPlayedMatch_whenRemoved_thenRejectedAndItStays() {
+		// given
+		unroster(alpha);
+		testHelper.createMatch(testHelper.createMatchdayInRegularPhase(season, "Test_Removal MD " + id, 1), alpha, bravo);
+
+		// when / then
+		assertReferencedRejection(alpha);
+	}
+
+	@Test
+	void givenUnrosteredTeamWithSeasonDrivers_whenRemoved_thenRejectedAndItStays() {
+		// given
+		unroster(alpha);
+		testHelper.createSeasonDriver(season, testHelper.createDriver("Test_Removal_" + id + "_D", "Test Removal Driver"), alpha);
+
+		// when / then
+		assertReferencedRejection(alpha);
+	}
+
+	@Test
+	void givenReplacedTeam_whenRemoved_thenRejectedAndTheSuccessionStays() {
+		// given
+		var successor = testHelper.createTeam("Test Removal Successor " + id, "Test_RMN_" + id);
+		seasonManagementService.addTeamToSeason(season.getId(), successor.getId());
+		unroster(successor);
+		seasonManagementService.replaceTeam(season.getId(), alpha.getId(), successor.getId(), null);
+		unroster(successor);
+
+		// when / then
+		assertReferencedRejection(alpha);
+		assertReferencedRejection(successor);
+		assertThat(reloadedSeason().findSeasonTeam(alpha).orElseThrow().isReplaced()).as("succession kept").isTrue();
+	}
+
+	@Test
 	void givenLastSubTeamWhoseParentHasNoPhasePlace_whenRemoved_thenTheParentLeavesToo() {
 		// given
 		var sub = subTeamOf(alpha);
@@ -110,6 +145,14 @@ class SeasonTeamRemovalIT {
 		var stored = reloadedSeason();
 		assertThat(stored.containsTeam(sub)).as("sub-team left").isFalse();
 		assertThat(stored.containsTeam(alpha)).as("the rostered parent stays in the season").isTrue();
+	}
+
+	private void assertReferencedRejection(Team team) {
+		assertThatThrownBy(() -> seasonManagementService.removeTeamFromSeason(season.getId(), team.getId()))
+				.isInstanceOf(BusinessRuleException.class)
+				.hasMessage("Cannot remove team from season: it has matches, lineups, drivers, playoff places "
+						+ "or a team replacement in this season.");
+		assertThat(reloadedSeason().containsTeam(team)).as(team.getShortName() + " stays in the season").isTrue();
 	}
 
 	private Team subTeamOf(Team parent) {

@@ -17,6 +17,8 @@ public interface PlayoffSeedRepository extends JpaRepository<PlayoffSeed, UUID> 
 
 	void deleteByPlayoffId(UUID playoffId);
 
+	boolean existsByPlayoffPhaseSeasonIdAndTeamId(UUID seasonId, UUID teamId);
+
 	/**
 	 * Full-table finder used by {@code BackupExportService}.
 	 *

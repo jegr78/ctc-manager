@@ -44,6 +44,16 @@ class SeasonManagementServiceTest {
     @Mock
     private SeasonPhaseService seasonPhaseService;
     @Mock
+    private MatchRepository matchRepository;
+    @Mock
+    private RaceLineupRepository raceLineupRepository;
+    @Mock
+    private PlayoffMatchupRepository playoffMatchupRepository;
+    @Mock
+    private PlayoffSeedRepository playoffSeedRepository;
+    @Mock
+    private SeasonDriverRepository seasonDriverRepository;
+    @Mock
     private MatchdayRepository matchdayRepository;
     @Mock
     private PhaseTeamRepository phaseTeamRepository;

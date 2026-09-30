@@ -35,6 +35,11 @@ public class SeasonManagementService {
     private final SeasonPhaseService seasonPhaseService;
     private final MatchdayRepository matchdayRepository;
     private final PhaseTeamRepository phaseTeamRepository;
+    private final MatchRepository matchRepository;
+    private final RaceLineupRepository raceLineupRepository;
+    private final PlayoffMatchupRepository playoffMatchupRepository;
+    private final PlayoffSeedRepository playoffSeedRepository;
+    private final SeasonDriverRepository seasonDriverRepository;
     private final SeasonPhaseRepository seasonPhaseRepository;
 
     public record SeasonEditFormData(Season season, List<Team> allTeams, List<Car> allCars,
@@ -332,10 +337,26 @@ public class SeasonManagementService {
         return team.getShortName();
     }
 
+    private boolean isReferencedInSeason(Season season, Team team) {
+        UUID seasonId = season.getId();
+        UUID teamId = team.getId();
+        var seasonTeam = season.findSeasonTeam(team);
+        boolean inSuccession = seasonTeam.isPresent() && (seasonTeam.get().isReplaced()
+                || season.getSeasonTeams().stream().anyMatch(st -> st.getSuccessor() != null
+                        && st.getSuccessor().getId().equals(seasonTeam.get().getId())));
+        return inSuccession
+                || !seasonDriverRepository.findBySeasonIdAndTeamId(seasonId, teamId).isEmpty()
+                || matchRepository.existsInSeasonForTeam(seasonId, teamId)
+                || raceLineupRepository.existsByRaceMatchdayPhaseSeasonIdAndTeamId(seasonId, teamId)
+                || playoffMatchupRepository.existsInSeasonForTeam(seasonId, teamId)
+                || playoffSeedRepository.existsByPlayoffPhaseSeasonIdAndTeamId(seasonId, teamId);
+    }
+
     /**
      * Removes a team from a season with sub-team constraint check.
-     * Refuses removal while the team itself holds a place in a phase of the season. Auto-removes the
-     * parent team once no sub-team remains, unless the parent still holds a phase place.
+     * Refuses removal while the team itself holds a phase place or is referenced by the season's
+     * matches, lineups, drivers, playoff or succession. Auto-removes the parent team once no sub-team
+     * remains, unless the parent is still referenced that way.
      */
     @Transactional
     public String removeTeamFromSeason(UUID seasonId, UUID teamId) {
@@ -348,6 +369,10 @@ public class SeasonManagementService {
             throw new BusinessRuleException(
                     "Cannot remove team from season: team is still assigned to one or more phase rosters. " +
                     "Remove it from all phases first.");
+        }
+        if (isReferencedInSeason(season, team)) {
+            throw new BusinessRuleException("Cannot remove team from season: it has matches, lineups, drivers, "
+                    + "playoff places or a team replacement in this season.");
         }
 
         if (!team.isSubTeam()) {
@@ -365,7 +390,8 @@ public class SeasonManagementService {
             var parent = team.getParentTeam();
             boolean hasOtherSubs = season.getTeams().stream()
                     .anyMatch(t -> t.isSubTeam() && t.getParentOrSelf().getId().equals(parent.getId()));
-            if (!hasOtherSubs && !phaseTeamRepository.existsByPhaseSeasonIdAndTeamId(seasonId, parent.getId())) {
+            if (!hasOtherSubs && !phaseTeamRepository.existsByPhaseSeasonIdAndTeamId(seasonId, parent.getId())
+                    && !isReferencedInSeason(season, parent)) {
                 season.removeTeam(parent);
                 log.info("Auto-removed parent team {} from season {} (no sub-teams left)",
                         parent.getShortName(), season.getName());

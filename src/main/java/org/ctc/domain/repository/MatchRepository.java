@@ -16,6 +16,10 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
 	@Query("SELECT m FROM Match m WHERE m.matchday.phase.season.id = :seasonId")
 	List<Match> findByMatchdaySeasonId(UUID seasonId);
 
+	@Query("SELECT COUNT(m) > 0 FROM Match m LEFT JOIN m.awayTeam away "
+			+ "WHERE m.matchday.phase.season.id = :seasonId AND (m.homeTeam.id = :teamId OR away.id = :teamId)")
+	boolean existsInSeasonForTeam(UUID seasonId, UUID teamId);
+
 	@EntityGraph(attributePaths = {"homeTeam", "awayTeam", "matchday"})
 	List<Match> findByMatchdayPhaseId(UUID phaseId);
 
