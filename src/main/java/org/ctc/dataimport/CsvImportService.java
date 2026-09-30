@@ -198,6 +198,10 @@ public class CsvImportService {
 							&& race.getPlayoffMatchup().isComplete())) {
 						throw new ImportRejectedException(List.of(PlayoffDecisionGuard.DECIDED));
 					}
+					if (racesToDelete.stream().anyMatch(race -> race.getPlayoffMatchup() != null
+							&& !race.getPlayoffMatchup().getId().equals(metadata.playoffMatchupId()))) {
+						throw new ImportRejectedException(List.of("The pairing's legs belong to another playoff matchup"));
+					}
 					for (var race : racesToDelete) {
 						raceLineupRepository.deleteAll(raceLineupRepository.findByRaceId(race.getId()));
 						match.getRaces().remove(race);
@@ -324,7 +328,7 @@ public class CsvImportService {
 			return;
 		}
 		if (matchup.isComplete()) {
-			throw new ImportRejectedException(List.of(PlayoffDecisionGuard.DECIDED));
+			errors.add(PlayoffDecisionGuard.DECIDED);
 		}
 		var playoffPhase = matchup.getRound().getPlayoff().getPhase();
 		if (!playoffPhase.getSeason().getId().equals(season.getId())) {
@@ -340,13 +344,13 @@ public class CsvImportService {
 
 	private List<String> foreignPairings(PlayoffMatchup matchup, List<ImportPreview> previews, List<Team> seasonTeams) {
 		var participants = Stream.of(matchup.getTeam1(), matchup.getTeam2())
-				.filter(Objects::nonNull).map(Team::getId).collect(Collectors.toSet());
+				.filter(Objects::nonNull).map(team -> team.getParentOrSelf().getId()).collect(Collectors.toSet());
 		var errors = new LinkedHashSet<String>();
 		for (var preview : previews) {
 			var names = List.copyOf(blockOrder(preview.getRows(), seasonTeams).values());
 			var teamIds = names.stream().map(name -> findTeamFlexible(name, seasonTeams))
-					.filter(Objects::nonNull).map(Team::getId).collect(Collectors.toSet());
-			if (teamIds.size() == names.size() && !teamIds.equals(participants)) {
+					.filter(Objects::nonNull).map(team -> team.getParentOrSelf().getId()).collect(Collectors.toSet());
+			if (names.size() != 2 || participants.size() != 2 || !teamIds.equals(participants)) {
 				errors.add("The scorecard teams " + String.join(" and ", names) + " are not the teams of the playoff matchup");
 			}
 		}

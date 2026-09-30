@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.ctc.TestHelper;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.ctc.dataimport.exception.ImportRejectedException;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Matchday;
@@ -18,6 +19,7 @@ import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.PlayoffMatchupRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.service.PlayoffDecisionGuard;
 import org.ctc.domain.service.PlayoffService;
 import org.ctc.testsupport.CtcDevSpringBootContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -202,6 +204,108 @@ class CsvImportTargetValidationIT {
 				.isEqualTo(playoffMatchday.getId());
 	}
 
+	@Test
+	void givenScorecardWithAThirdUnknownTeamBlock_whenImportedForAMatchup_thenRejectedWithoutWrites() throws Exception {
+		// given
+		var matchup = matchup(season, home, away);
+		var csv = scorecard(home.getShortName(), away.getShortName()) + "Test_Unknown_" + id + ",Test_Target_" + id + "_X,3,3,false\n";
+
+		// when
+		var rejection = rejectionOf(() -> importCsv(csv, metadata("Test_Target PO " + id, matchup.getId(), null), false));
+
+		// then
+		assertThat(rejection.getErrors()).as("errors").containsExactly(
+				"The scorecard teams " + home.getShortName() + " and " + away.getShortName() + " and Test_Unknown_" + id
+						+ " are not the teams of the playoff matchup");
+		assertNothingImportedFor(matchup);
+	}
+
+	@Test
+	void givenMatchupWithOnlyOneTeam_whenImportedWithThatTeamAlone_thenRejectedWithoutWrites() throws Exception {
+		// given
+		var matchup = matchup(season, home, null);
+		var csv = """
+				Team,PSN ID,Position,Quali,FL
+				%s,%s,1,1,true
+				""".formatted(home.getShortName(), homeDriver.getPsnId());
+
+		// when
+		var rejection = rejectionOf(() -> importCsv(csv, metadata("Test_Target PO " + id, matchup.getId(), null), false));
+
+		// then
+		assertThat(rejection.getErrors()).as("errors").containsExactly(
+				"The scorecard teams " + home.getShortName() + " are not the teams of the playoff matchup");
+		assertNothingImportedFor(matchup);
+	}
+
+	@Test
+	void givenSubTeamOfAMatchupTeam_whenImportedForTheMatchup_thenTheLegIsStored() throws Exception {
+		// given
+		var subTeam = testHelper.createSubTeam("Test Target Home Sub " + id, "Test_TGS_" + id, home);
+		season.addTeam(subTeam);
+		seasonRepository.save(season);
+		var subDriver = testHelper.createDriver("Test_Target_" + id + "_S", "Test Target Sub Driver");
+		testHelper.createSeasonDriver(season, subDriver, subTeam);
+		var matchup = matchup(season, home, away);
+		var csv = """
+				Team,PSN ID,Position,Quali,FL
+				%s,%s,1,1,true
+				%s,%s,2,2,false
+				""".formatted(subTeam.getShortName(), subDriver.getPsnId(), away.getShortName(), awayDriver.getPsnId());
+
+		// when
+		importCsv(csv, metadata("Test_Target PO " + id, matchup.getId(), null), false);
+
+		// then
+		assertThat(raceRepository.findByPlayoffMatchupId(matchup.getId())).as("a sub-team plays for its parent team")
+				.hasSize(1);
+	}
+
+	@Test
+	void givenPairingWhoseLegBelongsToAnotherMatchup_whenOverwrittenForThisMatchup_thenRejectedAndTheLegStays() throws Exception {
+		// given
+		var playoff = playoffService.createPlayoff(season.getId(), "Test Target Playoff " + id, 4);
+		var matchups = playoffMatchupRepository.findByRoundPlayoffId(playoff.getId());
+		var semi = matchups.stream().filter(m -> m.getRound().getRoundIndex() == 0).findFirst().orElseThrow();
+		var decider = matchups.stream().filter(m -> m.getRound().getRoundIndex() == 1).findFirst().orElseThrow();
+		semi.setTeam1(home);
+		semi.setTeam2(away);
+		decider.setTeam1(home);
+		decider.setTeam2(away);
+		var playoffMatchday = matchdayRepository.save(new Matchday(playoff.getPhase(), "Test_Target PMD " + id, 100));
+		entityManager.flush();
+		importScorecard(metadata(null, semi.getId(), playoffMatchday.getId()));
+
+		// when
+		var rejection = rejectionOf(() -> importCsv(scorecard(home.getShortName(), away.getShortName()),
+				metadata(null, decider.getId(), playoffMatchday.getId()), true));
+
+		// then
+		assertThat(rejection.getErrors()).as("errors").containsExactly(
+				"The pairing's legs belong to another playoff matchup");
+		assertThat(raceRepository.findByPlayoffMatchupId(semi.getId())).as("the other matchup keeps its leg").hasSize(1);
+		assertThat(raceRepository.findByPlayoffMatchupId(decider.getId())).as("no leg for this matchup").isEmpty();
+	}
+
+	@Test
+	void givenDecidedMatchupOfAnotherSeason_whenImported_thenBothErrorsAreReported() throws Exception {
+		// given
+		var other = testHelper.createSeason("Test_Target_Other_" + id);
+		other.addTeam(home);
+		other.addTeam(away);
+		seasonRepository.save(other);
+		var foreignMatchup = matchup(other, home, away);
+		foreignMatchup.setWinner(home);
+		entityManager.flush();
+
+		// when
+		var rejection = rejectionOf(metadata("Test_Target PO " + id, foreignMatchup.getId(), null));
+
+		// then
+		assertThat(rejection.getErrors()).as("errors").containsExactlyInAnyOrder(PlayoffDecisionGuard.DECIDED,
+				"The playoff matchup does not belong to the selected season");
+	}
+
 	private PlayoffMatchup matchup(Season target, Team team1, Team team2) {
 		var playoff = playoffService.createPlayoff(target.getId(), "Test Target Playoff " + id, 2);
 		var matchup = playoffMatchupRepository.findByRoundPlayoffId(playoff.getId()).getFirst();
@@ -216,19 +320,30 @@ class CsvImportTargetValidationIT {
 	}
 
 	private ImportRejectedException rejectionOf(CsvImportService.ImportMetadata metadata) {
-		var rejection = catchThrowableOfType(ImportRejectedException.class, () -> importScorecard(metadata));
+		return rejectionOf(() -> importScorecard(metadata));
+	}
+
+	private ImportRejectedException rejectionOf(ThrowingCallable importCall) {
+		var rejection = catchThrowableOfType(ImportRejectedException.class, importCall);
 		assertThat(rejection).as("the import is rejected").isNotNull();
 		return rejection;
 	}
 
 	private void importScorecard(CsvImportService.ImportMetadata metadata) throws Exception {
-		String csv = """
+		importCsv(scorecard(home.getShortName(), away.getShortName()), metadata, false);
+	}
+
+	private String scorecard(String homeName, String awayName) {
+		return """
 				Team,PSN ID,Position,Quali,FL
 				%s,%s,1,1,true
 				%s,%s,2,2,false
-				""".formatted(home.getShortName(), homeDriver.getPsnId(), away.getShortName(), awayDriver.getPsnId());
+				""".formatted(homeName, homeDriver.getPsnId(), awayName, awayDriver.getPsnId());
+	}
+
+	private void importCsv(String csv, CsvImportService.ImportMetadata metadata, boolean overwrite) throws Exception {
 		var preview = csvImportService.parseAndPreview(new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8)), metadata);
-		csvImportService.executeImport(preview, Map.of(), Set.of(), false);
+		csvImportService.executeImport(preview, Map.of(), Set.of(), overwrite);
 		entityManager.flush();
 	}
 
