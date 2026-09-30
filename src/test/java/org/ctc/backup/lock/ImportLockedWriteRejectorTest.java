@@ -42,7 +42,7 @@ class ImportLockedWriteRejectorTest {
     @Test
     void givenLockHeld_whenPostToWhitelistedImportExecute_thenAllowsThrough() throws Exception {
         // given — lock held, request is POST /admin/backup/import-execute (verbatim)
-        when(importLockService.isLocked()).thenReturn(true);
+        when(importLockService.tryEnterWriter()).thenReturn(false);
         HttpServletRequest req = mockRequest("POST", "/admin/backup/import-execute");
         HttpServletResponse res = Mockito.mock(HttpServletResponse.class);
 
@@ -59,7 +59,7 @@ class ImportLockedWriteRejectorTest {
             throws Exception {
         // given — lock held, request is POST /admin/backup/import-execute-anything
         // (a suffix-extended URL that would slip through a startsWith match)
-        when(importLockService.isLocked()).thenReturn(true);
+        when(importLockService.tryEnterWriter()).thenReturn(false);
         HttpServletRequest req = mockRequest("POST", "/admin/backup/import-execute-anything");
         StringWriter body = new StringWriter();
         HttpServletResponse res = Mockito.mock(HttpServletResponse.class);
@@ -78,7 +78,7 @@ class ImportLockedWriteRejectorTest {
     @Test
     void givenLockHeld_whenPostToBackupsFakePrefixCollision_thenRejectedWith503() throws Exception {
         // given — lock held, /admin/backups-fake (prefix collision with hypothetical /admin/backups path)
-        when(importLockService.isLocked()).thenReturn(true);
+        when(importLockService.tryEnterWriter()).thenReturn(false);
         HttpServletRequest req = mockRequest("POST", "/admin/backups-fake");
         StringWriter body = new StringWriter();
         HttpServletResponse res = Mockito.mock(HttpServletResponse.class);
@@ -100,7 +100,7 @@ class ImportLockedWriteRejectorTest {
     @Test
     void givenLockHeld_whenGetRequest_thenAllowedThroughStep1() throws Exception {
         // given — lock held BUT request is GET (non-mutating verb)
-        when(importLockService.isLocked()).thenReturn(true);
+        when(importLockService.tryEnterWriter()).thenReturn(false);
         HttpServletRequest req = mockRequest("GET", "/admin/seasons");
         HttpServletResponse res = Mockito.mock(HttpServletResponse.class);
 
@@ -110,14 +110,13 @@ class ImportLockedWriteRejectorTest {
         // then — step 1 short-circuit: non-mutating verb always allowed, regardless of lock state
         assertThat(allowed).as("GET request must always pass — step 1 short-circuit").isTrue();
         verify(res, never()).setStatus(anyInt());
-        // isLocked() must not even be queried when verb is GET (step-1 short-circuit)
-        verify(importLockService, never()).isLocked();
+        verify(importLockService, never()).tryEnterWriter();
     }
 
     @Test
     void givenLockNotHeld_whenPostToAnyAdminUrl_thenAllowedThroughStep2() throws Exception {
-        // given — no lock held
-        when(importLockService.isLocked()).thenReturn(false);
+        // given — no lock held, so the writer is admitted
+        when(importLockService.tryEnterWriter()).thenReturn(true);
         HttpServletRequest req = mockRequest("POST", "/admin/teams/save");
         HttpServletResponse res = Mockito.mock(HttpServletResponse.class);
 
@@ -134,7 +133,7 @@ class ImportLockedWriteRejectorTest {
         // given — lock held; PUT verb on whitelisted URL.
         // NOTE: PUT is a mutating verb (step 1 allows it through), so the decision tree
         // reaches step 3 (whitelist equals match) which still permits the exempt URL.
-        when(importLockService.isLocked()).thenReturn(true);
+        when(importLockService.tryEnterWriter()).thenReturn(false);
         HttpServletRequest req = mockRequest("PUT", "/admin/backup/import-execute");
         HttpServletResponse res = Mockito.mock(HttpServletResponse.class);
 
@@ -144,6 +143,48 @@ class ImportLockedWriteRejectorTest {
         // then — whitelist match by equals → allow regardless of verb (since verb is mutating)
         assertThat(allowed).as("whitelisted URL must pass even for PUT verb").isTrue();
         verify(res, never()).setStatus(anyInt());
+    }
+
+    @Test
+    void givenAdmittedWriter_whenRequestCompletes_thenTheWriterIsReleasedOnce() throws Exception {
+        // given
+        when(importLockService.tryEnterWriter()).thenReturn(true);
+        HttpServletRequest req = mockRequest("POST", "/admin/teams/save");
+        HttpServletResponse res = Mockito.mock(HttpServletResponse.class);
+        rejector.preHandle(req, res, new Object());
+        when(req.getAttribute(Mockito.anyString())).thenReturn(Boolean.TRUE);
+
+        // when
+        rejector.afterCompletion(req, res, new Object(), null);
+
+        // then
+        verify(importLockService, times(1)).exitWriter();
+    }
+
+    @Test
+    void givenAsyncRedispatchOfAnAdmittedWriter_whenPreHandled_thenNotCountedAgain() throws Exception {
+        // given
+        HttpServletRequest req = mockRequest("POST", "/admin/backup/export");
+        when(req.getAttribute(Mockito.anyString())).thenReturn(Boolean.TRUE);
+
+        // when
+        boolean allowed = rejector.preHandle(req, Mockito.mock(HttpServletResponse.class), new Object());
+
+        // then
+        assertThat(allowed).as("redispatch of an admitted writer").isTrue();
+        verify(importLockService, never()).tryEnterWriter();
+    }
+
+    @Test
+    void givenRejectedRequest_whenCompleted_thenNoWriterIsReleased() throws Exception {
+        // given
+        HttpServletRequest req = mockRequest("POST", "/admin/teams/save");
+
+        // when
+        rejector.afterCompletion(req, Mockito.mock(HttpServletResponse.class), new Object(), null);
+
+        // then
+        verify(importLockService, never()).exitWriter();
     }
 
     // -------------------------------------------------------------------------

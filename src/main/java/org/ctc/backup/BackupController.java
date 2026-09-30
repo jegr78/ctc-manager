@@ -15,6 +15,7 @@ import org.ctc.backup.dto.BackupImportResult;
 import org.ctc.backup.exception.AutoBackupBeforeImportException;
 import org.ctc.backup.exception.BackupArchiveException;
 import org.ctc.backup.exception.BackupImportException;
+import org.ctc.backup.exception.ImportWritersStillActiveException;
 import org.ctc.backup.exception.UploadsPreflightFailedException;
 import org.ctc.backup.exception.UploadsRestoreException;
 import org.ctc.backup.lock.ImportLockService;
@@ -50,6 +51,9 @@ import org.springframework.web.servlet.view.RedirectView;
 @RequestMapping("/admin/backup")
 @RequiredArgsConstructor
 public class BackupController {
+
+	private static final String WRITERS_STILL_ACTIVE = "Import aborted, changes that started before the import are still "
+			+ "being saved. No database changes. Try again in a moment.";
 
 	private static final DateTimeFormatter ISO_COMPACT_INSTANT =
 			DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneOffset.UTC);
@@ -178,6 +182,16 @@ public class BackupController {
 			return new ModelAndView(rv);
 		}
 		try {
+			try {
+				importLockService.awaitWritersDrained();
+			} catch (ImportWritersStillActiveException ex) {
+				ra.addFlashAttribute("errorMessage", WRITERS_STILL_ACTIVE);
+				return new ModelAndView("redirect:/admin/backup");
+			} catch (InterruptedException ex) {
+				Thread.currentThread().interrupt();
+				ra.addFlashAttribute("errorMessage", WRITERS_STILL_ACTIVE);
+				return new ModelAndView("redirect:/admin/backup");
+			}
 			if (bindingResult.hasErrors()) {
 				try {
 					BackupImportPreview preview = backupImportService.reparse(form.getStagingId());

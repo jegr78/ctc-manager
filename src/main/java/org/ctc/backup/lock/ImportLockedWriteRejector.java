@@ -37,6 +37,8 @@ public class ImportLockedWriteRejector implements HandlerInterceptor {
      */
     private static final Set<String> MUTATING_METHODS = Set.of("POST", "PUT", "PATCH", "DELETE");
 
+    private static final String ADMITTED_WRITER = ImportLockedWriteRejector.class.getName() + ".admitted";
+
     /** Minimal 503 HTML body — wording matches admin/layout.html banner verbatim. */
     private static final String LOCK_HTML = """
             <!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -51,8 +53,8 @@ public class ImportLockedWriteRejector implements HandlerInterceptor {
      * <p>Decision tree:
      * <ol>
      *   <li>Non-mutating method (GET/HEAD/OPTIONS/…) → allow.</li>
-     *   <li>Lock not held → allow (normal operation).</li>
      *   <li>Whitelisted URL {@code /admin/backup/import-execute} → allow.</li>
+     *   <li>Lock not held → admit as a writer until {@link #afterCompletion}.</li>
      *   <li>Else → reject with HTTP 503 + HTML body; return {@code false}.</li>
      * </ol>
      *
@@ -64,16 +66,28 @@ public class ImportLockedWriteRejector implements HandlerInterceptor {
 		if (!MUTATING_METHODS.contains(req.getMethod().toUpperCase())) {
 			return true;   // step 1 — read-only verb: allow
 		}
-		if (!importLockService.isLocked()) {
-			return true;                                // step 2 — no lock: allow
-		}
 		if ("/admin/backup/import-execute".equals(req.getRequestURI())) {
-			return true;   // step 3 — whitelist
+			return true;   // step 2 — whitelist, never counted as a writer
+		}
+		if (req.getAttribute(ADMITTED_WRITER) != null) {
+			return true;   // async redispatch of an admitted writer — counted once, released in afterCompletion
+		}
+		if (importLockService.tryEnterWriter()) {
+			req.setAttribute(ADMITTED_WRITER, Boolean.TRUE);
+			return true;   // step 3 — admitted writer until afterCompletion
 		}
 		log.info("Rejected admin POST during import lock: {} {}", sanitize(req.getMethod()), sanitize(req.getRequestURI()));
 		res.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
 		res.setContentType("text/html;charset=UTF-8");
 		res.getWriter().write(LOCK_HTML);
 		return false;                                                        // step 4 — reject
+	}
+
+	@Override
+	public void afterCompletion(HttpServletRequest req, HttpServletResponse res, Object handler, Exception ex) {
+		if (req.getAttribute(ADMITTED_WRITER) != null) {
+			req.removeAttribute(ADMITTED_WRITER);
+			importLockService.exitWriter();
+		}
 	}
 }
