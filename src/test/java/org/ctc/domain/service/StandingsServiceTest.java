@@ -613,7 +613,7 @@ class StandingsServiceTest {
             race2.setId(UUID.randomUUID());
             race2.setMatch(match2);
             race2.setMatchday(md2);
-            when(raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(season.getId()))
+            when(raceRepository.findByMatchdayPhaseIdAndPlayoffMatchupIsNull(regularPhase.getId()))
                     .thenReturn(List.of(race1, race2));
 
             // when
@@ -644,7 +644,7 @@ class StandingsServiceTest {
 
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
             when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match1));
-            when(raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(season.getId()))
+            when(raceRepository.findByMatchdayPhaseIdAndPlayoffMatchupIsNull(regularPhase.getId()))
                     .thenReturn(List.of());
 
             // when
@@ -867,7 +867,7 @@ class StandingsServiceTest {
             when(seasonPhaseService.findById(groupsPhase.getId())).thenReturn(groupsPhase);
             when(matchRepository.findByMatchdayPhaseId(groupsPhase.getId())).thenReturn(List.of(match));
             when(phaseTeamRepository.findByPhaseIdAndGroupId(groupsPhase.getId(), groupX.getId())).thenReturn(List.of(ptX1, ptX2));
-            when(raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(season.getId())).thenReturn(List.of());
+            when(raceRepository.findByMatchdayPhaseIdAndPlayoffMatchupIsNull(groupsPhase.getId())).thenReturn(List.of());
 
             // when — per-group Buchholz
             var result = standingsService.calculateStandingsWithBuchholz(groupsPhase.getId(), groupX.getId());
@@ -875,6 +875,49 @@ class StandingsServiceTest {
             // then — list returned with Buchholz populated
             assertThat(result).hasSize(2);
             assertThat(result.get(0).getTeam().getId()).isEqualTo(teamX1.getId()); // winner first
+        }
+
+        @Test
+        void givenOpponentOnAnotherGroupsMatchday_whenPerGroupBuchholzCalculated_thenThatOpponentIsIgnored() {
+            // given
+            var rs = new RaceScoring("RS", "20,15,10", "3,2,1", 2);
+            var ms = new MatchScoring("MS", 3, 1, 0);
+            var groupsPhase = PhaseTestFixtures.groupsRegularPhase(season, rs, ms, "Test_Buchholz-Group-X", "Test_Buchholz-Group-Y");
+            var groupX = groupsPhase.getGroups().get(0);
+            var groupY = groupsPhase.getGroups().get(1);
+            var teamX1 = new Team("Test_Buchholz-X1", "BX1");
+            teamX1.setId(UUID.randomUUID());
+            var teamX2 = new Team("Test_Buchholz-X2", "BX2");
+            teamX2.setId(UUID.randomUUID());
+            var teamY1 = new Team("Test_Buchholz-Y1", "BY1");
+            teamY1.setId(UUID.randomUUID());
+            var mdX = new Matchday(groupsPhase, "Test_Buchholz-MD-X", 1);
+            mdX.setGroup(groupX);
+            var mdY = new Matchday(groupsPhase, "Test_Buchholz-MD-Y", 2);
+            mdY.setGroup(groupY);
+            var matchX = createMatchWithScore(mdX, teamX1, teamX2, 70, 46);
+            var matchY = createMatchWithScore(mdY, teamY1, teamX1, 70, 46);
+            var raceX = new Race();
+            raceX.setMatchday(mdX);
+            raceX.setMatch(matchX);
+            var raceY = new Race();
+            raceY.setMatchday(mdY);
+            raceY.setMatch(matchY);
+            when(seasonPhaseService.findById(groupsPhase.getId())).thenReturn(groupsPhase);
+            when(matchRepository.findByMatchdayPhaseId(groupsPhase.getId())).thenReturn(List.of(matchX, matchY));
+            when(phaseTeamRepository.findByPhaseIdAndGroupId(groupsPhase.getId(), groupX.getId())).thenReturn(List.of(
+                    PhaseTestFixtures.assignTeam(groupsPhase, teamX1, groupX), PhaseTestFixtures.assignTeam(groupsPhase, teamX2, groupX)));
+            when(phaseTeamRepository.findByPhaseId(groupsPhase.getId())).thenReturn(List.of(
+                    PhaseTestFixtures.assignTeam(groupsPhase, teamX1, groupX), PhaseTestFixtures.assignTeam(groupsPhase, teamX2, groupX),
+                    PhaseTestFixtures.assignTeam(groupsPhase, teamY1, groupY)));
+            when(raceRepository.findByMatchdayPhaseIdAndPlayoffMatchupIsNull(groupsPhase.getId())).thenReturn(List.of(raceX, raceY));
+
+            // when
+            var result = standingsService.calculateStandingsWithBuchholz(groupsPhase.getId(), groupX.getId());
+
+            // then
+            var x1 = result.stream().filter(st -> st.getTeam().getId().equals(teamX1.getId())).findFirst().orElseThrow();
+            assertThat(x1.getBuchholz()).as("only the group X opponent BX2 (0 points) counts, not BY1 (3 points)").isZero();
         }
 
         @Test
