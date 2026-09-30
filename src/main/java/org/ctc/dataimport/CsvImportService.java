@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -151,7 +152,7 @@ public class CsvImportService {
 
 		for (int raceIndex = 0; raceIndex < previews.size(); raceIndex++) {
 			var preview = previews.get(raceIndex);
-			var grouped = groupByTeamPair(preview.getRows());
+			var grouped = groupByTeamPair(preview.getRows(), seasonTeams);
 
 			for (var entry : grouped.entrySet()) {
 				var teamPair = entry.getKey();
@@ -168,24 +169,25 @@ public class CsvImportService {
 
 		// Process each team pairing once, but handle multiple races
 		for (var entry : byTeamPairAndRaceIndex.entrySet()) {
-			var teamParts = entry.getKey().split("\\|");
-			var homeTeam = findTeamFlexible(teamParts[0], seasonTeams);
-			var awayTeam = teamParts.length > 1 ? findTeamFlexible(teamParts[1], seasonTeams) : null;
+			// The first leg's block order orients a new pairing; later legs may list the teams reversed.
+			var firstLegRows = entry.getValue().get(Collections.min(entry.getValue().keySet()));
+			var teamNames = firstLegRows.isEmpty() ? List.of(entry.getKey()) : pairingTeams(firstLegRows, seasonTeams);
+			var homeTeam = findTeamFlexible(teamNames.getFirst(), seasonTeams);
+			var awayTeam = teamNames.size() > 1 ? findTeamFlexible(teamNames.get(1), seasonTeams) : null;
 
 			if (homeTeam == null) {
-				result.addError("Team not found: " + teamParts[0]);
+				result.addError("Team not found: " + teamNames.getFirst());
 				continue;
 			}
-			if (awayTeam == null && teamParts.length > 1) {
-				result.addError("Team not found: " + teamParts[1]);
+			if (awayTeam == null && teamNames.size() > 1) {
+				result.addError("Team not found: " + teamNames.get(1));
 				continue;
 			}
 
 			var effectiveAwayTeam = awayTeam != null ? awayTeam : homeTeam;
 
-			// Duplicate check: same home vs away on this matchday
-			var existingMatch = matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(
-					matchday.getId(), homeTeam.getId(), effectiveAwayTeam.getId());
+			// Duplicate check: the same pairing on this matchday, in either orientation
+			var existingMatch = findPairing(matchday, homeTeam, effectiveAwayTeam);
 
 			Match match;
 			if (existingMatch.isPresent()) {
@@ -197,7 +199,11 @@ public class CsvImportService {
 							&& race.getPlayoffMatchup().isComplete())) {
 						throw new ImportRejectedException(List.of(PlayoffDecisionGuard.DECIDED));
 					}
-					racesToDelete.forEach(raceRepository::delete);
+					for (var race : racesToDelete) {
+						raceLineupRepository.deleteAll(raceLineupRepository.findByRaceId(race.getId()));
+						match.getRaces().remove(race);
+						raceRepository.delete(race);
+					}
 					raceRepository.flush();
 					log.info("Overwriting existing match: {} vs {} on {}",
 							sanitize(homeTeam.getShortName()), sanitize(effectiveAwayTeam.getShortName()), sanitize(matchday.getLabel()));
@@ -221,6 +227,12 @@ public class CsvImportService {
 				var race = new Race();
 				race.setMatchday(matchday);
 				race.setMatch(match);
+				var legHome = findTeamFlexible(raceRows.getFirst().teamShortName(), seasonTeams);
+				if (legHome != null && match != null && match.getAwayTeam() != null
+						&& !legHome.getId().equals(match.getHomeTeam().getId())) {
+					race.setHomeTeamOverride(match.getAwayTeam());
+					race.setAwayTeamOverride(match.getHomeTeam());
+				}
 
 				// Link to playoff matchup if applicable
 				if (metadata.isPlayoff()) {
@@ -426,13 +438,41 @@ public class CsvImportService {
 				});
 	}
 
-	private Map<String, List<ImportRow>> groupByTeamPair(List<ImportRow> rows) {
-		var teams = rows.stream().map(ImportRow::teamShortName).distinct().toList();
-		if (teams.size() == 2) {
-			return Map.of(teams.get(0) + "|" + teams.get(1), rows);
+	/** Keys a scorecard by its two teams regardless of block order, so A/B and B/A are one pairing. */
+	private Map<String, List<ImportRow>> groupByTeamPair(List<ImportRow> rows, List<Team> seasonTeams) {
+		var blocks = blockOrder(rows, seasonTeams);
+		if (blocks.size() == 2) {
+			return Map.of(blocks.keySet().stream().sorted().collect(Collectors.joining("|")), rows);
 		}
 		// Fallback: group all under first team
-		return Map.of(teams.isEmpty() ? "UNKNOWN" : teams.getFirst(), rows);
+		return Map.of(blocks.isEmpty() ? "UNKNOWN" : blocks.firstEntry().getKey(), rows);
+	}
+
+	/** The pairing's two teams in block order, or only the first team when the scorecard is no pairing. */
+	private List<String> pairingTeams(List<ImportRow> rows, List<Team> seasonTeams) {
+		var names = List.copyOf(blockOrder(rows, seasonTeams).values());
+		return names.size() == 2 ? names : names.subList(0, 1);
+	}
+
+	/**
+	 * Team names in the order their blocks appear, keyed by the resolved team so spelling variants of
+	 * one team collapse while different teams with similar short names stay apart.
+	 */
+	private LinkedHashMap<String, String> blockOrder(List<ImportRow> rows, List<Team> seasonTeams) {
+		var byTeam = new LinkedHashMap<String, String>();
+		rows.forEach(row -> byTeam.putIfAbsent(teamKey(row.teamShortName(), seasonTeams), row.teamShortName()));
+		return byTeam;
+	}
+
+	private String teamKey(String teamShortName, List<Team> seasonTeams) {
+		var team = findTeamFlexible(teamShortName, seasonTeams);
+		return team != null ? team.getId().toString() : teamShortName.replace('_', ' ').toLowerCase(Locale.ROOT);
+	}
+
+	private Optional<Match> findPairing(Matchday matchday, Team home, Team away) {
+		return matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(matchday.getId(), home.getId(), away.getId())
+				.or(() -> matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(
+						matchday.getId(), away.getId(), home.getId()));
 	}
 
 	private List<String[]> readCsvLines(InputStream stream) throws IOException {
@@ -490,20 +530,19 @@ public class CsvImportService {
 			return false;
 		}
 
-		var teams = preview.getRows().stream().map(ImportRow::teamShortName).distinct().toList();
+		var seasonTeams = season.getTeams();
+		var teams = List.copyOf(blockOrder(preview.getRows(), seasonTeams).values());
 		if (teams.size() < 2) {
 			return false;
 		}
 
-		var seasonTeams = season.getTeams();
 		var homeTeam = findTeamFlexible(teams.get(0), seasonTeams);
 		var awayTeam = findTeamFlexible(teams.get(1), seasonTeams);
 		if (homeTeam == null || awayTeam == null) {
 			return false;
 		}
 
-		boolean exists = matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(
-				matchday.getId(), homeTeam.getId(), awayTeam.getId());
+		boolean exists = findPairing(matchday, homeTeam, awayTeam).isPresent();
 		if (exists) {
 			preview.setDuplicateDetected(true);
 		}

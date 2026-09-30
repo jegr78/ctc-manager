@@ -414,8 +414,9 @@ class CsvImportServiceTest {
 		// given
 		when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 		when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
-		when(matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(
-				matchday.getId(), standaloneTeam1.getId(), standaloneTeam2.getId())).thenReturn(true);
+		when(matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(
+				matchday.getId(), standaloneTeam1.getId(), standaloneTeam2.getId()))
+				.thenReturn(Optional.of(new Match(matchday, standaloneTeam1, standaloneTeam2)));
 
 		var metadata = new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId());
 		var preview = new CsvImportService.ImportPreview(metadata);
@@ -437,7 +438,7 @@ class CsvImportServiceTest {
 		// given
 		when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 		when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
-		when(matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any())).thenReturn(false);
+		when(matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any())).thenReturn(Optional.empty());
 
 		var metadata = new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId());
 		var preview = new CsvImportService.ImportPreview(metadata);
