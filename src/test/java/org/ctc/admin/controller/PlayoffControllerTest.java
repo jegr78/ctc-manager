@@ -222,6 +222,46 @@ class PlayoffControllerTest {
 
 
     @Test
+    void givenDecidedMatchup_whenReopenedWithAndWithoutReason_thenFlashesTheOutcome() throws Exception {
+        // given
+        var matchup = decidedMatchup("Reopen Test");
+
+        // when / then
+        mockMvc.perform(post("/admin/playoffs/matchup/" + matchup.getId() + "/reopen"))
+                .andExpect(redirectedUrl("/admin/playoffs/matchup/" + matchup.getId()))
+                .andExpect(flash().attribute("errorMessage", "Error: Reopening a matchup needs a reason"));
+        mockMvc.perform(post("/admin/playoffs/matchup/" + matchup.getId() + "/reopen").param("reason", "Wrong result"))
+                .andExpect(redirectedUrl("/admin/playoffs/matchup/" + matchup.getId()))
+                .andExpect(flash().attribute("successMessage", "Matchup reopened for a new decision"));
+    }
+
+    @Test
+    void givenDecidedMatchup_whenSeedingSaved_thenErrorFlashOnTheSeedingPage() throws Exception {
+        // given
+        var matchup = decidedMatchup("Frozen Seed Test");
+        var playoffId = matchup.getRound().getPlayoff().getId();
+
+        // when / then
+        mockMvc.perform(post("/admin/playoffs/" + playoffId + "/seed")
+                        .param("seeds[0].matchupId", matchup.getId().toString())
+                        .param("seeds[0].teamId", season.getTeams().get(2).getId().toString())
+                        .param("seeds[0].slot", "1"))
+                .andExpect(redirectedUrl("/admin/playoffs/" + playoffId + "/seed"))
+                .andExpect(flash().attribute("errorMessage", "Seeding is frozen once a playoff matchup has results or a winner"));
+    }
+
+    private org.ctc.domain.model.PlayoffMatchup decidedMatchup(String name) {
+        var playoff = playoffService.createPlayoff(season.getId(), name, 4);
+        var matchup = playoff.getRounds().get(0).getMatchups().get(0);
+        var teams = season.getTeams();
+        playoffSeedingService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
+        playoffSeedingService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
+        playoffService.addRaceToMatchup(matchup.getId(), null, null, null);
+        playoffService.setWinnerManually(matchup.getId(), teams.get(0).getId(), "Opponent withdrew");
+        return matchup;
+    }
+
+    @Test
     void givenMatchupWithSeededTeams_whenDetermineWinner_thenRedirects() throws Exception {
         // given
         var playoff = playoffService.createPlayoff(season.getId(), "Winner Test", 4);

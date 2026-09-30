@@ -37,6 +37,7 @@ import org.springframework.stereotype.Component;
  *   <li>{@code next_matchup_id} (UUID, nullable self-FK)</li>
  *   <li>{@code home_score} (INT, nullable)</li>
  *   <li>{@code away_score} (INT, nullable)</li>
+ *   <li>{@code decision_reason} (VARCHAR(500), nullable) and {@code decision_history} (TEXT, nullable), V19</li>
  *   <li>{@code created_at}, {@code updated_at} (TIMESTAMP)</li>
  * </ul>
  *
@@ -53,8 +54,9 @@ public class PlayoffMatchupRestorer implements EntityRestorer {
      */
     private static final String INSERT_SQL_PASS1 =
             "INSERT INTO playoff_matchups (id, round_id, team1_id, team2_id, winner_id, "
-                    + "next_matchup_id, bracket_position, home_score, away_score, created_at, updated_at) "
-                    + "VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?)";
+                    + "next_matchup_id, bracket_position, home_score, away_score, decision_reason, "
+                    + "decision_history, created_at, updated_at) "
+                    + "VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)";
 
     /**
      * Pass-2 UPDATE binds {@code next_matchup_id} from the JSON, scoped by {@code id}.
@@ -86,8 +88,10 @@ public class PlayoffMatchupRestorer implements EntityRestorer {
             ps.setInt(6, row.get("bracketPosition").asInt());
             setNullableInt(ps, 7, row, "homeScore");
             setNullableInt(ps, 8, row, "awayScore");
-            ps.setTimestamp(9, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
-            ps.setTimestamp(10, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
+            setNullableString(ps, 9, row, "decisionReason");
+            setNullableString(ps, 10, row, "decisionHistory");
+            ps.setTimestamp(11, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
+            ps.setTimestamp(12, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
         });
 
         // Pass 2: UPDATE next_matchup_id for the subset with a non-null nextMatchup reference
@@ -114,6 +118,17 @@ public class PlayoffMatchupRestorer implements EntityRestorer {
             ps.setNull(idx, Types.OTHER);
         } else {
             ps.setObject(idx, UUID.fromString(value.asText()));
+        }
+    }
+
+    /** Older backups carry no decision fields; they restore as {@code NULL}. */
+    private static void setNullableString(PreparedStatement ps, int idx, JsonNode row, String field)
+            throws SQLException {
+        JsonNode value = row.get(field);
+        if (value == null || value.isNull()) {
+            ps.setNull(idx, Types.VARCHAR);
+        } else {
+            ps.setString(idx, value.asText());
         }
     }
 

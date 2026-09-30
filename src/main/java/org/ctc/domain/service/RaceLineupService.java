@@ -93,6 +93,7 @@ public class RaceLineupService {
 	public int saveLineup(UUID raceId, Map<UUID, UUID> rosterAssignments, Map<UUID, UUID> guestAssignments) {
 		var race = raceRepository.findById(raceId)
 				.orElseThrow(() -> new EntityNotFoundException("Race", raceId));
+		PlayoffDecisionGuard.requireOpen(race);
 
 		var collisions = new HashSet<>(rosterAssignments.keySet());
 		collisions.retainAll(guestAssignments.keySet());

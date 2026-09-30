@@ -127,6 +127,7 @@ public class MatchdayService {
         var matchday = matchdayRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Matchday", id));
         var seasonId = matchday.getSeason().getId();
+        matchday.getRaces().forEach(PlayoffDecisionGuard::requireOpen);
         matchdayRepository.delete(matchday);
         log.info("Deleted matchday: {}", matchday.getLabel());
         return seasonId;

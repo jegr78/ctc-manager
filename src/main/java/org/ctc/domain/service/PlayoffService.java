@@ -2,9 +2,12 @@ package org.ctc.domain.service;
 
 import static org.ctc.util.LogSanitizer.sanitize;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.BusinessRuleException;
@@ -41,6 +44,10 @@ public class PlayoffService {
 	private final ScoringService scoringService;
 	private final PlayoffBracketViewService playoffBracketViewService;
 	private final SeasonPhaseService seasonPhaseService;
+	private final RaceLineupRepository raceLineupRepository;
+
+	static final int MAX_REASON_LENGTH = 500;
+	private static final Pattern CONTROL_CHARACTERS = Pattern.compile("\\p{Cntrl}|[\\u2028\\u2029]");
 
 	/**
 	 * Creates a playoff for a season. Atomically auto-creates a PLAYOFF
@@ -147,9 +154,8 @@ public class PlayoffService {
 
 	@Transactional
 	public void determineWinner(UUID matchupId) {
-		PlayoffMatchup matchup = playoffMatchupRepository.findById(matchupId)
-				.orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", matchupId));
-
+		PlayoffMatchup matchup = findMatchup(matchupId);
+		requireUndecided(matchup);
 		if (!matchup.isReady()) {
 			throw new IllegalStateException("Matchup is not ready - both teams must be set");
 		}
@@ -158,77 +164,183 @@ public class PlayoffService {
 		if (legs.isEmpty()) {
 			throw new IllegalStateException("No races found for matchup");
 		}
-
-		UUID team1Id = matchup.getTeam1().getId();
-
-		int team1Total = 0;
-		int team2Total = 0;
-		for (Race leg : legs) {
-			if (leg.getResults().isEmpty()) {
-				continue;
-			}
-			int[] totals = scoringService.calculateTeamTotals(leg.getResults(), leg.getId(), team1Id);
-			team1Total += totals[0];
-			team2Total += totals[1];
+		if (!allLegsScored(legs)) {
+			throw new IllegalStateException("Every scheduled leg needs results before the winner is determined");
 		}
 
-		// Store aggregated scores on matchup
-		matchup.setHomeScore(team1Total);
-		matchup.setAwayScore(team2Total);
+		int[] totals = totals(matchup, legs);
+		matchup.setHomeScore(totals[0]);
+		matchup.setAwayScore(totals[1]);
 
 		// Explicit tie handling — ties are not silently resolved
-		if (team1Total == team2Total) {
+		if (totals[0] == totals[1]) {
 			playoffMatchupRepository.save(matchup);
 			throw new IllegalStateException(
-					"Tie (%d:%d) — Winner must be set manually".formatted(team1Total, team2Total));
+					"Tie (%d:%d) — Winner must be set manually".formatted(totals[0], totals[1]));
 		}
 
-		Team winner = team1Total > team2Total ? matchup.getTeam1() : matchup.getTeam2();
-		matchup.setWinner(winner);
-		playoffMatchupRepository.save(matchup);
-
-		// Advance winner to next matchup
-		if (matchup.getNextMatchup() != null) {
-			PlayoffMatchup next = matchup.getNextMatchup();
-			if (matchup.getBracketPosition() % 2 == 0) {
-				next.setTeam1(winner);
-			} else {
-				next.setTeam2(winner);
-			}
-			playoffMatchupRepository.save(next);
-		}
-
+		Team winner = totals[0] > totals[1] ? matchup.getTeam1() : matchup.getTeam2();
+		decide(matchup, winner, null);
 		log.info("Matchup winner determined: {} ({}:{}) - advancing to next round",
-				winner.getShortName(), team1Total, team2Total);
+				winner.getShortName(), totals[0], totals[1]);
 	}
 
+	/**
+	 * Declares {@code winnerTeamId} the winner. A winner who is not the points leader of all scheduled
+	 * legs (early completion, tie, adjudication) needs a reason, which is stored with the decision.
+	 */
 	@Transactional
-	public void setWinnerManually(UUID matchupId, UUID winnerTeamId) {
-		PlayoffMatchup matchup = playoffMatchupRepository.findById(matchupId)
-				.orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", matchupId));
-
+	public void setWinnerManually(UUID matchupId, UUID winnerTeamId, String reason) {
+		PlayoffMatchup matchup = findMatchup(matchupId);
+		requireUndecided(matchup);
 		Team winner = findTeam(winnerTeamId);
 
-		boolean isParticipant = (matchup.getTeam1() != null && matchup.getTeam1().getId().equals(winnerTeamId))
-				|| (matchup.getTeam2() != null && matchup.getTeam2().getId().equals(winnerTeamId));
-		if (!isParticipant) {
+		boolean isTeam1 = matchup.getTeam1() != null && matchup.getTeam1().getId().equals(winnerTeamId);
+		boolean isTeam2 = matchup.getTeam2() != null && matchup.getTeam2().getId().equals(winnerTeamId);
+		if (!isTeam1 && !isTeam2) {
 			throw new IllegalArgumentException("Winner must be one of the matchup participants");
 		}
 
+		List<Race> legs = raceRepository.findByPlayoffMatchupId(matchupId);
+		int[] totals = totals(matchup, legs);
+		boolean pointsLeader = !legs.isEmpty() && allLegsScored(legs)
+				&& (isTeam1 ? totals[0] > totals[1] : totals[1] > totals[0]);
+		String decisionReason = normalizedReason(reason);
+		if (!pointsLeader && decisionReason == null) {
+			throw new IllegalStateException("A winner that is not the points leader of all scheduled legs needs a reason");
+		}
+
+		decide(matchup, winner, decisionReason);
+		log.info("Matchup winner set manually: {}", winner.getShortName());
+	}
+
+	/**
+	 * Reopens a decided matchup for a new decision. Rejected while a later matchup has results or a
+	 * winner; otherwise the advancement into the successor and the revoked team's lineups there are
+	 * removed, while results, schedules and the decision history stay.
+	 */
+	@Transactional
+	public void reopen(UUID matchupId, String reason) {
+		PlayoffMatchup matchup = findMatchup(matchupId);
+		String reopenReason = normalizedReason(reason);
+		if (reopenReason == null) {
+			throw new IllegalStateException("Reopening a matchup needs a reason");
+		}
+		Team previousWinner = matchup.getWinner();
+		if (previousWinner == null) {
+			throw new IllegalStateException("The matchup is not decided");
+		}
+		for (var later = matchup.getNextMatchup(); later != null; later = later.getNextMatchup()) {
+			if (later.getWinner() != null || !allLegsUnscored(raceRepository.findByPlayoffMatchupId(later.getId()))) {
+				throw new IllegalStateException("A later matchup already has results or a winner. This needs a bracket correction");
+			}
+		}
+
+		appendHistory(matchup, "REOPENED", previousWinner, reopenReason);
+		matchup.setWinner(null);
+		matchup.setDecisionReason(null);
+		playoffMatchupRepository.save(matchup);
+		revokeAdvancement(matchup, previousWinner);
+		log.info("Matchup {} reopened, previous winner {}", matchupId, previousWinner.getShortName());
+	}
+
+	private PlayoffMatchup findMatchup(UUID matchupId) {
+		return playoffMatchupRepository.findById(matchupId)
+				.orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", matchupId));
+	}
+
+	private static void requireUndecided(PlayoffMatchup matchup) {
+		if (matchup.isComplete()) {
+			throw new IllegalStateException("The matchup is already decided. Reopen it first");
+		}
+	}
+
+	private static boolean allLegsScored(List<Race> legs) {
+		return legs.stream().noneMatch(leg -> leg.getResults().isEmpty());
+	}
+
+	private static boolean allLegsUnscored(List<Race> legs) {
+		return legs.stream().allMatch(leg -> leg.getResults().isEmpty());
+	}
+
+	private int[] totals(PlayoffMatchup matchup, List<Race> legs) {
+		int[] totals = {0, 0};
+		if (matchup.getTeam1() == null) {
+			return totals;
+		}
+		for (Race leg : legs) {
+			if (!leg.getResults().isEmpty()) {
+				int[] legTotals = scoringService.calculateTeamTotals(leg.getResults(), leg.getId(), matchup.getTeam1().getId());
+				totals[0] += legTotals[0];
+				totals[1] += legTotals[1];
+			}
+		}
+		return totals;
+	}
+
+	private static String normalizedReason(String reason) {
+		if (reason == null || reason.isBlank()) {
+			return null;
+		}
+		String stripped = CONTROL_CHARACTERS.matcher(reason).replaceAll(" ").strip();
+		if (stripped.length() > MAX_REASON_LENGTH) {
+			throw new IllegalStateException("The reason may have at most " + MAX_REASON_LENGTH + " characters");
+		}
+		return stripped;
+	}
+
+	private void decide(PlayoffMatchup matchup, Team winner, String reason) {
 		matchup.setWinner(winner);
+		matchup.setDecisionReason(reason);
+		appendHistory(matchup, "DECIDED", winner, reason);
 		playoffMatchupRepository.save(matchup);
 
-		if (matchup.getNextMatchup() != null) {
-			PlayoffMatchup next = matchup.getNextMatchup();
-			if (matchup.getBracketPosition() % 2 == 0) {
+		PlayoffMatchup next = matchup.getNextMatchup();
+		if (next != null) {
+			if (feedsFirstSlot(matchup)) {
 				next.setTeam1(winner);
 			} else {
 				next.setTeam2(winner);
 			}
 			playoffMatchupRepository.save(next);
 		}
+	}
 
-		log.info("Matchup winner set manually: {}", winner.getShortName());
+	private void revokeAdvancement(PlayoffMatchup matchup, Team previousWinner) {
+		PlayoffMatchup next = matchup.getNextMatchup();
+		if (next == null) {
+			return;
+		}
+		Team advanced = feedsFirstSlot(matchup) ? next.getTeam1() : next.getTeam2();
+		if (advanced == null || !advanced.getId().equals(previousWinner.getId())) {
+			return;
+		}
+		if (feedsFirstSlot(matchup)) {
+			next.setTeam1(null);
+		} else {
+			next.setTeam2(null);
+		}
+		playoffMatchupRepository.save(next);
+		UUID revokedClub = previousWinner.getParentOrSelf().getId();
+		for (Race race : raceRepository.findByPlayoffMatchupId(next.getId())) {
+			raceLineupRepository.findByRaceId(race.getId()).stream()
+					.filter(lineup -> lineup.getTeam().getParentOrSelf().getId().equals(revokedClub))
+					.forEach(raceLineupRepository::delete);
+		}
+	}
+
+	private static boolean feedsFirstSlot(PlayoffMatchup matchup) {
+		return matchup.getBracketPosition() % 2 == 0;
+	}
+
+	private static void appendHistory(PlayoffMatchup matchup, String action, Team winner, String reason) {
+		String score = matchup.getHomeScore() == null || matchup.getAwayScore() == null
+				? "" : " (%d:%d)".formatted(matchup.getHomeScore(), matchup.getAwayScore());
+		String entry = "%s %s %s%s%s".formatted(
+				Instant.now().truncatedTo(ChronoUnit.SECONDS), action,
+				winner.getShortName(), score, reason == null ? "" : ", reason: " + reason);
+		String history = matchup.getDecisionHistory();
+		matchup.setDecisionHistory(history == null ? entry : history + "\n" + entry);
 	}
 
 	@Transactional(readOnly = true)
@@ -302,8 +414,8 @@ public class PlayoffService {
 
 	@Transactional
 	public Race addRaceToMatchup(UUID matchupId, String track, String car, LocalDateTime dateTime) {
-		var matchup = playoffMatchupRepository.findById(matchupId)
-				.orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", matchupId));
+		var matchup = findMatchup(matchupId);
+		requireUndecided(matchup);
 
 		if (!matchup.isReady()) {
 			throw new IllegalStateException("Both teams must be set");

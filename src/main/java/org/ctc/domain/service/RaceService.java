@@ -223,6 +223,7 @@ public class RaceService {
 	@Transactional
 	public String saveResults(UUID raceId, List<RaceResultData> results) {
 		var race = raceRepository.findById(raceId).orElseThrow();
+		PlayoffDecisionGuard.requireOpen(race);
 
 		race.getResults().clear();
 		raceRepository.saveAndFlush(race);
@@ -271,6 +272,7 @@ public class RaceService {
 	@Transactional
 	public UUID deleteRace(UUID raceId) {
 		var race = raceRepository.findById(raceId).orElseThrow();
+		PlayoffDecisionGuard.requireOpen(race);
 		var matchdayId = race.getMatchday().getId();
 		var match = race.getMatch();
 		var matchup = race.getPlayoffMatchup();
