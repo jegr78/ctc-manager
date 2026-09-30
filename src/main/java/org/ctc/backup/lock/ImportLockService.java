@@ -68,4 +68,7 @@ public class ImportLockService {
     public boolean isLocked() {
         return lock.isLocked();
     }
+
+    public void awaitWritersDrained() {
+    }
 }
