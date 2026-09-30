@@ -49,7 +49,7 @@ public class SwissPairingService {
 		if (!matchdays.isEmpty()) {
 			var lastMatchday = matchdays.get(matchdays.size() - 1);
 			var lastRaces = raceRepository.findByMatchdayId(lastMatchday.getId());
-			if (!lastRaces.stream().allMatch(SwissPairingService::hasOutcome)) {
+			if (!allPairingsDecided(lastRaces)) {
 				throw new IllegalStateException("Current round has incomplete races");
 			}
 		}
@@ -81,7 +81,7 @@ public class SwissPairingService {
 			raceRepository.save(race);
 		}
 
-		log.info("Generated Swiss round {} for phase {} group {}: {} pairings",
+		log.info("Generated Swiss round {} for phase {} group {}: {} races",
 				roundNumber, phaseId, groupId, pairings.size());
 		return matchday;
 	}
@@ -133,15 +133,31 @@ public class SwissPairingService {
 
 		var lastMatchday = matchdays.get(matchdays.size() - 1);
 		var lastRaces = raceRepository.findByMatchdayId(lastMatchday.getId());
-		return lastRaces.stream().allMatch(SwissPairingService::hasOutcome);
+		return allPairingsDecided(lastRaces);
 	}
 
-	/** A bye, a walkover, results or aggregated scores decide a pairing, as in the standings. */
-	private static boolean hasOutcome(Race race) {
-		return race.isBye()
-				|| race.getMatch() != null && race.getMatch().getWalkoverTeam() != null
-				|| !race.getResults().isEmpty()
-				|| race.getHomeScore() != null && race.getAwayScore() != null;
+	private static boolean allPairingsDecided(List<Race> races) {
+		var legsByMatch = races.stream()
+				.filter(race -> race.getMatch() != null)
+				.collect(Collectors.groupingBy(race -> race.getMatch().getId()));
+		return legsByMatch.values().stream().allMatch(legs -> isDecided(legs.getFirst().getMatch(), legs))
+				&& races.stream().filter(race -> race.getMatch() == null)
+						.allMatch(race -> race.isBye() || !race.getResults().isEmpty());
+	}
+
+	/**
+	 * A bye, a walkover, results on every leg, or a quick score without any leg results decides a
+	 * pairing, as in the standings.
+	 */
+	private static boolean isDecided(Match match, List<Race> legs) {
+		if (match.isBye() || match.getWalkoverTeam() != null) {
+			return true;
+		}
+		if (legs.stream().noneMatch(leg -> leg.getResults().isEmpty())) {
+			return true;
+		}
+		return legs.stream().allMatch(leg -> leg.getResults().isEmpty())
+				&& match.getHomeScore() != null && match.getAwayScore() != null;
 	}
 
 	private List<Matchday> getMatchdaysForPhaseGroup(UUID phaseId, UUID groupId) {
@@ -208,7 +224,7 @@ public class SwissPairingService {
 		if (unpaired.size() % 2 != 0) {
 			Team byeTeam = selectByeTeam(unpaired, byeTeams);
 			unpaired.remove(byeTeam);
-			pairings.add(createRaceWithMatch(matchday, byeTeam, null, true));
+			pairings.addAll(createLegs(matchday, byeTeam, null, true));
 		}
 
 		// Pair teams: iterate through sorted list, pair with next available opponent
@@ -232,7 +248,7 @@ public class SwissPairingService {
 				log.warn("Swiss pairing: forced rematch {} vs {}", team1.getShortName(), opponent.getShortName());
 			}
 
-			pairings.add(createRaceWithMatch(matchday, team1, opponent, false));
+			pairings.addAll(createLegs(matchday, team1, opponent, false));
 		}
 
 		return pairings;
@@ -255,24 +271,37 @@ public class SwissPairingService {
 		// Handle bye for odd number
 		if (teams.size() % 2 != 0) {
 			Team byeTeam = teams.remove(teams.size() - 1);
-			pairings.add(createRaceWithMatch(matchday, byeTeam, null, true));
+			pairings.addAll(createLegs(matchday, byeTeam, null, true));
 		}
 
 		for (int i = 0; i < teams.size(); i += 2) {
-			pairings.add(createRaceWithMatch(matchday, teams.get(i), teams.get(i + 1), false));
+			pairings.addAll(createLegs(matchday, teams.get(i), teams.get(i + 1), false));
 		}
 
 		return pairings;
 	}
 
-	private Race createRaceWithMatch(Matchday matchday, Team homeTeam, Team awayTeam, boolean bye) {
+	/**
+	 * One race per configured leg of the phase, every even leg with home and away reversed; a bye
+	 * gets a single race.
+	 */
+	private List<Race> createLegs(Matchday matchday, Team homeTeam, Team awayTeam, boolean bye) {
 		var match = new Match(matchday, homeTeam, awayTeam);
 		match.setBye(bye);
 		match = matchRepository.save(match);
-		var race = new Race();
-		race.setMatchday(matchday);
-		race.setMatch(match);
-		return race;
+		int legs = bye ? 1 : Math.max(1, matchday.getPhase().getLegs());
+		List<Race> races = new ArrayList<>();
+		for (int leg = 0; leg < legs; leg++) {
+			var race = new Race();
+			race.setMatchday(matchday);
+			race.setMatch(match);
+			if (leg % 2 != 0) {
+				race.setHomeTeamOverride(awayTeam);
+				race.setAwayTeamOverride(homeTeam);
+			}
+			races.add(race);
+		}
+		return races;
 	}
 
 	/**

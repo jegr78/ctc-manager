@@ -4,6 +4,7 @@ import static org.ctc.util.LogSanitizer.sanitize;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +32,6 @@ public class SeasonManagementService {
     private final PlayoffRepository playoffRepository;
     private final RaceScoringRepository raceScoringRepository;
     private final MatchScoringRepository matchScoringRepository;
-    private final ScoringService scoringService;
     private final SeasonPhaseService seasonPhaseService;
     private final MatchdayRepository matchdayRepository;
     private final PhaseTeamRepository phaseTeamRepository;
@@ -41,8 +41,14 @@ public class SeasonManagementService {
                                      List<Track> allTracks, List<RaceScoring> allRaceScorings,
                                      List<MatchScoring> allMatchScorings) {}
 
-    /** {@code walkovers} maps a walkover race to the forfeiting team. */
-    public record SwissRoundData(Season season, Map<UUID, int[]> raceScores, Map<UUID, UUID> walkovers) {}
+    /** The regular phase's matchdays as Swiss rounds, and their pairings keyed by matchday id. */
+    public record SwissRoundData(Season season, List<Matchday> rounds, Map<UUID, List<SwissPairing>> pairings) {}
+
+    /**
+     * One Swiss pairing in match orientation. {@code quickScoreRaceId} is the leg that takes a quick
+     * score while the pairing is still open, otherwise {@code null}.
+     */
+    public record SwissPairing(Match match, UUID quickScoreRaceId, LocalDateTime dateTime) {}
 
     public record SeasonGroupOption(int year, int number, String label, int teamCount) {}
 
@@ -255,31 +261,24 @@ public class SeasonManagementService {
     @Transactional(readOnly = true)
     public SwissRoundData getSwissRoundData(UUID seasonId) {
         var season = findById(seasonId);
-        Map<UUID, int[]> raceScores = new HashMap<>();
-        Map<UUID, UUID> walkovers = new HashMap<>();
-        for (var md : season.getMatchdays()) {
-            for (var race : md.getRaces()) {
-				if (race.isBye()) {
-					continue;
-				}
-                if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
-                    walkovers.put(race.getId(), race.getMatch().getWalkoverTeam().getId());
-                    continue;
-                }
-                if (race.getHomeScore() != null && race.getAwayScore() != null) {
-                    raceScores.put(race.getId(), new int[]{race.getHomeScore(), race.getAwayScore()});
-                } else if (!race.getResults().isEmpty()) {
-                    int homeTotal = race.getResults().stream()
-                            .filter(r -> scoringService.isDriverInTeam(r, race.getId(), race.getHomeTeam().getId()))
-                            .mapToInt(RaceResult::getPointsTotal).sum();
-                    int awayTotal = race.getResults().stream()
-                            .filter(r -> !scoringService.isDriverInTeam(r, race.getId(), race.getHomeTeam().getId()))
-                            .mapToInt(RaceResult::getPointsTotal).sum();
-                    raceScores.put(race.getId(), new int[]{homeTotal, awayTotal});
-                }
+        var rounds = season.getMatchdays().stream()
+                .filter(md -> md.getPhase().getPhaseType() == PhaseType.REGULAR)
+                .toList();
+        Map<UUID, List<SwissPairing>> pairings = new HashMap<>();
+        for (var md : rounds) {
+            var mdPairings = new ArrayList<SwissPairing>();
+            for (var match : md.getMatches()) {
+                var legs = match.getRaces();
+                var firstLeg = legs.stream().filter(leg -> !leg.hasTeamOverrides()).findFirst()
+                        .or(() -> legs.stream().findFirst());
+                boolean open = !match.isBye() && match.getWalkoverTeam() == null && match.getHomeScore() == null;
+                mdPairings.add(new SwissPairing(match,
+                        open ? firstLeg.map(Race::getId).orElse(null) : null,
+                        firstLeg.map(Race::getDateTime).orElse(null)));
             }
+            pairings.put(md.getId(), mdPairings);
         }
-        return new SwissRoundData(season, raceScores, walkovers);
+        return new SwissRoundData(season, rounds, pairings);
     }
 
     /**

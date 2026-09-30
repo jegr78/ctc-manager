@@ -42,8 +42,6 @@ class SeasonManagementServiceTest {
     @Mock
     private MatchScoringRepository matchScoringRepository;
     @Mock
-    private ScoringService scoringService;
-    @Mock
     private SeasonPhaseService seasonPhaseService;
     @Mock
     private MatchdayRepository matchdayRepository;
@@ -683,6 +681,11 @@ class SeasonManagementServiceTest {
 		if (!season.getPhases().contains(phase)) {
 			season.getPhases().add(phase);
 		}
+        var playoffPhase = org.ctc.domain.service.PhaseTestFixtures.playoffPhase(season, "Test_Swiss-Playoff", null, null);
+        var playoffMatchday = new Matchday(playoffPhase, "Test_Swiss-Playoff-MD", 100);
+        playoffMatchday.setId(UUID.randomUUID());
+        playoffPhase.getMatchdays().add(playoffMatchday);
+        season.getPhases().add(playoffPhase);
 
         when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
@@ -691,8 +694,12 @@ class SeasonManagementServiceTest {
 
         // then
         assertThat(result.season()).isEqualTo(season);
-        assertThat(result.raceScores()).containsKey(race.getId());
-        assertThat(result.raceScores().get(race.getId())).isEqualTo(new int[]{10, 8});
+        assertThat(result.rounds()).as("Swiss rounds without the playoff matchday").containsExactly(matchday);
+        assertThat(result.pairings().get(matchday.getId())).as("one scored pairing").singleElement()
+                .satisfies(pairing -> {
+                    assertThat(pairing.match()).as("match").isEqualTo(match);
+                    assertThat(pairing.quickScoreRaceId()).as("no quick score once scored").isNull();
+                });
     }
 
     @Nested

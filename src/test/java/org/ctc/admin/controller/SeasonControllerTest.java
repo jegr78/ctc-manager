@@ -297,6 +297,6 @@ class SeasonControllerTest {
 				// then
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/swiss-rounds"))
-				.andExpect(model().attributeExists("season", "raceScores", "currentRound", "canGenerateNext"));
+				.andExpect(model().attributeExists("season", "pairings", "currentRound", "canGenerateNext"));
 	}
 }
