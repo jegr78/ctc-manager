@@ -481,9 +481,8 @@ public class BackupImportService {
         }
 
         // Shared by the auto-backup ZIP (Step 0.5) and the uploads-old/ sibling (AFTER_COMMIT listener).
-        // The audit-id suffix keeps imports within the same second apart.
-        String ts = clock.instant().truncatedTo(ChronoUnit.SECONDS).toString().replace(":", "-");
-        Path importBackupDir = importBackupsDir.resolve(ts + "-" + auditUuid.toString().substring(0, 8));
+        Instant importStart = clock.instant();
+        Path importBackupDir = importBackupsDir.resolve(recoveryDirName(importStart, auditUuid));
         // Target ZIP for the pre-import auto-backup (runs BEFORE any DB mutation).
         Path autoBackupZip = importBackupDir.resolve("auto-backup-before-import.zip");
 
@@ -509,6 +508,7 @@ public class BackupImportService {
         Map<String, Long> wipedCounts = new LinkedHashMap<>();
         Map<String, Long> restoredCounts = new LinkedHashMap<>();
         int schemaVersion = 0;
+        boolean ownsImportBackupDir = false;
 
         try {
             // Step 0: manifest re-read (schemaVersion validation is implicit — readManifest
@@ -522,6 +522,7 @@ public class BackupImportService {
 
             Files.createDirectories(importBackupsDir);
             Files.createDirectory(importBackupDir);  // fails rather than sharing a directory with another import
+            ownsImportBackupDir = true;
             try {
                 uploadsSwapPreflight.check(uploadsTargetDir, importBackupDir);
             } catch (UploadsSwapPreflightException preflightEx) {
@@ -542,7 +543,7 @@ public class BackupImportService {
             try {
                 try (OutputStream out = Files.newOutputStream(autoBackupZip,
                         StandardOpenOption.CREATE_NEW)) {
-                    backupArchive.writeZip(out, Instant.now());
+                    backupArchive.writeZip(out, importStart);
                 }
             } catch (IOException | RuntimeException autoExportEx) {
                 tryDeletePartialAutoBackup(autoBackupZip);  // best-effort cleanup, never throws
@@ -610,7 +611,9 @@ public class BackupImportService {
             log.error("Import failed for staging-id {}: ", stagingId, t);
             boolean auditWritten = tryRecordFailure(auditUuid, schemaVersion, sourceFilename,
                     wipedCounts, restoredCounts);
-            tryCleanupUploadsNew(uploadsNewDir);
+            if (ownsImportBackupDir) {
+                tryCleanupUploadsNew(uploadsNewDir);
+            }
             if (t instanceof Error err) {
                 throw err;
             }
@@ -847,6 +850,12 @@ public class BackupImportService {
      *
      * @param target path to the partial auto-backup ZIP (may be {@code null})
      */
+    /** {@code <second>-<first 8 chars of the audit id>}, sortable and unique per import. */
+    static String recoveryDirName(Instant importStart, UUID auditUuid) {
+        return importStart.truncatedTo(ChronoUnit.SECONDS).toString().replace(":", "-")
+                + "-" + auditUuid.toString().substring(0, 8);
+    }
+
     private static void tryDeletePartialAutoBackup(Path target) {
         if (target == null) {
             return;

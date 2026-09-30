@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Optional;
@@ -69,11 +68,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Tag("integration")
 class BackupImportPostCommitEdgeCasesIT {
 
-    /** ISO-8601 instant truncated to seconds, with {@code :} replaced by {@code -} to make
-     *  the literal path-component safe across POSIX + Windows file systems. Matches the
-     *  exact production formula in {@link BackupImportService#execute(UUID)}. */
+    /** ISO-8601 second with {@code :} replaced by {@code -}, then the first eight audit-id characters. */
     private static final Pattern TS_DIR_PATTERN =
-            Pattern.compile("^\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}Z$");
+            Pattern.compile("^\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}Z-[0-9a-f]{8}$");
 
     @TempDir
     Path tempRoot;
@@ -93,7 +90,7 @@ class BackupImportPostCommitEdgeCasesIT {
         uploadsTarget = tempRoot.resolve("uploads");
         // Use the same timestamp format the production code produces so the path naming
         // in this test exactly mirrors what BackupImportService.execute(...) would build.
-        String ts = Instant.now().truncatedTo(ChronoUnit.SECONDS).toString().replace(":", "-");
+        String ts = BackupImportService.recoveryDirName(Instant.now(), UUID.randomUUID());
         importBackupDir = tempRoot.resolve(".import-backups").resolve(ts);
         uploadsNewDir = importBackupDir.resolve("uploads-new");
         Files.createDirectories(importBackupDir);
@@ -209,11 +206,7 @@ class BackupImportPostCommitEdgeCasesIT {
 
     @Test
     void givenImportBackupDirNamingConvention_whenReplicatingProductionFormula_thenSubdirMatchesIso8601WithDashes() {
-        // given — the production formula in BackupImportService.execute(...) (Instant.now()
-        // .truncatedTo(SECONDS).toString().replace(":", "-")) is replicated in setUpLayout.
-        // This test pins the convention via the resolved sub-directory name created there. The
-        // matcher is the canonical ISO-8601-with-dashes shape used as the 24h-retention key
-        // (CONTEXT D-04) and operator forensic identifier.
+        // given — setUpLayout names the directory with BackupImportService.recoveryDirName.
 
         // when — extract the timestamped segment from the importBackupDir we built in setUpLayout
         Path tsSegment = importBackupDir.getFileName();
@@ -238,12 +231,10 @@ class BackupImportPostCommitEdgeCasesIT {
                 .as("Parent must be `.import-backups` per app.backup.import-backups-dir contract")
                 .hasToString(".import-backups");
 
-        // Cross-check: regenerating the formula at the moment of assertion produces a value
-        // that ALSO matches the same regex — the contract is stable, not coincidence.
-        String regenerated = Instant.now().truncatedTo(ChronoUnit.SECONDS).toString().replace(":", "-");
-        assertThat(regenerated)
-                .as("Re-applying production formula at assertion time must produce a contract-matching value")
-                .matches(TS_DIR_PATTERN);
+        assertThat(BackupImportService.recoveryDirName(Instant.parse("2026-09-30T12:00:00.750Z"),
+                UUID.fromString("1a2b3c4d-0000-0000-0000-000000000000")))
+                .as("production formula for a fixed instant and audit id")
+                .isEqualTo("2026-09-30T12-00-00Z-1a2b3c4d");
     }
 
     @AfterEach
