@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.ctc.TestHelper;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
@@ -25,6 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Mutates score sources through the real services and reads the stored aggregate back from the
@@ -165,6 +167,20 @@ class ScoreReaggregationIT {
 		// then
 		assertThat(stored()).extracting(Match::getHomeScore, Match::getAwayScore)
 				.as("a leg without results must not reset a quick score").containsExactly(3, 1);
+	}
+
+	@Test
+	void givenWalkoverMatch_whenQuickScored_thenRejectedAndTheWalkoverStays() {
+		// given
+		var leg = createMatchWithLegs(1).getFirst();
+		matchService.updateWalkover(match.getId(), away.getId());
+
+		// when / then
+		assertThatThrownBy(() -> raceService.quickScore(leg.getId(), 3, 1))
+				.isInstanceOf(BusinessRuleException.class)
+				.hasMessage("A walkover match has no score");
+		assertThat(stored()).extracting(Match::getHomeScore, Match::getAwayScore, m -> m.getWalkoverTeam().getId())
+				.as("the walkover keeps null scores").containsExactly(null, null, away.getId());
 	}
 
 	@Test

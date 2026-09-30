@@ -41,7 +41,8 @@ public class SeasonManagementService {
                                      List<Track> allTracks, List<RaceScoring> allRaceScorings,
                                      List<MatchScoring> allMatchScorings) {}
 
-    public record SwissRoundData(Season season, Map<UUID, int[]> raceScores) {}
+    /** {@code walkovers} maps a walkover race to the forfeiting team. */
+    public record SwissRoundData(Season season, Map<UUID, int[]> raceScores, Map<UUID, UUID> walkovers) {}
 
     public record SeasonGroupOption(int year, int number, String label, int teamCount) {}
 
@@ -255,11 +256,16 @@ public class SeasonManagementService {
     public SwissRoundData getSwissRoundData(UUID seasonId) {
         var season = findById(seasonId);
         Map<UUID, int[]> raceScores = new HashMap<>();
+        Map<UUID, UUID> walkovers = new HashMap<>();
         for (var md : season.getMatchdays()) {
             for (var race : md.getRaces()) {
 				if (race.isBye()) {
 					continue;
 				}
+                if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
+                    walkovers.put(race.getId(), race.getMatch().getWalkoverTeam().getId());
+                    continue;
+                }
                 if (race.getHomeScore() != null && race.getAwayScore() != null) {
                     raceScores.put(race.getId(), new int[]{race.getHomeScore(), race.getAwayScore()});
                 } else if (!race.getResults().isEmpty()) {
@@ -273,7 +279,7 @@ public class SeasonManagementService {
                 }
             }
         }
-        return new SwissRoundData(season, raceScores);
+        return new SwissRoundData(season, raceScores, walkovers);
     }
 
     /**

@@ -228,8 +228,11 @@ public class RaceController {
 	                         @RequestParam int awayScore,
 	                         @RequestParam(required = false) String returnUrl,
 	                         RedirectAttributes redirectAttributes) {
-		String message = raceService.quickScore(id, homeScore, awayScore);
-		redirectAttributes.addFlashAttribute("successMessage", message);
+		try {
+			redirectAttributes.addFlashAttribute("successMessage", raceService.quickScore(id, homeScore, awayScore));
+		} catch (BusinessRuleException e) {
+			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+		}
 		String safeUrl = returnUrl != null && returnUrl.startsWith("/") && !returnUrl.startsWith("//")
 				? returnUrl : "/admin/races";
 		return "redirect:" + safeUrl;

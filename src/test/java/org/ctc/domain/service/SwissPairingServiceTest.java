@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import jakarta.persistence.EntityManager;
 import java.util.*;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
@@ -27,6 +28,10 @@ class SwissPairingServiceTest {
 	private MatchRepository matchRepository;
 	@Autowired
 	private MatchService matchService;
+	@Autowired
+	private SeasonManagementService seasonManagementService;
+	@Autowired
+	private EntityManager entityManager;
 	@Autowired
 	private TeamRepository teamRepository;
 	@Autowired
@@ -181,7 +186,13 @@ class SwissPairingServiceTest {
 		matchService.updateWalkover(walkoverMatch.getId(), walkoverMatch.getAwayTeam().getId());
 		addDummyResults(races.get(1));
 
+		entityManager.flush();
+		entityManager.clear();
+
 		// when / then
+		assertThat(seasonManagementService.getSwissRoundData(season.getId()).walkovers())
+				.as("the round view shows the walkover instead of a score form")
+				.containsEntry(races.get(0).getId(), walkoverMatch.getAwayTeam().getId());
 		assertThat(swissPairingService.isCurrentRoundComplete(regularPhase.getId(), null))
 				.as("a walkover with null scores and no results completes its pairing").isTrue();
 		var md2 = swissPairingService.generateNextRound(regularPhase.getId(), null);
