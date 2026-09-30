@@ -203,6 +203,15 @@ public class PlayoffService {
 	}
 
 	@Transactional
+	public void reopen(UUID matchupId, String reason) {
+	}
+
+	@Transactional
+	public void setWinnerManually(UUID matchupId, UUID winnerTeamId, String reason) {
+		setWinnerManually(matchupId, winnerTeamId);
+	}
+
+	@Transactional
 	public void setWinnerManually(UUID matchupId, UUID winnerTeamId) {
 		PlayoffMatchup matchup = playoffMatchupRepository.findById(matchupId)
 				.orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", matchupId));

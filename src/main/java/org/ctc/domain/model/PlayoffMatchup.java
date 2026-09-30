@@ -50,6 +50,12 @@ public class PlayoffMatchup extends BaseEntity {
 
 	private Integer awayScore;
 
+	@Column(name = "decision_reason", length = 500)
+	private String decisionReason;
+
+	@Column(name = "decision_history", columnDefinition = "TEXT")
+	private String decisionHistory;
+
 	@OneToMany(mappedBy = "playoffMatchup")
 	@OrderBy("dateTime ASC NULLS LAST")
 	private List<Race> races = new ArrayList<>();
