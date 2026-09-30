@@ -2,15 +2,18 @@ package org.ctc.backup.lock;
 
 import static org.ctc.util.LogSanitizer.sanitize;
 
+import jakarta.servlet.AsyncEvent;
+import jakarta.servlet.AsyncListener;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.AsyncHandlerInterceptor;
 
 /**
  * Intercepts every mutating request under {@code /admin/**} while the import lock is held
@@ -26,7 +29,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ImportLockedWriteRejector implements HandlerInterceptor {
+public class ImportLockedWriteRejector implements AsyncHandlerInterceptor {
 
     private final ImportLockService importLockService;
 
@@ -73,7 +76,7 @@ public class ImportLockedWriteRejector implements HandlerInterceptor {
 			return true;   // async redispatch of an admitted writer — counted once, released in afterCompletion
 		}
 		if (importLockService.tryEnterWriter()) {
-			req.setAttribute(ADMITTED_WRITER, Boolean.TRUE);
+			req.setAttribute(ADMITTED_WRITER, new AtomicBoolean());
 			return true;   // step 3 — admitted writer until afterCompletion
 		}
 		log.info("Rejected admin POST during import lock: {} {}", sanitize(req.getMethod()), sanitize(req.getRequestURI()));
@@ -85,8 +88,39 @@ public class ImportLockedWriteRejector implements HandlerInterceptor {
 
 	@Override
 	public void afterCompletion(HttpServletRequest req, HttpServletResponse res, Object handler, Exception ex) {
-		if (req.getAttribute(ADMITTED_WRITER) != null) {
-			req.removeAttribute(ADMITTED_WRITER);
+		release(req.getAttribute(ADMITTED_WRITER));
+	}
+
+	/** Releases an async writer when its context ends, even if the container never redispatches. */
+	@Override
+	public void afterConcurrentHandlingStarted(HttpServletRequest req, HttpServletResponse res, Object handler) {
+		Object token = req.getAttribute(ADMITTED_WRITER);
+		if (token != null && req.isAsyncStarted()) {
+			req.getAsyncContext().addListener(new AsyncListener() {
+				@Override
+				public void onComplete(AsyncEvent event) {
+					release(token);
+				}
+
+				@Override
+				public void onTimeout(AsyncEvent event) {
+					release(token);
+				}
+
+				@Override
+				public void onError(AsyncEvent event) {
+					release(token);
+				}
+
+				@Override
+				public void onStartAsync(AsyncEvent event) {
+				}
+			});
+		}
+	}
+
+	private void release(Object token) {
+		if (token instanceof AtomicBoolean released && released.compareAndSet(false, true)) {
 			importLockService.exitWriter();
 		}
 	}

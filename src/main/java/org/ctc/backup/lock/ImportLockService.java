@@ -36,7 +36,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @Scope("singleton")  // explicit — redundant but documents singleton intent for concurrent-access safety
-public class ImportLockService {
+public final class ImportLockService {
 
     private final ReentrantLock lock = new ReentrantLock();  // fairness=false (non-blocking tryLock)
     private final Object writerMonitor = new Object();
@@ -49,6 +49,9 @@ public class ImportLockService {
 
     @Autowired
     public ImportLockService(@Value("${app.backup.writer-drain-timeout:PT30S}") Duration writerDrainTimeout) {
+        if (writerDrainTimeout.isNegative() || writerDrainTimeout.isZero()) {
+            throw new IllegalArgumentException("app.backup.writer-drain-timeout must be positive");
+        }
         this.writerDrainTimeout = writerDrainTimeout;
     }
 

@@ -114,6 +114,20 @@ class ImportInFlightWriterIT {
 		assertThat(carNamed("slow-" + id)).as("the slow writer still commits").isTrue();
 	}
 
+	@Test
+	void givenWriterStillRunning_whenAnInvalidConfirmFormArrives_thenItIsAnsweredWithoutWaitingForWriters() throws Exception {
+		// given
+		startPausedWriter("unrelated-" + id);
+
+		// when / then
+		mockMvc.perform(post("/admin/backup/import-execute")
+						.param("stagingId", UUID.randomUUID().toString())
+						.param("acknowledged", "false"))
+				.andExpect(flash().attribute("errorMessage",
+						org.hamcrest.Matchers.not("Import aborted, changes that started before the import are still being saved. "
+								+ "No database changes. Try again in a moment.")));
+	}
+
 	private void startPausedWriter(String model) throws InterruptedException {
 		writer = CompletableFuture.runAsync(() -> {
 			try {

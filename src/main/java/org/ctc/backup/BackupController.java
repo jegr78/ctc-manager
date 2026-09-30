@@ -182,16 +182,6 @@ public class BackupController {
 			return new ModelAndView(rv);
 		}
 		try {
-			try {
-				importLockService.awaitWritersDrained();
-			} catch (ImportWritersStillActiveException ex) {
-				ra.addFlashAttribute("errorMessage", WRITERS_STILL_ACTIVE);
-				return new ModelAndView("redirect:/admin/backup");
-			} catch (InterruptedException ex) {
-				Thread.currentThread().interrupt();
-				ra.addFlashAttribute("errorMessage", WRITERS_STILL_ACTIVE);
-				return new ModelAndView("redirect:/admin/backup");
-			}
 			if (bindingResult.hasErrors()) {
 				try {
 					BackupImportPreview preview = backupImportService.reparse(form.getStagingId());
@@ -206,6 +196,16 @@ public class BackupController {
 							"Backup archive failed safety checks (size or path) and was rejected.");
 					return new ModelAndView("redirect:/admin/backup");
 				}
+			}
+			try {
+				importLockService.awaitWritersDrained();
+			} catch (ImportWritersStillActiveException ex) {
+				ra.addFlashAttribute("errorMessage", WRITERS_STILL_ACTIVE);
+				return new ModelAndView("redirect:/admin/backup");
+			} catch (InterruptedException ex) {
+				Thread.currentThread().interrupt();
+				ra.addFlashAttribute("errorMessage", WRITERS_STILL_ACTIVE);
+				return new ModelAndView("redirect:/admin/backup");
 			}
 			try {
 				backupImportService.reparse(form.getStagingId());  // defense-in-depth re-validation

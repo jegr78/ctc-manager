@@ -7,6 +7,8 @@ import java.io.StringWriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -149,12 +151,12 @@ class ImportLockedWriteRejectorTest {
     void givenAdmittedWriter_whenRequestCompletes_thenTheWriterIsReleasedOnce() throws Exception {
         // given
         when(importLockService.tryEnterWriter()).thenReturn(true);
-        HttpServletRequest req = mockRequest("POST", "/admin/teams/save");
-        HttpServletResponse res = Mockito.mock(HttpServletResponse.class);
+        var req = new MockHttpServletRequest("POST", "/admin/teams/save");
+        var res = new MockHttpServletResponse();
         rejector.preHandle(req, res, new Object());
-        when(req.getAttribute(Mockito.anyString())).thenReturn(Boolean.TRUE);
 
         // when
+        rejector.afterCompletion(req, res, new Object(), null);
         rejector.afterCompletion(req, res, new Object(), null);
 
         // then
@@ -165,24 +167,43 @@ class ImportLockedWriteRejectorTest {
     void givenAsyncRedispatchOfAnAdmittedWriter_whenPreHandled_thenNotCountedAgain() throws Exception {
         // given
         when(importLockService.tryEnterWriter()).thenReturn(true);
-        HttpServletRequest req = mockRequest("POST", "/admin/backup/export");
-        when(req.getAttribute(Mockito.anyString())).thenReturn(Boolean.TRUE);
+        var req = new MockHttpServletRequest("POST", "/admin/backup/export");
+        rejector.preHandle(req, new MockHttpServletResponse(), new Object());
 
         // when
-        boolean allowed = rejector.preHandle(req, Mockito.mock(HttpServletResponse.class), new Object());
+        boolean allowed = rejector.preHandle(req, new MockHttpServletResponse(), new Object());
 
         // then
         assertThat(allowed).as("redispatch of an admitted writer").isTrue();
-        verify(importLockService, never()).tryEnterWriter();
+        verify(importLockService, times(1)).tryEnterWriter();
+    }
+
+    @Test
+    void givenAsyncWriter_whenTheAsyncContextEndsWithoutARedispatch_thenTheWriterIsReleasedOnce() throws Exception {
+        // given
+        when(importLockService.tryEnterWriter()).thenReturn(true);
+        var req = new MockHttpServletRequest("POST", "/admin/backup/export");
+        req.setAsyncSupported(true);
+        var res = new MockHttpServletResponse();
+        rejector.preHandle(req, res, new Object());
+        req.startAsync(req, res);
+        rejector.afterConcurrentHandlingStarted(req, res, new Object());
+
+        // when
+        req.getAsyncContext().complete();
+        rejector.afterCompletion(req, res, new Object(), null);
+
+        // then
+        verify(importLockService, times(1)).exitWriter();
     }
 
     @Test
     void givenRejectedRequest_whenCompleted_thenNoWriterIsReleased() throws Exception {
         // given
-        HttpServletRequest req = mockRequest("POST", "/admin/teams/save");
+        var req = new MockHttpServletRequest("POST", "/admin/teams/save");
 
         // when
-        rejector.afterCompletion(req, Mockito.mock(HttpServletResponse.class), new Object(), null);
+        rejector.afterCompletion(req, new MockHttpServletResponse(), new Object(), null);
 
         // then
         verify(importLockService, never()).exitWriter();
