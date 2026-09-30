@@ -136,7 +136,18 @@ public final class LimitedInputStream extends FilterInputStream {
         super.close();
     }
 
-    // skip(), mark(), reset(), available() are NOT overridden — FilterInputStream defaults suffice.
+    @Override
+    public long skip(long n) throws IOException {
+        long skipped = super.skip(n);
+        count += skipped;
+        if (count > limit) {
+            fireOnClose();
+            throw new BackupArchiveException(Reason.ENTRY_TOO_LARGE,
+                    "Entry exceeds limit: limit=" + limit + " bytes");
+        }
+        return skipped;
+    }
+
 
     // ----- private helpers -----
 
