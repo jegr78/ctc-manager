@@ -239,6 +239,25 @@ class CsvImportTargetValidationIT {
 	}
 
 	@Test
+	void givenMatchupWithOnlyOneTeam_whenImportedWithThatTeamAndItsSubTeam_thenRejectedWithoutWrites() throws Exception {
+		// given
+		var subTeam = testHelper.createSubTeam("Test Target Home Sub " + id, "Test_TGS_" + id, home);
+		season.addTeam(subTeam);
+		seasonRepository.save(season);
+		var matchup = matchup(season, home, null);
+
+		// when
+		var rejection = rejectionOf(() -> importCsv(scorecard(home.getShortName(), subTeam.getShortName()),
+				metadata("Test_Target PO " + id, matchup.getId(), null), false));
+
+		// then
+		assertThat(rejection.getErrors()).as("errors").containsExactly(
+				"The scorecard teams " + home.getShortName() + " and " + subTeam.getShortName()
+						+ " are not the teams of the playoff matchup");
+		assertNothingImportedFor(matchup);
+	}
+
+	@Test
 	void givenSubTeamOfAMatchupTeam_whenImportedForTheMatchup_thenTheLegIsStored() throws Exception {
 		// given
 		var subTeam = testHelper.createSubTeam("Test Target Home Sub " + id, "Test_TGS_" + id, home);
