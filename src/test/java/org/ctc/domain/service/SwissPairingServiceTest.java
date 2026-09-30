@@ -2,6 +2,7 @@ package org.ctc.domain.service;
 
 import jakarta.persistence.EntityManager;
 import java.util.*;
+import java.util.stream.Collectors;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.ctc.testsupport.CtcDevSpringBootContext;
@@ -174,6 +175,70 @@ class SwissPairingServiceTest {
 			assertFalse(firstRoundPairs.contains(pair),
 					"Rematch: " + race.getHomeTeam().getShortName() + " vs " + race.getAwayTeam().getShortName());
 		}
+	}
+
+	@Test
+	void givenTwoLegPhase_whenRoundsGenerated_thenEachPairingHasTwoLegsWithTheSecondReversed() {
+		// given
+		regularPhase.setLegs(2);
+		seasonPhaseRepository.save(regularPhase);
+		addTeams(4);
+
+		// when
+		var md1 = swissPairingService.generateNextRound(regularPhase.getId(), null);
+
+		// then
+		var legsByMatch = raceRepository.findByMatchdayId(md1.getId()).stream()
+				.collect(Collectors.groupingBy(race -> race.getMatch().getId()));
+		assertThat(legsByMatch).as("two pairings of four teams").hasSize(2);
+		legsByMatch.values().forEach(legs -> {
+			assertThat(legs).as("legs per pairing").hasSize(2);
+			var match = legs.getFirst().getMatch();
+			assertThat(legs).as("one leg in the pairing's orientation, one reversed")
+					.extracting(race -> race.getHomeTeam().getId())
+					.containsExactlyInAnyOrder(match.getHomeTeam().getId(), match.getAwayTeam().getId());
+		});
+		addDummyResults(md1.getId());
+		var md2 = swissPairingService.generateNextRound(regularPhase.getId(), null);
+		assertThat(raceRepository.findByMatchdayId(md2.getId())).as("round 2 also has two legs per pairing").hasSize(4);
+	}
+
+	@Test
+	void givenTwoLegPhaseWithOddTeams_whenRoundGenerated_thenTheByeHasASingleRace() {
+		// given
+		regularPhase.setLegs(2);
+		seasonPhaseRepository.save(regularPhase);
+		addTeams(5);
+
+		// when
+		var md = swissPairingService.generateNextRound(regularPhase.getId(), null);
+
+		// then
+		var races = raceRepository.findByMatchdayId(md.getId());
+		assertThat(races.stream().filter(Race::isBye)).as("one bye race, not one per leg").hasSize(1);
+		assertThat(races).as("two pairings with two legs plus the bye").hasSize(5);
+	}
+
+	@Test
+	void givenTwoLegGroupsPhase_whenGroupARoundGenerated_thenOnlyGroupATeamsGetTwoLegs() {
+		// given
+		var phase = buildSwissGroupsPhase();
+		phase.setLegs(2);
+		seasonPhaseRepository.save(phase);
+		var groupA = phase.getGroups().get(0);
+		addTeamsToPhase(phase, groupA, 4);
+		addTeamsToPhase(phase, phase.getGroups().get(1), 4);
+		var groupATeams = phaseTeamRepository.findByPhaseIdAndGroupId(phase.getId(), groupA.getId()).stream()
+				.map(pt -> pt.getTeam().getId()).collect(Collectors.toSet());
+
+		// when
+		var md = swissPairingService.generateNextRound(phase.getId(), groupA.getId());
+
+		// then
+		var races = raceRepository.findByMatchdayId(md.getId());
+		assertThat(races).as("two group A pairings with two legs").hasSize(4);
+		assertThat(races).as("only group A teams play")
+				.allSatisfy(race -> assertThat(groupATeams).contains(race.getHomeTeam().getId(), race.getAwayTeam().getId()));
 	}
 
 	@Test
