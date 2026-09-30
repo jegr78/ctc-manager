@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
@@ -875,6 +876,29 @@ class StandingsServiceTest {
             // then — list returned with Buchholz populated
             assertThat(result).hasSize(2);
             assertThat(result.get(0).getTeam().getId()).isEqualTo(teamX1.getId()); // winner first
+        }
+
+        @Test
+        void givenRaceWithoutMatchAndOnlyAnAwayOverride_whenBuchholzCalculated_thenTheRaceIsSkipped() {
+            // given
+            var team = new Team("Test_Buchholz-Lone", "BLN");
+            team.setId(UUID.randomUUID());
+            var other = new Team("Test_Buchholz-Other", "BOT");
+            other.setId(UUID.randomUUID());
+            var matchday = new Matchday(regularPhase, "Test_Buchholz-MD-Lone", 1);
+            var race = new Race();
+            race.setMatchday(matchday);
+            race.setAwayTeamOverride(team);
+            when(seasonPhaseService.findById(regularPhase.getId())).thenReturn(regularPhase);
+            when(matchRepository.findByMatchdayPhaseId(regularPhase.getId()))
+                    .thenReturn(List.of(createMatchWithScore(matchday, team, other, 30, 10)));
+            when(phaseTeamRepository.findByPhaseId(regularPhase.getId())).thenReturn(List.of(
+                    PhaseTestFixtures.assignTeam(regularPhase, team, null), PhaseTestFixtures.assignTeam(regularPhase, other, null)));
+            when(raceRepository.findByMatchdayPhaseIdAndPlayoffMatchupIsNull(regularPhase.getId())).thenReturn(List.of(race));
+
+            // when / then
+            assertThatCode(() -> standingsService.calculateStandingsWithBuchholz(regularPhase.getId(), null))
+                    .as("a race without a home team has no opponent pair").doesNotThrowAnyException();
         }
 
         @Test

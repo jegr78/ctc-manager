@@ -347,7 +347,7 @@ public class StandingsService {
 		List<Race> races = raceRepository.findByMatchdayPhaseIdAndPlayoffMatchupIsNull(phase.getId());
 		Map<UUID, Set<UUID>> opponents = new HashMap<>();
 		for (Race race : races) {
-			if (race.isBye() || race.getAwayTeam() == null || !inGroup(race, groupId)) {
+			if (race.isBye() || race.getHomeTeam() == null || race.getAwayTeam() == null || !inGroup(race, groupId)) {
 				continue;
 			}
 			UUID home = successionMap.getOrDefault(race.getHomeTeam().getId(), race.getHomeTeam().getId());
