@@ -215,7 +215,7 @@ public class StandingsService {
 		boolean isGroupsCombinedView = phase.getLayout() == PhaseLayout.GROUPS && groupId == null;
 
 		// Populate buchholz field for display (regardless of whether it's used as tiebreaker)
-		Map<UUID, Integer> buchholzScores = calculateBuchholzScoresForPhase(phase);
+		Map<UUID, Integer> buchholzScores = calculateBuchholzScoresForPhase(phase, groupId);
 		for (var standing : standings) {
 			standing.setBuchholz(buchholzScores.getOrDefault(standing.getTeam().getId(), 0));
 		}
@@ -328,13 +328,10 @@ public class StandingsService {
 	}
 
 	/**
-	 * Calculates Buchholz scores for a phase. The underlying race finder is season-scoped
-	 * (bye-aware, excludes playoff races); this is correct for current consumers because
-	 * the phase's matchdays are the only matchdays in the season-scoped query for LEAGUE
-	 * and per-group GROUPS, and for GROUPS combined-view Buchholz is display-only (not a
-	 * tiebreaker).
+	 * Buchholz from the phase's own races, limited to the group's matchdays when a group is given,
+	 * so another phase or group never changes the totals. Byes and playoff races have no opponent.
 	 */
-	private Map<UUID, Integer> calculateBuchholzScoresForPhase(SeasonPhase phase) {
+	private Map<UUID, Integer> calculateBuchholzScoresForPhase(SeasonPhase phase, UUID groupId) {
 		var season = phase.getSeason();
 		if (season == null) {
 			return Map.of();
@@ -347,11 +344,10 @@ public class StandingsService {
 		Map<UUID, Integer> pointsMap = standings.stream()
 				.collect(Collectors.toMap(s -> s.getTeam().getId(), TeamStanding::getPoints));
 
-		// Build opponents map from races (excludes byes + playoff matchups)
-		List<Race> races = raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(season.getId());
+		List<Race> races = raceRepository.findByMatchdayPhaseIdAndPlayoffMatchupIsNull(phase.getId());
 		Map<UUID, Set<UUID>> opponents = new HashMap<>();
 		for (Race race : races) {
-			if (race.isBye() || race.getAwayTeam() == null) {
+			if (race.isBye() || race.getHomeTeam() == null || race.getAwayTeam() == null || !inGroup(race, groupId)) {
 				continue;
 			}
 			UUID home = successionMap.getOrDefault(race.getHomeTeam().getId(), race.getHomeTeam().getId());
@@ -370,6 +366,11 @@ public class StandingsService {
 		}
 
 		return buchholz;
+	}
+
+	private static boolean inGroup(Race race, UUID groupId) {
+		var group = race.getMatchday().getGroup();
+		return groupId == null || group != null && group.getId().equals(groupId);
 	}
 
 	private void processMatch(Match match, Map<UUID, TeamStanding> standingsMap,

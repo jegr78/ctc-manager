@@ -17,8 +17,8 @@ public interface RaceRepository extends JpaRepository<Race, UUID> {
 	List<Race> findByMatchdaySeasonId(UUID seasonId);
 
 	@EntityGraph(attributePaths = {"matchday", "match", "track", "car"})
-	@Query("SELECT r FROM Race r WHERE r.matchday.phase.season.id = :seasonId AND r.playoffMatchup IS NULL")
-	List<Race> findByMatchdaySeasonIdAndPlayoffMatchupIsNull(UUID seasonId);
+	@Query("SELECT r FROM Race r WHERE r.matchday.phase.id = :phaseId AND r.playoffMatchup IS NULL")
+	List<Race> findByMatchdayPhaseIdAndPlayoffMatchupIsNull(UUID phaseId);
 
 	@EntityGraph(attributePaths = {"playoffMatchup", "track", "car"})
 	List<Race> findByPlayoffMatchupId(UUID matchupId);
