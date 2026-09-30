@@ -175,21 +175,17 @@ public class RaceService {
 		var track = trackId != null ? trackRepository.findById(trackId).orElse(null) : null;
 		var car = carId != null ? carRepository.findById(carId).orElse(null) : null;
 
-		var rejection = validateCarAndTrack(matchday.getSeason(), homeTeam, car, track, id);
+		var rejection = validatePairingChange(race, matchday, homeTeam, awayTeam);
+		if (rejection == null) {
+			rejection = validateCarAndTrack(matchday.getSeason(), homeTeam, car, track, id);
+		}
 		if (rejection != null) {
 			return new SaveResult(false, rejection, id, matchdayId);
 		}
 
 		race.setMatchday(matchday);
-
-		Match match = race.getMatch();
-		if (match == null) {
-			match = new Match(matchday, homeTeam, awayTeam);
-			match = matchRepository.save(match);
-			race.setMatch(match);
-		} else {
-			match.setHomeTeam(homeTeam);
-			match.setAwayTeam(awayTeam);
+		if (race.getPlayoffMatchup() == null) {
+			applyPairing(race, matchday, homeTeam, awayTeam);
 		}
 
 		race.setTrack(track);
@@ -279,6 +275,57 @@ public class RaceService {
 		raceRepository.delete(race);
 		log.info("Deleted race: {} vs {}", race.getHomeTeam().getShortName(), race.getAwayTeam().getShortName());
 		return matchdayId;
+	}
+
+	/**
+	 * Rejects a change of the race's effective teams or phase for playoff races, and for regular
+	 * races once any leg of the pairing has results; changes nothing.
+	 */
+	private String validatePairingChange(Race race, Matchday matchday, Team homeTeam, Team awayTeam) {
+		if (race.getId() == null) {
+			return null;
+		}
+		boolean teamsChanged = !sameTeam(race.getHomeTeam(), homeTeam) || !sameTeam(race.getAwayTeam(), awayTeam);
+		boolean phaseChanged = !race.getMatchday().getPhase().getId().equals(matchday.getPhase().getId());
+		if (!teamsChanged && !phaseChanged) {
+			return null;
+		}
+		if (race.getPlayoffMatchup() != null) {
+			return "The teams and phase of a playoff race come from its playoff matchup";
+		}
+		var legs = race.getMatch() != null ? raceRepository.findByMatchId(race.getMatch().getId()) : List.of(race);
+		if (legs.stream().anyMatch(leg -> !leg.getResults().isEmpty())) {
+			return "Teams and phase cannot change after results were entered";
+		}
+		return null;
+	}
+
+	/**
+	 * Maps the submitted effective teams onto the shared Match through this leg's orientation and
+	 * keeps every reversed leg of the match reversed.
+	 */
+	private void applyPairing(Race race, Matchday matchday, Team homeTeam, Team awayTeam) {
+		Match match = race.getMatch();
+		if (match == null) {
+			race.setMatch(matchRepository.save(new Match(matchday, homeTeam, awayTeam)));
+			return;
+		}
+		if (sameTeam(race.getHomeTeam(), homeTeam) && sameTeam(race.getAwayTeam(), awayTeam)) {
+			return;
+		}
+		boolean reversedLeg = race.hasTeamOverrides();
+		match.setHomeTeam(reversedLeg ? awayTeam : homeTeam);
+		match.setAwayTeam(reversedLeg ? homeTeam : awayTeam);
+		for (var leg : raceRepository.findByMatchId(match.getId())) {
+			if (leg.hasTeamOverrides()) {
+				leg.setHomeTeamOverride(match.getAwayTeam());
+				leg.setAwayTeamOverride(match.getHomeTeam());
+			}
+		}
+	}
+
+	private static boolean sameTeam(Team a, Team b) {
+		return a != null && b != null && a.getId().equals(b.getId());
 	}
 
 	/** Returns the rejection message, or {@code null} when car and track may be used; changes nothing. */

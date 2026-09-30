@@ -96,6 +96,11 @@ public class Race extends BaseEntity {
 		return null;
 	}
 
+	/** Even legs carry overrides that reverse the Match pairing. */
+	public boolean hasTeamOverrides() {
+		return homeTeamOverride != null || awayTeamOverride != null;
+	}
+
 	public boolean isBye() {
 		return match != null && match.isBye();
 	}
