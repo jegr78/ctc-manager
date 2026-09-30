@@ -119,6 +119,31 @@ class CsvImportTransactionIT {
 	}
 
 	@Test
+	void givenOverwriteWithValidRows_whenImportExecuted_thenTheOldRaceIsReplacedByTheImportedOne() throws Exception {
+		// given
+		String csv = """
+				Team,PSN ID,Position,Quali,FL
+				%s,%s,2,1,false
+				%s,%s,1,2,true
+				""".formatted(home(), existingDriver.getPsnId(), away(), fuzzyDriver.getPsnId());
+
+		// when
+		mockMvc.perform(multipart("/admin/import/execute")
+						.file(csvFile(csv))
+						.param("seasonId", fixture.season().getId().toString())
+						.param("matchdayId", fixture.matchday().getId().toString())
+						.param("overwrite", "true"))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(flash().attribute("successMessage", containsString("Import successful: 1 races")));
+
+		// then
+		List<Race> races = raceRepository.findByMatchId(fixture.match().getId());
+		assertThat(races).as("overwrite replaces the old race").singleElement()
+				.extracting(Race::getId).isNotEqualTo(fixture.race().getId());
+		assertThat(resultCount(races.getFirst().getId())).isEqualTo(2);
+	}
+
+	@Test
 	void givenMalformedRows_whenImportExecuted_thenEveryRowErrorIsReportedAndNothingIsCreated() throws Exception {
 		// given
 		String newMatchdayLabel = "Test_CsvTx_" + id + " New MD";
