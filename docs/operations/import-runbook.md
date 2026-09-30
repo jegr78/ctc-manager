@@ -17,6 +17,9 @@ A successful or failed import attempt leaves a recovery ZIP at:
 <import-backups-dir>/<ts>/auto-backup-before-import.zip
 ```
 
+`<ts>` is the import time followed by the first eight characters of its audit id, for example
+`2026-09-30T12-00-00Z-1a2b3c4d`, so imports within the same second never share a directory.
+
 `<import-backups-dir>` is `app.backup.import-backups-dir`:
 
 | Runtime | Path |

@@ -19,9 +19,9 @@ import java.util.UUID;
  *                             used for staging-file cleanup
  * @param auditUuid            id of the failure-time audit row OR a fresh UUID for the
  *                             success-time audit row
- * @param importBackupDir      timestamped directory {@code data/.import-backups/<ts>/}
+ * @param importBackupDir      per-import directory {@code <import-backups-dir>/<second>-<audit-id prefix>/}
  * @param uploadsTarget        live uploads directory {@code data/<profile>/uploads/}
- * @param uploadsNewDir        staged uploads at {@code data/.import-backups/<ts>/uploads-new/}
+ * @param uploadsNewDir        staged uploads at {@code <importBackupDir>/uploads-new/}
  * @param schemaVersion        manifest {@code schemaVersion} value, copied into the audit row
  * @param tableCountsWiped     per-table row counts deleted in the wipe step (empty map on
  *                             failure-before-wipe)
