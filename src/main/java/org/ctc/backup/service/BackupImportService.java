@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -166,6 +167,7 @@ public class BackupImportService {
     private final UploadsSwapPreflight uploadsSwapPreflight;
     private final Path stagingDir;
     private final Path importBackupsDir;
+    private final Clock clock;
     private final Path uploadsTargetDir;
 
     @PersistenceContext
@@ -200,6 +202,7 @@ public class BackupImportService {
             ApplicationEventPublisher eventPublisher,
             BackupExecutedByResolver executedByResolver,
             UploadsSwapPreflight uploadsSwapPreflight,
+            Clock clock,
             @Value("${app.backup.staging-dir}") String stagingDirRaw,
             @Value("${app.backup.import-backups-dir}") String importBackupsDirRaw,
             @Value("${app.upload-dir}") String uploadDirRaw
@@ -215,6 +218,7 @@ public class BackupImportService {
         this.eventPublisher = eventPublisher;
         this.executedByResolver = executedByResolver;
         this.uploadsSwapPreflight = uploadsSwapPreflight;
+        this.clock = clock;
         this.stagingDir = Paths.get(stagingDirRaw).toAbsolutePath().normalize();
         this.importBackupsDir = Paths.get(importBackupsDirRaw).toAbsolutePath().normalize();
         this.uploadsTargetDir = Paths.get(uploadDirRaw).toAbsolutePath().normalize();
@@ -478,7 +482,7 @@ public class BackupImportService {
 
         // <ts> directory for atomic move-triple — computed ONCE here and shared by the
         // auto-backup ZIP path (Step 0.5) and the uploads-old/ sibling (AFTER_COMMIT listener).
-        String ts = Instant.now().truncatedTo(ChronoUnit.SECONDS).toString().replace(":", "-");
+        String ts = clock.instant().truncatedTo(ChronoUnit.SECONDS).toString().replace(":", "-");
         Path importBackupDir = importBackupsDir.resolve(ts);
         // Target ZIP for the pre-import auto-backup (runs BEFORE any DB mutation).
         Path autoBackupZip = importBackupDir.resolve("auto-backup-before-import.zip");
