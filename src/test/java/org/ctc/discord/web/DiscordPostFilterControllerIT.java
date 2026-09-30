@@ -8,11 +8,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.LocalDateTime;
 import java.util.UUID;
 import org.ctc.TestHelper;
+import org.ctc.discord.dto.DiscordPostRef;
 import org.ctc.discord.model.DiscordPost;
 import org.ctc.discord.model.DiscordPostType;
 import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.Race;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.Team;
 import org.hamcrest.Matchers;
@@ -42,30 +44,34 @@ class DiscordPostFilterControllerIT {
 	private TestHelper helper;
 
 	private UUID seasonAId;
+	private UUID seasonBId;
+	private UUID matchAId;
 
 	@BeforeEach
 	void seedRows() {
 		discordPostRepository.deleteAll();
 
-		Season seasonA = helper.createSeason("Filter Season A");
+		Season seasonA = helper.createSeason("Test_Filter Season A");
 		seasonAId = seasonA.getId();
-		Matchday mdA = helper.createMatchdayInRegularPhase(seasonA, "MD-A-1", 0);
-		Team homeA = helper.createTeam("Home FA", "fa-h");
-		Team awayA = helper.createTeam("Away FA", "fa-a");
+		Matchday mdA = helper.createMatchdayInRegularPhase(seasonA, "Test_MD-A-1", 0);
+		Team homeA = helper.createTeam("Test Home FA", "Test_FAH");
+		Team awayA = helper.createTeam("Test Away FA", "Test_FAA");
 		Match matchA = helper.createMatch(mdA, homeA, awayA);
+		matchAId = matchA.getId();
+		Race raceA = helper.createRace(mdA, matchA);
 
-		Season seasonB = helper.createSeason("Filter Season B");
-		Matchday mdB = helper.createMatchdayInRegularPhase(seasonB, "MD-B-1", 0);
-		Team homeB = helper.createTeam("Home FB", "fb-h");
-		Team awayB = helper.createTeam("Away FB", "fb-a");
+		Season seasonB = helper.createSeason("Test_Filter Season B");
+		seasonBId = seasonB.getId();
+		Matchday mdB = helper.createMatchdayInRegularPhase(seasonB, "Test_MD-B-1", 0);
+		Team homeB = helper.createTeam("Test Home FB", "Test_FBH");
+		Team awayB = helper.createTeam("Test Away FB", "Test_FBA");
 		Match matchB = helper.createMatch(mdB, homeB, awayB);
 
-		discordPostRepository.save(buildPost("chan-1", "msg-1", DiscordPostType.TEAM_CARDS,
-				matchA.getId(), seasonA.getId()));
-		discordPostRepository.save(buildPost("chan-1", "msg-2", DiscordPostType.SCHEDULE,
-				matchA.getId(), seasonA.getId()));
-		discordPostRepository.save(buildPost("chan-2", "msg-3", DiscordPostType.TEAM_CARDS,
-				matchB.getId(), seasonB.getId()));
+		discordPostRepository.save(buildPost("msg-1", DiscordPostType.TEAM_CARDS, DiscordPostRef.match(matchA)));
+		discordPostRepository.save(buildPost("msg-2", DiscordPostType.MATCHDAY_PAIRINGS, DiscordPostRef.matchday(mdA)));
+		discordPostRepository.save(buildPost("msg-3", DiscordPostType.RACE_RESULTS, DiscordPostRef.race(raceA)));
+		discordPostRepository.save(buildPost("msg-4", DiscordPostType.POWER_RANKINGS, DiscordPostRef.season(seasonA)));
+		discordPostRepository.save(buildPost("msg-5", DiscordPostType.TEAM_CARDS, DiscordPostRef.match(matchB)));
 	}
 
 	@AfterEach
@@ -73,18 +79,37 @@ class DiscordPostFilterControllerIT {
 		discordPostRepository.deleteAll();
 	}
 
-	private static DiscordPost buildPost(
-			String channelId, String messageId, DiscordPostType type, UUID matchId, UUID seasonId) {
+	private static DiscordPost buildPost(String messageId, DiscordPostType type, DiscordPostRef ref) {
 		DiscordPost p = new DiscordPost();
-		p.setChannelId(channelId);
+		p.setChannelId("chan-1");
 		p.setMessageId(messageId);
 		p.setWebhookId("100");
 		p.setWebhookToken("tok-" + messageId);
 		p.setPostType(type);
-		p.setMatchId(matchId);
-		p.setSeasonId(seasonId);
 		p.setPostedAt(LocalDateTime.now());
+		ref.applyTo(p);
 		return p;
+	}
+
+	@Test
+	void givenMatchMatchdayRaceAndSeasonPosts_whenFilteredBySeason_thenAllPostsOfThatSeasonAreListed() throws Exception {
+		mockMvc.perform(get("/admin/discord/posts").param("seasonId", seasonAId.toString()))
+				.andExpect(status().isOk())
+				.andExpect(model().attribute("posts",
+						Matchers.hasProperty("totalElements", Matchers.equalTo(4L))));
+		mockMvc.perform(get("/admin/discord/posts").param("seasonId", seasonBId.toString()))
+				.andExpect(model().attribute("posts",
+						Matchers.hasProperty("totalElements", Matchers.equalTo(1L))));
+	}
+
+	@Test
+	void givenSeededRows_whenFilteredBySeasonAndMatch_thenOnlyThatMatchsPost() throws Exception {
+		mockMvc.perform(get("/admin/discord/posts")
+						.param("seasonId", seasonAId.toString())
+						.param("matchId", matchAId.toString()))
+				.andExpect(status().isOk())
+				.andExpect(model().attribute("posts",
+						Matchers.hasProperty("totalElements", Matchers.equalTo(1L))));
 	}
 
 	@Test
@@ -98,12 +123,12 @@ class DiscordPostFilterControllerIT {
 				.andExpect(model().attributeExists("filter"))
 				.andExpect(model().attribute("activeRoute", "discord-posts"))
 				.andExpect(model().attribute("posts",
-						Matchers.hasProperty("totalElements", Matchers.greaterThanOrEqualTo(3L))));
+						Matchers.hasProperty("totalElements", Matchers.greaterThanOrEqualTo(5L))));
 	}
 
 	@Test
 	void givenSeededRows_whenFilterByPostType_thenOnlyMatchingRowsReturned() throws Exception {
-		mockMvc.perform(get("/admin/discord/posts").param("postType", "SCHEDULE"))
+		mockMvc.perform(get("/admin/discord/posts").param("postType", "MATCHDAY_PAIRINGS"))
 				.andExpect(status().isOk())
 				.andExpect(model().attribute("posts",
 						Matchers.hasProperty("totalElements", Matchers.equalTo(1L))));
