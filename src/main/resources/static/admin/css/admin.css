@@ -2140,3 +2140,11 @@ a.season-header-title:hover {
     padding: 0;
     min-width: 0;
 }
+
+.fieldset-plain:disabled input,
+.fieldset-plain:disabled select {
+    background: var(--bg-input);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    cursor: not-allowed;
+}

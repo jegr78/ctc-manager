@@ -18,6 +18,7 @@
         <form th:action="@{/admin/playoffs/{id}/seed(id=${playoff.id})}" method="post">
             <fieldset th:disabled="${seedingFrozen}" class="fieldset-plain">
             <input type="hidden" name="playoffId" th:value="${playoff.id}">
+            <div class="table-scroll">
             <table>
                 <thead>
                     <tr><th>Matchup</th><th>Seed</th><th>Team 1</th><th>Seed</th><th>Team 2</th></tr>
@@ -56,6 +57,7 @@
                     </tr>
                 </tbody>
             </table>
+            </div>
             </fieldset>
             <div class="actions mt-md">
                 <button th:if="${!seedingFrozen}" type="submit" class="btn btn-primary">Save Seeding</button>
