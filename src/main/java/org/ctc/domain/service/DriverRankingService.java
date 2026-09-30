@@ -24,8 +24,8 @@ public class DriverRankingService {
 	/**
 	 * Primary per-phase entry point.
 	 *
-	 * <p>Union-merges race results from both finders to ensure PLAYOFF phases produce
-	 * non-empty rankings:
+	 * <p>Union-merges race results from both finders, each result once, to ensure PLAYOFF phases
+	 * produce non-empty rankings:
 	 * <ul>
 	 *   <li>{@code findByRaceMatchdayPhaseId} — REGULAR matchday-linked races</li>
 	 *   <li>{@code findByRacePlayoffMatchupRoundPlayoffPhaseId} — PLAYOFF matchup-linked races</li>
@@ -38,11 +38,14 @@ public class DriverRankingService {
 		var phase = seasonPhaseService.findById(phaseId);
 		UUID seasonId = phase.getSeason().getId();
 
-		List<RaceResult> regularResults = raceResultRepository.findByRaceMatchdayPhaseId(phaseId);
-		List<RaceResult> playoffResults = raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(phaseId);
-		List<RaceResult> all = new ArrayList<>(regularResults.size() + playoffResults.size());
-		all.addAll(regularResults);
-		all.addAll(playoffResults);
+		// A playoff race hangs off a PLAYOFF matchday and its matchup, so both finders return it.
+		List<RaceResult> all = new ArrayList<>(raceResultRepository.findByRaceMatchdayPhaseId(phaseId));
+		Set<UUID> seen = all.stream().map(RaceResult::getId).filter(Objects::nonNull).collect(Collectors.toSet());
+		for (RaceResult result : raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(phaseId)) {
+			if (result.getId() == null || seen.add(result.getId())) {
+				all.add(result);
+			}
+		}
 
 		// Accumulate per driver
 		Map<UUID, DriverRanking> rankingMap = new LinkedHashMap<>();
