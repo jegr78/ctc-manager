@@ -1,5 +1,6 @@
 package org.ctc.discord.web;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -12,6 +13,7 @@ import org.ctc.discord.dto.DiscordPostRef;
 import org.ctc.discord.model.DiscordPost;
 import org.ctc.discord.model.DiscordPostType;
 import org.ctc.discord.repository.DiscordPostRepository;
+import org.ctc.discord.service.DiscordPostListService;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.Race;
@@ -24,6 +26,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -142,6 +145,20 @@ class DiscordPostFilterControllerIT {
 				.andExpect(status().isOk())
 				.andExpect(model().attribute("posts",
 						Matchers.hasProperty("totalElements", Matchers.equalTo(1L))));
+	}
+
+	@Test
+	void givenSortByWebhookToken_whenListed_thenRowsCarryNoWebhookCredentialsAndTheSortIsIgnored() throws Exception {
+		var result = mockMvc.perform(get("/admin/discord/posts").param("sort", "webhookToken,asc"))
+				.andExpect(status().isOk())
+				.andReturn();
+
+		var posts = (Page<?>) result.getModelAndView().getModel().get("posts");
+		assertThat(posts.getContent()).as("listed rows")
+				.allSatisfy(row -> assertThat(row)
+						.isInstanceOf(DiscordPostListService.DiscordPostRow.class));
+		assertThat(posts.getSort().getOrderFor("webhookToken"))
+				.as("sort on the webhook token").isNull();
 	}
 
 	@Test

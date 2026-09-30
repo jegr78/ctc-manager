@@ -4,15 +4,18 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.ctc.discord.dto.DiscordPostFilterForm;
 import org.ctc.discord.model.DiscordPost;
+import org.ctc.discord.model.DiscordPostType;
 import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
@@ -21,6 +24,7 @@ import org.ctc.domain.model.Season;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -36,13 +40,31 @@ public class DiscordPostListService {
 	private final SeasonRepository seasonRepository;
 	private final MatchRepository matchRepository;
 
+	private static final Set<String> SORTABLE = Set.of("postedAt", "postType", "updatedAt");
+
 	/**
 	 * A season filter matches season and phase posts of that season as well as posts of its
-	 * matches, matchdays and races.
+	 * matches, matchdays and races. Rows leave out the webhook credentials, and sorting is limited
+	 * to the displayed timestamps and the post type.
 	 */
 	@Transactional(readOnly = true)
-	public Page<DiscordPost> findPosts(DiscordPostFilterForm filter, Pageable pageable) {
-		return discordPostRepository.findAll(spec(filter), pageable);
+	public Page<DiscordPostRow> findPosts(DiscordPostFilterForm filter, Pageable pageable) {
+		return discordPostRepository.findAll(spec(filter), sortable(pageable)).map(DiscordPostRow::of);
+	}
+
+	/** A listed Discord post without its webhook credentials. */
+	public record DiscordPostRow(DiscordPostType postType, String channelId, String messageId, UUID matchId,
+	                             LocalDateTime postedAt, LocalDateTime updatedAt) {
+		static DiscordPostRow of(DiscordPost post) {
+			return new DiscordPostRow(post.getPostType(), post.getChannelId(), post.getMessageId(),
+					post.getMatchId(), post.getPostedAt(), post.getUpdatedAt());
+		}
+	}
+
+	private static Pageable sortable(Pageable pageable) {
+		var sort = Sort.by(pageable.getSort().stream().filter(order -> SORTABLE.contains(order.getProperty())).toList());
+		return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+				sort.isSorted() ? sort : Sort.by(Sort.Direction.DESC, "postedAt"));
 	}
 
 	@Transactional(readOnly = true)
