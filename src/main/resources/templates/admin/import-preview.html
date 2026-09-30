@@ -168,8 +168,9 @@
             <p>Source: Google Sheet</p>
         </div>
 
+        <p th:if="${importBlocked}" class="text-dim mb-md">Fix the errors above and preview again. An import with errors is rejected as a whole.</p>
         <div class="actions mt-md">
-            <button type="submit" class="btn btn-primary">Execute Import</button>
+            <button type="submit" class="btn btn-primary" th:disabled="${importBlocked}">Execute Import</button>
             <a th:href="@{/admin/import}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>

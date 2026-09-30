@@ -165,7 +165,29 @@ class CsvImportControllerTest {
 						.param("matchdayLabel", "CsvPrev ImportMD"))
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/import-preview"))
-				.andExpect(model().attributeExists("preview", "metadata"));
+				.andExpect(model().attributeExists("preview", "metadata"))
+				.andExpect(model().attribute("importBlocked", false));
+	}
+
+	@Test
+	void givenCsvWithAMalformedRow_whenPreview_thenExecuteIsDisabledWithAHint() throws Exception {
+		// given
+		var fixture = testHelper.createFullSeasonFixture("CsvPrevBad");
+		var csvContent = fixture.homeTeam().getShortName() + ",csv_prev_bad_drv1,1,1,true\n"
+				+ fixture.awayTeam().getShortName() + ",csv_prev_bad_drv2,second,2,false";
+		var file = new MockMultipartFile("file", "results.csv", "text/csv", csvContent.getBytes());
+
+		// when / then
+		mockMvc.perform(multipart("/admin/import/preview")
+						.file(file)
+						.param("seasonId", fixture.season().getId().toString())
+						.param("matchdayLabel", "CsvPrevBad ImportMD"))
+				.andExpect(status().isOk())
+				.andExpect(model().attribute("importBlocked", true))
+				.andExpect(content().string(org.hamcrest.Matchers.containsString(
+						"An import with errors is rejected as a whole.")))
+				.andExpect(content().string(org.hamcrest.Matchers.containsString(
+						"<button type=\"submit\" class=\"btn btn-primary\" disabled=\"disabled\">Execute Import</button>")));
 	}
 
 

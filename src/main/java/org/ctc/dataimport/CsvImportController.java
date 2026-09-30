@@ -56,6 +56,7 @@ public class CsvImportController {
 
 			csvImportService.checkDuplicate(preview);
 			model.addAttribute("preview", preview);
+			model.addAttribute("importBlocked", preview.hasErrors());
 			model.addAttribute("metadata", metadata);
 			seasonManagementService.findByIdOptional(seasonId).ifPresent(s -> model.addAttribute("seasonDisplayLabel", s.getDisplayLabel()));
 			model.addAttribute("source", "csv");
@@ -113,6 +114,7 @@ public class CsvImportController {
 			}
 
 			model.addAttribute("previews", previews);
+			model.addAttribute("importBlocked", previews.stream().anyMatch(CsvImportService.ImportPreview::hasErrors));
 			model.addAttribute("raceSheetNames", raceSheets);
 			model.addAttribute("isMultiRace", raceSheets.size() > 1);
 			model.addAttribute("metadata", metadata);
