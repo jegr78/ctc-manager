@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
+import java.time.Duration;
 import org.ctc.discord.exception.DiscordAuthException;
 import org.ctc.discord.exception.DiscordTransientException;
 import org.ctc.discord.util.BucketState;
@@ -43,6 +44,8 @@ class DiscordRateLimitInterceptorIT {
 		registry.add("app.discord.rate-limit.jitter-ms", () -> "0");
 		// Compress the 5xx backoff schedule so exhaustion tests run in well under a second
 		registry.add("app.discord.rate-limit.fivexx-backoff-ms", () -> "10,10,10");
+		registry.add("app.discord.rate-limit.max-retry-after-ms", () -> "2000");
+		registry.add("app.discord.read-timeout", () -> "500ms");
 	}
 
 	@Autowired
@@ -90,6 +93,38 @@ class DiscordRateLimitInterceptorIT {
 				.isInstanceOf(DiscordTransientException.class)
 				.hasMessageContaining("Discord connection problem");
 		wm.verify(4, getRequestedFor(urlPathEqualTo("/api/v10/users/@me")));
+	}
+
+	@Test
+	void given429WithRetryAfterAboveTheCap_whenFetchBotUser_thenFailsWithoutWaitingOrRetrying() {
+		// given
+		wm.stubFor(get(urlPathEqualTo("/api/v10/users/@me"))
+				.willReturn(aResponse().withStatus(429)
+						.withHeader("Retry-After", "60")));
+		long start = System.nanoTime();
+
+		// when / then
+		assertThatThrownBy(() -> discordRestClient.fetchBotUser())
+				.isInstanceOf(DiscordTransientException.class)
+				.hasMessageContaining("Discord connection problem");
+		assertThat(Duration.ofNanos(System.nanoTime() - start)).as("time spent on the rate limit")
+				.isLessThan(Duration.ofSeconds(5));
+		wm.verify(1, getRequestedFor(urlPathEqualTo("/api/v10/users/@me")));
+	}
+
+	@Test
+	void givenStalledResponse_whenFetchBotUser_thenFailsAfterTheReadTimeout() {
+		// given
+		wm.stubFor(get(urlPathEqualTo("/api/v10/users/@me"))
+				.willReturn(okJson("{\"id\":\"42\",\"username\":\"CTC-Bot\",\"discriminator\":\"0001\"}")
+						.withFixedDelay(4000)));
+		long start = System.nanoTime();
+
+		// when / then
+		assertThatThrownBy(() -> discordRestClient.fetchBotUser())
+				.isInstanceOf(DiscordTransientException.class);
+		assertThat(Duration.ofNanos(System.nanoTime() - start)).as("time spent on the stalled response")
+				.isLessThan(Duration.ofMillis(3000));
 	}
 
 	@Test
