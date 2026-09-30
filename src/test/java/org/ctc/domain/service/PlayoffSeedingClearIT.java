@@ -119,6 +119,36 @@ class PlayoffSeedingClearIT {
 				.as("the other playoff's slot").isNull();
 	}
 
+	@Test
+	void givenSlotOfALaterRoundOrWithoutMatchup_whenSeedingSaved_thenRejected() {
+		// given
+		var fourTeams = testHelper.createSeason("Test_SeedClear_Four_" + id);
+		var bracket = playoffService.createPlayoff(fourTeams.getId(), "Test SeedClear Four " + id, 4);
+		var laterRound = playoffMatchupRepository.findByRoundPlayoffId(bracket.getId()).stream()
+				.filter(matchup -> matchup.getRound().getRoundIndex() == 1).findFirst().orElseThrow();
+
+		// when / then
+		assertThatThrownBy(() -> playoffSeedingService.saveSeed(bracket.getId(), List.of(
+				new PlayoffSeedingService.SeedEntry(laterRound.getId(), 1, alpha.getId(), 1))))
+				.as("a later-round slot").isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("The seeding slot does not belong to this playoff");
+		assertThatThrownBy(() -> playoffSeedingService.saveSeed(bracket.getId(), List.of(
+				new PlayoffSeedingService.SeedEntry(null, 1, alpha.getId(), 1))))
+				.as("a slot without matchup").isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("The seeding slot does not belong to this playoff");
+	}
+
+	@Test
+	void givenOneSeedNumberForTwoSlots_whenAutoSeeded_thenRejectedWithAMessage() {
+		// given
+		save(alpha.getId(), 1, bravo.getId(), null);
+
+		// when / then
+		assertThatThrownBy(() -> playoffSeedingService.autoSeedBracket(playoff.getId()))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessage("Auto-seeding needs seed numbers for all 2 teams, found 1");
+	}
+
 	private void save(UUID team1, Integer seed1, UUID team2, Integer seed2) {
 		playoffSeedingService.saveSeed(playoff.getId(), List.of(
 				new PlayoffSeedingService.SeedEntry(finale.getId(), 1, team1, seed1),

@@ -90,9 +90,9 @@ public class PlayoffSeedingService {
 	public void saveSeed(UUID playoffId, List<SeedEntry> seeds) {
 		requireSeedingOpen(playoffId);
 		for (var entry : seeds) {
-			var matchup = playoffMatchupRepository.findById(entry.matchupId())
-					.orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", entry.matchupId()));
-			if (!matchup.getRound().getPlayoff().getId().equals(playoffId)) {
+			var matchup = entry.matchupId() == null ? null : playoffMatchupRepository.findById(entry.matchupId()).orElse(null);
+			if (matchup == null || !matchup.getRound().getPlayoff().getId().equals(playoffId)
+					|| matchup.getRound().getRoundIndex() != 0) {
 				throw new IllegalArgumentException("The seeding slot does not belong to this playoff");
 			}
 			seedTeam(entry.matchupId(), entry.teamId(), entry.slot());
@@ -186,6 +186,10 @@ public class PlayoffSeedingService {
 		int[] matchupOrder = buildBracketOrder(matchups.size());
 
 		int seededTeamCount = sortedTeams.size();
+		if (seededTeamCount < matchups.size() * 2) {
+			throw new IllegalStateException("Auto-seeding needs seed numbers for all %d teams, found %d"
+					.formatted(matchups.size() * 2, seededTeamCount));
+		}
 		for (int i = 0; i < matchups.size() && i < matchupOrder.length; i++) {
 			int seedIdx = matchupOrder[i];
 			var matchup = matchups.get(i);
