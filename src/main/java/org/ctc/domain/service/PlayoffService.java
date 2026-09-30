@@ -330,10 +330,11 @@ public class PlayoffService {
 	}
 
 	private static void appendHistory(PlayoffMatchup matchup, String action, Team winner, String reason) {
-		String entry = "%s %s %s (%s:%s)%s".formatted(
+		String score = matchup.getHomeScore() == null || matchup.getAwayScore() == null
+				? "" : " (%d:%d)".formatted(matchup.getHomeScore(), matchup.getAwayScore());
+		String entry = "%s %s %s%s%s".formatted(
 				java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS), action,
-				winner.getShortName(), matchup.getHomeScore(), matchup.getAwayScore(),
-				reason == null ? "" : " reason: " + reason);
+				winner.getShortName(), score, reason == null ? "" : ", reason: " + reason);
 		String history = matchup.getDecisionHistory();
 		matchup.setDecisionHistory(history == null ? entry : history + "\n" + entry);
 	}

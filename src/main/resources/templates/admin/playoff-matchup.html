@@ -19,7 +19,7 @@
 
     <div th:if="${matchup.winner != null}" class="alert alert-success">
         Winner: <strong th:text="${matchup.winner.shortName}"></strong>
-        <span th:if="${matchup.decisionReason != null}" class="text-dim" th:text="${matchup.decisionReason}"></span>
+        <span th:if="${matchup.decisionReason != null}" class="text-dim" th:text="|Reason: ${matchup.decisionReason}|"></span>
     </div>
 
     <div th:if="${matchup.winner != null}" class="card">
