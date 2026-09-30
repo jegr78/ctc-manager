@@ -44,6 +44,16 @@ class SeasonManagementServiceTest {
     @Mock
     private SeasonPhaseService seasonPhaseService;
     @Mock
+    private MatchRepository matchRepository;
+    @Mock
+    private RaceLineupRepository raceLineupRepository;
+    @Mock
+    private PlayoffMatchupRepository playoffMatchupRepository;
+    @Mock
+    private PlayoffSeedRepository playoffSeedRepository;
+    @Mock
+    private SeasonDriverRepository seasonDriverRepository;
+    @Mock
     private MatchdayRepository matchdayRepository;
     @Mock
     private PhaseTeamRepository phaseTeamRepository;
@@ -572,8 +582,7 @@ class SeasonManagementServiceTest {
 
         when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
         when(teamRepository.findById(team.getId())).thenReturn(Optional.of(team));
-        // PhaseTeam exists in some phase of the season (D-25 strict guard — season-scoped check)
-        when(phaseTeamRepository.existsByPhaseSeasonId(season.getId())).thenReturn(true);
+        when(phaseTeamRepository.existsByPhaseSeasonIdAndTeamId(season.getId(), team.getId())).thenReturn(true);
 
         // when / then: removal must fail because PhaseTeam still references it
         assertThatThrownBy(() -> service.removeTeamFromSeason(season.getId(), team.getId()))
