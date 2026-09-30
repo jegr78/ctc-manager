@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -715,49 +716,74 @@ public class BackupImportService {
     private long restoreOneTable(ZipFile zf, EntityRef ref, EntityRestorer restorer, long[] inflatedBytes)
             throws IOException {
         String entryPath = ref.fileName();
-        long totalRows = 0;
-        List<JsonNode> batch = new ArrayList<>(RESTORE_BATCH_SIZE);
-
         // CodeQL FP: java/path-injection — assertEntrySafe + PathTraversalGuard.assertWithin defense not traceable; see docs/security/sast-acceptance.md
         ZipEntry entry = zf.getEntry(entryPath);
         if (entry == null) {
             // Only tables an older schema never exported get here; assertDataMatchesManifest rejects the rest.
             log.info("Backup ZIP has no data entry for table={} (entryPath={})", ref.tableName(), entryPath);
-            return totalRows;
+            return 0;
         }
+        List<JsonNode> batch = new ArrayList<>(RESTORE_BATCH_SIZE);
+        long[] rowIndex = {0L};
+        long totalRows = readRows(zf, entry, inflatedBytes, row -> {
+            batch.add(row);
+            rowIndex[0]++;
+            if (rowIndex[0] % FAIL_INJECT_INTERVAL == 0) {
+                failureInjector.maybeFailAt(ref.tableName(), (int) rowIndex[0]);
+            }
+            if (batch.size() >= RESTORE_BATCH_SIZE) {
+                restorer.restore(batch, jdbcTemplate);
+                batch.clear();
+            }
+        });
+        if (!batch.isEmpty()) {
+            restorer.restore(batch, jdbcTemplate);
+        }
+        return totalRows;
+    }
 
+    /**
+     * Counts the rows {@link #restoreAll} would restore, through the same entry lookup and parse loop,
+     * so the manifest check cannot pass on bytes the restore never reads.
+     */
+    private Map<String, Long> countRestorableRows(Path staged) throws BackupArchiveException {
+        Map<String, Long> counts = new LinkedHashMap<>();
+        long[] inflatedBytes = {0L};
+        try (ZipFile zf = new ZipFile(staged.toFile())) {
+            for (EntityRef ref : backupSchema.getExportOrder()) {
+                // CodeQL FP: java/path-injection — assertEntrySafe + PathTraversalGuard.assertWithin defense not traceable; see docs/security/sast-acceptance.md
+                ZipEntry entry = zf.getEntry(ref.fileName());
+                if (entry != null) {
+                    counts.put(ref.tableName(), readRows(zf, entry, inflatedBytes, row -> { }));
+                }
+            }
+        } catch (BackupArchiveException ex) {
+            throw ex;
+        } catch (IOException ex) {
+            throw new BackupArchiveException(Reason.MANIFEST_INVALID, "ZIP read failure", ex);
+        }
+        return counts;
+    }
+
+    /** Streams the JSON array of {@code entry} and hands each top-level object to {@code onRow}. */
+    private long readRows(ZipFile zf, ZipEntry entry, long[] inflatedBytes, Consumer<JsonNode> onRow)
+            throws IOException {
+        long totalRows = 0;
         try (InputStream entryStream = new LimitedInputStream(zf.getInputStream(entry),
                 BackupImportLimits.MAX_ENTRY_BYTES, bytes -> inflatedBytes[0] += bytes)) {
             JsonParser parser = backupObjectMapper.getFactory().createParser(entryStream);
             parser.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
             try {
-                JsonToken firstToken = parser.nextToken();
-                if (firstToken != JsonToken.START_ARRAY) {
+                if (parser.nextToken() != JsonToken.START_ARRAY) {
                     throw new BackupArchiveException(Reason.MANIFEST_INVALID,
-                            "data file is not a JSON array: " + entryPath);
+                            "data file is not a JSON array: " + entry.getName());
                 }
-                int rowIndex = 0;
                 JsonToken tok;
                 while ((tok = parser.nextToken()) != null && tok != JsonToken.END_ARRAY) {
                     if (tok == JsonToken.START_OBJECT) {
-                        JsonNode row = backupObjectMapper.readTree(parser);
-                        batch.add(row);
-                        rowIndex++;
+                        onRow.accept(backupObjectMapper.readTree(parser));
                         totalRows++;
-
-                        if (rowIndex % FAIL_INJECT_INTERVAL == 0) {
-                            failureInjector.maybeFailAt(ref.tableName(), rowIndex);
-                        }
-
-                        if (batch.size() >= RESTORE_BATCH_SIZE) {
-                            restorer.restore(batch, jdbcTemplate);
-                            batch.clear();
-                        }
                     }
-                }
-                if (!batch.isEmpty()) {
-                    restorer.restore(batch, jdbcTemplate);
-                    batch.clear();
                 }
             } finally {
                 parser.close();
@@ -929,7 +955,7 @@ public class BackupImportService {
      * so a stripped or tampered backup never reaches the wipe.
      */
     private void assertDataMatchesManifest(Path staged, BackupManifest manifest) throws BackupArchiveException {
-        Map<String, Long> actualCounts = backupArchive.countDataEntries(staged);
+        Map<String, Long> actualCounts = countRestorableRows(staged);
         Set<String> absentInSchema = TABLES_ABSENT_IN_SCHEMA.getOrDefault(manifest.schemaVersion(), Set.of());
         List<String> problems = new ArrayList<>();
         for (EntityRef ref : backupSchema.getExportOrder()) {
