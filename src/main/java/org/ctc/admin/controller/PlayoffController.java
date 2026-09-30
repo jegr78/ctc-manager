@@ -159,7 +159,12 @@ public class PlayoffController {
         var seeds = form.getSeeds().stream()
                 .map(e -> new PlayoffSeedingService.SeedEntry(e.getMatchupId(), e.getSlot(), e.getTeamId(), e.getSeedNumber()))
                 .toList();
-        playoffSeedingService.saveSeed(id, seeds);
+        try {
+            playoffSeedingService.saveSeed(id, seeds);
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/admin/playoffs/" + id + "/seed";
+        }
         redirectAttributes.addFlashAttribute("successMessage", "Seeding saved");
         return "redirect:/admin/playoffs?seasonId=" + playoffService.getSeasonIdForPlayoff(id);
     }
@@ -201,9 +206,10 @@ public class PlayoffController {
     @PostMapping("/matchup/{matchupId}/set-winner")
     public String setWinnerManually(@PathVariable UUID matchupId,
                                     @RequestParam UUID winnerTeamId,
+                                    @RequestParam(required = false) String reason,
                                     RedirectAttributes redirectAttributes) {
         try {
-            playoffService.setWinnerManually(matchupId, winnerTeamId);
+            playoffService.setWinnerManually(matchupId, winnerTeamId, reason);
             var data = playoffService.getMatchupDetail(matchupId);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Winner set manually: " + data.matchup().getWinner().getShortName());
@@ -212,6 +218,18 @@ public class PlayoffController {
             redirectAttributes.addFlashAttribute("errorMessage", "Error: " + e.getMessage());
             return "redirect:/admin/playoffs/matchup/" + matchupId;
         }
+    }
+
+    @PostMapping("/matchup/{matchupId}/reopen")
+    public String reopen(@PathVariable UUID matchupId, @RequestParam(required = false) String reason,
+                         RedirectAttributes redirectAttributes) {
+        try {
+            playoffService.reopen(matchupId, reason);
+            redirectAttributes.addFlashAttribute("successMessage", "Matchup reopened for a new decision");
+        } catch (EntityNotFoundException | IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Error: " + e.getMessage());
+        }
+        return "redirect:/admin/playoffs/matchup/" + matchupId;
     }
 
     @PostMapping("/round/{roundId}/download-overview")

@@ -16,6 +16,7 @@ import org.ctc.dataimport.exception.ImportRejectedException;
 import org.ctc.domain.exception.ValidationException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
+import org.ctc.domain.service.PlayoffDecisionGuard;
 import org.ctc.domain.service.ScoringService;
 import org.ctc.domain.service.SeasonPhaseService;
 import org.springframework.stereotype.Service;
@@ -55,7 +56,7 @@ public class CsvImportService {
 			playoffRepository.findBySeasonId(season.getId()).ifPresent(playoff -> {
 				var playoffMatchups = playoffMatchupRepository.findByRoundPlayoffId(playoff.getId());
 				for (var matchup : playoffMatchups) {
-					if (matchup.isReady()) {
+					if (matchup.isReady() && !matchup.isComplete()) {
 						matchups.add(new PlayoffMatchupDto(
 								matchup.getId(),
 								season.getDisplayLabel(),
@@ -130,7 +131,7 @@ public class CsvImportService {
 		rejectInvalidPreviews(previews);
 
 		var metadata = previews.get(0).getMetadata();
-		rejectForeignMatchday(metadata);
+		rejectForeignOrDecidedTarget(metadata);
 
 		// Resolve season
 		var season = seasonRepository.findById(metadata.seasonId()).orElseThrow(
@@ -285,7 +286,14 @@ public class CsvImportService {
 		}
 	}
 
-	private void rejectForeignMatchday(ImportMetadata metadata) {
+	private void rejectForeignOrDecidedTarget(ImportMetadata metadata) {
+		if (metadata.isPlayoff()) {
+			playoffMatchupRepository.findById(metadata.playoffMatchupId())
+					.filter(PlayoffMatchup::isComplete)
+					.ifPresent(matchup -> {
+						throw new ImportRejectedException(List.of(PlayoffDecisionGuard.DECIDED));
+					});
+		}
 		if (!metadata.hasMatchdayId()) {
 			return;
 		}

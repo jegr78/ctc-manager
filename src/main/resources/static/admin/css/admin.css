@@ -2128,3 +2128,8 @@ a.season-header-title:hover {
     color: var(--text-dim);
     margin-left: 4px;
 }
+
+.decision-history {
+    white-space: pre-line;
+    font-size: 0.85rem;
+}

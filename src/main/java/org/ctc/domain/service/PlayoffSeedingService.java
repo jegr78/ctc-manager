@@ -28,11 +28,13 @@ public class PlayoffSeedingService {
 	private final SeasonPhaseService seasonPhaseService;
 	private final StandingsService standingsService;
 	private final PhaseTeamRepository phaseTeamRepository;
+	private final RaceRepository raceRepository;
 
 	@Transactional
 	public void seedTeam(UUID matchupId, UUID teamId, int slot) {
 		PlayoffMatchup matchup = playoffMatchupRepository.findById(matchupId)
 				.orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", matchupId));
+		requireSeedingOpen(matchup.getRound().getPlayoff().getId());
 
 		if (slot == 1) {
 			matchup.setTeam1(teamId != null ? findTeam(teamId) : null);
@@ -81,6 +83,7 @@ public class PlayoffSeedingService {
 
 	@Transactional
 	public void saveSeed(UUID playoffId, List<SeedEntry> seeds) {
+		requireSeedingOpen(playoffId);
 		for (var entry : seeds) {
 			if (entry.teamId() != null) {
 				seedTeam(entry.matchupId(), entry.teamId(), entry.slot());
@@ -102,6 +105,7 @@ public class PlayoffSeedingService {
 
 	@Transactional
 	public void saveSeedNumbers(UUID playoffId, Map<UUID, Integer> teamSeeds) {
+		requireSeedingOpen(playoffId);
 		var playoff = playoffRepository.findById(playoffId)
 				.orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
 		playoffSeedRepository.deleteByPlayoffId(playoffId);
@@ -130,6 +134,7 @@ public class PlayoffSeedingService {
 	 */
 	@Transactional
 	public void autoSeedBracket(UUID playoffId) {
+		requireSeedingOpen(playoffId);
 		var seeds = playoffSeedRepository.findByPlayoffId(playoffId);
 
 		List<Team> sortedTeams;
@@ -255,6 +260,15 @@ public class PlayoffSeedingService {
 	private Team findTeam(UUID teamId) {
 		return teamRepository.findById(teamId)
 				.orElseThrow(() -> new EntityNotFoundException("Team", teamId));
+	}
+
+	private void requireSeedingOpen(UUID playoffId) {
+		boolean started = playoffMatchupRepository.findByRoundPlayoffId(playoffId).stream()
+				.anyMatch(matchup -> matchup.isComplete() || raceRepository.findByPlayoffMatchupId(matchup.getId()).stream()
+						.anyMatch(race -> !race.getResults().isEmpty()));
+		if (started) {
+			throw new IllegalStateException("Seeding is frozen once a playoff matchup has results or a winner");
+		}
 	}
 
 	public record SeedEntry(UUID matchupId, int slot, UUID teamId, Integer seedNumber) {

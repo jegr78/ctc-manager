@@ -17,9 +17,26 @@
         </div>
     </div>
 
-    <!-- Winner badge -->
     <div th:if="${matchup.winner != null}" class="alert alert-success">
         Winner: <strong th:text="${matchup.winner.shortName}"></strong>
+        <span th:if="${matchup.decisionReason != null}" class="text-dim" th:text="${matchup.decisionReason}"></span>
+    </div>
+
+    <div th:if="${matchup.winner != null}" class="card">
+        <h2>Reopen Matchup</h2>
+        <p class="text-dim">Results and lineups of a decided matchup are locked. Reopening removes the advancement into the next round.</p>
+        <form th:action="@{/admin/playoffs/matchup/{id}/reopen(id=${matchup.id})}" method="post">
+            <div class="form-group">
+                <label for="reopenReason">Reason</label>
+                <input id="reopenReason" type="text" name="reason" maxlength="500" required>
+            </div>
+            <button type="submit" class="btn btn-secondary">Reopen</button>
+        </form>
+    </div>
+
+    <div th:if="${matchup.decisionHistory != null}" class="card">
+        <h2>Decision History</h2>
+        <p class="decision-history" th:text="${matchup.decisionHistory}"></p>
     </div>
 
     <!-- Legs table -->
@@ -106,6 +123,10 @@
             <span class="text-dim">or manually:</span>
             <form th:action="@{/admin/playoffs/matchup/{id}/set-winner(id=${matchup.id})}" method="post"
                   onsubmit="return confirm('Set winner manually?')">
+                <div class="form-group">
+                    <label for="winnerReason">Reason (required unless the winner leads on points after every leg)</label>
+                    <input id="winnerReason" type="text" name="reason" maxlength="500">
+                </div>
                 <div class="actions" style="gap:8px;">
                     <button type="submit" name="winnerTeamId" th:value="${matchup.team1.id}"
                             class="btn btn-secondary" th:text="${matchup.team1.shortName}"></button>

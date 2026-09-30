@@ -3,6 +3,7 @@ package org.ctc.domain.service;
 import static org.ctc.util.LogSanitizer.sanitize;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -88,7 +89,7 @@ public class ScoringService {
 		log.info("Recomputed match scores for match {}: {} : {}", match.getId(), match.getHomeScore(), match.getAwayScore());
 	}
 
-	/** Playoff counterpart of {@link #recomputeMatchScores(Match)}; the declared winner is left alone. */
+	/** Playoff counterpart of {@link #recomputeMatchScores(Match)}; rejects any change to a decided matchup's totals. */
 	@Transactional
 	public void recomputePlayoffMatchupScores(PlayoffMatchup matchup) {
 		if (matchup.getTeam1() == null) {
@@ -96,8 +97,13 @@ public class ScoringService {
 			return;
 		}
 		int[] totals = sumLegs(raceRepository.findByPlayoffMatchupId(matchup.getId()), matchup.getTeam1().getId());
-		matchup.setHomeScore(totals == null ? null : totals[0]);
-		matchup.setAwayScore(totals == null ? null : totals[1]);
+		Integer home = totals == null ? null : totals[0];
+		Integer away = totals == null ? null : totals[1];
+		if (!Objects.equals(home, matchup.getHomeScore()) || !Objects.equals(away, matchup.getAwayScore())) {
+			PlayoffDecisionGuard.requireOpen(matchup);
+		}
+		matchup.setHomeScore(home);
+		matchup.setAwayScore(away);
 		playoffMatchupRepository.save(matchup);
 	}
 
