@@ -129,6 +129,37 @@ class ScoreReaggregationIT {
 		assertThat(stored().getAwayScore()).as("away score").isEqualTo(total);
 	}
 
+	@Test
+	void givenQuickScoredMatch_whenAnUnscoredLegIsDeleted_thenTheQuickScoreStays() {
+		// given
+		var legs = createMatchWithLegs(2);
+		raceService.quickScore(legs.get(0).getId(), 3, 1);
+
+		// when
+		raceService.deleteRace(legs.get(1).getId());
+
+		// then
+		assertThat(List.of(stored().getHomeScore(), stored().getAwayScore()))
+				.as("a leg without results must not reset a quick score").isEqualTo(List.of(3, 1));
+	}
+
+	@Test
+	void givenQuickScoredMatchWithLineupsOnly_whenDriversMerged_thenTheQuickScoreStays() {
+		// given
+		var leg = createMatchWithLegs(1).getFirst();
+		var managed = raceRepository.findById(leg.getId()).orElseThrow();
+		raceLineupRepository.save(new RaceLineup(managed, homeDriver, home));
+		raceLineupRepository.save(new RaceLineup(managed, awayDriver, away));
+		raceService.quickScore(leg.getId(), 3, 1);
+
+		// when
+		driverMergeService.merge(awayDriver.getId(), homeDriver.getId());
+
+		// then
+		assertThat(List.of(stored().getHomeScore(), stored().getAwayScore()))
+				.as("a merge touching only lineups must not reset a quick score").isEqualTo(List.of(3, 1));
+	}
+
 	private List<Race> createMatchWithLegs(int legs) {
 		Season season = testHelper.createSeason("Test_Reagg_" + id);
 		home = testHelper.createTeam("Test Reagg Home " + id, "Test_RGH_" + id);

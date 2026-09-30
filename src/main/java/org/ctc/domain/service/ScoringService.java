@@ -62,65 +62,65 @@ public class ScoringService {
 	 */
 	@Transactional
 	public void recomputeMatchScoresFromAllLegs(Race race) {
-		if (race.isBye()) {
-			return;
-		}
-		if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
-			return;
-		}
 		if (race.getMatch() != null) {
-			Match match = race.getMatch();
-			if (match.getHomeTeam() == null) {
-				log.warn("Skipping match-score recompute for match {} — homeTeam is null", match.getId());
-			} else {
-				UUID hId = match.getHomeTeam().getId();
-				var legs = raceRepository.findByMatchId(match.getId());
-				int matchHome = 0;
-				int matchAway = 0;
-				for (Race leg : legs) {
-					if (leg.getResults().isEmpty()) {
-						continue;
-					}
-					matchHome += leg.getResults().stream()
-							.filter(r -> isDriverInTeam(r, leg.getId(), hId))
-							.mapToInt(RaceResult::getPointsTotal).sum();
-					matchAway += leg.getResults().stream()
-							.filter(r -> !isDriverInTeam(r, leg.getId(), hId))
-							.mapToInt(RaceResult::getPointsTotal).sum();
-				}
-				match.setHomeScore(matchHome);
-				match.setAwayScore(matchAway);
-				matchRepository.save(match);
-				log.info("Recomputed match scores after clear: {} {} : {} {}",
-						match.getHomeTeam().getShortName(), matchHome, matchAway,
-						match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "?");
-			}
+			recomputeMatchScores(race.getMatch());
 		}
 		if (race.getPlayoffMatchup() != null) {
-			PlayoffMatchup matchup = race.getPlayoffMatchup();
-			if (matchup.getTeam1() == null) {
-				log.warn("Skipping playoff-matchup score recompute for matchup {} — team1 is null", matchup.getId());
-			} else {
-				UUID t1Id = matchup.getTeam1().getId();
-				var legs = raceRepository.findByPlayoffMatchupId(matchup.getId());
-				int mHome = 0;
-				int mAway = 0;
-				for (Race leg : legs) {
-					if (leg.getResults().isEmpty()) {
-						continue;
-					}
-					mHome += leg.getResults().stream()
-							.filter(r -> isDriverInTeam(r, leg.getId(), t1Id))
-							.mapToInt(RaceResult::getPointsTotal).sum();
-					mAway += leg.getResults().stream()
-							.filter(r -> !isDriverInTeam(r, leg.getId(), t1Id))
-							.mapToInt(RaceResult::getPointsTotal).sum();
-				}
-				matchup.setHomeScore(mHome);
-				matchup.setAwayScore(mAway);
-				playoffMatchupRepository.save(matchup);
-			}
+			recomputePlayoffMatchupScores(race.getPlayoffMatchup());
 		}
+	}
+
+	/**
+	 * Re-sums the match from the results of its current legs; without any scored leg the match is
+	 * unplayed again ({@code null} scores) rather than a 0:0 draw.
+	 */
+	@Transactional
+	public void recomputeMatchScores(Match match) {
+		if (match.isBye() || match.getWalkoverTeam() != null) {
+			return;
+		}
+		if (match.getHomeTeam() == null) {
+			log.warn("Skipping match-score recompute for match {} — homeTeam is null", match.getId());
+			return;
+		}
+		int[] totals = sumLegs(raceRepository.findByMatchId(match.getId()), match.getHomeTeam().getId());
+		match.setHomeScore(totals == null ? null : totals[0]);
+		match.setAwayScore(totals == null ? null : totals[1]);
+		matchRepository.save(match);
+		log.info("Recomputed match scores for match {}: {} : {}", match.getId(), match.getHomeScore(), match.getAwayScore());
+	}
+
+	/** Playoff counterpart of {@link #recomputeMatchScores(Match)}; the declared winner is left alone. */
+	@Transactional
+	public void recomputePlayoffMatchupScores(PlayoffMatchup matchup) {
+		if (matchup.getTeam1() == null) {
+			log.warn("Skipping playoff-matchup score recompute for matchup {} — team1 is null", matchup.getId());
+			return;
+		}
+		int[] totals = sumLegs(raceRepository.findByPlayoffMatchupId(matchup.getId()), matchup.getTeam1().getId());
+		matchup.setHomeScore(totals == null ? null : totals[0]);
+		matchup.setAwayScore(totals == null ? null : totals[1]);
+		playoffMatchupRepository.save(matchup);
+	}
+
+	/** Returns [home, away] over all scored legs, or {@code null} when no leg has results. */
+	private int[] sumLegs(List<Race> legs, UUID homeTeamId) {
+		int home = 0;
+		int away = 0;
+		boolean scored = false;
+		for (Race leg : legs) {
+			if (leg.getResults().isEmpty()) {
+				continue;
+			}
+			scored = true;
+			home += leg.getResults().stream()
+					.filter(r -> isDriverInTeam(r, leg.getId(), homeTeamId))
+					.mapToInt(RaceResult::getPointsTotal).sum();
+			away += leg.getResults().stream()
+					.filter(r -> !isDriverInTeam(r, leg.getId(), homeTeamId))
+					.mapToInt(RaceResult::getPointsTotal).sum();
+		}
+		return scored ? new int[]{home, away} : null;
 	}
 
 	/**
@@ -133,64 +133,7 @@ public class ScoringService {
 		if (race.getResults().isEmpty()) {
 			return;
 		}
-		if (race.isBye()) {
-			return;
-		}
-		if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
-			return;
-		}
-
-		if (race.getMatch() != null && race.getMatch().getHomeTeam() != null) {
-			Match match = race.getMatch();
-			UUID hId = match.getHomeTeam().getId();
-
-			// Load all races for this match from database to ensure completeness
-			// (important for CSV import where races are added sequentially)
-			var legs = raceRepository.findByMatchId(match.getId());
-
-			int matchHome = 0;
-			int matchAway = 0;
-			for (Race leg : legs) {
-				if (leg.getResults().isEmpty()) {
-					continue;
-				}
-				matchHome += leg.getResults().stream()
-						.filter(r -> isDriverInTeam(r, leg.getId(), hId))
-						.mapToInt(RaceResult::getPointsTotal).sum();
-				matchAway += leg.getResults().stream()
-						.filter(r -> !isDriverInTeam(r, leg.getId(), hId))
-						.mapToInt(RaceResult::getPointsTotal).sum();
-			}
-			match.setHomeScore(matchHome);
-			match.setAwayScore(matchAway);
-			log.info("Aggregated match scores: {} {} : {} {}",
-					match.getHomeTeam().getShortName(), matchHome, matchAway,
-					match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "?");
-		}
-
-		if (race.getPlayoffMatchup() != null && race.getPlayoffMatchup().getTeam1() != null) {
-			PlayoffMatchup matchup = race.getPlayoffMatchup();
-			UUID t1Id = matchup.getTeam1().getId();
-
-			// Load all races for this matchup from database for consistency
-			var legs = raceRepository.findByPlayoffMatchupId(matchup.getId());
-
-			int mHome = 0;
-			int mAway = 0;
-			for (Race leg : legs) {
-				if (leg.getResults().isEmpty()) {
-					continue;
-				}
-				mHome += leg.getResults().stream()
-						.filter(r -> isDriverInTeam(r, leg.getId(), t1Id))
-						.mapToInt(RaceResult::getPointsTotal).sum();
-				mAway += leg.getResults().stream()
-						.filter(r -> !isDriverInTeam(r, leg.getId(), t1Id))
-						.mapToInt(RaceResult::getPointsTotal).sum();
-			}
-			matchup.setHomeScore(mHome);
-			matchup.setAwayScore(mAway);
-		}
+		recomputeMatchScoresFromAllLegs(race);
 	}
 
 	/**

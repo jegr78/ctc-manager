@@ -37,6 +37,9 @@ class DriverMergeServiceTest {
 	@Mock
 	private PsnAliasRepository psnAliasRepository;
 
+	@Mock
+	private ScoringService scoringService;
+
 	@InjectMocks
 	private DriverMergeService driverMergeService;
 

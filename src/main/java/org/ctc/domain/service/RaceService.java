@@ -272,8 +272,25 @@ public class RaceService {
 	public UUID deleteRace(UUID raceId) {
 		var race = raceRepository.findById(raceId).orElseThrow();
 		var matchdayId = race.getMatchday().getId();
+		var match = race.getMatch();
+		var matchup = race.getPlayoffMatchup();
+		boolean hadResults = !race.getResults().isEmpty();
+		log.info("Deleting race: {} vs {}", race.getHomeTeam().getShortName(), race.getAwayTeam().getShortName());
+		raceLineupRepository.deleteAll(raceLineupRepository.findByRaceId(raceId));
+		if (match != null) {
+			match.getRaces().remove(race);
+		}
+		if (matchup != null) {
+			matchup.getRaces().remove(race);
+		}
 		raceRepository.delete(race);
-		log.info("Deleted race: {} vs {}", race.getHomeTeam().getShortName(), race.getAwayTeam().getShortName());
+		raceRepository.flush();
+		if (hadResults && match != null) {
+			scoringService.recomputeMatchScores(match);
+		}
+		if (hadResults && matchup != null) {
+			scoringService.recomputePlayoffMatchupScores(matchup);
+		}
 		return matchdayId;
 	}
 
