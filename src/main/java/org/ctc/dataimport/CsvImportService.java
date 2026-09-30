@@ -130,6 +130,7 @@ public class CsvImportService {
 		rejectInvalidPreviews(previews);
 
 		var metadata = previews.get(0).getMetadata();
+		rejectForeignMatchday(metadata);
 
 		// Resolve season
 		var season = seasonRepository.findById(metadata.seasonId()).orElseThrow(
@@ -282,6 +283,17 @@ public class CsvImportService {
 		if (!errors.isEmpty()) {
 			throw new ImportRejectedException(errors);
 		}
+	}
+
+	private void rejectForeignMatchday(ImportMetadata metadata) {
+		if (!metadata.hasMatchdayId()) {
+			return;
+		}
+		matchdayRepository.findById(metadata.matchdayId())
+				.filter(matchday -> !matchday.getSeason().getId().equals(metadata.seasonId()))
+				.ifPresent(matchday -> {
+					throw new ImportRejectedException(List.of("The matchday does not belong to the selected season"));
+				});
 	}
 
 	private Driver resolveDriver(ImportRow row, Map<String, UUID> confirmedMatches,

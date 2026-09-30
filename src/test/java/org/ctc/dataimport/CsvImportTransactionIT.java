@@ -171,6 +171,33 @@ class CsvImportTransactionIT {
 		assertThat(raceRepository.findByMatchId(fixture.match().getId())).hasSize(1);
 	}
 
+	@Test
+	void givenMatchdayOfAnotherSeason_whenImportExecuted_thenRejectedAndNothingIsCreated() throws Exception {
+		// given
+		var other = testHelper.createSeason("Test_CsvTx_Other_" + id);
+		var foreignMatchday = testHelper.createMatchdayInRegularPhase(other, "Test_CsvTx_" + id + " Foreign", 1);
+		String csv = """
+				Team,PSN ID,Position,Quali,FL
+				%s,%s,1,1,true
+				%s,%s,2,2,false
+				""".formatted(home(), existingDriver.getPsnId(), away(), fuzzyDriver.getPsnId());
+
+		// when
+		mockMvc.perform(multipart("/admin/import/execute")
+						.file(csvFile(csv))
+						.param("seasonId", fixture.season().getId().toString())
+						.param("matchdayId", foreignMatchday.getId().toString()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(flash().attribute("errorMessage", allOf(
+						containsString("Import rejected, nothing was imported"),
+						containsString("The matchday does not belong to the selected season"))));
+
+		// then
+		assertThat(raceRepository.findByMatchdayId(foreignMatchday.getId()))
+				.as("no race may land in the other season's matchday").isEmpty();
+		testHelper.deleteSeasonCascade(other);
+	}
+
 	private String home() {
 		return fixture.homeTeam().getShortName();
 	}

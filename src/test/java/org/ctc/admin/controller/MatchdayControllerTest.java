@@ -175,6 +175,25 @@ class MatchdayControllerTest {
     }
 
     @Test
+    void givenMatchdayOfAnotherSeason_whenSaved_thenConflictAndUnchanged() throws Exception {
+        // given
+        var season = testHelper.createSeason("Test_MD Target Season");
+        var other = testHelper.createSeason("Test_MD Other Season");
+        var matchday = testHelper.createMatchdayInRegularPhase(other, "Test_MD Foreign", 1);
+
+        // when
+        mockMvc.perform(post("/admin/matchdays/save")
+                        .param("id", matchday.getId().toString())
+                        .param("label", "Test_MD Moved")
+                        .param("sortIndex", "2")
+                        .param("seasonId", season.getId().toString()))
+                // then
+                .andExpect(status().isConflict())
+                .andExpect(model().attribute("message", "A matchday cannot move to another season"));
+        assertEquals("Test_MD Foreign", matchdayRepository.findById(matchday.getId()).orElseThrow().getLabel());
+    }
+
+    @Test
     void givenBlankLabel_whenSaveMatchday_thenReturnsFormWithErrors() throws Exception {
         // given
         var season = testHelper.createSeason("MD Validation Season");
