@@ -10,6 +10,8 @@ import static org.ctc.discord.DiscordPermissions.VIEW_CHANNEL;
 import static org.ctc.util.LogSanitizer.sanitize;
 import static org.springframework.util.StringUtils.hasText;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.Normalizer;
@@ -63,9 +65,22 @@ public class DiscordChannelService {
 	private final DiscordBotIdentityCache botIdentityCache;
 	private final MatchRepository matchRepository;
 	private final ApplicationEventPublisher eventPublisher;
+	private final EntityManager entityManager;
 
+	/**
+	 * Creates the match's Discord channel and webhook. The match row stays locked until the
+	 * association is stored, so a repeated or concurrent request for a linked match returns
+	 * {@code false} without creating a second channel.
+	 */
 	@Transactional
-	public void createMatchChannel(Match match) throws DiscordApiException {
+	public boolean createMatchChannel(Match requested) throws DiscordApiException {
+		Match match = entityManager.find(Match.class, requested.getId());
+		entityManager.flush();
+		entityManager.refresh(match, LockModeType.PESSIMISTIC_WRITE);
+		if (match.getDiscordChannelId() != null) {
+			log.info("Match {} already has Discord channel {}; nothing created", match.getId(), match.getDiscordChannelId());
+			return false;
+		}
 		DiscordGlobalConfig cfg = configService.getOrInitialize();
 		assertPreconditions(match, cfg);
 
@@ -134,6 +149,7 @@ public class DiscordChannelService {
 				match.getId(), channel.name(), channel.id());
 
 		eventPublisher.publishEvent(new ChannelCreatedEvent(match.getId()));
+		return true;
 	}
 
 	@Transactional
