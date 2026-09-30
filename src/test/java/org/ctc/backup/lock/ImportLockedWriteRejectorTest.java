@@ -191,10 +191,11 @@ class ImportLockedWriteRejectorTest {
 
         // when
         req.getAsyncContext().complete();
-        rejector.afterCompletion(req, res, new Object(), null);
 
         // then
-        verify(importLockService, times(1)).exitWriter();
+        verify(importLockService, times(1).description("released without a redispatch")).exitWriter();
+        rejector.afterCompletion(req, res, new Object(), null);
+        verify(importLockService, times(1).description("a late redispatch releases nothing twice")).exitWriter();
     }
 
     @Test
