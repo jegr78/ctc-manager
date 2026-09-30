@@ -137,10 +137,12 @@ public class CsvImportService {
 		var season = seasonRepository.findById(metadata.seasonId()).orElseThrow(
 				() -> new ValidationException("Season not found in CSV import: " + metadata.seasonId()));
 
-		var raceScoring = seasonPhaseService.findRegularPhase(season.getId()).getRaceScoring();
-
 		// Resolve or create matchday
 		var matchday = findOrCreateMatchday(season, metadata);
+		var raceScoring = matchday.getPhase().getRaceScoring();
+		if (raceScoring == null) {
+			throw new ImportRejectedException(List.of("The target phase has no race scoring"));
+		}
 
 		// Group all rows from all previews by team pair
 		var seasonTeams = season.getTeams();
@@ -391,25 +393,35 @@ public class CsvImportService {
 		return null;
 	}
 
+	/** The phase a label-addressed matchday lives in: the playoff phase for a playoff import, otherwise REGULAR. */
+	private SeasonPhase labelPhase(Season season, ImportMetadata metadata) {
+		if (metadata.isPlayoff()) {
+			return playoffMatchupRepository.findById(metadata.playoffMatchupId())
+					.orElseThrow(() -> new ValidationException(
+							"Playoff matchup not found in CSV import: " + metadata.playoffMatchupId()))
+					.getRound().getPlayoff().getPhase();
+		}
+		return seasonPhaseService.findRegularPhase(season.getId());
+	}
+
 	private Matchday findOrCreateMatchday(Season season, ImportMetadata metadata) {
 		if (metadata.hasMatchdayId()) {
 			return matchdayRepository.findById(metadata.matchdayId())
 					.orElseThrow(() -> new ValidationException(
 							"Matchday not found in CSV import: " + metadata.matchdayId()));
 		}
-		// Scope lookup + sortIndex calculation to the REGULAR phase: a season-wide query
-		// would let PLAYOFF sortIndex (>= 100) poison the next REGULAR sortIndex and let
-		// the label-equality match accidentally pick up a PLAYOFF matchday with the same label.
-		var regular = seasonPhaseService.findRegularPhase(season.getId());
-		var regularMatchdays = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regular.getId());
-		return regularMatchdays.stream()
+		// Label lookup and sortIndex stay inside one phase, so a same-named matchday of another
+		// phase is never reused and PLAYOFF indexes (>= 100) never shift the REGULAR ones.
+		var phase = labelPhase(season, metadata);
+		var phaseMatchdays = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(phase.getId());
+		return phaseMatchdays.stream()
 				.filter(md -> md.getLabel().equals(metadata.matchdayLabel()))
 				.findFirst()
 				.orElseGet(() -> {
-					var maxIndex = regularMatchdays.stream()
+					var maxIndex = phaseMatchdays.stream()
 							.mapToInt(Matchday::getSortIndex)
-							.max().orElse(0);
-					var md = new Matchday(regular, metadata.matchdayLabel(), maxIndex + 1);
+							.max().orElse(phase.getPhaseType() == PhaseType.PLAYOFF ? 99 : 0);
+					var md = new Matchday(phase, metadata.matchdayLabel(), maxIndex + 1);
 					return matchdayRepository.save(md);
 				});
 	}
@@ -470,10 +482,7 @@ public class CsvImportService {
 		if (metadata.hasMatchdayId()) {
 			matchday = matchdayRepository.findById(metadata.matchdayId()).orElse(null);
 		} else {
-			// Scope label lookup to the REGULAR phase to avoid cross-phase label collisions
-			// (a REGULAR "Round 1" must not match a PLAYOFF "Round 1").
-			var regular = seasonPhaseService.findRegularPhase(season.getId());
-			matchday = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regular.getId()).stream()
+			matchday = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(labelPhase(season, metadata).getId()).stream()
 					.filter(md -> md.getLabel().equals(metadata.matchdayLabel()))
 					.findFirst().orElse(null);
 		}
