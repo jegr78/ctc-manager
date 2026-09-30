@@ -171,11 +171,13 @@ public class RaceService {
 		var homeTeam = teamRepository.findById(homeTeamId).orElseThrow();
 		var awayTeam = teamRepository.findById(awayTeamId).orElseThrow();
 
-		Race race;
-		if (id != null) {
-			race = raceRepository.findById(id).orElseThrow();
-		} else {
-			race = new Race();
+		Race race = id != null ? raceRepository.findById(id).orElseThrow() : new Race();
+		var track = trackId != null ? trackRepository.findById(trackId).orElse(null) : null;
+		var car = carId != null ? carRepository.findById(carId).orElse(null) : null;
+
+		var rejection = validateCarAndTrack(matchday.getSeason(), homeTeam, car, track, id);
+		if (rejection != null) {
+			return new SaveResult(false, rejection, id, matchdayId);
 		}
 
 		race.setMatchday(matchday);
@@ -190,20 +192,11 @@ public class RaceService {
 			match.setAwayTeam(awayTeam);
 		}
 
-		if (trackId != null) {
-			race.setTrack(trackRepository.findById(trackId).orElse(null));
-		} else {
-			race.setTrack(null);
-		}
-		if (carId != null) {
-			race.setCar(carRepository.findById(carId).orElse(null));
-		} else {
-			race.setCar(null);
-		}
+		race.setTrack(track);
+		race.setCar(car);
 		boolean dateTimeChanged = id != null && !Objects.equals(race.getDateTime(), dateTime);
 		race.setDateTime(dateTime);
 
-		// Settings
 		var settings = race.getSettings();
 		if (settings == null) {
 			settings = new RaceSettings(race);
@@ -220,33 +213,6 @@ public class RaceService {
 		settings.setTimeOfDay(timeOfDay);
 		settings.setAvailableTyres(availableTyres);
 		settings.setMandatoryTyres(mandatoryTyres);
-
-		// Pool validation
-		var season = matchday.getSeason();
-		if (race.getCar() != null && !season.getCars().contains(race.getCar())) {
-			return new SaveResult(false, "Car is not in this season's pool", id, matchdayId);
-		}
-		if (race.getTrack() != null && !season.getTracks().contains(race.getTrack())) {
-			return new SaveResult(false, "Track is not in this season's pool", id, matchdayId);
-		}
-
-		// Uniqueness validation
-		if (race.getCar() != null) {
-			var usedCarIds = getUsedCarIds(season.getId(), homeTeam.getId(), id);
-			if (usedCarIds.contains(race.getCar().getId())) {
-				return new SaveResult(false,
-						homeTeam.getShortName() + " has already used " + race.getCar().getDisplayName() + " this season",
-						id, matchdayId);
-			}
-		}
-		if (race.getTrack() != null) {
-			var usedTrackIds = getUsedTrackIds(season.getId(), homeTeam.getId(), id);
-			if (usedTrackIds.contains(race.getTrack().getId())) {
-				return new SaveResult(false,
-						homeTeam.getShortName() + " has already used " + race.getTrack().getName() + " this season",
-						id, matchdayId);
-			}
-		}
 
 		raceRepository.save(race);
 		if (dateTimeChanged && race.getMatch() != null) {
@@ -313,6 +279,23 @@ public class RaceService {
 		raceRepository.delete(race);
 		log.info("Deleted race: {} vs {}", race.getHomeTeam().getShortName(), race.getAwayTeam().getShortName());
 		return matchdayId;
+	}
+
+	/** Returns the rejection message, or {@code null} when car and track may be used; changes nothing. */
+	private String validateCarAndTrack(Season season, Team homeTeam, Car car, Track track, UUID raceId) {
+		if (car != null && !season.getCars().contains(car)) {
+			return "Car is not in this season's pool";
+		}
+		if (track != null && !season.getTracks().contains(track)) {
+			return "Track is not in this season's pool";
+		}
+		if (car != null && getUsedCarIds(season.getId(), homeTeam.getId(), raceId).contains(car.getId())) {
+			return homeTeam.getShortName() + " has already used " + car.getDisplayName() + " this season";
+		}
+		if (track != null && getUsedTrackIds(season.getId(), homeTeam.getId(), raceId).contains(track.getId())) {
+			return homeTeam.getShortName() + " has already used " + track.getName() + " this season";
+		}
+		return null;
 	}
 
 	private Set<UUID> getUsedCarIds(UUID seasonId, UUID homeTeamId, UUID excludeRaceId) {
