@@ -153,6 +153,23 @@ class PlayoffDecisionIT {
 	}
 
 	@Test
+	void givenDecidedMatchup_whenUnchangedResultsOrLineupAreSavedAgain_thenStillRejected() {
+		// given
+		var leg = decideSemiForAlpha();
+
+		// when / then
+		assertThatThrownBy(() -> raceService.saveResults(leg.getId(), List.of(
+				new RaceService.RaceResultData(alphaDriver.getId(), alphaDriver.getPsnId(), null, 1, 1, true),
+				new RaceService.RaceResultData(bravoDriver.getId(), bravoDriver.getPsnId(), null, 2, 2, false))))
+				.as("a resave that keeps the totals is still a result change")
+				.isInstanceOf(BusinessRuleException.class).hasMessage(DECIDED);
+		assertThatThrownBy(() -> raceLineupService.saveLineup(leg.getId(),
+				Map.of(alphaDriver.getId(), alpha.getId(), bravoDriver.getId(), bravo.getId())))
+				.as("an unchanged lineup is still a lineup change")
+				.isInstanceOf(BusinessRuleException.class).hasMessage(DECIDED);
+	}
+
+	@Test
 	void givenDecidedMatchup_whenAMergeWouldDropAResult_thenRejected() {
 		// given
 		decideSemiForAlpha();
