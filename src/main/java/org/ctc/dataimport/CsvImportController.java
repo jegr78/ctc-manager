@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.dataimport.exception.AuthGoogleApiException;
 import org.ctc.dataimport.exception.GoogleApiException;
+import org.ctc.dataimport.exception.ImportRejectedException;
 import org.ctc.dataimport.exception.NotFoundGoogleApiException;
 import org.ctc.dataimport.exception.PermissionGoogleApiException;
 import org.ctc.dataimport.exception.TransientGoogleApiException;
@@ -55,6 +56,7 @@ public class CsvImportController {
 
 			csvImportService.checkDuplicate(preview);
 			model.addAttribute("preview", preview);
+			model.addAttribute("importBlocked", preview.hasErrors());
 			model.addAttribute("metadata", metadata);
 			seasonManagementService.findByIdOptional(seasonId).ifPresent(s -> model.addAttribute("seasonDisplayLabel", s.getDisplayLabel()));
 			model.addAttribute("source", "csv");
@@ -112,6 +114,7 @@ public class CsvImportController {
 			}
 
 			model.addAttribute("previews", previews);
+			model.addAttribute("importBlocked", previews.stream().anyMatch(CsvImportService.ImportPreview::hasErrors));
 			model.addAttribute("raceSheetNames", raceSheets);
 			model.addAttribute("isMultiRace", raceSheets.size() > 1);
 			model.addAttribute("metadata", metadata);
@@ -237,17 +240,15 @@ public class CsvImportController {
 			// Execute import for all races (handles multi-race reuse of matches correctly)
 			var cumulativeResult = csvImportService.executeMultiRaceImport(previews, confirmedMatches, createNewDrivers, overwrite);
 
-			if (cumulativeResult.hasErrors()) {
-				redirectAttributes.addFlashAttribute("errorMessage",
-						"Import with errors: " + String.join(", ", cumulativeResult.getErrors()));
-			} else {
-				var msg = "Import successful: " + cumulativeResult.getImportedRaces().size() + " races, " +
-						cumulativeResult.getNewDriversCreated() + " new drivers";
-				if (cumulativeResult.getLineupCount() > 0) {
-					msg += ", " + cumulativeResult.getLineupCount() + " lineup entries";
-				}
-				redirectAttributes.addFlashAttribute("successMessage", msg);
+			var msg = "Import successful: " + cumulativeResult.getImportedRaces().size() + " races, " +
+					cumulativeResult.getNewDriversCreated() + " new drivers";
+			if (cumulativeResult.getLineupCount() > 0) {
+				msg += ", " + cumulativeResult.getLineupCount() + " lineup entries";
 			}
+			redirectAttributes.addFlashAttribute("successMessage", msg);
+		} catch (ImportRejectedException e) {
+			redirectAttributes.addFlashAttribute("errorMessage",
+					"Import rejected, nothing was imported: " + String.join("; ", e.getErrors()));
 		} catch (AuthGoogleApiException e) {
 			log.error("Google Sheets authentication failed during CSV import execute", e);
 			redirectAttributes.addFlashAttribute("errorMessage", "Authentication problem — re-link Google account");

@@ -12,6 +12,7 @@ import java.util.*;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.dataimport.exception.ImportRejectedException;
 import org.ctc.domain.exception.ValidationException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
@@ -119,17 +120,15 @@ public class CsvImportService {
 	 * @param createNewDrivers  set of PSN IDs to create as new drivers
 	 * @param overwriteExisting whether to overwrite existing matches
 	 * @return cumulative import result
+	 * @throws ImportRejectedException when any preview row, the metadata or a race row is invalid;
+	 *                                 nothing is written in that case
 	 */
+	@Transactional
 	public ImportResult executeMultiRaceImport(List<ImportPreview> previews, Map<String, UUID> confirmedMatches,
 	                                           Set<String> createNewDrivers, boolean overwriteExisting) {
 		var result = new ImportResult();
+		rejectInvalidPreviews(previews);
 
-		if (previews.isEmpty()) {
-			result.addError("No previews provided for import");
-			return result;
-		}
-
-		// All previews should have the same metadata (season, matchday)
 		var metadata = previews.get(0).getMetadata();
 
 		// Resolve season
@@ -257,118 +256,32 @@ public class CsvImportService {
 			}
 		}
 
-		log.info("Import completed: {} races, {} new drivers, {} errors",
-				result.getImportedRaces().size(), result.getNewDriversCreated(), result.getErrors().size());
+		if (result.hasErrors()) {
+			log.warn("Import rejected after {} validation errors; rolling back", result.getErrors().size());
+			throw new ImportRejectedException(result.getErrors());
+		}
+		log.info("Import completed: {} races, {} new drivers",
+				result.getImportedRaces().size(), result.getNewDriversCreated());
 		return result;
 	}
 
-	public ImportResult executeImportLegacy(ImportPreview preview, Map<String, UUID> confirmedMatches,
-	                                        Set<String> createNewDrivers, boolean overwriteExisting) {
-		var result = new ImportResult();
-		var metadata = preview.getMetadata();
-
-		// Resolve season
-		var season = seasonRepository.findById(metadata.seasonId()).orElseThrow(
-				() -> new ValidationException("Season not found in CSV import: " + metadata.seasonId()));
-
-		var raceScoring = seasonPhaseService.findRegularPhase(season.getId()).getRaceScoring();
-
-		// Resolve or create matchday
-		var matchday = findOrCreateMatchday(season, metadata);
-
-		// Process each row
-		var seasonTeams = season.getTeams();
-		Map<String, List<ImportRow>> byTeamPair = groupByTeamPair(preview.getRows());
-
-		for (var entry : byTeamPair.entrySet()) {
-			var teamParts = entry.getKey().split("\\|");
-			var homeTeam = findTeamFlexible(teamParts[0], seasonTeams);
-			var awayTeam = teamParts.length > 1 ? findTeamFlexible(teamParts[1], seasonTeams) : null;
-
-			if (homeTeam == null) {
-				result.addError("Team not found: " + teamParts[0]);
-				continue;
-			}
-			if (awayTeam == null && teamParts.length > 1) {
-				result.addError("Team not found: " + teamParts[1]);
-				continue;
-			}
-
-			var effectiveAwayTeam = awayTeam != null ? awayTeam : homeTeam;
-
-			// Duplicate check: same home vs away on this matchday
-			if (matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(
-					matchday.getId(), homeTeam.getId(), effectiveAwayTeam.getId())) {
-				if (overwriteExisting) {
-					// Delete existing match (cascades to races + results)
-					var existing = matchRepository.findByMatchdayId(matchday.getId()).stream()
-							.filter(m -> m.getHomeTeam().getId().equals(homeTeam.getId())
-									&& m.getAwayTeam() != null
-									&& m.getAwayTeam().getId().equals(effectiveAwayTeam.getId()))
-							.findFirst();
-					existing.ifPresent(m -> {
-						matchRepository.delete(m);
-						matchRepository.flush();
-						log.info("Overwriting existing match: {} vs {} on {}",
-								sanitize(homeTeam.getShortName()), sanitize(effectiveAwayTeam.getShortName()), sanitize(matchday.getLabel()));
-					});
-				} else {
-					result.addError("Match already exists: " + homeTeam.getShortName() +
-							" vs " + effectiveAwayTeam.getShortName() + " on " + matchday.getLabel());
-					continue;
-				}
-			}
-
-			var match = new Match(matchday, homeTeam, effectiveAwayTeam);
-			match = matchRepository.save(match);
-			var race = new Race();
-			race.setMatchday(matchday);
-			race.setMatch(match);
-
-			// Link to playoff matchup if applicable
-			if (metadata.isPlayoff()) {
-				var matchup = playoffMatchupRepository.findById(metadata.playoffMatchupId())
-						.orElseThrow(() -> new ValidationException(
-								"Playoff matchup not found in CSV import: " + metadata.playoffMatchupId()));
-				race.setPlayoffMatchup(matchup);
-			}
-
-			// Save race early to get ID for RaceLineup references
-			race = raceRepository.save(race);
-
-			for (var row : entry.getValue()) {
-				var driver = resolveDriver(row, confirmedMatches, createNewDrivers, result);
-				if (driver == null) {
-					continue;
-				}
-
-				// Ensure SeasonDriver exists
-				ensureSeasonDriver(season, driver, row.teamShortName());
-
-				var raceResult = new RaceResult(race, driver, row.position(), row.qualiPosition(), row.fastestLap());
-				scoringService.calculatePoints(raceResult, raceScoring);
-				race.getResults().add(raceResult);
-
-				// Create RaceLineup for all teams
-				var resolvedTeam = findTeamFlexible(row.teamShortName(), seasonTeams);
-				if (resolvedTeam != null) {
-					var existingLineup = raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driver.getId());
-					if (existingLineup.isEmpty()) {
-						raceLineupRepository.save(new RaceLineup(race, driver, resolvedTeam));
-						result.incrementLineupCount();
-					}
-				}
-			}
-
-			raceRepository.save(race);
-			scoringService.aggregateMatchScores(race);
-			result.addImportedRace(homeTeam.getShortName() +
-					(awayTeam != null ? " vs " + awayTeam.getShortName() : ""));
+	private static void rejectInvalidPreviews(List<ImportPreview> previews) {
+		if (previews.isEmpty()) {
+			throw new ImportRejectedException(List.of("No previews provided for import"));
 		}
-
-		log.info("Import completed: {} races, {} new drivers, {} errors",
-				result.getImportedRaces().size(), result.getNewDriversCreated(), result.getErrors().size());
-		return result;
+		var errors = new ArrayList<String>();
+		var metadata = previews.get(0).getMetadata();
+		for (int i = 0; i < previews.size(); i++) {
+			var preview = previews.get(i);
+			var prefix = previews.size() > 1 ? "Race " + (i + 1) + ": " : "";
+			preview.getErrors().forEach(error -> errors.add(prefix + error));
+			if (!Objects.equals(preview.getMetadata(), metadata)) {
+				errors.add(prefix + "import metadata differs from race 1");
+			}
+		}
+		if (!errors.isEmpty()) {
+			throw new ImportRejectedException(errors);
+		}
 	}
 
 	private Driver resolveDriver(ImportRow row, Map<String, UUID> confirmedMatches,
@@ -382,7 +295,11 @@ public class CsvImportService {
 		if (matchResult.type() == DriverMatchingService.MatchType.FUZZY) {
 			var confirmedId = confirmedMatches.get(row.psnId());
 			if (confirmedId != null) {
-				return driverRepository.findById(confirmedId).orElse(null);
+				var confirmed = driverRepository.findById(confirmedId);
+				if (confirmed.isEmpty()) {
+					result.addError("Confirmed driver no longer exists for: " + row.psnId());
+				}
+				return confirmed.orElse(null);
 			}
 		}
 
