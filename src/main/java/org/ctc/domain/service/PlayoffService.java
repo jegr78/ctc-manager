@@ -2,9 +2,12 @@ package org.ctc.domain.service;
 
 import static org.ctc.util.LogSanitizer.sanitize;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.BusinessRuleException;
@@ -44,6 +47,7 @@ public class PlayoffService {
 	private final RaceLineupRepository raceLineupRepository;
 
 	static final int MAX_REASON_LENGTH = 500;
+	private static final Pattern CONTROL_CHARACTERS = Pattern.compile("\\p{Cntrl}|[\\u2028\\u2029]");
 
 	/**
 	 * Creates a playoff for a season. Atomically auto-creates a PLAYOFF
@@ -278,7 +282,7 @@ public class PlayoffService {
 		if (reason == null || reason.isBlank()) {
 			return null;
 		}
-		String stripped = reason.strip();
+		String stripped = CONTROL_CHARACTERS.matcher(reason).replaceAll(" ").strip();
 		if (stripped.length() > MAX_REASON_LENGTH) {
 			throw new IllegalStateException("The reason may have at most " + MAX_REASON_LENGTH + " characters");
 		}
@@ -333,7 +337,7 @@ public class PlayoffService {
 		String score = matchup.getHomeScore() == null || matchup.getAwayScore() == null
 				? "" : " (%d:%d)".formatted(matchup.getHomeScore(), matchup.getAwayScore());
 		String entry = "%s %s %s%s%s".formatted(
-				java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS), action,
+				Instant.now().truncatedTo(ChronoUnit.SECONDS), action,
 				winner.getShortName(), score, reason == null ? "" : ", reason: " + reason);
 		String history = matchup.getDecisionHistory();
 		matchup.setDecisionHistory(history == null ? entry : history + "\n" + entry);

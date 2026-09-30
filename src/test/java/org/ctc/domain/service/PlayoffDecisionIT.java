@@ -196,7 +196,7 @@ class PlayoffDecisionIT {
 				Team,PSN ID,Position,Quali,FL
 				%s,%s,1,1,true
 				%s,%s,2,2,false
-				""".formatted(bravo.getShortName(), bravoDriver.getPsnId(), alpha.getShortName(), alphaDriver.getPsnId());
+				""".formatted(alpha.getShortName(), bravoDriver.getPsnId(), bravo.getShortName(), alphaDriver.getPsnId());
 		var metadata = new CsvImportService.ImportMetadata(playoff.getPhase().getSeason().getId(), null, null, null, null,
 				leg.getMatchday().getId());
 		var preview = csvImportService.parseAndPreview(

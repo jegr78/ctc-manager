@@ -53,7 +53,7 @@ public class PlayoffMatchup extends BaseEntity {
 	@Column(name = "decision_reason", length = 500)
 	private String decisionReason;
 
-	@Column(name = "decision_history", columnDefinition = "TEXT")
+	@Column(name = "decision_history", columnDefinition = "LONGTEXT")
 	private String decisionHistory;
 
 	@OneToMany(mappedBy = "playoffMatchup")

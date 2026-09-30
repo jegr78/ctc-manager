@@ -191,6 +191,10 @@ public class CsvImportService {
 					match = existingMatch.get();
 					// Delete existing races (cascades to results)
 					var racesToDelete = raceRepository.findByMatchId(match.getId());
+					if (racesToDelete.stream().anyMatch(race -> race.getPlayoffMatchup() != null
+							&& race.getPlayoffMatchup().isComplete())) {
+						throw new ImportRejectedException(List.of(PlayoffDecisionGuard.DECIDED));
+					}
 					racesToDelete.forEach(raceRepository::delete);
 					raceRepository.flush();
 					log.info("Overwriting existing match: {} vs {} on {}",

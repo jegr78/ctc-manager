@@ -346,6 +346,7 @@ public class MatchService {
 		var match = matchRepository.findById(matchId)
 				.orElseThrow(() -> new EntityNotFoundException("Match", matchId));
 		var matchdayId = match.getMatchday().getId();
+		match.getRaces().forEach(PlayoffDecisionGuard::requireOpen);
 		matchRepository.delete(match);
 		log.info("Deleted match: {} vs {}", match.getHomeTeam().getShortName(),
 				match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "bye");
