@@ -13,9 +13,11 @@ import java.time.Instant;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+import org.ctc.TestHelper;
 import org.ctc.backup.dto.BackupImportPreview;
 import org.ctc.backup.exception.BackupArchiveException;
 import org.ctc.backup.exception.BackupArchiveException.Reason;
@@ -50,6 +52,7 @@ class BackupImportManifestContractIT {
 	@Autowired BackupImportService backupImportService;
 	@Autowired BackupArchiveService backupArchiveService;
 	@Autowired CarRepository carRepository;
+	@Autowired TestHelper testHelper;
 
 	@Value("${app.backup.staging-dir}")
 	String stagingDirRaw;
@@ -145,6 +148,45 @@ class BackupImportManifestContractIT {
 		assertDataMismatch(() -> stage(zip), "discord_post: data file missing");
 	}
 
+	@Test
+	void givenDataFileUnderAnUnderscoreName_whenStaged_thenTheRestoredFileCountsAsMissing() throws Exception {
+		// given
+		var season = testHelper.createSeason("Test_Manifest_" + id);
+		try {
+			byte[] zip = rewrite(export(), name -> true,
+					name -> name.equals("data/season-phases.json") ? "data/season_phases.json" : name, manifest -> { });
+
+			// when / then
+			assertDataMismatch(() -> stage(zip), "season_phases: data file missing");
+		} finally {
+			testHelper.deleteSeasonCascade(season);
+		}
+	}
+
+	@Test
+	void givenTwoEntriesWithTheSameName_whenStaged_thenRejectedAsDuplicateEntry() throws Exception {
+		// given
+		byte[] zip = duplicateCarsEntry(export());
+
+		// when / then
+		assertThatThrownBy(() -> stage(zip))
+				.isInstanceOfSatisfying(BackupArchiveException.class, ex -> {
+					assertThat(ex.reason()).as("reason").isEqualTo(Reason.DUPLICATE_ENTRY);
+					assertThat(ex.getMessage()).as("message").contains("data/cars.json");
+				});
+	}
+
+	@Test
+	void givenManifestWithoutTableCounts_whenStaged_thenRejectedAsInvalidManifest() throws Exception {
+		// given
+		byte[] zip = rewrite(export(), name -> true, manifest -> manifest.remove("table_counts"));
+
+		// when / then
+		assertThatThrownBy(() -> stage(zip))
+				.isInstanceOfSatisfying(BackupArchiveException.class, ex ->
+						assertThat(ex.reason()).as("reason").isEqualTo(Reason.MANIFEST_INVALID));
+	}
+
 	private void assertDataMismatch(ThrowingCallable call, String detail) {
 		assertThatThrownBy(call::call)
 				.isInstanceOfSatisfying(BackupArchiveException.class, ex -> {
@@ -180,6 +222,40 @@ class BackupImportManifestContractIT {
 
 	private static byte[] rewrite(byte[] zip, Predicate<String> keep, Consumer<ObjectNode> editManifest)
 			throws IOException {
+		return rewrite(zip, keep, UnaryOperator.identity(), editManifest);
+	}
+
+	/** Writes {@code data/cars.json} twice by patching a same-length sibling name in every header. */
+	private static byte[] duplicateCarsEntry(byte[] zip) throws IOException {
+		var out = new ByteArrayOutputStream();
+		try (var in = new ZipInputStream(new ByteArrayInputStream(zip));
+		     var rewritten = new ZipOutputStream(out)) {
+			ZipEntry entry;
+			while ((entry = in.getNextEntry()) != null) {
+				byte[] content = in.readAllBytes();
+				rewritten.putNextEntry(new ZipEntry(entry.getName()));
+				rewritten.write(content);
+				rewritten.closeEntry();
+				if (entry.getName().equals("data/cars.json")) {
+					rewritten.putNextEntry(new ZipEntry("data/cars.jsoX"));
+					rewritten.write("[]".getBytes(StandardCharsets.UTF_8));
+					rewritten.closeEntry();
+				}
+			}
+		}
+		byte[] bytes = out.toByteArray();
+		byte[] from = "data/cars.jsoX".getBytes(StandardCharsets.US_ASCII);
+		byte[] to = "data/cars.json".getBytes(StandardCharsets.US_ASCII);
+		for (int i = 0; i <= bytes.length - from.length; i++) {
+			if (java.util.Arrays.equals(bytes, i, i + from.length, from, 0, from.length)) {
+				System.arraycopy(to, 0, bytes, i, to.length);
+			}
+		}
+		return bytes;
+	}
+
+	private static byte[] rewrite(byte[] zip, Predicate<String> keep, UnaryOperator<String> rename,
+			Consumer<ObjectNode> editManifest) throws IOException {
 		var out = new ByteArrayOutputStream();
 		try (var in = new ZipInputStream(new ByteArrayInputStream(zip));
 		     var rewritten = new ZipOutputStream(out)) {
@@ -194,7 +270,7 @@ class BackupImportManifestContractIT {
 					editManifest.accept(manifest);
 					content = JSON.writeValueAsString(manifest).getBytes(StandardCharsets.UTF_8);
 				}
-				rewritten.putNextEntry(new ZipEntry(entry.getName()));
+				rewritten.putNextEntry(new ZipEntry(rename.apply(entry.getName())));
 				rewritten.write(content);
 				rewritten.closeEntry();
 			}

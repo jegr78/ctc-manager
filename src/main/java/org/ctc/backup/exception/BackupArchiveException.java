@@ -80,7 +80,10 @@ public class BackupArchiveException extends RuntimeException {
          * A required {@code data/*.json} entry is missing, or its row count differs from the
          * manifest's {@code table_counts}.
          */
-        DATA_MISMATCH
+        DATA_MISMATCH,
+
+        /** Two entries in the archive share one name. */
+        DUPLICATE_ENTRY
     }
 
     private final Reason reason;

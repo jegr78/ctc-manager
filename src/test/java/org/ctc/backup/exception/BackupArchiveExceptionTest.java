@@ -10,7 +10,7 @@ class BackupArchiveExceptionTest {
     @Test
     void givenEachReason_whenConstruct_thenReasonAndMessagePropagate() {
         // given
-        assertThat(Reason.values()).as("an added or removed Reason needs a controller mapping").hasSize(9);
+        assertThat(Reason.values()).as("an added or removed Reason needs a controller mapping").hasSize(10);
 
         // when / then — loop over every value; each must round-trip correctly
         for (Reason reason : Reason.values()) {
