@@ -99,7 +99,7 @@ BREAKING CHANGE: TeamDto fields renamed for consistency
 ### Kein Release bei
 
 - Commits die nur `ci:` oder `build:` Prefixe haben
-- Commits mit `[skip ci]` (SNAPSHOT-Bumps)
+- SNAPSHOT-Bump-Commits (`chore: bump version to X.Y.Z-SNAPSHOT [skip ci]`); sie zählen nicht als releasebare Änderung
 
 ## Dateien und Aenderungen
 
