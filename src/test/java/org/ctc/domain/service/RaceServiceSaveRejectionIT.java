@@ -135,7 +135,7 @@ class RaceServiceSaveRejectionIT {
 	}
 
 	@Test
-	void givenMatchOfTheTwoTeams_whenCreatingARaceInReverseOrientation_thenRejectedWithoutANewMatch() {
+	void givenMatchOfTheTwoTeams_whenCreatingARaceInReverseOrientation_thenItJoinsTheMatchAsAReversedLeg() {
 		// given
 		long matchesBefore = matchRepository.count();
 
@@ -144,10 +144,15 @@ class RaceServiceSaveRejectionIT {
 				fixture.homeTeam().getId(), null, null, ORIGINAL_TIME, 5, 1, 1, 1, "100%", 0, 1, "clear", "noon", "any", "none");
 
 		// then
-		assertThat(result.success()).as("save of a reversed pairing").isFalse();
-		assertThat(result.message()).isEqualTo("Match already exists: %s vs %s".formatted(fixture.homeTeam().getShortName(),
-				fixture.awayTeam().getShortName()));
-		assertThat(matchRepository.count()).as("matches after the rejected save").isEqualTo(matchesBefore);
+		assertThat(result.success()).as("save of a reversed leg: %s", result.message()).isTrue();
+		assertThat(matchRepository.count()).as("matches after the save").isEqualTo(matchesBefore);
+		transactionTemplate.executeWithoutResult(status -> {
+			var legs = raceRepository.findByMatchId(fixture.match().getId());
+			assertThat(legs).as("legs of the existing match").hasSize(2);
+			var added = legs.stream().filter(leg -> !leg.getId().equals(fixture.race().getId())).findFirst().orElseThrow();
+			assertThat(added.getHomeTeam().getId()).as("home team of the new leg").isEqualTo(fixture.awayTeam().getId());
+			assertThat(added.getAwayTeam().getId()).as("away team of the new leg").isEqualTo(fixture.homeTeam().getId());
+		});
 	}
 
 	@Test

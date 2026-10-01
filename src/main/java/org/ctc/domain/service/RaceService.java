@@ -178,7 +178,7 @@ public class RaceService {
 
 		var rejection = validatePairingChange(race, matchday, homeTeam, awayTeam);
 		if (rejection == null) {
-			rejection = validateUniquePairing(race, matchday, homeTeam, awayTeam);
+			rejection = validateUniquePairing(race, homeTeam, awayTeam);
 		}
 		if (rejection == null) {
 			rejection = validateCarAndTrack(matchday.getSeason(), homeTeam, car, track, id);
@@ -327,17 +327,19 @@ public class RaceService {
 		return null;
 	}
 
-	/** Rejects a pairing that another match of the matchday already holds, in either orientation; changes nothing. */
-	private String validateUniquePairing(Race race, Matchday matchday, Team homeTeam, Team awayTeam) {
-		if (race.getPlayoffMatchup() != null) {
+	/**
+	 * Rejects moving a race's match onto a pairing that another match of its matchday already holds,
+	 * in either orientation; changes nothing. A new race joins such a match instead.
+	 */
+	private String validateUniquePairing(Race race, Team homeTeam, Team awayTeam) {
+		Match own = race.getMatch();
+		if (race.getPlayoffMatchup() != null || own == null) {
 			return null;
 		}
-		Match own = race.getMatch();
-		UUID matchdayId = own != null ? own.getMatchday().getId() : matchday.getId();
 		for (Team[] pair : new Team[][] {{homeTeam, awayTeam}, {awayTeam, homeTeam}}) {
-			var other = matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(matchdayId,
+			var other = matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(own.getMatchday().getId(),
 					pair[0].getId(), pair[1].getId());
-			if (other.isPresent() && (own == null || !other.get().getId().equals(own.getId()))) {
+			if (other.isPresent() && !other.get().getId().equals(own.getId())) {
 				return "Match already exists: " + pair[0].getShortName() + " vs " + pair[1].getShortName();
 			}
 		}
@@ -351,7 +353,7 @@ public class RaceService {
 	private void applyPairing(Race race, Matchday matchday, Team homeTeam, Team awayTeam) {
 		Match match = race.getMatch();
 		if (match == null) {
-			race.setMatch(matchRepository.save(new Match(matchday, homeTeam, awayTeam)));
+			joinOrCreateMatch(race, matchday, homeTeam, awayTeam);
 			return;
 		}
 		if (sameTeam(race.getHomeTeam(), homeTeam) && sameTeam(race.getAwayTeam(), awayTeam)) {
@@ -366,6 +368,25 @@ public class RaceService {
 				leg.setAwayTeamOverride(match.getHomeTeam());
 			}
 		}
+	}
+
+	/** A new race becomes a further leg of the matchday's match of the two teams, reversed when the teams are. */
+	private void joinOrCreateMatch(Race race, Matchday matchday, Team homeTeam, Team awayTeam) {
+		var same = matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(matchday.getId(),
+				homeTeam.getId(), awayTeam.getId());
+		if (same.isPresent()) {
+			race.setMatch(same.get());
+			return;
+		}
+		var reversed = matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(matchday.getId(),
+				awayTeam.getId(), homeTeam.getId());
+		if (reversed.isPresent()) {
+			race.setMatch(reversed.get());
+			race.setHomeTeamOverride(homeTeam);
+			race.setAwayTeamOverride(awayTeam);
+			return;
+		}
+		race.setMatch(matchRepository.save(new Match(matchday, homeTeam, awayTeam)));
 	}
 
 	private static boolean sameTeam(Team a, Team b) {
