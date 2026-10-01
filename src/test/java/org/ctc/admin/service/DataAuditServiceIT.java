@@ -378,7 +378,7 @@ class DataAuditServiceIT {
 		// then
 		assertThat(findings).as("reserved shared slug").singleElement().satisfies(finding -> {
 			assertThat(finding.resolution()).as("resolution").isEqualTo(AMBIGUOUS);
-			assertThat(finding.evidence()).as("evidence").startsWith("Several profiles shared this URL");
+			assertThat(finding.evidence()).as("evidence").startsWith("Several profiles share this base slug");
 		});
 	}
 

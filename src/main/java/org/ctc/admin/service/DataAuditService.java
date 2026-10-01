@@ -11,6 +11,7 @@ import static org.ctc.admin.dto.DataAuditFinding.Resolution.RECONSTRUCTIBLE;
 import static org.ctc.admin.dto.DataAuditFinding.Resolution.UNDETERMINABLE;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -95,7 +96,7 @@ public class DataAuditService {
 		List<DataAuditReport.Section> sections = findings.entrySet().stream()
 				.map(entry -> new DataAuditReport.Section(entry.getKey(), List.copyOf(entry.getValue())))
 				.toList();
-		DataAuditReport report = new DataAuditReport(Instant.now(), sections);
+		DataAuditReport report = new DataAuditReport(Instant.now().truncatedTo(ChronoUnit.SECONDS), sections);
 		log.info("Data audit found {} anomalies", report.total());
 		return report;
 	}
@@ -438,7 +439,7 @@ public class DataAuditService {
 			String subject = "%s URL '%s'".formatted(kind.name().toLowerCase(), slug.getSlug());
 			if (slug.getEntityId() == null) {
 				out.add(new DataAuditFinding(PUBLIC_URL, AMBIGUOUS, subject,
-						"Several profiles shared this URL before slugs were stored; it now lists them",
+						"Several profiles share this base slug, so the URL lists them instead of leading to one profile",
 						"Keep the listing page, or decide which profile the old URL leads to"));
 			} else if (!profiles.containsKey(slug.getEntityId())) {
 				out.add(new DataAuditFinding(PUBLIC_URL, AMBIGUOUS, subject,
