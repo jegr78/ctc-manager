@@ -12,14 +12,15 @@ import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.channels.FileChannel;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.ctc.domain.repository.PlayoffRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
@@ -81,7 +82,7 @@ class SiteGeneratorPublishTest {
 		assertThat(site.resolve("index.html")).as("published index").hasContent("site/index");
 		assertThat(site.resolve("stale.html")).as("page of the previous site").doesNotExist();
 		assertThat(Files.list(parent).map(p -> p.getFileName().toString()).toList())
-				.as("directories next to the site").containsExactly("site");
+				.as("entries next to the site").containsExactlyInAnyOrder("site", "site.lock");
 	}
 
 	@Test
@@ -99,7 +100,7 @@ class SiteGeneratorPublishTest {
 		assertThat(result.getErrors()).as("generation errors").containsExactly("Generation failed: disk full");
 		assertThat(site.resolve("index.html")).as("previous index").hasContent("previous");
 		assertThat(Files.list(parent).map(p -> p.getFileName().toString()).toList())
-				.as("directories next to the site").containsExactly("site");
+				.as("entries next to the site").containsExactlyInAnyOrder("site", "site.lock");
 	}
 
 	@Test
@@ -117,37 +118,113 @@ class SiteGeneratorPublishTest {
 	}
 
 	@Test
-	void givenGenerationInProgress_whenASecondOneStarts_thenItWaitsAndBothPublishCompleteSites() throws Exception {
+	void givenGenerationInProgress_whenASecondOneStarts_thenItIsRejectedAndTheFirstPublishes() throws Exception {
 		// given
 		var firstIndexStarted = new CountDownLatch(1);
 		var releaseFirst = new CountDownLatch(1);
-		var indexWrites = new AtomicInteger();
 		doAnswer(invocation -> {
-			Path file = invocation.getArgument(2);
-			if (indexWrites.incrementAndGet() == 1) {
-				firstIndexStarted.countDown();
-				releaseFirst.await(10, TimeUnit.SECONDS);
-			}
-			Files.writeString(file, "site/index");
+			firstIndexStarted.countDown();
+			releaseFirst.await(10, TimeUnit.SECONDS);
+			Files.writeString(invocation.getArgument(2), "site/index");
 			return null;
 		}).when(templateWriter).write(eq("site/index"), any(), any(), any(), any(), any());
 		writeOtherPagesForReal();
-		var pool = Executors.newFixedThreadPool(2);
-
-		// when
+		var pool = Executors.newSingleThreadExecutor();
 		var first = pool.submit(service::generate);
 		assertThat(firstIndexStarted.await(10, TimeUnit.SECONDS)).as("first generation reached the index").isTrue();
-		var second = pool.submit(service::generate);
-		Thread.sleep(300);
-		int writesWhileFirstRuns = indexWrites.get();
+
+		// when
+		var second = service.generate();
 		releaseFirst.countDown();
 
 		// then
-		assertThat(writesWhileFirstRuns).as("index writes while the first generation runs").isEqualTo(1);
+		assertThat(second.getErrors()).as("second generation errors")
+				.containsExactly("A site generation is already running. Try again when it has finished.");
 		assertThat(first.get(10, TimeUnit.SECONDS).getErrors()).as("first generation errors").isEmpty();
-		assertThat(second.get(10, TimeUnit.SECONDS).getErrors()).as("second generation errors").isEmpty();
 		pool.shutdown();
 		assertThat(site.resolve("index.html")).as("published index").hasContent("site/index");
+	}
+
+	@Test
+	void givenAnotherProcessHoldsTheSiteLock_whenGenerated_thenItIsRejectedAndTheSiteStays() throws Exception {
+		// given
+		writePagesForReal();
+		try (var channel = FileChannel.open(parent.resolve("site.lock"), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+		     var lock = channel.lock()) {
+
+			// when
+			var result = service.generate();
+
+			// then
+			assertThat(result.getErrors()).as("generation errors")
+					.containsExactly("A site generation is already running. Try again when it has finished.");
+		}
+		assertThat(site.resolve("index.html")).as("previous index").hasContent("previous");
+	}
+
+	@Test
+	void givenOutputDirectoryContainingTheUploads_whenGenerated_thenRefusedBeforeTouchingIt() throws Exception {
+		// given
+		service.setUploadDir(site.resolve("uploads").toString());
+		writePagesForReal();
+
+		// when
+		var result = service.generate();
+
+		// then
+		assertThat(result.getErrors()).as("generation errors").singleElement().asString()
+				.startsWith("Generation failed: Refusing to publish to " + site);
+		assertThat(site.resolve("index.html")).as("previous index").hasContent("previous");
+		assertThat(Files.list(parent).map(p -> p.getFileName().toString()).toList())
+				.as("entries next to the site").containsExactly("site");
+	}
+
+	@Test
+	void givenPublishInterruptedBetweenItsRenames_whenGeneratedAgainAndFailing_thenThePreviousSiteIsBack() throws Exception {
+		// given
+		Files.move(site, parent.resolve("site.previous"));
+		writePagesForReal();
+		doThrow(new IOException("disk full")).when(templateWriter)
+				.write(eq("site/archive"), any(), any(), any(), any(), any());
+
+		// when
+		service.generate();
+
+		// then
+		assertThat(site.resolve("index.html")).as("restored index").hasContent("previous");
+	}
+
+	@Test
+	void givenStagingLeftByACrashedRun_whenGenerated_thenItIsRemoved() throws Exception {
+		// given
+		Files.createDirectories(parent.resolve("site.generating-crashed"));
+		writePagesForReal();
+
+		// when
+		var result = service.generate();
+
+		// then
+		assertThat(result.getErrors()).as("generation errors").isEmpty();
+		assertThat(parent.resolve("site.generating-crashed")).as("stale staging").doesNotExist();
+	}
+
+	@Test
+	void givenOutputOnAnotherFileStore_whenCopiedIn_thenItHoldsExactlyTheNewSite() throws Exception {
+		// given
+		Path staging = Files.createDirectories(parent.resolve("staging"));
+		Files.createDirectories(staging.resolve("season/a"));
+		Files.writeString(staging.resolve("index.html"), "new");
+		Files.writeString(staging.resolve("season/a/team.html"), "team");
+		Files.createDirectories(site.resolve("season/old"));
+		Files.writeString(site.resolve("season/old/stale.html"), "stale");
+
+		// when
+		SiteGeneratorService.copyInto(staging, site);
+
+		// then
+		assertThat(site.resolve("index.html")).as("replaced page").hasContent("new");
+		assertThat(site.resolve("season/a/team.html")).as("new nested page").hasContent("team");
+		assertThat(site.resolve("season/old")).as("directory of the previous site").doesNotExist();
 	}
 
 	private void writePagesForReal() throws IOException {

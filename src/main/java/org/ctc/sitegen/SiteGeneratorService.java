@@ -2,11 +2,15 @@ package org.ctc.sitegen;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.FileChannel;
+import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +58,8 @@ public class SiteGeneratorService {
     private final TeamProfilePageGenerator teamProfilePageGenerator;
     private final DriverProfilePageGenerator driverProfilePageGenerator;
     private final SiteSlugService siteSlugService;
+    private static final String STAGING_INFIX = ".generating-";
+
     private final ReentrantLock generationLock = new ReentrantLock();
 
     @Value("${app.upload-dir:data/dev/uploads}")
@@ -70,30 +76,67 @@ public class SiteGeneratorService {
     }
 
     /**
-     * Generates the whole site into a sibling directory and replaces the output directory only
-     * when generation and validation succeeded; a failure leaves the previous site in place.
-     * Overlapping calls run one after the other.
+     * Generates the whole site into a staging directory next to the output directory and
+     * replaces the output only when generation and validation succeeded; a failure leaves the
+     * previous site in place. A generation that starts while another one runs, in this or another
+     * process, is rejected.
      */
     @Transactional(readOnly = true)
     public GenerationResult generate() {
-        generationLock.lock();
+        if (!generationLock.tryLock()) {
+            return busy();
+        }
         try {
-            return generateAndPublish();
+            Path target = resolveTarget();
+            Files.createDirectories(Objects.requireNonNull(target.getParent(), "output directory has no parent"));
+            Path lockFile = target.resolveSibling(target.getFileName() + ".lock");
+            try (var channel = FileChannel.open(lockFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+                 var processLock = channel.tryLock()) {
+                return processLock == null ? busy() : generateAndPublish(target);
+            } catch (OverlappingFileLockException e) {
+                return busy();
+            }
+        } catch (IOException | IllegalArgumentException e) {
+            log.error("Site generation could not start", e);
+            var result = new GenerationResult();
+            result.addError("Generation failed: " + e.getMessage());
+            return result;
         } finally {
             generationLock.unlock();
         }
     }
 
-    private GenerationResult generateAndPublish() {
+    private static GenerationResult busy() {
         var result = new GenerationResult();
+        result.addError("A site generation is already running. Try again when it has finished.");
+        return result;
+    }
+
+    private Path resolveTarget() {
         Path target = Path.of(siteProperties.getOutputDir()).toAbsolutePath().normalize();
         if (target.getNameCount() < 2) {
             throw new IllegalArgumentException("Refusing to publish to dangerously short path: " + target);
         }
-        Path staging = target.resolveSibling(target.getFileName() + ".generating");
+        var protectedDirs = new java.util.ArrayList<>(List.of(Path.of("").toAbsolutePath().normalize()));
+        if (uploadDir != null) {
+            protectedDirs.add(Path.of(uploadDir).toAbsolutePath().normalize());
+        }
+        for (Path protectedDir : protectedDirs) {
+            if (protectedDir.startsWith(target)) {
+                throw new IllegalArgumentException(
+                        "Refusing to publish to " + target + ", which contains " + protectedDir);
+            }
+        }
+        return target;
+    }
+
+    private GenerationResult generateAndPublish(Path target) {
+        var result = new GenerationResult();
+        Path staging = null;
         try {
-            deleteTree(staging);
-            Files.createDirectories(staging);
+            removeStaleStaging(target);
+            restorePrevious(target);
+            staging = Files.createDirectory(target.resolveSibling(target.getFileName() + STAGING_INFIX + UUID.randomUUID()));
             generateInto(staging, result);
             if (!result.hasErrors()) {
                 validate(staging);
@@ -104,10 +147,12 @@ public class SiteGeneratorService {
             log.error("Site generation failed; the previous site stays published", e);
             result.addError(failureMessage(e));
         } finally {
-            try {
-                deleteTree(staging);
-            } catch (IOException e) {
-                log.warn("Could not remove the staging directory {}", staging, e);
+            if (staging != null) {
+                try {
+                    deleteTree(staging);
+                } catch (IOException e) {
+                    log.warn("Could not remove the staging directory {}", staging, e);
+                }
             }
         }
         return result;
@@ -190,42 +235,74 @@ public class SiteGeneratorService {
     }
 
     /**
-     * Swaps the staged site in by renaming directories. When the output directory cannot be
-     * renamed (for example a mount point), its content is replaced instead.
+     * Swaps the staged site in by renaming directories. An output directory on another file
+     * store than its parent (a mount point) cannot be renamed; it gets the new files copied in,
+     * and the files the new site no longer has are removed afterwards.
      */
     private static void publish(Path staging, Path target) throws IOException {
-        Path previous = target.resolveSibling(target.getFileName() + ".previous");
-        deleteTree(previous);
         if (!Files.exists(target)) {
-            Files.createDirectories(Objects.requireNonNull(target.getParent(), "output directory has no parent"));
             Files.move(staging, target, StandardCopyOption.ATOMIC_MOVE);
             return;
         }
-        try {
-            Files.move(target, previous, StandardCopyOption.ATOMIC_MOVE);
-        } catch (IOException e) {
-            log.info("Output directory {} cannot be renamed ({}); replacing its content", target, e.toString());
-            replaceContent(staging, target);
+        if (!Files.getFileStore(target).equals(Files.getFileStore(staging))) {
+            copyInto(staging, target);
             return;
         }
+        Path previous = previousOf(target);
+        deleteTree(previous);
+        Files.move(target, previous, StandardCopyOption.ATOMIC_MOVE);
         try {
             Files.move(staging, target, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException e) {
-            Files.move(previous, target, StandardCopyOption.ATOMIC_MOVE);
+            try {
+                Files.move(previous, target, StandardCopyOption.ATOMIC_MOVE);
+            } catch (IOException restoreFailure) {
+                e.addSuppressed(restoreFailure);
+            }
             throw e;
         }
         deleteTree(previous);
     }
 
-    private static void replaceContent(Path staging, Path target) throws IOException {
-        try (var children = Files.list(target)) {
-            for (Path child : children.toList()) {
-                deleteTree(child);
+    /** Copies the staged site over {@code target}, then deletes what the staged site does not contain. */
+    static void copyInto(Path staging, Path target) throws IOException {
+        try (var paths = Files.walk(staging)) {
+            for (Path source : paths.toList()) {
+                Path destination = target.resolve(staging.relativize(source));
+                if (Files.isDirectory(source)) {
+                    Files.createDirectories(destination);
+                } else {
+                    Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
+                }
             }
         }
-        try (var children = Files.list(staging)) {
-            for (Path child : children.toList()) {
-                Files.move(child, target.resolve(staging.relativize(child)), StandardCopyOption.ATOMIC_MOVE);
+        try (var paths = Files.walk(target)) {
+            for (Path existing : paths.sorted(Comparator.reverseOrder()).toList()) {
+                if (!existing.equals(target) && !Files.exists(staging.resolve(target.relativize(existing)))) {
+                    deleteTree(existing);
+                }
+            }
+        }
+    }
+
+    private static Path previousOf(Path target) {
+        return target.resolveSibling(target.getFileName() + ".previous");
+    }
+
+    /** Puts back the previous site when an earlier publish stopped between its two renames. */
+    private static void restorePrevious(Path target) throws IOException {
+        Path previous = previousOf(target);
+        if (!Files.exists(target) && Files.isDirectory(previous)) {
+            log.warn("Restoring the previous site from {}", previous);
+            Files.move(previous, target, StandardCopyOption.ATOMIC_MOVE);
+        }
+    }
+
+    private static void removeStaleStaging(Path target) throws IOException {
+        String prefix = target.getFileName() + STAGING_INFIX;
+        try (var siblings = Files.list(Objects.requireNonNull(target.getParent()))) {
+            for (Path sibling : siblings.filter(p -> String.valueOf(p.getFileName()).startsWith(prefix)).toList()) {
+                deleteTree(sibling);
             }
         }
     }
