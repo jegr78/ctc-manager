@@ -35,6 +35,7 @@ jobs:
               - 'src/**'
               - 'pom.xml'
               - 'lombok.config'
+              - '.gitattributes'
               - 'config/**'
               - 'scripts/**'
               - 'rewrite.yml'
@@ -54,9 +55,17 @@ jobs:
 
   build-and-test:
     needs: changes
+    # Runs even when changes failed, so the required check fails instead of being skipped.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
 
     steps:
+      - name: Require a successful path check
+        if: needs.changes.result != 'success'
+        run: |
+          echo "The changes job ended with '${{ needs.changes.result }}', so this check cannot pass."
+          exit 1
+
       - name: Checkout
         uses: actions/checkout@v7
 
@@ -141,9 +150,16 @@ jobs:
     # Whitelist-on-suffix approach. Cross-platform grep idiom mirrors pom.xml PLAT-07
     # build-guard (commit f451ff4).
     needs: changes
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
 
     steps:
+      - name: Require a successful path check
+        if: needs.changes.result != 'success'
+        run: |
+          echo "The changes job ended with '${{ needs.changes.result }}', so this check cannot pass."
+          exit 1
+
       - name: Checkout
         uses: actions/checkout@v7
 
@@ -184,9 +200,16 @@ jobs:
     # 25609204039 before the -noble pin.
     # Full build job, always on. Acceptable cost: +1-3 minutes CI per PR.
     needs: [changes, dockerfile-noble-pin-guard]
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
 
     steps:
+      - name: Require a successful path check
+        if: needs.changes.result != 'success' || needs.dockerfile-noble-pin-guard.result != 'success'
+        run: |
+          echo "The changes job ended with '${{ needs.changes.result }}' and the pin guard with '${{ needs.dockerfile-noble-pin-guard.result }}', so this check cannot pass."
+          exit 1
+
       - name: Checkout
         uses: actions/checkout@v7
 
