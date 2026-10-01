@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
@@ -159,11 +160,15 @@ class SiteGeneratorServiceIT {
         when(siteProperties.getOutputDir()).thenReturn(outDir.toString());
         when(siteSlugService.allocate()).thenThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate"));
 
+        var sut = buildSut();
+        var result = new SiteGeneratorService.GenerationResult[1];
+
         // when
-        var result = buildSut().generate();
+        assertThatCode(() -> result[0] = sut.generate()).as("generation with a slug conflict")
+                .doesNotThrowAnyException();
 
         // then
-        assertThat(result.getErrors()).as("generation errors").containsExactly(
+        assertThat(result[0].getErrors()).as("generation errors").containsExactly(
                 "Generation failed: another generation stored profile URLs at the same time. Try again.");
         assertThat(previous).as("previous output").hasContent("previous");
     }

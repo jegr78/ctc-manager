@@ -30,6 +30,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
@@ -196,13 +197,16 @@ class BackupLenientV1AcceptanceIT {
         var v2Tables = new java.util.ArrayList<>(V1_TABLES_24);
         v2Tables.addAll(List.of("discord_global_config", "discord_post"));
         MockMultipartFile file = wrapAsMultipart(buildSyntheticZip(2, v2Tables));
-        BackupImportPreview preview = backupImportService.stage(file);
+        var preview = new BackupImportPreview[1];
 
         // when
-        backupImportService.execute(preview.stagingId());
+        assertThatCode(() -> {
+            preview[0] = backupImportService.stage(file);
+            backupImportService.execute(preview[0].stagingId());
+        }).as("import of a v2 backup without site_slugs").doesNotThrowAnyException();
 
         // then
-        assertThat(preview.schemaMatches()).as("v2 backup accepted").isTrue();
+        assertThat(preview[0].schemaMatches()).as("v2 backup accepted").isTrue();
         assertThat(siteSlugRepository.count()).as("site_slugs after a v2 import").isZero();
     }
 
