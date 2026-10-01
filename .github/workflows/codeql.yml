@@ -57,9 +57,14 @@ jobs:
       - name: Build for CodeQL
         run: ./mvnw compile --no-transfer-progress -DskipTests -Dspring.profiles.active=dev
 
-      - name: Record the analysis start
-        id: started
-        run: echo "at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+      - name: Record the open alerts before the analysis
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.ref_name }}
+          OWNER_REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: bash scripts/ci/codeql-gate.sh snapshot "$RUNNER_TEMP/codeql-baseline.txt"
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
@@ -75,5 +80,4 @@ jobs:
           BASE_REF: ${{ github.base_ref || 'master' }}
           OWNER_REPO: ${{ github.repository }}
           EVENT_NAME: ${{ github.event_name }}
-          ANALYSIS_STARTED_AT: ${{ steps.started.outputs.at }}
-        run: bash scripts/ci/codeql-gate.sh
+        run: BASELINE_FILE="$RUNNER_TEMP/codeql-baseline.txt" bash scripts/ci/codeql-gate.sh

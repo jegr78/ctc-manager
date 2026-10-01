@@ -14,10 +14,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Runs {@code scripts/ci/codeql-gate.sh} against a fake {@code gh} that returns the alert lines
- * the real {@code gh api --jq} call would print, or fails like an API error.
+ * Runs {@code scripts/ci/codeql-gate.sh} against a fake {@code gh} that serves code-scanning
+ * alert JSON the way {@code gh api --paginate --slurp} does, or fails like an API error.
  */
 class CodeqlGateScriptTest {
+
+	private static final String ALERT_12 = alert(12, "java/ssrf", "high", "src/A.java", false);
 
 	@TempDir
 	Path bin;
@@ -37,95 +39,149 @@ class CodeqlGateScriptTest {
 				  echo "HTTP 403: Resource not accessible by integration" >&2
 				  exit 1
 				fi
-				cat "$FAKE_DIR/$source.lines" 2>/dev/null || true
+				printf '[%s]' "$(cat "$FAKE_DIR/$source.json")"
 				""");
 		Files.setPosixFilePermissions(gh, PosixFilePermissions.fromString("rwxr-xr-x"));
 	}
 
 	@Test
-	void givenAlertsApiFails_whenGated_thenTheGateFails() throws Exception {
+	void givenBaseAlertsApiFails_whenPullRequestGated_thenTheGateFails() throws Exception {
 		// given
+		alerts("pr", ALERT_12);
 		Files.writeString(bin.resolve("ref.fail"), "");
 
 		// when
 		var run = gate(Map.of("EVENT_NAME", "pull_request"));
 
 		// then
-		assertThat(run.exit()).as("exit code when the API fails").isNotZero();
+		assertThat(run.exit()).as("exit code when the base lookup fails").isNotZero();
+		assertThat(run.output()).as("gate output").doesNotContain("No new HIGH/CRITICAL");
+	}
+
+	@Test
+	void givenPullRequestAlertsApiFails_whenGated_thenTheGateFails() throws Exception {
+		// given
+		alerts("ref", ALERT_12);
+		Files.writeString(bin.resolve("pr.fail"), "");
+
+		// when
+		var run = gate(Map.of("EVENT_NAME", "pull_request"));
+
+		// then
+		assertThat(run.exit()).as("exit code when the PR lookup fails").isNotZero();
 		assertThat(run.output()).as("gate output").doesNotContain("No new HIGH/CRITICAL");
 	}
 
 	@Test
 	void givenAdditionalAlertOfTheSameRuleInTheSameFile_whenPullRequestGated_thenItCountsAsNew() throws Exception {
 		// given
-		Files.writeString(bin.resolve("ref.lines"), "12|java/ssrf|src/A.java|2026-09-01T10:00:00Z\n");
-		Files.writeString(bin.resolve("pr.lines"),
-				"12|java/ssrf|src/A.java|2026-09-01T10:00:00Z\n13|java/ssrf|src/A.java|2026-10-01T09:00:00Z\n");
+		alerts("ref", ALERT_12);
+		alerts("pr", ALERT_12, alert(13, "java/ssrf", "high", "src/A.java", false));
 
 		// when
 		var run = gate(Map.of("EVENT_NAME", "pull_request"));
 
 		// then
 		assertThat(run.exit()).as("exit code with a new alert").isEqualTo(1);
-		assertThat(run.output()).as("reported alerts").contains("13|java/ssrf|src/A.java")
+		assertThat(run.output()).as("reported alerts").contains("13|java/ssrf|\"src/A.java\"")
 				.doesNotContain("12|java/ssrf");
 	}
 
 	@Test
-	void givenPullRequestWithTheBaseAlertsOnly_whenGated_thenItPasses() throws Exception {
+	void givenOnlyDismissedOrLowerSeverityNewAlerts_whenPullRequestGated_thenItPasses() throws Exception {
 		// given
-		Files.writeString(bin.resolve("ref.lines"), "12|java/ssrf|src/A.java|2026-09-01T10:00:00Z\n");
-		Files.writeString(bin.resolve("pr.lines"), "12|java/ssrf|src/A.java|2026-09-01T10:00:00Z\n");
+		alerts("ref", ALERT_12);
+		alerts("pr", ALERT_12, alert(14, "java/xss", "critical", "src/B.java", true),
+				alert(15, "java/xss", "medium", "src/B.java", false));
 
 		// when
 		var run = gate(Map.of("EVENT_NAME", "pull_request"));
 
 		// then
-		assertThat(run.exit()).as("exit code without new alerts").isZero();
+		assertThat(run.exit()).as("exit code without new open HIGH/CRITICAL alerts").isZero();
 		assertThat(run.output()).as("gate output").contains("No new HIGH/CRITICAL CodeQL alerts.");
 	}
 
 	@Test
-	void givenPushWithAnAlertFirstSeenInThisAnalysis_whenGated_thenItCountsAsNew() throws Exception {
+	void givenPathWithPipeAndNewline_whenPullRequestGated_thenTheAlertCountsAndPrintsOnOneLine() throws Exception {
 		// given
-		Files.writeString(bin.resolve("ref.lines"),
-				"12|java/ssrf|src/A.java|2026-09-01T10:00:00Z\n14|java/xss|src/B.java|2026-10-01T09:05:00Z\n");
+		alerts("ref", ALERT_12);
+		alerts("pr", ALERT_12, alert(16, "java/xss", "high", "src/|1|Evil\\n::warning::x.java", false));
 
 		// when
-		var run = gate(Map.of("EVENT_NAME", "push", "ANALYSIS_STARTED_AT", "2026-10-01T09:00:00Z"));
+		var run = gate(Map.of("EVENT_NAME", "pull_request"));
 
 		// then
-		assertThat(run.exit()).as("exit code with a new alert on push").isEqualTo(1);
-		assertThat(run.output()).as("reported alerts").contains("14|java/xss|src/B.java")
-				.doesNotContain("12|java/ssrf");
+		assertThat(run.exit()).as("exit code with a new alert in an odd path").isEqualTo(1);
+		assertThat(run.output()).as("reported alert").contains("16|java/xss|\"src/|1|Evil\\n::warning::x.java\"")
+				.doesNotContain("\n::warning::");
 	}
 
 	@Test
-	void givenPushWithOnlyOlderAlerts_whenGated_thenItPasses() throws Exception {
+	void givenPushThatMergedAnAlertFirstSeenOnThePullRequest_whenGated_thenItCountsAsNew() throws Exception {
 		// given
-		Files.writeString(bin.resolve("ref.lines"), "12|java/ssrf|src/A.java|2026-09-01T10:00:00Z\n");
+		alerts("ref", ALERT_12);
+		var baseline = bin.resolve("baseline.txt");
+		assertThat(run("snapshot", baseline.toString()).exit()).as("snapshot exit code").isZero();
+		alerts("ref", ALERT_12, alert(13, "java/ssrf", "high", "src/A.java", false));
 
 		// when
-		var run = gate(Map.of("EVENT_NAME", "push", "ANALYSIS_STARTED_AT", "2026-10-01T09:00:00Z"));
+		var run = gate(Map.of("EVENT_NAME", "push", "BASELINE_FILE", baseline.toString()));
+
+		// then
+		assertThat(run.exit()).as("exit code with a new alert on push").isEqualTo(1);
+		assertThat(run.output()).as("reported alerts").contains("13|java/ssrf").doesNotContain("12|java/ssrf");
+	}
+
+	@Test
+	void givenPushWithoutNewAlerts_whenGated_thenItPasses() throws Exception {
+		// given
+		alerts("ref", ALERT_12);
+		var baseline = bin.resolve("baseline.txt");
+		run("snapshot", baseline.toString());
+
+		// when
+		var run = gate(Map.of("EVENT_NAME", "push", "BASELINE_FILE", baseline.toString()));
 
 		// then
 		assertThat(run.exit()).as("exit code on push without new alerts").isZero();
 	}
 
 	@Test
-	void givenPushWhoseAlertsApiFails_whenGated_thenTheGateFails() throws Exception {
+	void givenSnapshotApiFails_whenRecorded_thenItFails() throws Exception {
 		// given
 		Files.writeString(bin.resolve("ref.fail"), "");
 
 		// when
-		var run = gate(Map.of("EVENT_NAME", "push", "ANALYSIS_STARTED_AT", "2026-10-01T09:00:00Z"));
+		var run = run("snapshot", bin.resolve("baseline.txt").toString());
 
 		// then
-		assertThat(run.exit()).as("exit code when the API fails on push").isNotZero();
+		assertThat(run.exit()).as("snapshot exit code when the API fails").isNotZero();
+	}
+
+	private void alerts(String source, String... alerts) throws IOException {
+		Files.writeString(bin.resolve(source + ".json"), "[" + String.join(",", alerts) + "]");
+	}
+
+	private static String alert(int number, String rule, String severity, String path, boolean dismissed) {
+		return """
+				{"number":%d,"dismissed_at":%s,"rule":{"id":"%s","security_severity_level":"%s"},
+				 "most_recent_instance":{"location":{"path":"%s"}}}""".formatted(
+				number, dismissed ? "\"2026-09-01T00:00:00Z\"" : "null", rule, severity, path);
 	}
 
 	private Run gate(Map<String, String> env) throws Exception {
-		var process = new ProcessBuilder("bash", "scripts/ci/codeql-gate.sh").redirectErrorStream(true);
+		return run(env);
+	}
+
+	private Run run(String... args) throws Exception {
+		return run(Map.of("EVENT_NAME", "push"), args);
+	}
+
+	private Run run(Map<String, String> env, String... args) throws Exception {
+		var command = new java.util.ArrayList<>(java.util.List.of("bash", "scripts/ci/codeql-gate.sh"));
+		command.addAll(java.util.List.of(args));
+		var process = new ProcessBuilder(command).redirectErrorStream(true);
 		process.environment().putAll(Map.of("PATH", bin + ":" + System.getenv("PATH"), "FAKE_DIR", bin.toString(),
 				"OWNER_REPO", "owner/repo", "PR_NUMBER", "7", "BASE_REF", "master", "HEAD_REF", "master"));
 		process.environment().putAll(env);
