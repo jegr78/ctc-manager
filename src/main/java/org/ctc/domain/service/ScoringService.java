@@ -3,8 +3,11 @@ package org.ctc.domain.service;
 import static org.ctc.util.LogSanitizer.sanitize;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.*;
@@ -82,7 +85,7 @@ public class ScoringService {
 			log.warn("Skipping match-score recompute for match {} — homeTeam is null", match.getId());
 			return;
 		}
-		int[] totals = sumLegs(raceRepository.findByMatchId(match.getId()), match.getHomeTeam().getId());
+		int[] totals = legTotals(match);
 		match.setHomeScore(totals == null ? null : totals[0]);
 		match.setAwayScore(totals == null ? null : totals[1]);
 		matchRepository.save(match);
@@ -96,7 +99,7 @@ public class ScoringService {
 			log.warn("Skipping playoff-matchup score recompute for matchup {} — team1 is null", matchup.getId());
 			return;
 		}
-		int[] totals = sumLegs(raceRepository.findByPlayoffMatchupId(matchup.getId()), matchup.getTeam1().getId());
+		int[] totals = legTotals(matchup);
 		Integer home = totals == null ? null : totals[0];
 		Integer away = totals == null ? null : totals[1];
 		if (!Objects.equals(home, matchup.getHomeScore()) || !Objects.equals(away, matchup.getAwayScore())) {
@@ -107,7 +110,18 @@ public class ScoringService {
 		playoffMatchupRepository.save(matchup);
 	}
 
-	/** Returns [home, away] over all scored legs, or {@code null} when no leg has results. */
+	/** Returns the [home, away] totals of the match's scored legs without saving, or {@code null} when no leg has results. */
+	@Transactional(readOnly = true)
+	public int[] legTotals(Match match) {
+		return sumLegs(raceRepository.findByMatchId(match.getId()), match.getHomeTeam().getId());
+	}
+
+	/** Returns the [team1, team2] totals of the matchup's scored legs without saving, or {@code null} when no leg has results. */
+	@Transactional(readOnly = true)
+	public int[] legTotals(PlayoffMatchup matchup) {
+		return sumLegs(raceRepository.findByPlayoffMatchupId(matchup.getId()), matchup.getTeam1().getId());
+	}
+
 	private int[] sumLegs(List<Race> legs, UUID homeTeamId) {
 		int home = 0;
 		int away = 0;
@@ -117,12 +131,15 @@ public class ScoringService {
 				continue;
 			}
 			scored = true;
-			home += leg.getResults().stream()
-					.filter(r -> isDriverInTeam(r, leg.getId(), homeTeamId))
-					.mapToInt(RaceResult::getPointsTotal).sum();
-			away += leg.getResults().stream()
-					.filter(r -> !isDriverInTeam(r, leg.getId(), homeTeamId))
-					.mapToInt(RaceResult::getPointsTotal).sum();
+			Map<UUID, RaceLineup> lineups = raceLineupRepository.findByRaceId(leg.getId()).stream()
+					.collect(Collectors.toMap(lineup -> lineup.getDriver().getId(), Function.identity()));
+			for (RaceResult result : leg.getResults()) {
+				if (isDriverInTeam(result, leg, homeTeamId, lineups.get(result.getDriver().getId()))) {
+					home += result.getPointsTotal();
+				} else {
+					away += result.getPointsTotal();
+				}
+			}
 		}
 		return scored ? new int[]{home, away} : null;
 	}
@@ -164,13 +181,19 @@ public class ScoringService {
 	public boolean isDriverInTeam(RaceResult result, UUID raceId, UUID teamId) {
 		var lineup = raceLineupRepository.findByRaceIdAndDriverId(raceId, result.getDriver().getId());
 		if (lineup.isPresent()) {
-			UUID lineupTeamId = lineup.get().getTeam().getId();
+			return isDriverInTeam(result, null, teamId, lineup.get());
+		}
+		return isDriverInTeam(result, raceRepository.findById(raceId).orElse(null), teamId, null);
+	}
+
+	private static boolean isDriverInTeam(RaceResult result, Race race, UUID teamId, RaceLineup lineup) {
+		if (lineup != null) {
+			UUID lineupTeamId = lineup.getTeam().getId();
 			return lineupTeamId.equals(teamId)
-					|| (lineup.get().getTeam().getParentTeam() != null
-					&& lineup.get().getTeam().getParentTeam().getId().equals(teamId));
+					|| (lineup.getTeam().getParentTeam() != null
+					&& lineup.getTeam().getParentTeam().getId().equals(teamId));
 		}
 		// Fallback for legacy data without RaceLineup — filter by current season.
-		var race = raceRepository.findById(raceId).orElse(null);
 		if (race == null || race.getMatchday() == null) {
 			return false;
 		}

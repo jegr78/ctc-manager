@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Data Audit', ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <h1>Data Audit</h1>
+    </div>
+
+    <div class="card mb-md">
+        <p>
+            A read-only check of the stored league data. It changes nothing; each finding proposes a
+            correction for a later, reviewed action.
+        </p>
+        <p class="text-dim" th:text="|Generated ${report.generatedAt()} · ${report.total()} findings|">Generated</p>
+        <div class="chip-list">
+            <span th:each="resolution : ${resolutions}" class="badge" th:classappend="${resolution.badgeClass}"
+                  th:text="|${resolution.label}: ${report.count(resolution)}|">Resolution</span>
+        </div>
+    </div>
+
+    <div class="card mb-md" th:each="section : ${report.sections()}"
+         th:id="${'audit-' + #strings.toLowerCase(section.category().name())}">
+        <h2 th:text="|${section.category().label} (${section.findings().size()})|">Category</h2>
+        <p class="text-dim" th:text="|Related: ${section.category().relatedIssues}|">Related</p>
+        <div class="table-scroll" th:if="${!section.findings().isEmpty()}">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Record</th>
+                        <th>Resolution</th>
+                        <th>Evidence</th>
+                        <th>Proposed correction</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="finding : ${section.findings()}">
+                        <td th:text="${finding.subject()}"></td>
+                        <td><span class="badge" th:classappend="${finding.resolution().badgeClass}"
+                                  th:text="${finding.resolution().label}"></span></td>
+                        <td th:text="${finding.evidence()}"></td>
+                        <td th:text="${finding.correction()}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div th:if="${section.findings().isEmpty()}" class="empty-state empty-state--compact">
+            <p>No findings.</p>
+        </div>
+    </div>
+</section>
+</body>
+</html>
