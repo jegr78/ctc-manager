@@ -1103,3 +1103,12 @@ a.season-tag:hover {
     color: var(--text-dim);
     margin-left: 4px;
 }
+
+.shared-profile-list {
+    list-style: none;
+    margin: 16px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
