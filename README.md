@@ -27,7 +27,7 @@
 - **Team Cards** — Generate 1080x1920 team card PNGs with colors, logo, rating and standings
 - **Race Attachments** — Upload files or link external resources to races
 - **Docker** — Local development and production deployment with MariaDB
-- **Backup & Restore** — Export a full ZIP backup of all 26 entity tables (24 league entities + 2 Discord-state entities — `discord_global_config` + `discord_post`); restore via a preview-and-confirm import flow with lenient schema-version acceptance (`IN (1, 2)` — pre-v1.13 backups remain restorable)
+- **Backup & Restore** — Export a full ZIP backup of all 27 entity tables (24 league entities, the 2 Discord-state entities `discord_global_config` and `discord_post`, and the public URL slugs in `site_slugs`); restore via a preview-and-confirm import flow that accepts schema versions 1, 2 and 3, so older backups remain restorable
 - **Discord Integration** — Per-match Discord channels with 11 structured posts (team cards, settings, lineups, schedule, results, match preview, matchday overview, power rankings, standings), forum-thread linking for race-results + standings, auto-edit on schedule/preview changes, pre-flight gates and stale-detection signals. See [Discord Integration wiki page](../../wiki/Discord-Integration) and [`docs/operations/discord-integration.md`](docs/operations/discord-integration.md).
 
 > **Note (v1.13):** Per-match Discord channels with structured posting workflows are now available
@@ -43,7 +43,7 @@ v1.10 introduces a full database backup/restore feature accessible via `/admin/b
 
 1. Navigate to `/admin/backup` in the admin sidebar.
 2. Click **Export Backup** — a ZIP file (`ctc-backup-<ISO-instant>.zip`) downloads immediately.
-3. Store the ZIP in a safe location. Each export captures all 26 entity tables (including Discord global config + idempotency-tracking).
+3. Store the ZIP in a safe location. Each export captures all 27 entity tables (including Discord global config, idempotency tracking and public URL slugs).
 
 ### Import
 
@@ -51,8 +51,8 @@ v1.10 introduces a full database backup/restore feature accessible via `/admin/b
 2. Review the preview: per-table row counts (current vs. backup) and schema-version match indicator.
 3. Check the **I understand** confirmation and click **Execute Import**. The database is replaced atomically.
 
-> **Schema-Version lock:** The import is rejected if the backup's schema version does not match the
-> current application version. Do not import backups from a different major schema version.
+> **Schema-Version lock:** The import rejects a backup whose schema version is not 1, 2 or 3 before it
+> writes anything.
 
 ### Recovery
 
