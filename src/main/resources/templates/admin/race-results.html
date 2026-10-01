@@ -12,6 +12,9 @@
         <span th:text="${race.track?.name ?: 'No track'}"></span> —
         <span th:text="${race.car?.displayName ?: 'No car'}"></span>
     </p>
+    <div th:if="${raceScoring == null}" class="alert alert-warning mb-md">
+        This phase has no race scoring. Set one on the phase before entering results.
+    </div>
 
     <style>
         .fl-toggle {
@@ -110,9 +113,12 @@
     </div>
 
     <script th:inline="javascript">
-        var racePoints = /*[[${raceScoring.racePointsArray}]]*/ [];
-        var qualiPoints = /*[[${raceScoring.qualiPointsArray}]]*/ [];
-        var flPoints = /*[[${raceScoring.fastestLapPoints}]]*/ 0;
+        var racePoints = /*[[${raceScoring?.racePointsArray}]]*/ [];
+        var qualiPoints = /*[[${raceScoring?.qualiPointsArray}]]*/ [];
+        var flPoints = /*[[${raceScoring?.fastestLapPoints}]]*/ 0;
+        racePoints = racePoints || [];
+        qualiPoints = qualiPoints || [];
+        flPoints = flPoints || 0;
         var homeTeam = /*[[${race.homeTeam.shortName}]]*/ '';
 
         function calcPoints() {

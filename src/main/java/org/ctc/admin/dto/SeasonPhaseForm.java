@@ -31,7 +31,8 @@ public class SeasonPhaseForm {
     @NotNull
     private SeasonFormat format = SeasonFormat.LEAGUE;
 
-    private UUID raceScoringId;     // optional in form; service enforces non-null when phase is non-PLAYOFF
+    // Both optional: without race scoring no results can be entered, without match scoring games award no match points.
+    private UUID raceScoringId;
     private UUID matchScoringId;
 
     private LocalDate startDate;
