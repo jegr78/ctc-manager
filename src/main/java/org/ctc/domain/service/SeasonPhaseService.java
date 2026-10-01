@@ -326,9 +326,7 @@ public class SeasonPhaseService {
         team.setId(teamId);
         var pt = new PhaseTeam(phase, team);
         if (groupId != null) {
-            var group = seasonPhaseGroupRepository.findById(groupId)
-                    .orElseThrow(() -> new EntityNotFoundException("SeasonPhaseGroup", groupId));
-            pt.setGroup(group);
+            pt.setGroup(groupOfPhase(phase, groupId));
         }
         var saved = phaseTeamRepository.save(pt);
         log.info("Assigned team {} to phase {} (group={})", teamId, phaseId, groupId);
@@ -364,18 +362,14 @@ public class SeasonPhaseService {
                         .orElseThrow(() -> new EntityNotFoundException("Team", a.teamId()));
                 var newPt = new PhaseTeam(phase, team);
                 if (a.groupId() != null) {
-                    newPt.setGroup(seasonPhaseGroupRepository.findById(a.groupId())
-                            .orElseThrow(() -> new EntityNotFoundException("SeasonPhaseGroup", a.groupId())));
+                    newPt.setGroup(groupOfPhase(phase, a.groupId()));
                 }
                 phaseTeamRepository.save(newPt);
             } else {
                 // UPDATE only if group changed
                 UUID currentGroupId = pt.getGroup() != null ? pt.getGroup().getId() : null;
                 if (!Objects.equals(currentGroupId, a.groupId())) {
-                    pt.setGroup(a.groupId() != null
-                            ? seasonPhaseGroupRepository.findById(a.groupId())
-                                    .orElseThrow(() -> new EntityNotFoundException("SeasonPhaseGroup", a.groupId()))
-                            : null);
+                    pt.setGroup(a.groupId() != null ? groupOfPhase(phase, a.groupId()) : null);
                     phaseTeamRepository.save(pt);
                 }
             }
@@ -387,5 +381,14 @@ public class SeasonPhaseService {
             }
         }
         log.info("Assigned {} teams to phase {} (existing: {})", includedTeamIds.size(), phaseId, existing.size());
+    }
+
+    private SeasonPhaseGroup groupOfPhase(SeasonPhase phase, UUID groupId) {
+        var group = seasonPhaseGroupRepository.findById(groupId)
+                .orElseThrow(() -> new EntityNotFoundException("SeasonPhaseGroup", groupId));
+        if (!group.getPhase().getId().equals(phase.getId())) {
+            throw new BusinessRuleException("Group '" + group.getName() + "' does not belong to this phase");
+        }
+        return group;
     }
 }

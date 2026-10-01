@@ -242,7 +242,7 @@ public class MatchService {
 
 	/**
 	 * Creates a match with automatic first leg (Race) creation.
-	 * Throws IllegalStateException if a duplicate match already exists.
+	 * Throws IllegalStateException if the matchday already has a match of the two teams, in either orientation.
 	 */
 	@Transactional
 	public Match createMatch(UUID matchdayId, UUID homeTeamId, UUID awayTeamId, boolean bye) {
@@ -252,12 +252,15 @@ public class MatchService {
 				.orElseThrow(() -> new EntityNotFoundException("Team", homeTeamId));
 		var awayTeam = bye ? null : (awayTeamId != null ? teamRepository.findById(awayTeamId).orElse(null) : null);
 
-		// Duplicate check
-		if (!bye && awayTeam != null &&
-				matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(
-						matchdayId, homeTeam.getId(), awayTeam.getId())) {
-			throw new IllegalStateException(
-					"Match already exists: " + homeTeam.getShortName() + " vs " + awayTeam.getShortName());
+		if (!bye && awayTeam != null) {
+			if (matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(matchdayId, homeTeam.getId(), awayTeam.getId())) {
+				throw new IllegalStateException(
+						"Match already exists: " + homeTeam.getShortName() + " vs " + awayTeam.getShortName());
+			}
+			if (matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(matchdayId, awayTeam.getId(), homeTeam.getId())) {
+				throw new IllegalStateException(
+						"Match already exists: " + awayTeam.getShortName() + " vs " + homeTeam.getShortName());
+			}
 		}
 
 		var match = createMatchWithLegs(matchday, homeTeam, awayTeam, bye);

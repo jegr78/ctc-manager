@@ -242,6 +242,35 @@ class MatchServiceTest {
 
 
 	@Test
+	void givenReversedPairingOnTheMatchday_whenCreateMatch_thenThrowsNamingTheExistingMatch() {
+		// given
+		var matchdayId = UUID.randomUUID();
+		var homeTeamId = UUID.randomUUID();
+		var awayTeamId = UUID.randomUUID();
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("Test Season"), "MD1", 1);
+		matchday.setId(matchdayId);
+		var homeTeam = new Team();
+		homeTeam.setId(homeTeamId);
+		homeTeam.setShortName("HOM");
+		var awayTeam = new Team();
+		awayTeam.setId(awayTeamId);
+		awayTeam.setShortName("AWY");
+		when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
+		when(teamRepository.findById(homeTeamId)).thenReturn(Optional.of(homeTeam));
+		when(teamRepository.findById(awayTeamId)).thenReturn(Optional.of(awayTeam));
+		when(matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(matchdayId, homeTeamId, awayTeamId))
+				.thenReturn(false);
+		when(matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(matchdayId, awayTeamId, homeTeamId))
+				.thenReturn(true);
+
+		// when / then
+		assertThatThrownBy(() -> service.createMatch(matchdayId, homeTeamId, awayTeamId, false))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessage("Match already exists: AWY vs HOM");
+		verify(matchRepository, never()).save(any(Match.class));
+	}
+
+	@Test
 	void givenExistingMatch_whenAddLeg_thenAdditionalRaceCreated() {
 		// given
 		var matchId = UUID.randomUUID();
