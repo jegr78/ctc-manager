@@ -175,14 +175,14 @@ public class TemplatePreviewService {
         var match = data.matches().getFirst();
 
         ctx.setVariable("homeTeamName", match.homeTeamName());
-        ctx.setVariable("homeTeamNameHtml", formatTeamNameHtml(match.homeTeamName()));
+        ctx.setVariable("homeTeamNameHtml", OverlayGraphicService.formatTeamNameHtml(match.homeTeamName()));
         ctx.setVariable("homeTeamShortName", match.homeTeamShortName());
         ctx.setVariable("homeLogoBase64", match.homeLogoBase64());
         ctx.setVariable("homePrimaryColor", match.homePrimaryColor());
         ctx.setVariable("homeSecondaryColor", match.homeSecondaryColor());
         ctx.setVariable("homeRecord", match.homeRecord());
         ctx.setVariable("awayTeamName", match.awayTeamName());
-        ctx.setVariable("awayTeamNameHtml", formatTeamNameHtml(match.awayTeamName()));
+        ctx.setVariable("awayTeamNameHtml", OverlayGraphicService.formatTeamNameHtml(match.awayTeamName()));
         ctx.setVariable("awayTeamShortName", match.awayTeamShortName());
         ctx.setVariable("awayLogoBase64", match.awayLogoBase64());
         ctx.setVariable("awayPrimaryColor", match.awayPrimaryColor());
@@ -340,17 +340,6 @@ public class TemplatePreviewService {
             log.warn("Failed to encode classpath resource: {}", classpathLocation, e);
         }
         return null;
-    }
-
-    private String formatTeamNameHtml(String name) {
-		if (name == null) {
-			return "";
-		}
-        String[] words = name.split("\\s+");
-        if (words.length <= 3) {
-            return String.join("<br>", words);
-        }
-        return words[0] + "<br>" + words[1] + "<br>" + String.join(" ", java.util.Arrays.copyOfRange(words, 2, words.length));
     }
 
     private String processTemplate(String templateContent, Context ctx) {

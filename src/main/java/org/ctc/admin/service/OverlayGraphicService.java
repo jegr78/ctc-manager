@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -17,6 +18,7 @@ import org.ctc.domain.service.StandingsService.TeamStanding;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.HtmlUtils;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
@@ -117,15 +119,15 @@ public class OverlayGraphicService extends AbstractGraphicService implements Tem
 		return standing.getWins() + "-" + standing.getLosses() + "-" + standing.getDraws();
 	}
 
-	String formatTeamNameHtml(String name) {
+	static String formatTeamNameHtml(String name) {
 		if (name == null) {
 			return "";
 		}
-		String[] words = name.split("\\s+");
+		String[] words = Arrays.stream(name.trim().split("\\s+")).map(HtmlUtils::htmlEscape).toArray(String[]::new);
 		if (words.length <= 3) {
 			return String.join("<br>", words);
 		}
-		return words[0] + "<br>" + words[1] + "<br>" + String.join(" ", java.util.Arrays.copyOfRange(words, 2, words.length));
+		return words[0] + "<br>" + words[1] + "<br>" + String.join(" ", Arrays.copyOfRange(words, 2, words.length));
 	}
 
 	private String renderTemplate(Context ctx) throws IOException {

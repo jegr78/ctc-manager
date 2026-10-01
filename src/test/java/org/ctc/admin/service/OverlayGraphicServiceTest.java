@@ -37,6 +37,23 @@ class OverlayGraphicServiceTest {
 	}
 
 	@Test
+	void givenTeamNameWithMarkup_whenFormattedForTheOverlay_thenMarkupIsEscapedAndLineBreaksStay() {
+		// when
+		String html = OverlayGraphicService.formatTeamNameHtml("<img src=x onerror=alert(1)> R&D \"Racing\" Team");
+
+		// then
+		assertThat(html).as("escaped words, one per line for the first two")
+				.isEqualTo("&lt;img<br>src=x<br>onerror=alert(1)&gt; R&amp;D &quot;Racing&quot; Team");
+	}
+
+	@Test
+	void givenShortTeamName_whenFormattedForTheOverlay_thenEachWordIsOnItsOwnLine() {
+		// when / then
+		assertThat(OverlayGraphicService.formatTeamNameHtml("Team <b>Red</b>")).as("short name")
+				.isEqualTo("Team<br>&lt;b&gt;Red&lt;/b&gt;");
+	}
+
+	@Test
 	void givenRaceWithNoTeams_whenGenerateOverlay_thenThrowsIllegalState() {
 		// given
 		var service = createService();

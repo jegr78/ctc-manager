@@ -386,6 +386,7 @@
 						<exclude>org/ctc/admin/service/ProvisionalScoresGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/AbstractGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/PlaywrightScreenshotter.class</exclude>
+						<exclude>org/ctc/admin/service/SandboxedHtmlRenderer.class</exclude>
 						<exclude>org/ctc/admin/service/PlayoffRoundOverviewGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/PlayoffRoundScheduleGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/PlayoffRoundResultsGraphicService.class</exclude>
