@@ -14,8 +14,10 @@ import java.util.zip.ZipOutputStream;
 import org.ctc.backup.exception.BackupArchiveException;
 import org.ctc.backup.dto.BackupImportPreview;
 import org.ctc.backup.schema.BackupManifest;
+import org.ctc.backup.schema.BackupSchema;
 import org.ctc.discord.repository.DiscordGlobalConfigRepository;
 import org.ctc.discord.repository.DiscordPostRepository;
+import org.ctc.domain.repository.SiteSlugRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -28,6 +30,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
@@ -41,7 +44,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  *       and surfaces the {@code DiscordGlobalConfigService.getOrInitialize()} self-heal
  *       contract as the only path that introduces a row.</li>
  *   <li>v2 manifest without the Discord JSON entries — refused with {@code DATA_MISMATCH}.</li>
- *   <li>v3 (and higher) manifests — refused with {@code SCHEMA_MISMATCH}.</li>
+ *   <li>v2 manifest with the Discord tables but without {@code site_slugs} — accepted, and
+ *       the slug table stays empty.</li>
+ *   <li>v4 (and higher) manifests — refused with {@code SCHEMA_MISMATCH}.</li>
  *   <li>v0 (and lower) manifests — refused with {@code SCHEMA_MISMATCH}.</li>
  * </ul>
  */
@@ -89,6 +94,9 @@ class BackupLenientV1AcceptanceIT {
     @Autowired
     private org.ctc.backup.schema.BackupSchema backupSchema;
 
+    @Autowired
+    private SiteSlugRepository siteSlugRepository;
+
     private Path tempZip;
 
     @AfterEach
@@ -123,7 +131,7 @@ class BackupLenientV1AcceptanceIT {
 
         // then
         assertThat(preview.schemaVersion()).isEqualTo(1);
-        assertThat(preview.currentSchemaVersion()).isEqualTo(2);
+        assertThat(preview.currentSchemaVersion()).isEqualTo(BackupSchema.SCHEMA_VERSION);
         assertThat(preview.schemaMatches())
                 .as("v1 backup must be accepted by SUPPORTED_SCHEMA_VERSIONS contains check")
                 .isTrue();
@@ -150,9 +158,9 @@ class BackupLenientV1AcceptanceIT {
     }
 
     @Test
-    void givenV3ManifestZip_whenStage_thenRefusedWithSchemaMismatch() throws Exception {
+    void givenV4ManifestZip_whenStage_thenRefusedWithSchemaMismatch() throws Exception {
         // given
-        MockMultipartFile file = wrapAsMultipart(buildSyntheticZip(3, V1_TABLES_24));
+        MockMultipartFile file = wrapAsMultipart(buildSyntheticZip(4, V1_TABLES_24));
 
         // when / then
         assertThatThrownBy(() -> backupImportService.stage(file))
@@ -181,6 +189,25 @@ class BackupLenientV1AcceptanceIT {
                 .isInstanceOfSatisfying(BackupArchiveException.class, ex -> assertThat(ex.reason())
                         .as("only v1 may omit the Discord tables")
                         .isEqualTo(BackupArchiveException.Reason.DATA_MISMATCH));
+    }
+
+    @Test
+    void givenV2ManifestZipWithoutSiteSlugs_whenExecuted_thenAcceptedAndTheSlugTableIsEmpty() throws Exception {
+        // given
+        var v2Tables = new java.util.ArrayList<>(V1_TABLES_24);
+        v2Tables.addAll(List.of("discord_global_config", "discord_post"));
+        MockMultipartFile file = wrapAsMultipart(buildSyntheticZip(2, v2Tables));
+        var preview = new BackupImportPreview[1];
+
+        // when
+        assertThatCode(() -> {
+            preview[0] = backupImportService.stage(file);
+            backupImportService.execute(preview[0].stagingId());
+        }).as("import of a v2 backup without site_slugs").doesNotThrowAnyException();
+
+        // then
+        assertThat(preview[0].schemaMatches()).as("v2 backup accepted").isTrue();
+        assertThat(siteSlugRepository.count()).as("site_slugs after a v2 import").isZero();
     }
 
     private Path buildSyntheticZip(int schemaVersion, List<String> tables) throws IOException {

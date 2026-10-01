@@ -15,6 +15,7 @@ import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonPhaseGroupRepository;
 import org.ctc.domain.service.SeasonPhaseService;
 import org.ctc.sitegen.model.GenerationContext;
+import org.ctc.sitegen.model.SiteSlugs;
 import org.ctc.sitegen.model.GroupSubTabView;
 import org.ctc.sitegen.model.PhaseTabView;
 import org.ctc.sitegen.model.RaceView;
@@ -233,7 +234,7 @@ public class MatchdaysPageGenerator {
             context.setVariable("season", season);
             context.setVariable("matchday", matchday);
             var raceViews = raceRepository.findByMatchdayId(matchday.getId()).stream()
-                    .map(r -> toRaceView(r, season, "../driver/", allLineups)).toList();
+                    .map(r -> toRaceView(r, season, "../driver/", allLineups, ctx.slugs())).toList();
             context.setVariable("races", raceViews);
 
             context.setVariable("currentPage", "matchdays");
@@ -253,7 +254,7 @@ public class MatchdaysPageGenerator {
     }
 
     private RaceView toRaceView(Race race, Season season, String driverUrlPrefix,
-                                List<RaceLineup> seasonLineups) {
+                                List<RaceLineup> seasonLineups, SiteSlugs slugs) {
         var homeTeam = race.getHomeTeam();
         String homeShortName = homeTeam != null ? homeTeam.getShortName() : "Bye";
 
@@ -277,7 +278,7 @@ public class MatchdaysPageGenerator {
                                     .filter(sd -> sd.getSeason().getId().equals(season.getId()))
                                     .map(sd -> sd.getTeam().getParentOrSelf().getShortName())
                                     .findFirst().orElse("?"));
-                    String driverSlug = siteSlugger.slugify(r.getDriver().getPsnId());
+                    String driverSlug = slugs.driver(r.getDriver().getId());
                     String driverProfileUrl = driverUrlPrefix + driverSlug + ".html";
                     return new RaceView.ResultView(r.getDriver().getPsnId(), teamShortName, scoringTeamShortName,
                             r.getPosition(), r.getQualiPosition(), r.isFastestLap(), r.getPointsTotal(),

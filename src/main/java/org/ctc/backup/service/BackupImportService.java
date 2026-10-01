@@ -126,18 +126,20 @@ public class BackupImportService {
      * v1 backups carry only the pre-v1.13 entity surface ({@code DiscordGlobalConfig} /
      * {@code DiscordPost} entries are absent and stay empty after import — the
      * {@code DiscordGlobalConfigService.getOrInitialize()} fallback self-heals on first
-     * page-load). v3+ backups are refused with {@link Reason#SCHEMA_MISMATCH}.
+     * page-load). v1 and v2 backups carry no {@code site_slugs}; the site generation stores
+     * fresh slugs after import. v4+ backups are refused with {@link Reason#SCHEMA_MISMATCH}.
      *
      * <p>Declared as a {@link java.util.LinkedHashSet} so the iteration order is stable
      * (ascending integer order) — used directly inside the error message via
      * {@code SUPPORTED_SCHEMA_VERSIONS.toString()}, where {@code Set.of(1, 2)} produces
      * a hash-randomised order that breaks message-matching assertions.
      */
-    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2));
+    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3));
 
     /** Tables an older schema version never exported; they may be absent when the manifest announces no rows. */
     static final Map<Integer, Set<String>> TABLES_ABSENT_IN_SCHEMA = Map.of(
-            1, Set.of("discord_global_config", "discord_post"));
+            1, Set.of("discord_global_config", "discord_post", "site_slugs"),
+            2, Set.of("site_slugs"));
 
     /** Batch size for the JSON-stream-to-batchUpdate accumulator. */
     private static final int RESTORE_BATCH_SIZE = 500;

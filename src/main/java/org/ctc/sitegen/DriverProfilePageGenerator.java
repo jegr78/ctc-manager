@@ -2,6 +2,7 @@ package org.ctc.sitegen;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,6 +18,7 @@ import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.RaceResult;
 import org.ctc.domain.model.Season;
+import org.ctc.domain.model.SiteSlugKind;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceResultRepository;
@@ -52,11 +54,13 @@ public class DriverProfilePageGenerator {
     private final RaceResultRepository raceResultRepository;
     private final RaceLineupRepository raceLineupRepository;
     private final SeasonPhaseService seasonPhaseService;
+    private final SharedProfilePageGenerator sharedProfilePageGenerator;
 
     public void generate(GenerationContext ctx, SiteGeneratorService.GenerationResult result) throws IOException {
         var season = ctx.season();
         var seasonDrivers = seasonDriverRepository.findBySeasonId(season.getId());
         var generatedDriverIds = new HashSet<UUID>();
+        var generatedNames = new HashMap<UUID, String>();
 
         // showPhaseBreakdown is gated by season.phases.size() >= 2 (server-side flag).
         boolean seasonHasMultiplePhases =
@@ -78,6 +82,7 @@ public class DriverProfilePageGenerator {
 				continue;
 			}
             writeDriverProfile(ctx, season, driver, sd.getTeam(), seasonHasMultiplePhases, guestLookup, result);
+            generatedNames.put(driver.getId(), driver.getPsnId());
         }
 
         // Second pass: pure guests appear only in a RaceLineup (no SeasonDriver row) and would
@@ -97,7 +102,12 @@ public class DriverProfilePageGenerator {
                 continue;
             }
             writeDriverProfile(ctx, season, driver, team, seasonHasMultiplePhases, guestLookup, result);
+            generatedNames.put(driver.getId(), driver.getPsnId());
         }
+
+        sharedProfilePageGenerator.generate(ctx, SiteSlugKind.DRIVER,
+                ctx.outPath().resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel())).resolve("driver"),
+                generatedNames, result);
     }
 
     private void writeDriverProfile(GenerationContext ctx, Season season, Driver driver, Team team,
@@ -163,7 +173,7 @@ public class DriverProfilePageGenerator {
 
         var dir = ctx.outPath().resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel())).resolve("driver");
         Files.createDirectories(dir);
-        templateWriter.write("site/driver-profile", context, dir.resolve(siteSlugger.slugify(driver.getPsnId()) + ".html"),
+        templateWriter.write("site/driver-profile", context, dir.resolve(ctx.slugs().driver(driver.getId()) + ".html"),
                 ctx.activeSeasonSlug(), ctx.activeSeasonName());
         result.incrementPages();
     }

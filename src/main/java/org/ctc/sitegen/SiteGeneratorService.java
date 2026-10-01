@@ -18,9 +18,11 @@ import org.ctc.domain.service.DriverRankingService;
 import org.ctc.domain.service.PlayoffBracketViewService;
 import org.ctc.domain.service.SeasonPhaseService;
 import org.ctc.domain.service.StandingsService;
+import org.ctc.sitegen.model.SiteSlugs;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.core.io.Resource;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +51,7 @@ public class SiteGeneratorService {
     private final MatchdaysPageGenerator matchdaysPageGenerator;
     private final TeamProfilePageGenerator teamProfilePageGenerator;
     private final DriverProfilePageGenerator driverProfilePageGenerator;
+    private final SiteSlugService siteSlugService;
 
     @Value("${app.upload-dir:data/dev/uploads}")
     private String uploadDir;
@@ -69,6 +72,9 @@ public class SiteGeneratorService {
         Path outPath = Path.of(siteProperties.getOutputDir());
 
         try {
+            var slugs = siteSlugService.allocate();
+            slugs.shared().forEach(shared -> result.addWarning("Profiles shared the URL " + shared.slug()
+                    + ".html, which now lists them (" + shared.kind().name().toLowerCase(Locale.ENGLISH) + ")"));
             cleanOutputDirectory(outPath);
             Files.createDirectories(outPath);
 
@@ -97,7 +103,7 @@ public class SiteGeneratorService {
                 boolean hasPlayoff = playoffSeasonSlug != null;
                 var ctx = new org.ctc.sitegen.model.GenerationContext(
                         outPath, season, activeSeasonSlug, activeSeasonName,
-                        hasPlayoff, playoffSeasonSlug);
+                        hasPlayoff, playoffSeasonSlug, slugs);
                 standingsPageGenerator.generate(ctx, result);
                 driverRankingPageGenerator.generate(ctx, result);
                 matchdaysPageGenerator.generateDetails(ctx, result);
@@ -114,12 +120,12 @@ public class SiteGeneratorService {
             generateLinks(outPath, siteProperties.getLinks(), activeSeasonSlug, activeSeasonName, result);
 
             // Generate overview pages
-            generateTeamsOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, result);
-            generateDriversOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, result);
+            generateTeamsOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, result);
+            generateDriversOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, result);
 
             // Generate alltime pages (filtered to production seasons only)
-            generateAlltimeStandings(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, result);
-            generateAlltimeDriverRanking(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, result);
+            generateAlltimeStandings(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, result);
+            generateAlltimeDriverRanking(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, result);
 
             // Copy static assets
             copyAssets(outPath, result);
@@ -128,6 +134,12 @@ public class SiteGeneratorService {
         } catch (IOException e) {
             log.error("Site generation failed", e);
             result.addError("Generation failed: " + e.getMessage());
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Profile URLs were stored by a concurrent generation", e);
+            result.addError("Generation failed: another generation stored profile URLs at the same time. Try again.");
+        } catch (SiteSlugs.MissingSlugException e) {
+            log.warn("Site generation hit a profile without a URL", e);
+            result.addError("Generation failed: " + e.getMessage() + ". A team or driver was added meanwhile; try again.");
         }
 
         return result;
@@ -250,7 +262,7 @@ public class SiteGeneratorService {
 
     private void generateTeamsOverview(Path outPath, List<Season> productionSeasons,
                                        String activeSeasonSlug, String activeSeasonName,
-                                       GenerationResult result) throws IOException {
+                                       SiteSlugs slugs, GenerationResult result) throws IOException {
         var sortedSeasons = productionSeasons.stream()
                 .sorted(java.util.Comparator.comparing(Season::getYear).thenComparing(Season::getNumber))
                 .toList();
@@ -297,7 +309,7 @@ public class SiteGeneratorService {
                             var s = seasons.get(i);
                             if (standingsBySeasonId.getOrDefault(s.getId(), java.util.Set.of()).contains(team.getId())) {
                                 profileUrl = "season/" + siteSlugger.slugify(s.getDisplayLabel())
-                                        + "/team/" + siteSlugger.slugify(team.getShortName()) + ".html";
+                                        + "/team/" + slugs.team(team.getId()) + ".html";
                                 break;
                             }
                         }
@@ -305,7 +317,7 @@ public class SiteGeneratorService {
                     String logoRelPath = copyLogoToAssets(team.getLogoUrl(), outPath, assetsPath);
                     return new TeamOverviewEntry(
                             team.getShortName(),
-                            siteSlugger.slugify(team.getShortName()),
+                            slugs.team(team.getId()),
                             logoRelPath,
                             profileUrl,
                             seasons.stream().map(s -> siteSlugger.slugify(s.getDisplayLabel())).toList(),
@@ -331,7 +343,7 @@ public class SiteGeneratorService {
 
     private void generateDriversOverview(Path outPath, List<Season> productionSeasons,
                                          String activeSeasonSlug, String activeSeasonName,
-                                         GenerationResult result) throws IOException {
+                                         SiteSlugs slugs, GenerationResult result) throws IOException {
         var sortedSeasons = productionSeasons.stream()
                 .sorted(java.util.Comparator.comparing(Season::getYear).thenComparing(Season::getNumber))
                 .toList();
@@ -351,11 +363,11 @@ public class SiteGeneratorService {
                     var infos = e.getValue();
                     var latestInfo = infos.getLast();
                     String profileUrl = "season/" + siteSlugger.slugify(latestInfo.season().getDisplayLabel())
-                            + "/driver/" + siteSlugger.slugify(driver.getPsnId()) + ".html";
+                            + "/driver/" + slugs.driver(driver.getId()) + ".html";
                     String teamName = latestInfo.team().getShortName();
                     return new DriverOverviewEntry(
                             driver.getPsnId(),
-                            siteSlugger.slugify(driver.getPsnId()),
+                            slugs.driver(driver.getId()),
                             teamName,
                             profileUrl,
                             infos.stream().map(i -> siteSlugger.slugify(i.season().getDisplayLabel())).toList(),
@@ -380,8 +392,8 @@ public class SiteGeneratorService {
     }
 
     private void generateAlltimeStandings(Path outPath, List<Season> productionSeasons,
-                                           String activeSeasonSlug,
-                                           String activeSeasonName, GenerationResult result) throws IOException {
+                                           String activeSeasonSlug, String activeSeasonName,
+                                           SiteSlugs slugs, GenerationResult result) throws IOException {
         var ctx = new Context(Locale.ENGLISH);
         var standings = standingsService.calculateAlltimeStandings(productionSeasons);
 
@@ -403,7 +415,7 @@ public class SiteGeneratorService {
                 var seasonStandings = standingsService.calculateStandings(regularPhaseOpt.get().getId(), null);
                 if (seasonStandings.stream().anyMatch(st -> st.getTeam().getId().equals(teamId))) {
                     teamSlugMap.put(teamId, "season/" + siteSlugger.slugify(season.getDisplayLabel())
-                            + "/team/" + siteSlugger.slugify(s.getTeam().getShortName()) + ".html");
+                            + "/team/" + slugs.team(s.getTeam().getId()) + ".html");
                     break;
                 }
             }
@@ -421,8 +433,8 @@ public class SiteGeneratorService {
     }
 
     private void generateAlltimeDriverRanking(Path outPath, List<Season> productionSeasons,
-                                               String activeSeasonSlug,
-                                               String activeSeasonName, GenerationResult result) throws IOException {
+                                               String activeSeasonSlug, String activeSeasonName,
+                                               SiteSlugs slugs, GenerationResult result) throws IOException {
         var ctx = new Context(Locale.ENGLISH);
         var seasonIds = productionSeasons.stream().map(Season::getId).toList();
         var driverRanking = driverRankingService.calculateAlltimeRanking(seasonIds);
@@ -444,7 +456,7 @@ public class SiteGeneratorService {
                 }
                 // Latest season wins for the profile link
                 driverSlugMap.put(driverId, "season/" + siteSlugger.slugify(season.getDisplayLabel())
-                        + "/driver/" + siteSlugger.slugify(sd.getDriver().getPsnId()) + ".html");
+                        + "/driver/" + slugs.driver(sd.getDriver().getId()) + ".html");
             }
         }
 
@@ -570,11 +582,14 @@ public class SiteGeneratorService {
     public static class GenerationResult {
         private int pagesGenerated;
         private final java.util.List<String> errors = new java.util.ArrayList<>();
+        private final java.util.List<String> warnings = new java.util.ArrayList<>();
 
         public void incrementPages() { pagesGenerated++; }
         public void addError(String error) { errors.add(error); }
         public int getPagesGenerated() { return pagesGenerated; }
         public java.util.List<String> getErrors() { return java.util.Collections.unmodifiableList(errors); }
         public boolean hasErrors() { return !errors.isEmpty(); }
+        public void addWarning(String warning) { warnings.add(warning); }
+        public java.util.List<String> getWarnings() { return java.util.Collections.unmodifiableList(warnings); }
     }
 }

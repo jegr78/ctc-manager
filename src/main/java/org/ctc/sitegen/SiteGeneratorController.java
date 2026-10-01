@@ -31,6 +31,9 @@ public class SiteGeneratorController {
 		} else {
 			redirectAttributes.addFlashAttribute("successMessage",
 					"Site generated successfully: " + result.getPagesGenerated() + " pages");
+			if (!result.getWarnings().isEmpty()) {
+				redirectAttributes.addFlashAttribute("warningMessage", String.join("; ", result.getWarnings()));
+			}
 		}
 
 		return "redirect:/admin/generate";

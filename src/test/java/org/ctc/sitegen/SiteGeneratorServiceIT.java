@@ -16,6 +16,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
@@ -56,6 +58,7 @@ class SiteGeneratorServiceIT {
     @Mock private MatchdaysPageGenerator matchdaysPageGenerator;
     @Mock private TeamProfilePageGenerator teamProfilePageGenerator;
     @Mock private DriverProfilePageGenerator driverProfilePageGenerator;
+    @Mock private SiteSlugService siteSlugService;
 
     private SiteGeneratorService buildSut() {
         // Lombok @RequiredArgsConstructor field order:
@@ -63,7 +66,7 @@ class SiteGeneratorServiceIT {
         // PlayoffBracketViewService, PlayoffRepository, SeasonTeamRepository, SiteProperties,
         // YouTubeScraperService, SeasonPhaseService, SiteSlugger, TemplateWriter,
         // StandingsPageGenerator, DriverRankingPageGenerator, MatchdaysPageGenerator,
-        // TeamProfilePageGenerator, DriverProfilePageGenerator
+        // TeamProfilePageGenerator, DriverProfilePageGenerator, SiteSlugService
         return new SiteGeneratorService(
                 seasonRepository,
                 seasonDriverRepository,
@@ -81,7 +84,8 @@ class SiteGeneratorServiceIT {
                 driverRankingPageGenerator,
                 matchdaysPageGenerator,
                 teamProfilePageGenerator,
-                driverProfilePageGenerator);
+                driverProfilePageGenerator,
+                siteSlugService);
     }
 
     @Test
@@ -107,6 +111,8 @@ class SiteGeneratorServiceIT {
         // skip). Stub findByType so the fixture season survives into the per-season helper loop.
         when(seasonPhaseService.findByType(seasonId, org.ctc.domain.model.PhaseType.REGULAR))
                 .thenReturn(java.util.Optional.of(regular));
+        when(siteSlugService.allocate()).thenReturn(new org.ctc.sitegen.model.SiteSlugs(
+                java.util.Map.of(), java.util.Map.of(), List.of()));
         when(seasonRepository.findByActiveTrue()).thenReturn(java.util.Optional.empty());
         when(seasonRepository.findAll()).thenReturn(List.of(season));
         when(playoffRepository.findBySeasonId(seasonId)).thenReturn(java.util.Optional.empty());
@@ -144,5 +150,26 @@ class SiteGeneratorServiceIT {
         // alltime aggregation uses calculateAlltimeStandings (NOT the legacy seasonId overload).
         verify(standingsService, atLeastOnce()).calculateAlltimeStandings(anyList());
         verify(driverRankingService, atLeastOnce()).calculateAlltimeRanking(anyList());
+    }
+
+    @Test
+    void givenConcurrentSlugAllocation_whenGenerate_thenErrorAndThePreviousOutputStays() throws Exception {
+        // given
+        var outDir = java.nio.file.Files.createTempDirectory("sitegen-it-");
+        var previous = java.nio.file.Files.writeString(outDir.resolve("index.html"), "previous");
+        when(siteProperties.getOutputDir()).thenReturn(outDir.toString());
+        when(siteSlugService.allocate()).thenThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate"));
+
+        var sut = buildSut();
+        var result = new SiteGeneratorService.GenerationResult[1];
+
+        // when
+        assertThatCode(() -> result[0] = sut.generate()).as("generation with a slug conflict")
+                .doesNotThrowAnyException();
+
+        // then
+        assertThat(result[0].getErrors()).as("generation errors").containsExactly(
+                "Generation failed: another generation stored profile URLs at the same time. Try again.");
+        assertThat(previous).as("previous output").hasContent("previous");
     }
 }
