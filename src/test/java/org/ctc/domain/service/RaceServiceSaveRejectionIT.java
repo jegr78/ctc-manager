@@ -135,6 +135,21 @@ class RaceServiceSaveRejectionIT {
 	}
 
 	@Test
+	void givenMatchOfTheTwoTeams_whenCreatingARaceInTheSameOrientation_thenItJoinsTheMatch() {
+		// given
+		long matchesBefore = matchRepository.count();
+
+		// when
+		var result = raceService.saveRace(null, fixture.matchday().getId(), fixture.homeTeam().getId(),
+				fixture.awayTeam().getId(), null, null, ORIGINAL_TIME, 5, 1, 1, 1, "100%", 0, 1, "clear", "noon", "any", "none");
+
+		// then
+		assertThat(result.success()).as("save of a further leg: %s", result.message()).isTrue();
+		assertThat(matchRepository.count()).as("matches after the save").isEqualTo(matchesBefore);
+		assertThat(raceRepository.findByMatchId(fixture.match().getId())).as("legs of the existing match").hasSize(2);
+	}
+
+	@Test
 	void givenMatchOfTheTwoTeams_whenCreatingARaceInReverseOrientation_thenItJoinsTheMatchAsAReversedLeg() {
 		// given
 		long matchesBefore = matchRepository.count();
