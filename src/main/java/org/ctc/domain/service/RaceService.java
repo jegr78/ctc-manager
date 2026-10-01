@@ -230,7 +230,7 @@ public class RaceService {
 	public String saveResults(UUID raceId, List<RaceResultData> results) {
 		var race = raceRepository.findById(raceId).orElseThrow();
 		PlayoffDecisionGuard.requireOpen(race);
-		if (race.getMatchday().getPhase().getRaceScoring() == null) {
+		if (race.getMatchday().getPhase().getRaceScoring() == null && results.stream().anyMatch(r -> r.driverId() != null)) {
 			throw new BusinessRuleException(NO_RACE_SCORING);
 		}
 

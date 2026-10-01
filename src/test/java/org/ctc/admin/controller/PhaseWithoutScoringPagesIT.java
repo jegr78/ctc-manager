@@ -16,6 +16,7 @@ import org.ctc.TestHelper;
 import org.ctc.TestHelper.SeasonFixture;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.PhaseTeam;
+import org.ctc.domain.model.RaceResult;
 import org.ctc.domain.model.SeasonPhase;
 import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.RaceRepository;
@@ -81,7 +82,27 @@ class PhaseWithoutScoringPagesIT {
 		// then
 		assertThat(response[0].getResponse().getStatus()).as("status of the results form").isEqualTo(200);
 		assertThat(response[0].getResponse().getContentAsString()).as("results form")
-				.contains("This phase has no race scoring");
+				.contains("This phase has no race scoring")
+				.contains("racePoints = racePoints || [];", "qualiPoints = qualiPoints || [];", "flPoints = flPoints || 0;");
+	}
+
+	@Test
+	void givenStoredResultsInPhaseWithoutRaceScoring_whenAnEmptyResultListIsSaved_thenTheResultsAreCleared() throws Exception {
+		// given
+		var race = raceRepository.findById(fixture.race().getId()).orElseThrow();
+		race.getResults().add(new RaceResult(race, entityManager.find(Driver.class, driver.getId()), 1, 1, false));
+		entityManager.flush();
+		entityManager.clear();
+
+		// when
+		mockMvc.perform(post("/admin/races/" + fixture.race().getId() + "/results"))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(flash().attributeExists("successMessage"));
+
+		// then
+		entityManager.clear();
+		assertThat(raceRepository.findById(fixture.race().getId()).orElseThrow().getResults())
+				.as("results after clearing them without race scoring").isEmpty();
 	}
 
 	@Test
