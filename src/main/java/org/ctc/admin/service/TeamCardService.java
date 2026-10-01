@@ -1,9 +1,5 @@
 package org.ctc.admin.service;
 
-import com.microsoft.playwright.Browser;
-import com.microsoft.playwright.BrowserType;
-import com.microsoft.playwright.Page;
-import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.PlaywrightException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -102,9 +98,6 @@ public class TeamCardService implements TemplateManageable {
 
 		String html = renderTemplate(ctx);
 
-		Path tempFile = Files.createTempFile("team-card-", ".html");
-		Files.writeString(tempFile, html);
-
 		String storagePath = getCardStoragePath(seasonTeam);
 		Path outputFile = uploadDir.resolve(storagePath);
 		// NP: uploadDir is an absolute configured path; storagePath is always non-empty —
@@ -112,11 +105,7 @@ public class TeamCardService implements TemplateManageable {
 		// See config/spotbugs-exclude.xml TeamCardService NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE entry.
 		Files.createDirectories(outputFile.getParent());
 
-		try {
-			renderCardScreenshotWithRetry(tempFile, outputFile);
-		} finally {
-			Files.deleteIfExists(tempFile);
-		}
+		renderCardScreenshotWithRetry(html, outputFile);
 
 		log.info("Generated team card: {}", outputFile);
 		return getCardPath(seasonTeam);
@@ -126,9 +115,9 @@ public class TeamCardService implements TemplateManageable {
 	// screenshot capture with "Protocol error (Page.captureScreenshot): Unable to capture screenshot".
 	// The root mitigation lives in surefire/failsafe (DevDataSeeder skipped via
 	// app.seed-on-startup=false); this retry is the safety-net for the remaining tail.
-	private void renderCardScreenshotWithRetry(Path tempFile, Path outputFile) {
+	private void renderCardScreenshotWithRetry(String html, Path outputFile) {
 		try {
-			renderCardScreenshot(tempFile, outputFile);
+			SandboxedHtmlRenderer.screenshot(html, 1080, 1920, false, outputFile);
 		} catch (PlaywrightException e) {
 			if (!isChromiumCaptureRace(e)) {
 				throw e;
@@ -141,19 +130,7 @@ public class TeamCardService implements TemplateManageable {
 				Thread.currentThread().interrupt();
 				throw e;
 			}
-			renderCardScreenshot(tempFile, outputFile);
-		}
-	}
-
-	private void renderCardScreenshot(Path tempFile, Path outputFile) {
-		try (Playwright pw = Playwright.create();
-		     Browser browser = pw.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
-		     Page page = browser.newPage(new Browser.NewPageOptions()
-					 .setViewportSize(1080, 1920))) {
-			page.navigate("file://" + tempFile.toAbsolutePath());
-			page.screenshot(new Page.ScreenshotOptions()
-					.setPath(outputFile)
-					.setFullPage(false));
+			SandboxedHtmlRenderer.screenshot(html, 1080, 1920, false, outputFile);
 		}
 	}
 

@@ -1,9 +1,5 @@
 package org.ctc.admin.service;
 
-import com.microsoft.playwright.Browser;
-import com.microsoft.playwright.BrowserType;
-import com.microsoft.playwright.Page;
-import com.microsoft.playwright.Playwright;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,38 +30,11 @@ public abstract class AbstractGraphicService {
 	}
 
 	protected void renderScreenshot(String html, Path outputFile) throws IOException {
-		Path tempFile = Files.createTempFile("graphic-", ".html");
-		Files.writeString(tempFile, html);
-
-		try (Playwright pw = Playwright.create();
-		     Browser browser = pw.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
-		     Page page = browser.newPage(new Browser.NewPageOptions()
-					 .setViewportSize(1920, 1080))) {
-			page.navigate("file://" + tempFile.toAbsolutePath());
-			page.screenshot(new Page.ScreenshotOptions()
-					.setPath(outputFile)
-					.setFullPage(false));
-		} finally {
-			Files.deleteIfExists(tempFile);
-		}
+		SandboxedHtmlRenderer.screenshot(html, 1920, 1080, false, outputFile);
 	}
 
 	protected void renderScreenshotTransparent(String html, Path outputFile) throws IOException {
-		Path tempFile = Files.createTempFile("graphic-", ".html");
-		Files.writeString(tempFile, html);
-
-		try (Playwright pw = Playwright.create();
-		     Browser browser = pw.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
-		     Page page = browser.newPage(new Browser.NewPageOptions()
-					 .setViewportSize(1920, 1080))) {
-			page.navigate("file://" + tempFile.toAbsolutePath());
-			page.screenshot(new Page.ScreenshotOptions()
-					.setPath(outputFile)
-					.setFullPage(false)
-					.setOmitBackground(true));
-		} finally {
-			Files.deleteIfExists(tempFile);
-		}
+		SandboxedHtmlRenderer.screenshot(html, 1920, 1080, true, outputFile);
 	}
 
 	protected String encodeCardBase64(String cardUrl) {
