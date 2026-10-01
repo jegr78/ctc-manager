@@ -56,6 +56,7 @@ class SiteGeneratorServiceIT {
     @Mock private MatchdaysPageGenerator matchdaysPageGenerator;
     @Mock private TeamProfilePageGenerator teamProfilePageGenerator;
     @Mock private DriverProfilePageGenerator driverProfilePageGenerator;
+    @Mock private SiteSlugService siteSlugService;
 
     private SiteGeneratorService buildSut() {
         // Lombok @RequiredArgsConstructor field order:
@@ -63,7 +64,7 @@ class SiteGeneratorServiceIT {
         // PlayoffBracketViewService, PlayoffRepository, SeasonTeamRepository, SiteProperties,
         // YouTubeScraperService, SeasonPhaseService, SiteSlugger, TemplateWriter,
         // StandingsPageGenerator, DriverRankingPageGenerator, MatchdaysPageGenerator,
-        // TeamProfilePageGenerator, DriverProfilePageGenerator
+        // TeamProfilePageGenerator, DriverProfilePageGenerator, SiteSlugService
         return new SiteGeneratorService(
                 seasonRepository,
                 seasonDriverRepository,
@@ -81,7 +82,8 @@ class SiteGeneratorServiceIT {
                 driverRankingPageGenerator,
                 matchdaysPageGenerator,
                 teamProfilePageGenerator,
-                driverProfilePageGenerator);
+                driverProfilePageGenerator,
+                siteSlugService);
     }
 
     @Test
@@ -107,6 +109,8 @@ class SiteGeneratorServiceIT {
         // skip). Stub findByType so the fixture season survives into the per-season helper loop.
         when(seasonPhaseService.findByType(seasonId, org.ctc.domain.model.PhaseType.REGULAR))
                 .thenReturn(java.util.Optional.of(regular));
+        when(siteSlugService.allocate()).thenReturn(new org.ctc.sitegen.model.SiteSlugs(
+                java.util.Map.of(), java.util.Map.of(), List.of()));
         when(seasonRepository.findByActiveTrue()).thenReturn(java.util.Optional.empty());
         when(seasonRepository.findAll()).thenReturn(List.of(season));
         when(playoffRepository.findBySeasonId(seasonId)).thenReturn(java.util.Optional.empty());

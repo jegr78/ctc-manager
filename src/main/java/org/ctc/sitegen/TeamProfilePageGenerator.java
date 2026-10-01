@@ -42,6 +42,7 @@ public class TeamProfilePageGenerator {
     private final StandingsService standingsService;
     private final SeasonPhaseService seasonPhaseService;
     private final PhaseTeamRepository phaseTeamRepository;
+    private final SharedProfilePageGenerator sharedProfilePageGenerator;
 
     @lombok.Setter
     @Value("${app.upload-dir:data/dev/uploads}")
@@ -73,6 +74,7 @@ public class TeamProfilePageGenerator {
             }
         }
 
+        var generatedNames = new java.util.HashMap<java.util.UUID, String>();
         for (var team : teams) {
             var teamStanding = standings.stream()
                     .filter(s -> s.getTeam().getId().equals(team.getId()))
@@ -171,7 +173,7 @@ public class TeamProfilePageGenerator {
                                 .filter(r -> r.getRace().getMatchday().getSeason().getId().equals(season.getId()))
                                 .toList();
                         int totalPoints = driverResults.stream().mapToInt(RaceResult::getPointsTotal).sum();
-                        String driverProfileUrl = "../driver/" + siteSlugger.slugify(driver.getPsnId()) + ".html";
+                        String driverProfileUrl = "../driver/" + ctx.slugs().driver(driver.getId()) + ".html";
                         return new SiteGeneratorService.DriverEntry(driver.getPsnId(), driverProfileUrl, totalPoints);
                     })
                     .toList();
@@ -194,10 +196,14 @@ public class TeamProfilePageGenerator {
             context.setVariable("pageTitle", team.getName());
 
             Files.createDirectories(teamDir);
-            templateWriter.write("site/team-profile", context, teamDir.resolve(siteSlugger.slugify(team.getShortName()) + ".html"),
+            templateWriter.write("site/team-profile", context, teamDir.resolve(ctx.slugs().team(team.getId()) + ".html"),
                     ctx.activeSeasonSlug(), ctx.activeSeasonName());
             result.incrementPages();
+            generatedNames.put(team.getId(), team.getShortName());
         }
+        sharedProfilePageGenerator.generate(ctx, SiteSlugKind.TEAM,
+                outPath.resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel())).resolve("team"),
+                generatedNames, result);
     }
 
     private static String ordinalSuffix(int n) {

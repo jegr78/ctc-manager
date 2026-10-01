@@ -66,6 +66,7 @@ class BackupExportServiceTest {
 	@Mock private RaceAttachmentRepository raceAttachmentRepository;
 	@Mock private DiscordGlobalConfigRepository discordGlobalConfigRepository;
 	@Mock private DiscordPostRepository discordPostRepository;
+	@Mock private SiteSlugRepository siteSlugRepository;
 
 	private BackupExportService service;
 	private Path uploadRoot;
@@ -82,7 +83,7 @@ class BackupExportServiceTest {
 				playoffRoundRepository, playoffMatchupRepository, playoffSeedRepository,
 				matchdayRepository, matchRepository, raceRepository, raceLineupRepository,
 				raceResultRepository, raceSettingsRepository, raceAttachmentRepository,
-				discordGlobalConfigRepository, discordPostRepository,
+				discordGlobalConfigRepository, discordPostRepository, siteSlugRepository,
 				tempDir.toString()
 		);
 		ReflectionTestUtils.invokeMethod(service, "initialize");

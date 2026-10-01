@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{site/layout :: layout(${pageTitle}, ~{::section})}">
+<body>
+<section>
+    <div class="section">
+        <h2 class="section-title" th:text="${pageTitle}">Profiles</h2>
+        <p class="text-dim">This address was shared by several profiles. Choose one:</p>
+        <ul class="shared-profile-list">
+            <li th:each="link : ${profiles}">
+                <a class="entity-link" th:href="${link.url}" th:text="${link.name}">Profile</a>
+            </li>
+        </ul>
+    </div>
+</section>
+</body>
+</html>

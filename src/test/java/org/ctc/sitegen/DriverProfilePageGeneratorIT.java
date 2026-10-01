@@ -66,6 +66,7 @@ class DriverProfilePageGeneratorIT {
     @Autowired private DriverProfilePageGenerator driverProfilePageGenerator;
     @Autowired private SeasonRepository seasonRepository;
     @Autowired private SiteSlugger siteSlugger;
+    @Autowired private SiteSlugService siteSlugService;
     @Autowired private DriverRepository driverRepository;
     @Autowired private RaceLineupRepository raceLineupRepository;
 
@@ -124,7 +125,7 @@ class DriverProfilePageGeneratorIT {
         // given — Test-Season 2026 (year=2026, number=99) seeded with pure guest Test_Guest_1
         var season = seasonRepository.findByYearAndNumber(2026, 99).getFirst();
         var slug = siteSlugger.slugify(season.getDisplayLabel());
-        var ctx = new GenerationContext(tempDir, season, slug, season.getName(), false, null);
+        var ctx = new GenerationContext(tempDir, season, slug, season.getName(), false, null, siteSlugService.allocate());
         var result = new SiteGeneratorService.GenerationResult();
 
         // when
@@ -148,7 +149,7 @@ class DriverProfilePageGeneratorIT {
         // given
         var season = seasonRepository.findByYearAndNumber(2026, 99).getFirst();
         var slug = siteSlugger.slugify(season.getDisplayLabel());
-        var ctx = new GenerationContext(tempDir, season, slug, season.getName(), false, null);
+        var ctx = new GenerationContext(tempDir, season, slug, season.getName(), false, null, siteSlugService.allocate());
         var genResult = new SiteGeneratorService.GenerationResult();
         var guest = driverRepository.findByPsnId("Test_Guest_1").orElseThrow();
         // The actual fielding sub-team names, scoped to the season (same source the generator uses).

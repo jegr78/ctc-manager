@@ -81,6 +81,7 @@ public class BackupExportService {
 	private final RaceAttachmentRepository raceAttachmentRepository;
 	private final DiscordGlobalConfigRepository discordGlobalConfigRepository;
 	private final DiscordPostRepository discordPostRepository;
+	private final SiteSlugRepository siteSlugRepository;
 
 	private final String uploadDirRaw;
 
@@ -115,6 +116,7 @@ public class BackupExportService {
 			RaceAttachmentRepository raceAttachmentRepository,
 			DiscordGlobalConfigRepository discordGlobalConfigRepository,
 			DiscordPostRepository discordPostRepository,
+			SiteSlugRepository siteSlugRepository,
 			@Value("${app.upload-dir:data/dev/uploads}") String uploadDirRaw
 	) {
 		this.backupSchema = backupSchema;
@@ -144,6 +146,7 @@ public class BackupExportService {
 		this.raceAttachmentRepository = raceAttachmentRepository;
 		this.discordGlobalConfigRepository = discordGlobalConfigRepository;
 		this.discordPostRepository = discordPostRepository;
+		this.siteSlugRepository = siteSlugRepository;
 		this.uploadDirRaw = uploadDirRaw;
 	}
 
@@ -177,6 +180,7 @@ public class BackupExportService {
 		this.repositoriesByEntityClass.put(RaceAttachment.class, raceAttachmentRepository);
 		this.repositoriesByEntityClass.put(DiscordGlobalConfig.class, discordGlobalConfigRepository);
 		this.repositoriesByEntityClass.put(DiscordPost.class, discordPostRepository);
+		this.repositoriesByEntityClass.put(SiteSlug.class, siteSlugRepository);
 		log.info("BackupExportService initialized: uploadRoot={}, repositoryCount={}",
 				uploadRoot, repositoriesByEntityClass.size());
 	}

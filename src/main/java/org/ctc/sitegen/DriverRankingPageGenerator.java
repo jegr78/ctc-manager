@@ -101,7 +101,7 @@ public class DriverRankingPageGenerator {
         var driverSlugMap = new HashMap<UUID, String>();
         for (var r : ranking) {
             driverSlugMap.put(r.getDriver().getId(),
-                    "driver/" + siteSlugger.slugify(r.getDriver().getPsnId()) + ".html");
+                    "driver/" + ctx.slugs().driver(r.getDriver().getId()) + ".html");
         }
         tplCtx.setVariable("driverSlugMap", driverSlugMap);
 

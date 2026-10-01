@@ -130,7 +130,7 @@ public class StandingsPageGenerator {
         var teamSlugMap = new HashMap<UUID, String>();
         for (var s : standings) {
             teamSlugMap.put(s.getTeam().getId(),
-                    "team/" + siteSlugger.slugify(s.getTeam().getShortName()) + ".html");
+                    "team/" + ctx.slugs().team(s.getTeam().getId()) + ".html");
         }
 
         // Tab row for season phases (visible when ≥2 phases).
