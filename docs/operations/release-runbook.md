@@ -253,16 +253,16 @@ If any check fails, re-read the failing section, fix the cited precondition, and
 
 ## Section 6 — Future-proof releases
 
-`.github/workflows/release.yml` runs after every completed `CI` or `CodeQL SAST` run of a master push. It releases a revision only when the latest runs of `build-and-test`, `dockerfile-noble-pin-guard`, `docker-build` and `Analyze (java-kotlin)` on it succeeded and master has not moved past it. Each release produces:
+`.github/workflows/release.yml` runs after every completed `CI` or `CodeQL SAST` run of a master push. It releases a revision only when the latest push runs of `ci.yml` and `codeql.yml` on it succeeded, including their jobs `build-and-test`, `dockerfile-noble-pin-guard`, `docker-build` and `Analyze (java-kotlin)`, and master has not moved past it. Each release produces:
 
 - Annotated tag pushed atomically with the release commit on master
 - GitHub Release page generated with auto-notes
 - JAR uploaded as a Release asset
 - Docker image pushed to `ghcr.io/jegr78/ctc-manager:X.Y.Z` and `:latest`
 
-The operator does NOT run this runbook for future releases. The runbook is reserved for retroactive catch-up of historically missed releases. A skipped release names the check that was not green in a `::notice::`; rerunning the failed check is enough, because its completion triggers the release workflow again. A release that stopped after pushing its tag resumes on the next run and only creates what is missing (GitHub Release, image, SNAPSHOT bump). A tag `vX.Y.Z` without the matching release commit aborts the run before the build.
+The operator does NOT run this runbook for future releases. The runbook is reserved for retroactive catch-up of historically missed releases. A skipped release names the check that was not green in a `::notice::`; rerunning the failed check is enough, because its completion triggers the release workflow again. A release that stopped after pushing its tag resumes when the same revision is evaluated again (re-run the failed release run before merging anything else) and only creates what is missing (GitHub Release, image, SNAPSHOT bump). If a newer commit is released first, create the missing GitHub Release or image of the stopped version by hand with Section 2. A tag `vX.Y.Z` without the matching release commit aborts the run before the build.
 
-To check the gate without publishing, start the workflow by hand with `dry-run` and optionally a `sha`:
+To check the gate without publishing, start the workflow by hand with `dry-run`. Without `sha` it evaluates the latest master commit that is not a release or SNAPSHOT commit:
 
 ```bash
 gh workflow run release.yml -f dry-run=true

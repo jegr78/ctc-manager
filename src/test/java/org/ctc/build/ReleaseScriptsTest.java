@@ -130,12 +130,13 @@ class ReleaseScriptsTest {
 		}
 
 		@Test
-		void givenOlderFailedRunAndNewerSuccessfulRun_whenGated_thenTheLatestRunCounts() throws Exception {
+		void givenOlderFailedRunsBeforeAndAfterNewerSuccessfulRuns_whenGated_thenTheLatestRunCounts() throws Exception {
 			// given
 			String sha = commitAndPush("fix: a bug");
 			greenRuns();
-			runs(run(1, CI, "completed", "success"), run(0, CI, "completed", "failure"),
-					run(2, CODEQL, "completed", "success"));
+			jobs(3, job("Analyze (java-kotlin)", "completed", "success"));
+			runs(run(0, CI, "completed", "failure"), run(1, CI, "completed", "success"),
+					run(3, CODEQL, "completed", "success"), run(2, CODEQL, "completed", "failure"));
 
 			// when
 			var run = gate(sha);

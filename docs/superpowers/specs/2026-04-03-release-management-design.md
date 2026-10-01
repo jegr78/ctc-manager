@@ -39,7 +39,7 @@ master Push → CI + CodeQL grün → Gate → Version bestimmen → Build → T
 ```
 
 1. `release.yml` startet per `workflow_run`, wenn ein `CI`- oder `CodeQL SAST`-Lauf eines Pushs auf `master` endet. Ein Push selbst löst keinen Release aus.
-2. `scripts/ci/release-gate.sh` prüft die Revision `head_sha` des auslösenden Laufs. Released wird nur, wenn der jeweils letzte Lauf von `build-and-test`, `dockerfile-noble-pin-guard`, `docker-build` und `Analyze (java-kotlin)` erfolgreich ist. Läuft ein Check noch, ist er fehlgeschlagen, abgebrochen oder fehlt er, endet der Lauf als Skip mit Hinweis. Der zweite der beiden `workflow_run`-Läufe released dann.
+2. `scripts/ci/release-gate.sh` prüft die Revision `head_sha` des auslösenden Laufs. Released wird nur, wenn der jeweils letzte Push-Lauf von `ci.yml` und `codeql.yml` auf dieser Revision erfolgreich ist und darin die Jobs `build-and-test`, `dockerfile-noble-pin-guard`, `docker-build` und `Analyze (java-kotlin)` erfolgreich sind. Das Gate liest Workflow-Runs statt Check-Runs, weil jeder Workflow mit `checks: write` einen Check-Run gleichen Namens anlegen könnte. Läuft ein Check noch, ist er fehlgeschlagen, abgebrochen oder fehlt er, endet der Lauf als Skip mit Hinweis. Der zweite der beiden `workflow_run`-Läufe released dann.
 3. Hat `master` die Revision schon überholt (außer durch Release- und Bump-Commits), ist sie obsolet und wird übersprungen; die neuere Revision released mit ihren eigenen Checks.
 4. `concurrency: release` serialisiert alle Läufe; ein laufender Release wird nie abgebrochen.
 5. `scripts/ci/release-version.sh` liest die Commits seit dem letzten Tag und bestimmt den SemVer-Bump via Conventional Commits.
@@ -49,7 +49,7 @@ master Push → CI + CodeQL grün → Gate → Version bestimmen → Build → T
 
 ### Wiederaufnahme nach einem Abbruch
 
-Liegt auf `master` direkt über der Revision ein `release: vX.Y.Z`-Commit mit Tag `vX.Y.Z`, setzt der nächste Lauf diesen Release fort statt eine neue Version zu bestimmen. Er erstellt nur, was fehlt: das GitHub Release (`gh release view`), das Image (`docker manifest inspect`) und den SNAPSHOT-Bump (nur wenn `master` noch auf `X.Y.Z` steht). Existiert ein Tag `vX.Y.Z` ohne passenden Release-Commit, bricht der Lauf ab.
+Liegt auf `master` direkt über der Revision ein `release: vX.Y.Z`-Commit mit Tag `vX.Y.Z`, der nur die Version in `pom.xml` auf `X.Y.Z` ändert, setzt ein erneuter Lauf derselben Revision diesen Release fort statt eine neue Version zu bestimmen. Er erstellt nur, was fehlt: das GitHub Release (`gh release view`), das Image (`docker manifest inspect`) und den SNAPSHOT-Bump (nur wenn `master` noch auf `X.Y.Z` steht). Ändert der getaggte Release-Commit mehr, oder existiert ein Tag `vX.Y.Z` ohne passenden Release-Commit, bricht der Lauf ab. Landet vor dem erneuten Lauf schon ein neuer Commit, released dieser eine neue Version; das fehlende Release der alten Version wird dann von Hand nachgezogen (`docs/operations/release-runbook.md`).
 
 ### Endlosschleifen-Vermeidung
 
@@ -57,7 +57,7 @@ Release- und SNAPSHOT-Bump-Commit enthalten `[skip ci]`. Dadurch laufen weder CI
 
 ### Nur Doku-Pushs
 
-CodeQL ignoriert Pushs, die nur `docs/**`, `*.md`, `.planning/**` oder `.gitmessage` ändern. Für eine solche Revision fehlt `Analyze (java-kotlin)`, das Gate überspringt sie. Ihr Commit geht mit dem nächsten Release einer Code-Revision mit.
+`codeql.yml` analysiert jeden Push auf `master` ohne `paths-ignore`, damit auch eine reine Doku-Revision alle Pflicht-Checks hat und released werden kann.
 
 ## Conventional Commits Konvention
 
