@@ -47,7 +47,7 @@ class CodeqlGateScriptTest {
 	@Test
 	void givenBaseAlertsApiFails_whenPullRequestGated_thenTheGateFails() throws Exception {
 		// given
-		alerts("pr", ALERT_12);
+		alerts("pr");
 		Files.writeString(bin.resolve("ref.fail"), "");
 
 		// when
@@ -61,7 +61,7 @@ class CodeqlGateScriptTest {
 	@Test
 	void givenPullRequestAlertsApiFails_whenGated_thenTheGateFails() throws Exception {
 		// given
-		alerts("ref", ALERT_12);
+		alerts("ref");
 		Files.writeString(bin.resolve("pr.fail"), "");
 
 		// when
