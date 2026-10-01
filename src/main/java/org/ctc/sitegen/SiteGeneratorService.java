@@ -6,6 +6,7 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -196,7 +197,7 @@ public class SiteGeneratorService {
         Path previous = target.resolveSibling(target.getFileName() + ".previous");
         deleteTree(previous);
         if (!Files.exists(target)) {
-            Files.createDirectories(target.getParent());
+            Files.createDirectories(Objects.requireNonNull(target.getParent(), "output directory has no parent"));
             Files.move(staging, target, StandardCopyOption.ATOMIC_MOVE);
             return;
         }
@@ -224,7 +225,7 @@ public class SiteGeneratorService {
         }
         try (var children = Files.list(staging)) {
             for (Path child : children.toList()) {
-                Files.move(child, target.resolve(child.getFileName().toString()), StandardCopyOption.ATOMIC_MOVE);
+                Files.move(child, target.resolve(staging.relativize(child)), StandardCopyOption.ATOMIC_MOVE);
             }
         }
     }
