@@ -408,6 +408,19 @@ class SwissPairingServiceTest {
 	}
 
 	@Test
+	void givenGroupOfAnotherPhase_whenGenerateNextRound_thenThrowsIllegalArgument() {
+		// given
+		var phase = buildSwissGroupsPhase();
+		addTeamsToPhase(phase, phase.getGroups().get(0), 4);
+		var foreignGroup = buildSwissGroupsPhase().getGroups().get(0);
+
+		// when / then
+		assertThatThrownBy(() -> swissPairingService.generateNextRound(phase.getId(), foreignGroup.getId()))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("Group does not belong to this phase: " + foreignGroup.getId());
+	}
+
+	@Test
 	void givenSwissGroupsPhase_whenGenerateNextRoundForGroupA_thenOnlyGroupAAdvances() {
 		// given — GROUPS-layout SWISS phase with two groups (A: 4 teams, B: 4 teams)
 		var phase = buildSwissGroupsPhase();

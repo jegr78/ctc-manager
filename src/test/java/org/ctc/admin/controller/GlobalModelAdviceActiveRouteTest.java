@@ -40,6 +40,7 @@ class GlobalModelAdviceActiveRouteTest {
 			"/admin/import,import",
 			"/admin/gt7-sync,gt7-sync",
 			"/admin/backup,backup",
+			"/admin/data-audit,data-audit",
 			"/admin/discord-config,discord-config",
 			"/admin/discord-config/save,discord-config",
 			"/admin/discord/posts,discord-posts",

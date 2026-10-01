@@ -358,6 +358,33 @@ class SeasonPhaseServiceTest {
     }
 
     @Test
+    void givenGroupOfAnotherPhase_whenAssignTeamsToPhase_thenRejectedWithoutWrite() {
+        // given
+        var season = buildSeasonWithTeams("Test_Roster_Foreign_Group", 2);
+        var teams = season.getSeasonTeams().stream().map(SeasonTeam::getTeam).toList();
+        var phase = PhaseTestFixtures.groupsRegularPhase(season, getRs(season), getMs(season), "Test_Group_Own");
+        var other = PhaseTestFixtures.groupsRegularPhase(season, getRs(season), getMs(season), "Test_Group_Foreign");
+        var foreign = other.getGroups().get(0);
+        var existing = PhaseTestFixtures.assignTeam(phase, teams.get(0), phase.getGroups().get(0));
+        when(seasonPhaseRepository.findById(phase.getId())).thenReturn(Optional.of(phase));
+        when(phaseTeamRepository.findByPhaseId(phase.getId())).thenReturn(List.of(existing));
+        when(seasonPhaseGroupRepository.findById(foreign.getId())).thenReturn(Optional.of(foreign));
+        lenient().when(teamRepository.findById(teams.get(1).getId())).thenReturn(Optional.of(teams.get(1)));
+
+        for (var assignment : List.of(new SeasonPhaseService.Assignment(teams.get(0).getId(), true, foreign.getId()),
+                new SeasonPhaseService.Assignment(teams.get(1).getId(), true, foreign.getId()))) {
+            // when / then
+            assertThatThrownBy(() -> seasonPhaseService.assignTeamsToPhase(phase.getId(), List.of(assignment)))
+                    .as("assignment of %s to a group of another phase", assignment.teamId())
+                    .isInstanceOf(BusinessRuleException.class)
+                    .hasMessage("Group 'Test_Group_Foreign' does not belong to this phase");
+        }
+        verify(phaseTeamRepository, never()).save(any(PhaseTeam.class));
+        verify(phaseTeamRepository, never()).delete(any(PhaseTeam.class));
+        assertThat(existing.getGroup()).as("group of the existing place").isEqualTo(phase.getGroups().get(0));
+    }
+
+    @Test
     void givenAssignmentUnchanged_whenAssignTeamsToPhase_thenNoWrite() {
         // given: T1 is already in GroupA and the new assignment says T1@GroupA included
         var season = buildSeasonWithTeams("Phase60-Test-Season-NoOp", 1);

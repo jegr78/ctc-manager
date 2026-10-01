@@ -28,6 +28,7 @@
 - **Race Attachments** — Upload files or link external resources to races
 - **Docker** — Local development and production deployment with MariaDB
 - **Backup & Restore** — Export a full ZIP backup of all 27 entity tables (24 league entities, the 2 Discord-state entities `discord_global_config` and `discord_post`, and the public URL slugs in `site_slugs`); restore via a preview-and-confirm import flow that accepts schema versions 1, 2 and 3, so older backups remain restorable
+- **Data Audit** — Read-only check at `/admin/data-audit` that lists inconsistent historical records (stale aggregates, duplicate pairings, phase and group mismatches, succession problems, playoff decisions, ambiguous public URLs) with evidence and a proposed correction. See the [Data Audit wiki page](../../wiki/Data-Audit).
 - **Discord Integration** — Per-match Discord channels with 11 structured posts (team cards, settings, lineups, schedule, results, match preview, matchday overview, power rankings, standings), forum-thread linking for race-results + standings, auto-edit on schedule/preview changes, pre-flight gates and stale-detection signals. See [Discord Integration wiki page](../../wiki/Discord-Integration) and [`docs/operations/discord-integration.md`](docs/operations/discord-integration.md).
 
 > **Note (v1.13):** Per-match Discord channels with structured posting workflows are now available

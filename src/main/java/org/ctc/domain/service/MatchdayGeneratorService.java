@@ -50,6 +50,11 @@ public class MatchdayGeneratorService {
 			throw new IllegalArgumentException(
 					"GROUPS layout requires non-null groupId");
 		}
+		if (groupId != null && !seasonPhaseGroupRepository.findById(groupId)
+				.orElseThrow(() -> new EntityNotFoundException("SeasonPhaseGroup", groupId))
+				.getPhase().getId().equals(phaseId)) {
+			throw new IllegalArgumentException("Group does not belong to this phase: " + groupId);
+		}
 
 		if (phase.getFormat() == SeasonFormat.SWISS) {
 			throw new IllegalArgumentException(

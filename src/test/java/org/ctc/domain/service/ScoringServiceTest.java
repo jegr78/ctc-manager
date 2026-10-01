@@ -17,7 +17,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -237,10 +236,8 @@ class ScoringServiceTest {
 			race.setResults(List.of(r1, r2));
 
 			// RaceLineup determines team assignment
-			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), homeDriver.getId()))
-					.thenReturn(Optional.of(new RaceLineup(race, homeDriver, homeTeam)));
-			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), awayDriver.getId()))
-					.thenReturn(Optional.of(new RaceLineup(race, awayDriver, awayTeam)));
+			when(raceLineupRepository.findByRaceId(race.getId()))
+					.thenReturn(List.of(new RaceLineup(race, homeDriver, homeTeam), new RaceLineup(race, awayDriver, awayTeam)));
 			when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
 
 			// when
@@ -284,10 +281,8 @@ class ScoringServiceTest {
 			race.setResults(List.of(r1, r2));
 
 			// No RaceLineup exists — fallback to SeasonDriver
-			when(raceLineupRepository.findByRaceIdAndDriverId(any(), any()))
-					.thenReturn(Optional.empty());
+			when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of());
 			when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
-			when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
 
 			// when
 			scoringService.aggregateMatchScores(race);
@@ -314,8 +309,8 @@ class ScoringServiceTest {
 			race.setResults(List.of(r1));
 
 			// RaceLineup points to sub-team, but match uses parent team
-			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driver.getId()))
-					.thenReturn(Optional.of(new RaceLineup(race, driver, subTeam)));
+			when(raceLineupRepository.findByRaceId(race.getId()))
+					.thenReturn(List.of(new RaceLineup(race, driver, subTeam)));
 			when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
 
 			// when
@@ -373,10 +368,8 @@ class ScoringServiceTest {
 			var r2 = createResult(completedLeg, awayDriver, 4);
 			completedLeg.setResults(List.of(r1, r2));
 
-			when(raceLineupRepository.findByRaceIdAndDriverId(completedLeg.getId(), homeDriver.getId()))
-					.thenReturn(Optional.of(new RaceLineup(completedLeg, homeDriver, homeTeam)));
-			when(raceLineupRepository.findByRaceIdAndDriverId(completedLeg.getId(), awayDriver.getId()))
-					.thenReturn(Optional.of(new RaceLineup(completedLeg, awayDriver, awayTeam)));
+			when(raceLineupRepository.findByRaceId(completedLeg.getId()))
+					.thenReturn(List.of(new RaceLineup(completedLeg, homeDriver, homeTeam), new RaceLineup(completedLeg, awayDriver, awayTeam)));
 			when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(clearedRace, completedLeg));
 
 			match.setHomeScore(99);
@@ -427,10 +420,8 @@ class ScoringServiceTest {
 			var r2 = createResult(completedLeg, d2, 7);
 			completedLeg.setResults(List.of(r1, r2));
 
-			when(raceLineupRepository.findByRaceIdAndDriverId(completedLeg.getId(), d1.getId()))
-					.thenReturn(Optional.of(new RaceLineup(completedLeg, d1, team1)));
-			when(raceLineupRepository.findByRaceIdAndDriverId(completedLeg.getId(), d2.getId()))
-					.thenReturn(Optional.of(new RaceLineup(completedLeg, d2, team2)));
+			when(raceLineupRepository.findByRaceId(completedLeg.getId()))
+					.thenReturn(List.of(new RaceLineup(completedLeg, d1, team1), new RaceLineup(completedLeg, d2, team2)));
 			when(raceRepository.findByPlayoffMatchupId(matchup.getId()))
 					.thenReturn(List.of(clearedRace, completedLeg));
 
@@ -503,16 +494,8 @@ class ScoringServiceTest {
 			var ra2 = createResult(race, a2, 12);
 			race.setResults(List.of(rh1, rh2, rh3, ra1, ra2));
 
-			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), h1.getId()))
-					.thenReturn(Optional.of(new RaceLineup(race, h1, homeTeam)));
-			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), h2.getId()))
-					.thenReturn(Optional.of(new RaceLineup(race, h2, homeTeam)));
-			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), h3.getId()))
-					.thenReturn(Optional.of(new RaceLineup(race, h3, homeTeam)));
-			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), a1.getId()))
-					.thenReturn(Optional.of(new RaceLineup(race, a1, awayTeam)));
-			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), a2.getId()))
-					.thenReturn(Optional.of(new RaceLineup(race, a2, awayTeam)));
+			when(raceLineupRepository.findByRaceId(race.getId()))
+					.thenReturn(List.of(new RaceLineup(race, h1, homeTeam), new RaceLineup(race, h2, homeTeam), new RaceLineup(race, h3, homeTeam), new RaceLineup(race, a1, awayTeam), new RaceLineup(race, a2, awayTeam)));
 			when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
 
 			// when
