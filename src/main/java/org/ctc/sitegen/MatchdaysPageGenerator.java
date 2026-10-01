@@ -152,7 +152,7 @@ public class MatchdaysPageGenerator {
         tplCtx.setVariable("groupTabs", groupTabs);
 
         templateWriter.write("site/matchdays", tplCtx, dir.resolve(filename),
-                ctx.activeSeasonSlug(), ctx.activeSeasonName());
+                ctx.outPath(), ctx.activeSeasonSlug(), ctx.activeSeasonName());
         result.incrementPages();
     }
 
@@ -248,7 +248,7 @@ public class MatchdaysPageGenerator {
             var dir = ctx.outPath().resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel())).resolve("matchday");
             Files.createDirectories(dir);
             templateWriter.write("site/matchday", context, dir.resolve(siteSlugger.slugify(matchday.getLabel()) + ".html"),
-                    ctx.activeSeasonSlug(), ctx.activeSeasonName());
+                    ctx.outPath(), ctx.activeSeasonSlug(), ctx.activeSeasonName());
             result.incrementPages();
         }
     }

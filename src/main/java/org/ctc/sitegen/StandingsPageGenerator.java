@@ -175,7 +175,7 @@ public class StandingsPageGenerator {
         tplCtx.setVariable("emptyStateBody", "Standings will appear once race results are recorded.");
 
         templateWriter.write("site/standings", tplCtx, dir.resolve(fileBaseName + ".html"),
-                ctx.activeSeasonSlug(), ctx.activeSeasonName());
+                ctx.outPath(), ctx.activeSeasonSlug(), ctx.activeSeasonName());
         result.incrementPages();
     }
 

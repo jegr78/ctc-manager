@@ -46,7 +46,7 @@ public class SharedProfilePageGenerator {
             context.setVariable("playoffSeasonSlug", ctx.playoffSeasonSlug());
             context.setVariable("breadcrumbCurrent", shared.slug());
             templateWriter.write("site/shared-profile", context, dir.resolve(shared.slug() + ".html"),
-                    ctx.activeSeasonSlug(), ctx.activeSeasonName());
+                    ctx.outPath(), ctx.activeSeasonSlug(), ctx.activeSeasonName());
             result.incrementPages();
         }
     }

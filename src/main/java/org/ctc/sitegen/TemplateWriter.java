@@ -16,14 +16,8 @@ import org.thymeleaf.context.Context;
 public class TemplateWriter {
 
     private final TemplateEngine templateEngine;
-    private final SiteProperties siteProperties;
 
-    public void write(String templateName, Context context, Path outputFile,
-                      String activeSeasonSlug, String activeSeasonName) throws IOException {
-        write(templateName, context, outputFile, Path.of(siteProperties.getOutputDir()),
-                activeSeasonSlug, activeSeasonName);
-    }
-
+    /** Writes the page to {@code outputFile}, with asset and root links relative to {@code outRoot}. */
     public void write(String templateName, Context context, Path outputFile, Path outRoot,
                       String activeSeasonSlug, String activeSeasonName) throws IOException {
         if (!outputFile.toAbsolutePath().normalize().startsWith(outRoot.toAbsolutePath().normalize())) {

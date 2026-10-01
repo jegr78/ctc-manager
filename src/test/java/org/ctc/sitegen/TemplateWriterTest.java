@@ -22,7 +22,7 @@ class TemplateWriterTest {
 	void givenOutputFileOutsideTheSiteRoot_whenWritten_thenRefusedWithoutRendering() {
 		// given
 		TemplateEngine engine = mock(TemplateEngine.class);
-		var writer = new TemplateWriter(engine, new SiteProperties());
+		var writer = new TemplateWriter(engine);
 		Path outside = root.resolve("season/s/team/../../../../evil.html");
 
 		// when / then

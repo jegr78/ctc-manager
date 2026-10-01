@@ -197,7 +197,7 @@ public class TeamProfilePageGenerator {
 
             Files.createDirectories(teamDir);
             templateWriter.write("site/team-profile", context, teamDir.resolve(ctx.slugs().team(team.getId()) + ".html"),
-                    ctx.activeSeasonSlug(), ctx.activeSeasonName());
+                    ctx.outPath(), ctx.activeSeasonSlug(), ctx.activeSeasonName());
             result.incrementPages();
             generatedNames.put(team.getId(), team.getShortName());
         }
