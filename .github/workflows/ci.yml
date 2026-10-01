@@ -36,6 +36,7 @@ jobs:
               - 'pom.xml'
               - 'lombok.config'
               - 'config/**'
+              - 'scripts/**'
               - 'rewrite.yml'
               - '.dockerignore'
               - 'Dockerfile'
