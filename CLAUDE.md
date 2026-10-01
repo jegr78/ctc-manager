@@ -227,6 +227,7 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 
 * **Push/PR to `master`:** Build, Tests, Playwright E2E, JaCoCo Coverage PR comment.
 * **Push `docs/site/**`:** GitHub Pages Deployment.
+* **Release:** `release.yml` runs after each completed `CI` or `CodeQL SAST` run of a master push. `scripts/ci/release-gate.sh` releases the revision only when the latest `build-and-test`, `dockerfile-noble-pin-guard`, `docker-build` and `Analyze (java-kotlin)` runs on it succeeded and master has not moved past it. A rerun of a failed check triggers the release again. A run that stopped after the tag push resumes and creates only the missing parts. `ReleaseScriptsTest` covers the gate and `scripts/ci/release-version.sh`.
 * **Docker:** Multi-stage Dockerfile (JDK build, JRE runtime), non-root user `ctc`, healthcheck `/actuator/health`.
 
 ---

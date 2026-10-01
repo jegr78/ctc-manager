@@ -253,18 +253,24 @@ If any check fails, re-read the failing section, fix the cited precondition, and
 
 ## Section 6 — Future-proof releases
 
-After Phase 88 / REL-01 hardening lands (`.github/workflows/release.yml` SemVer-strict tag sort + `fetch-tags: true` + parser + idempotency guard + dry-run gates), every subsequent milestone PR squash-merge to `master` automatically produces the `vX.Y.0` release artifact set:
+`.github/workflows/release.yml` runs after every completed `CI` or `CodeQL SAST` run of a master push. It releases a revision only when the latest runs of `build-and-test`, `dockerfile-noble-pin-guard`, `docker-build` and `Analyze (java-kotlin)` on it succeeded and master has not moved past it. Each release produces:
 
-- Annotated tag pushed by the workflow
+- Annotated tag pushed atomically with the release commit on master
 - GitHub Release page generated with auto-notes
 - JAR uploaded as a Release asset
-- Docker image pushed to `ghcr.io/jegr78/ctc-manager:X.Y.0` and `:latest`
+- Docker image pushed to `ghcr.io/jegr78/ctc-manager:X.Y.Z` and `:latest`
 
-The operator does NOT run this runbook for future v1.X.0 releases. The runbook is reserved for retroactive catch-up of historically missed releases. The hardened workflow refuses to recreate an existing tag (idempotency guard fires `::error::Tag vX.Y.0 already exists. Aborting before build.` BEFORE the 19-minute build), so accidental re-runs are bounded.
+The operator does NOT run this runbook for future releases. The runbook is reserved for retroactive catch-up of historically missed releases. A skipped release names the check that was not green in a `::notice::`; rerunning the failed check is enough, because its completion triggers the release workflow again. A release that stopped after pushing its tag resumes on the next run and only creates what is missing (GitHub Release, image, SNAPSHOT bump). A tag `vX.Y.Z` without the matching release commit aborts the run before the build.
+
+To check the gate without publishing, start the workflow by hand with `dry-run` and optionally a `sha`:
+
+```bash
+gh workflow run release.yml -f dry-run=true
+```
 
 ### Squash-merge subject discipline (operator action — critical for MINOR bump)
 
-The workflow's bump-determination logic at [.github/workflows/release.yml:70](../../.github/workflows/release.yml#L70) and [:85](../../.github/workflows/release.yml#L85) requires the squash-merge commit subject to match Conventional Commits — **with the `feat:` prefix specifically for the `vX.Y → vX.Y.0` minor bump**:
+The bump determination in [scripts/ci/release-version.sh](../../scripts/ci/release-version.sh) requires the squash-merge commit subject to match Conventional Commits — **with the `feat:` prefix specifically for the `vX.Y → vX.Y.0` minor bump**:
 
 ```bash
 gh pr merge <PR_NUMBER> --squash --subject "feat(vX.Y): <milestone title>"
