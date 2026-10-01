@@ -113,9 +113,9 @@
     </div>
 
     <script th:inline="javascript">
-        var racePoints = /*[[${raceScoring?.racePointsArray}]]*/ [];
-        var qualiPoints = /*[[${raceScoring?.qualiPointsArray}]]*/ [];
-        var flPoints = /*[[${raceScoring?.fastestLapPoints}]]*/ 0;
+        var racePoints = /*[[${raceScoring?.racePointsArray}]]*/ [] || [];
+        var qualiPoints = /*[[${raceScoring?.qualiPointsArray}]]*/ [] || [];
+        var flPoints = /*[[${raceScoring?.fastestLapPoints}]]*/ 0 || 0;
         var homeTeam = /*[[${race.homeTeam.shortName}]]*/ '';
 
         function calcPoints() {
