@@ -132,7 +132,7 @@
   - `ci.yml` - Main CI: checkout, setup JDK 25, cache Maven dependencies, install Playwright browsers, build, unit tests, integration tests, E2E tests (via `-Pe2e`), JaCoCo coverage report comment on PRs
   - `codeql.yml` - CodeQL SAST: Checkout, JDK setup, CodeQL init (java-kotlin, security-extended), compile, analyze, alert gate on new HIGH/CRITICAL findings (PR jobs only; weekly cron is detection-only)
   - `mariadb-migration-smoke.yml` - Testcontainers smoke test: Validates Flyway migration round-trip parity on live MariaDB:11
-  - `release.yml` - Semantic versioning: Auto-detect version bump, create GitHub release, build Docker image, push to registry
+  - `release.yml` - Semantic versioning after green CI and CodeQL on master: Auto-detect version bump, create GitHub release, build Docker image, push to registry
   - `deploy-site.yml` - GitHub Pages: Deploy `docs/site/` on push to master
 
 **Build Process:**

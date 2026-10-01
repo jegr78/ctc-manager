@@ -12,7 +12,7 @@ Das CTC-Manager-Projekt naehert sich dem ersten Release (1.0.0). Bisher gibt es 
 |--------|-------------|
 | Versionierung | Semantic Versioning (SemVer) |
 | Commit-Konvention | Conventional Commits (englisch) |
-| Release-Trigger | Automatisch bei Merge nach `master` |
+| Release-Trigger | Automatisch, sobald alle Pflicht-Checks der Master-Revision grün sind |
 | Version-Bestimmung | Aus Commit-Messages abgeleitet (feat→Minor, fix→Patch, BREAKING CHANGE→Major) |
 | Erste Version | 1.0.0 |
 | Docker Registry | GitHub Container Registry (ghcr.io) |
@@ -35,22 +35,29 @@ feature/xyz Branch → Squash-Merge PR → master (SNAPSHOT)
 ### Release-Phase (automatisch)
 
 ```
-master Push → Analyse Commits → Version bestimmen → Build → Tag → Release → Docker → SNAPSHOT Bump
+master Push → CI + CodeQL grün → Gate → Version bestimmen → Build → Tag + master atomar → Release → Docker → SNAPSHOT Bump
 ```
 
-1. GitHub Actions `release.yml` triggert auf Push nach `master`
-2. Filtert Bot-Commits (SNAPSHOT-Bump) um Endlosschleifen zu vermeiden
-3. Liest Commits seit letztem Tag → bestimmt SemVer-Bump via Conventional Commits
-4. Entfernt `-SNAPSHOT` aus `pom.xml` → Release-Version (z.B. `1.1.0`)
-5. Baut Projekt mit `./mvnw verify`
-6. Erstellt Git-Tag `vX.Y.Z` und GitHub Release mit auto-generierten Notes
-7. Baut Docker-Image und pusht zu `ghcr.io/jegr78/ctc-manager:X.Y.Z` + `:latest`
-8. Bumpt `pom.xml` auf naechsten SNAPSHOT (z.B. `1.2.0-SNAPSHOT`)
-9. Committet SNAPSHOT-Bump mit `chore: bump version to X.Y.Z-SNAPSHOT [skip ci]`
+1. `release.yml` startet per `workflow_run`, wenn ein `CI`- oder `CodeQL SAST`-Lauf eines Pushs auf `master` endet. Ein Push selbst löst keinen Release aus.
+2. `scripts/ci/release-gate.sh` prüft die Revision `head_sha` des auslösenden Laufs. Released wird nur, wenn der jeweils letzte Push-Lauf von `ci.yml` und `codeql.yml` auf dieser Revision erfolgreich ist und darin die Jobs `build-and-test`, `dockerfile-noble-pin-guard`, `docker-build` und `Analyze (java-kotlin)` erfolgreich sind. Das Gate liest Workflow-Runs statt Check-Runs, weil jeder Workflow mit `checks: write` einen Check-Run gleichen Namens anlegen könnte. Läuft ein Check noch, ist er fehlgeschlagen, abgebrochen oder fehlt er, endet der Lauf als Skip mit Hinweis. Der zweite der beiden `workflow_run`-Läufe released dann.
+3. Hat `master` die Revision schon überholt (außer durch Release- und Bump-Commits), ist sie obsolet und wird übersprungen; die neuere Revision released mit ihren eigenen Checks.
+4. `concurrency: release` serialisiert alle Läufe; ein laufender Release wird nie abgebrochen.
+5. `scripts/ci/release-version.sh` liest die Commits seit dem letzten Tag und bestimmt den SemVer-Bump via Conventional Commits.
+6. Setzt die Release-Version in `pom.xml`, baut mit `./mvnw verify`, committet `release: vX.Y.Z` (mit `[skip ci]` im Body) und pusht Commit, Tag und `master` mit `git push --atomic`.
+7. Erstellt das GitHub Release, baut und pusht das Docker-Image zu `ghcr.io/jegr78/ctc-manager:X.Y.Z` + `:latest`.
+8. Bumpt `pom.xml` auf den nächsten SNAPSHOT und committet `chore: bump version to X.Y.Z-SNAPSHOT [skip ci]`.
+
+### Wiederaufnahme nach einem Abbruch
+
+Liegt auf `master` direkt über der Revision ein `release: vX.Y.Z`-Commit mit Tag `vX.Y.Z`, der nur die Version in `pom.xml` auf `X.Y.Z` ändert, setzt ein erneuter Lauf derselben Revision diesen Release fort statt eine neue Version zu bestimmen. Er erstellt nur, was fehlt: das GitHub Release (`gh release view`), das Image (`docker manifest inspect`) und den SNAPSHOT-Bump (nur wenn `master` noch auf `X.Y.Z` steht). Ändert der getaggte Release-Commit mehr, oder existiert ein Tag `vX.Y.Z` ohne passenden Release-Commit, bricht der Lauf ab. Landet vor dem erneuten Lauf schon ein neuer Commit, released dieser eine neue Version; das fehlende Release der alten Version wird dann von Hand nachgezogen (`docs/operations/release-runbook.md`).
 
 ### Endlosschleifen-Vermeidung
 
-Der SNAPSHOT-Bump-Commit enthaelt `[skip ci]` im Commit-Message. Zusaetzlich prueft der Workflow ob der Committer der GitHub Actions Bot ist und ueberspringt in dem Fall.
+Release- und SNAPSHOT-Bump-Commit enthalten `[skip ci]`. Dadurch laufen weder CI noch CodeQL, und es entsteht kein weiterer `workflow_run`.
+
+### Nur Doku-Pushs
+
+`codeql.yml` analysiert jeden Push auf `master` ohne `paths-ignore`, damit auch eine reine Doku-Revision alle Pflicht-Checks hat und released werden kann.
 
 ## Conventional Commits Konvention
 
@@ -100,146 +107,7 @@ BREAKING CHANGE: TeamDto fields renamed for consistency
 
 #### 1. `.github/workflows/release.yml`
 
-Automatisierter Release-Workflow:
-
-```yaml
-name: Release
-
-on:
-  push:
-    branches: [master]
-
-permissions:
-  contents: write
-  packages: write
-
-jobs:
-  release:
-    # Skip bot commits (SNAPSHOT bumps)
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0  # Full history for tag analysis
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup JDK 25
-        uses: actions/setup-java@v5
-        with:
-          java-version: '25'
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: Determine version bump
-        id: version
-        run: |
-          # Get last tag (or use v0.0.0 if none exists)
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
-
-          # Get commits since last tag
-          COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s" 2>/dev/null || git log --pretty=format:"%s")
-
-          # Determine bump type
-          BUMP="patch"
-          if echo "$COMMITS" | grep -qE "^feat(\(.+\))?!:|BREAKING CHANGE"; then
-            BUMP="major"
-          elif echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
-            BUMP="minor"
-          fi
-
-          # Parse current version from last tag
-          VERSION=${LAST_TAG#v}
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
-
-          # Apply bump
-          case $BUMP in
-            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
-            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
-            patch) PATCH=$((PATCH + 1)) ;;
-          esac
-
-          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
-          NEXT_SNAPSHOT="${MAJOR}.$((MINOR + 1)).0-SNAPSHOT"
-
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "next_snapshot=$NEXT_SNAPSHOT" >> $GITHUB_OUTPUT
-          echo "bump=$BUMP" >> $GITHUB_OUTPUT
-          echo "Release: $NEW_VERSION (${BUMP} bump from ${LAST_TAG})"
-
-      - name: Skip if no releasable commits
-        id: check
-        run: |
-          COMMITS=$(git log ${{ steps.version.outputs.last_tag }}..HEAD --pretty=format:"%s" 2>/dev/null || git log --pretty=format:"%s")
-          if echo "$COMMITS" | grep -qE "^(feat|fix|docs|refactor|perf|test|style|chore)(\(.+\))?:"; then
-            echo "should_release=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_release=false" >> $GITHUB_OUTPUT
-            echo "No releasable commits found, skipping release"
-          fi
-
-      - name: Set release version in pom.xml
-        if: steps.check.outputs.should_release == 'true'
-        run: |
-          ./mvnw versions:set -DnewVersion=${{ steps.version.outputs.new_version }} -DgenerateBackupPoms=false
-
-      - name: Build and verify
-        if: steps.check.outputs.should_release == 'true'
-        run: ./mvnw verify -Dspring.profiles.active=dev
-
-      - name: Configure git
-        if: steps.check.outputs.should_release == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Create tag
-        if: steps.check.outputs.should_release == 'true'
-        run: |
-          git add pom.xml
-          git commit -m "release: v${{ steps.version.outputs.new_version }}"
-          git tag -a "v${{ steps.version.outputs.new_version }}" -m "Release v${{ steps.version.outputs.new_version }}"
-
-      - name: Create GitHub Release
-        if: steps.check.outputs.should_release == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git push origin "v${{ steps.version.outputs.new_version }}"
-          gh release create "v${{ steps.version.outputs.new_version }}" \
-            --title "v${{ steps.version.outputs.new_version }}" \
-            --generate-notes \
-            target/ctc-manager-${{ steps.version.outputs.new_version }}.jar
-
-      - name: Login to GHCR
-        if: steps.check.outputs.should_release == 'true'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Docker image
-        if: steps.check.outputs.should_release == 'true'
-        run: |
-          VERSION=${{ steps.version.outputs.new_version }}
-          IMAGE=ghcr.io/${{ github.repository_owner }}/ctc-manager
-
-          docker build -t ${IMAGE}:${VERSION} -t ${IMAGE}:latest .
-          docker push ${IMAGE}:${VERSION}
-          docker push ${IMAGE}:latest
-
-      - name: Bump to next SNAPSHOT
-        if: steps.check.outputs.should_release == 'true'
-        run: |
-          ./mvnw versions:set -DnewVersion=${{ steps.version.outputs.next_snapshot }} -DgenerateBackupPoms=false
-          git add pom.xml
-          git commit -m "chore: bump version to ${{ steps.version.outputs.next_snapshot }} [skip ci]"
-          git push origin master
-```
+Automatisierter Release-Workflow, siehe "Release-Phase". Gate und Versionslogik liegen in `scripts/ci/release-gate.sh` und `scripts/ci/release-version.sh`; `ReleaseScriptsTest` prüft beide gegen ein temporäres Repository und ein gefälschtes `gh`.
 
 #### 2. `versions-maven-plugin` in `pom.xml`
 
@@ -264,7 +132,7 @@ Aktuell: `0.0.1-SNAPSHOT` → Aendern zu `1.0.0-SNAPSHOT`
 
 #### 4. `.github/workflows/ci.yml` — Release-Workflow nicht blockieren
 
-Keine Aenderung noetig. Der CI-Workflow laeuft auf PRs und Push nach master. Der Release-Workflow ist ein separater Workflow. Beide laufen parallel — CI validiert, Release publiziert.
+Der Release-Workflow wartet per `workflow_run` auf CI und CodeQL und released nur eine Revision, deren Pflicht-Checks grün sind.
 
 #### 5. `Dockerfile` — JAR-Name anpassen
 
@@ -313,10 +181,10 @@ Der SNAPSHOT zeigt immer die naechste erwartete Minor-Version. Bei Patch-Release
 
 ```
 PR erstellt → ci.yml (Build + Tests + Coverage)
-PR gemergt  → ci.yml (Build + Tests) + release.yml (Release + Docker)
+PR gemergt  → ci.yml + codeql.yml → release.yml (Gate, Release + Docker)
 ```
 
-Beide Workflows laufen unabhaengig. `ci.yml` validiert Code-Qualitaet, `release.yml` kuemmert sich um Versionierung und Publishing.
+`ci.yml` und `codeql.yml` validieren, `release.yml` released erst danach.
 
 ## Commit-Message Umstellung
 

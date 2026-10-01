@@ -1,36 +1,77 @@
 name: Release
 
+# Releases only a master revision whose required checks all succeeded. Every completed CI or
+# CodeQL run on a master push triggers this workflow; the gate skips until both are done.
 on:
-  push:
+  workflow_run:
+    workflows: [CI, CodeQL SAST]
+    types: [completed]
     branches: [master]
   workflow_dispatch:
     inputs:
+      sha:
+        description: 'Master revision to evaluate (default: the latest master commit that is not a release or snapshot commit).'
+        required: false
+        type: string
       dry-run:
-        description: 'Dry-run: exercise version determination + idempotency guard, skip versions:set/build/tag/release/docker/snapshot.'
+        description: 'Dry-run: run the gate and the version determination, skip build/tag/release/docker/snapshot.'
         required: false
         type: boolean
         default: false
 
+# One release at a time; a newer waiting run replaces an older waiting one.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 permissions:
   contents: write
   packages: write
+  actions: read
 
 jobs:
   release:
-    # Skip bot commits (SNAPSHOT version bumps)
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
+    env:
+      REQUIRED_JOBS: |
+        .github/workflows/ci.yml:build-and-test
+        .github/workflows/ci.yml:dockerfile-noble-pin-guard
+        .github/workflows/ci.yml:docker-build
+        .github/workflows/codeql.yml:Analyze (java-kotlin)
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.workflow_run.head_sha || 'master' }}
           fetch-depth: 0
-          fetch-tags: true          # REL-01: required so `git tag` returns remote tags
-          # PAT with repo scope — required to push past branch protection
-          token: ${{ secrets.RELEASE_TOKEN }}
+          fetch-tags: true          # required so `git tag` returns remote tags
+          persist-credentials: false
+
+      - name: Select the revision of a manual run
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          REQUESTED: ${{ inputs.sha }}
+        run: |
+          if [ -n "${REQUESTED}" ]; then
+            sha=$(git rev-parse --verify "${REQUESTED}^{commit}")
+          else
+            sha=$(git log --format='%H %s' origin/master \
+              | awk '$2 != "release:" && !($2 == "chore:" && $3 == "bump") && !found { print $1; found = 1 }')
+          fi
+          git merge-base --is-ancestor "${sha}" origin/master || { echo "::error::${sha} is not on master"; exit 1; }
+          git checkout --quiet "${sha}"
+
+      - name: Gate on the checks of this revision
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER_REPO: ${{ github.repository }}
+        run: SHA=$(git rev-parse HEAD) bash scripts/ci/release-gate.sh
 
       - name: Setup JDK 25
+        if: steps.gate.outputs.decision == 'release'
         uses: actions/setup-java@v6
         with:
           java-version: '25'
@@ -39,136 +80,86 @@ jobs:
 
       - name: Determine version
         id: version
-        run: |
-          # REL-01 (a): strict 3-part SemVer pattern, sorted by version not reachability.
-          # Ignores legacy short-form tags (v1.5, v1.8, etc.) deliberately.
-          LAST_TAG=$(git tag --sort=-version:refname --list 'v[0-9]*.[0-9]*.[0-9]*' | head -1)
-
-          if [ -z "$LAST_TAG" ]; then
-            HAS_TAGS=false
-          else
-            HAS_TAGS=true
-          fi
-          echo "has_tags=$HAS_TAGS" >> $GITHUB_OUTPUT
-
-          if [ "$HAS_TAGS" = "false" ]; then
-            # Initial release: read version from pom.xml SNAPSHOT
-            POM_VERSION=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
-            NEW_VERSION=${POM_VERSION%-SNAPSHOT}
-            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-            echo "Initial release: $NEW_VERSION (from pom.xml $POM_VERSION)"
-          else
-            echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
-
-            # Get commits since last tag — include subject (%s), body, and footer (%B)
-            # so the Conventional Commits `BREAKING CHANGE:` footer token participates
-            # in the major-bump regex (REVIEW finding CR-01).
-            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:'%H%n%B%n---END---')
-            SUBJECTS=$(git log ${LAST_TAG}..HEAD --pretty=format:'%s')
-
-            # Check for releasable commits — subject-level check only (skip token starts the subject line).
-            if ! echo "$SUBJECTS" | grep -qE "^(feat|fix|docs|refactor|perf|test|style|chore)(\(.+\))?[!]?:"; then
-              echo "should_skip=true" >> $GITHUB_OUTPUT
-              echo "No releasable commits found, skipping release"
-              exit 0
-            fi
-
-            # Determine bump type:
-            # - `feat!:` / `fix!:` subject (column 0) → major
-            # - `BREAKING CHANGE:` / `BREAKING-CHANGE:` footer (column 0) → major
-            # - `feat:` subject → minor
-            # - everything else releasable → patch
-            BUMP="patch"
-            if echo "$SUBJECTS" | grep -qE "^(feat|fix)(\(.+\))?!:" \
-               || echo "$COMMITS" | grep -qE "^BREAKING[ -]CHANGE:"; then
-              BUMP="major"
-            elif echo "$SUBJECTS" | grep -qE "^feat(\(.+\))?:"; then
-              BUMP="minor"
-            fi
-
-            # REL-01 (c): parser hardening — default PATCH=0; validate numeric MAJOR/MINOR/PATCH.
-            VERSION=${LAST_TAG#v}
-            IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
-            PATCH="${PATCH:-0}"
-            if ! [[ "$MAJOR" =~ ^[0-9]+$ && "$MINOR" =~ ^[0-9]+$ && "$PATCH" =~ ^[0-9]+$ ]]; then
-              echo "::error::Invalid SemVer in last tag '$LAST_TAG' (MAJOR=$MAJOR MINOR=$MINOR PATCH=$PATCH)"
-              exit 1
-            fi
-
-            # Apply bump
-            case $BUMP in
-              major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
-              minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
-              patch) PATCH=$((PATCH + 1)) ;;
-            esac
-
-            NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
-            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-            echo "bump=$BUMP" >> $GITHUB_OUTPUT
-            echo "Release: $NEW_VERSION ($BUMP bump from $LAST_TAG)"
-          fi
-
-          # Calculate next SNAPSHOT version (always next minor)
-          IFS='.' read -r M N P <<< "$NEW_VERSION"
-          NEXT_SNAPSHOT="${M}.$((N + 1)).0-SNAPSHOT"
-          echo "next_snapshot=$NEXT_SNAPSHOT" >> $GITHUB_OUTPUT
-
-      - name: Idempotency guard — refuse if tag already exists
-        if: steps.version.outputs.should_skip != 'true'
-        run: |
-          # REL-01 (d): refuse BEFORE the 19-minute build to avoid a duplicate-tag failure
-          # after a full verify run (previous regression pattern across v1.8/v1.9/v1.10/v1.11).
-          if git rev-parse "v${{ steps.version.outputs.new_version }}^{}" >/dev/null 2>&1; then
-            echo "::error::Tag v${{ steps.version.outputs.new_version }} already exists. Aborting before build."
-            exit 1
-          fi
-          echo "Tag v${{ steps.version.outputs.new_version }} is available."
-
-      - name: Set release version in pom.xml
-        if: steps.version.outputs.should_skip != 'true' && inputs.dry-run != true
-        run: ./mvnw versions:set -DnewVersion=${{ steps.version.outputs.new_version }} -DgenerateBackupPoms=false
-
-      - name: Build and verify
-        if: steps.version.outputs.should_skip != 'true' && inputs.dry-run != true
-        run: ./mvnw verify -Dspring.profiles.active=dev
-
-      - name: Configure git
-        if: steps.version.outputs.should_skip != 'true' && inputs.dry-run != true
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Create release commit and tag
-        if: steps.version.outputs.should_skip != 'true' && inputs.dry-run != true
-        run: |
-          git add pom.xml
-          git commit -m "release: v${{ steps.version.outputs.new_version }}"
-          git tag -a "v${{ steps.version.outputs.new_version }}" -m "Release v${{ steps.version.outputs.new_version }}"
-
-      - name: Push tag and create GitHub Release
-        if: steps.version.outputs.should_skip != 'true' && inputs.dry-run != true
-        env:
-          # REVIEW finding WR-05: use the same PAT as the checkout step so the Release
-          # page is authored by the operator (not `github-actions[bot]`) and `gh release
-          # create` keeps working if branch-protection ever restricts release creation.
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        run: |
-          git push origin "v${{ steps.version.outputs.new_version }}"
-          gh release create "v${{ steps.version.outputs.new_version }}" \
-            --title "v${{ steps.version.outputs.new_version }}" \
-            --generate-notes \
-            target/ctc-manager-${{ steps.version.outputs.new_version }}.jar
+        if: steps.gate.outputs.decision == 'release'
+        run: SHA=$(git rev-parse HEAD) bash scripts/ci/release-version.sh
 
       - name: Login to GHCR
-        if: steps.version.outputs.should_skip != 'true' && inputs.dry-run != true
+        if: steps.gate.outputs.decision == 'release' && steps.version.outputs.should_skip != 'true'
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Plan the remaining release steps
+        id: plan
+        if: steps.gate.outputs.decision == 'release' && steps.version.outputs.should_skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.new_version }}
+          IMAGE: ghcr.io/${{ github.repository_owner }}/ctc-manager
+          DRY_RUN: ${{ inputs.dry-run == true }}
+        run: |
+          if [ "${DRY_RUN}" = "true" ]; then
+            echo "Dry-run: release v${VERSION} would be published"
+            exit 0
+          fi
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+          if gh release view "v${VERSION}" > /dev/null 2>&1; then
+            echo "github_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "github_release=true" >> "$GITHUB_OUTPUT"
+          fi
+          if docker manifest inspect "${IMAGE}:${VERSION}" > /dev/null 2>&1; then
+            echo "image=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "image=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure git
+        if: steps.plan.outputs.publish == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Set release version in pom.xml
+        if: steps.plan.outputs.publish == 'true' && steps.version.outputs.resume != 'true'
+        run: ./mvnw versions:set -DnewVersion=${{ steps.version.outputs.new_version }} -DgenerateBackupPoms=false
+
+      - name: Check out the release tag of the earlier attempt
+        if: steps.plan.outputs.publish == 'true' && steps.version.outputs.resume == 'true'
+        run: git checkout --quiet "v${{ steps.version.outputs.new_version }}"
+
+      - name: Build and verify
+        if: steps.plan.outputs.publish == 'true' && (steps.version.outputs.resume != 'true' || steps.plan.outputs.github_release == 'true')
+        run: ./mvnw verify -Dspring.profiles.active=dev
+
+      # The release commit, its tag and master move together, so a failed push leaves nothing behind.
+      - name: Push release commit and tag
+        if: steps.plan.outputs.publish == 'true' && steps.version.outputs.resume != 'true'
+        env:
+          # PAT with repo scope, required to push past branch protection.
+          PUSH_URL: https://x-access-token:${{ secrets.RELEASE_TOKEN }}@github.com/${{ github.repository }}.git
+        run: |
+          VERSION=${{ steps.version.outputs.new_version }}
+          git add pom.xml
+          git commit -m "release: v${VERSION}" -m "[skip ci]"
+          git tag -a "v${VERSION}" -m "Release v${VERSION}"
+          git push --atomic "${PUSH_URL}" HEAD:master "v${VERSION}"
+
+      - name: Create GitHub Release
+        if: steps.plan.outputs.github_release == 'true'
+        env:
+          # The PAT authors the Release page as the operator, not github-actions[bot].
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          gh release create "v${{ steps.version.outputs.new_version }}" \
+            --title "v${{ steps.version.outputs.new_version }}" \
+            --generate-notes \
+            target/ctc-manager-${{ steps.version.outputs.new_version }}.jar
+
       - name: Build and push Docker image
-        if: steps.version.outputs.should_skip != 'true' && inputs.dry-run != true
+        if: steps.plan.outputs.image == 'true'
         run: |
           VERSION=${{ steps.version.outputs.new_version }}
           IMAGE=ghcr.io/${{ github.repository_owner }}/ctc-manager
@@ -178,9 +169,24 @@ jobs:
           docker push ${IMAGE}:latest
 
       - name: Bump to next SNAPSHOT
-        if: steps.version.outputs.should_skip != 'true' && inputs.dry-run != true
+        id: bump
+        if: steps.plan.outputs.publish == 'true'
         run: |
+          git fetch --quiet origin master
+          git checkout --quiet --force origin/master
+          current=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
+          if [ "${current}" != "${{ steps.version.outputs.new_version }}" ]; then
+            echo "master is already at ${current}, nothing to bump"
+            exit 0
+          fi
           ./mvnw versions:set -DnewVersion=${{ steps.version.outputs.next_snapshot }} -DgenerateBackupPoms=false
           git add pom.xml
           git commit -m "chore: bump version to ${{ steps.version.outputs.next_snapshot }} [skip ci]"
-          git push origin master
+          echo "push=true" >> "$GITHUB_OUTPUT"
+
+      - name: Push the SNAPSHOT bump
+        if: steps.bump.outputs.push == 'true'
+        env:
+          # PAT with repo scope, required to push past branch protection.
+          PUSH_URL: https://x-access-token:${{ secrets.RELEASE_TOKEN }}@github.com/${{ github.repository }}.git
+        run: git push "${PUSH_URL}" HEAD:master

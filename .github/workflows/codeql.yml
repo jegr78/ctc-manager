@@ -1,13 +1,9 @@
 name: CodeQL SAST
 
 on:
+  # Every master push is analyzed, because the release gate needs this check on each revision.
   push:
     branches: [master]
-    paths-ignore:
-      - '.planning/**'
-      - '*.md'
-      - 'docs/**'
-      - '.gitmessage'
   pull_request:
     branches: [master]
     paths-ignore:
