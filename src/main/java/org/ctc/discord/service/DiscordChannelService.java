@@ -13,6 +13,7 @@ import static org.springframework.util.StringUtils.hasText;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.LockTimeoutException;
+import jakarta.persistence.PersistenceException;
 import jakarta.persistence.PessimisticLockException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,6 +38,7 @@ import org.ctc.discord.event.ChannelCreatedEvent;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
 import org.ctc.discord.exception.DiscordAuthException;
+import org.ctc.discord.exception.DiscordChannelBusyException;
 import org.ctc.discord.exception.DiscordTransientException;
 import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.domain.exception.BusinessRuleException;
@@ -46,6 +48,7 @@ import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.SeasonPhaseGroup;
 import org.ctc.domain.repository.MatchRepository;
+import org.hibernate.exception.LockAcquisitionException;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -193,8 +196,12 @@ public class DiscordChannelService {
 		} catch (jakarta.persistence.EntityNotFoundException _) {
 			throw new EntityNotFoundException("Match", requested.getId());
 		} catch (PessimisticLockException | LockTimeoutException _) {
-			throw new BusinessRuleException(
-					"Another request is changing this match's Discord channel. Reload the page and try again.");
+			throw new DiscordChannelBusyException();
+		} catch (PersistenceException e) {
+			if (e.getCause() instanceof LockAcquisitionException) {
+				throw new DiscordChannelBusyException();
+			}
+			throw e;
 		}
 		return match;
 	}

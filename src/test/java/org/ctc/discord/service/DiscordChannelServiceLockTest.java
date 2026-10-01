@@ -11,19 +11,25 @@ import static org.mockito.Mockito.when;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.LockTimeoutException;
+import jakarta.persistence.PersistenceException;
 import jakarta.persistence.PessimisticLockException;
+import java.sql.SQLException;
 import java.util.UUID;
 import org.ctc.discord.DiscordBotIdentityCache;
 import org.ctc.discord.DiscordRestClient;
-import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.discord.exception.DiscordChannelBusyException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.repository.MatchRepository;
+import org.hibernate.exception.LockAcquisitionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
 
 class DiscordChannelServiceLockTest {
+
+	private static final String BUSY =
+			"Another request is changing this match's Discord channel. Reload the page and try again.";
 
 	private final DiscordRestClient restClient = mock(DiscordRestClient.class);
 	private final EntityManager entityManager = mock(EntityManager.class);
@@ -46,8 +52,8 @@ class DiscordChannelServiceLockTest {
 
 		// when / then
 		assertThatThrownBy(() -> service.createMatchChannel(match))
-				.isInstanceOf(BusinessRuleException.class)
-				.hasMessage("Another request is changing this match's Discord channel. Reload the page and try again.");
+				.isInstanceOf(DiscordChannelBusyException.class)
+				.hasMessage(BUSY);
 		verifyNoInteractions(restClient);
 	}
 
@@ -59,9 +65,33 @@ class DiscordChannelServiceLockTest {
 
 		// when / then
 		assertThatThrownBy(() -> service.linkExistingChannel(match, "c1"))
-				.isInstanceOf(BusinessRuleException.class)
-				.hasMessage("Another request is changing this match's Discord channel. Reload the page and try again.");
+				.isInstanceOf(DiscordChannelBusyException.class)
+				.hasMessage(BUSY);
 		verifyNoInteractions(restClient);
+	}
+
+	@Test
+	void givenDeadlockWhileLocking_whenChannelCreated_thenBusyMessageAndNoDiscordCall() {
+		// given
+		doThrow(new PersistenceException("deadlock",
+				new LockAcquisitionException("deadlock", new SQLException("Deadlock found", "40001", 1213))))
+				.when(entityManager).refresh(eq(match), eq(LockModeType.PESSIMISTIC_WRITE));
+
+		// when / then
+		assertThatThrownBy(() -> service.createMatchChannel(match))
+				.isInstanceOf(DiscordChannelBusyException.class)
+				.hasMessage(BUSY);
+		verifyNoInteractions(restClient);
+	}
+
+	@Test
+	void givenOtherPersistenceFailureWhileLocking_whenChannelCreated_thenItPropagates() {
+		// given
+		var failure = new PersistenceException("broken");
+		doThrow(failure).when(entityManager).refresh(eq(match), eq(LockModeType.PESSIMISTIC_WRITE));
+
+		// when / then
+		assertThatThrownBy(() -> service.createMatchChannel(match)).isSameAs(failure);
 	}
 
 	@Test
