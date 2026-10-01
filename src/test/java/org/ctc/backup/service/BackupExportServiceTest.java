@@ -26,7 +26,7 @@ import static org.mockito.Mockito.when;
 /**
  * Phase 73-03 — Mockito unit test for {@link BackupExportService}.
  *
- * <p>Stubs all 26 repositories, drives the three public methods, and asserts:
+ * <p>Stubs all 27 repositories, drives the three public methods, and asserts:
  * <ul>
  *   <li>{@code countRowsPerTable()} returns a {@link LinkedHashMap} keyed by
  *       {@link EntityRef#tableName()} in the order of {@link BackupSchema#getExportOrder()}.</li>

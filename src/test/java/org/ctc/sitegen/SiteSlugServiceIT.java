@@ -109,6 +109,22 @@ class SiteSlugServiceIT {
 	}
 
 	@Test
+	void givenUnstoredTeamWhoseSlugLooksLikeASuffix_whenASharedSlugIsSplit_thenItKeepsItsUrl() {
+		// given
+		Team two = team("Test AB " + id + " 2");
+		Team underscore = team("Test_AB_" + id);
+		Team dash = team("Test-AB-" + id);
+
+		// when
+		var slugs = siteSlugService.allocate();
+
+		// then
+		assertThat(slugs.team(two.getId())).as("legacy URL of the team named ...-2").isEqualTo(base + "-2");
+		assertThat(List.of(slugs.team(underscore.getId()), slugs.team(dash.getId())))
+				.as("the split shared slug skips the taken suffix").containsExactly(base + "-3", base + "-4");
+	}
+
+	@Test
 	void givenDriverWithStoredSlug_whenACollidingDriverIsAdded_thenTheFirstKeepsItsSlugAndTheNewOneGetsTheNextSuffix() {
 		// given
 		Driver first = driver("Test_AB_" + id);

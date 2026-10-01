@@ -71,20 +71,28 @@ public class SiteSlugService {
 		}
 
 		var created = new ArrayList<SiteSlug>();
+		var storedSlugs = Set.copyOf(taken);
 		pendingByBase.forEach((base, group) -> {
+			if (group.size() == 1 && !storedSlugs.contains(base)) {
+				assign(kind, group.getFirst(), base, base, slugs, created);
+			}
+		});
+		taken.addAll(pendingByBase.keySet());
+		pendingByBase.forEach((base, group) -> {
+			if (group.size() == 1 && !storedSlugs.contains(base)) {
+				return;
+			}
 			group.sort(Comparator.comparing(Profile::createdAt, Comparator.nullsFirst(Comparator.naturalOrder()))
 					.thenComparing(Profile::id));
-			if (!taken.contains(base) && group.size() > 1) {
+			if (!storedSlugs.contains(base)) {
 				created.add(new SiteSlug(kind, base, base, null));
-				taken.add(base);
 				log.warn("{} profiles {} shared the URL slug '{}'; it now lists them",
 						kind, group.stream().map(Profile::name).toList(), base);
 			}
 			for (Profile profile : group) {
-				String slug = taken.contains(base) ? nextFree(base, taken) : base;
+				String slug = nextFree(base, taken);
 				taken.add(slug);
-				slugs.put(profile.id(), slug);
-				created.add(new SiteSlug(kind, slug, base, profile.id()));
+				assign(kind, profile, slug, base, slugs, created);
 			}
 		});
 		siteSlugRepository.saveAll(created);
@@ -97,6 +105,12 @@ public class SiteSlugService {
 						.sorted(SLUG_ORDER)
 						.map(SiteSlug::getEntityId).toList())));
 		return slugs;
+	}
+
+	private static void assign(SiteSlugKind kind, Profile profile, String slug, String base,
+	                           Map<UUID, String> slugs, List<SiteSlug> created) {
+		slugs.put(profile.id(), slug);
+		created.add(new SiteSlug(kind, slug, base, profile.id()));
 	}
 
 	private static String nextFree(String base, Set<String> taken) {

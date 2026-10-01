@@ -9,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -25,6 +26,9 @@ import lombok.ToString;
 @NoArgsConstructor
 @ToString
 public class SiteSlug extends BaseEntity {
+
+	/** Every slug the allocation produces; a restored slug outside it could name a path outside the site. */
+	public static final Pattern FORMAT = Pattern.compile("[a-z0-9-]*");
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)

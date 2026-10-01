@@ -22,6 +22,7 @@ import org.ctc.sitegen.model.SiteSlugs;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.core.io.Resource;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -133,6 +134,12 @@ public class SiteGeneratorService {
         } catch (IOException e) {
             log.error("Site generation failed", e);
             result.addError("Generation failed: " + e.getMessage());
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Profile URLs were stored by a concurrent generation", e);
+            result.addError("Generation failed: another generation stored profile URLs at the same time. Try again.");
+        } catch (SiteSlugs.MissingSlugException e) {
+            log.warn("Site generation hit a profile without a URL", e);
+            result.addError("Generation failed: " + e.getMessage() + ". A team or driver was added meanwhile; try again.");
         }
 
         return result;

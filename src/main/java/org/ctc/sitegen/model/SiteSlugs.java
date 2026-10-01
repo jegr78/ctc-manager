@@ -3,6 +3,7 @@ package org.ctc.sitegen.model;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.ctc.domain.model.SiteSlug;
 import org.ctc.domain.model.SiteSlugKind;
 
 /**
@@ -15,6 +16,9 @@ public record SiteSlugs(Map<UUID, String> teams, Map<UUID, String> drivers, List
 		teams = Map.copyOf(teams);
 		drivers = Map.copyOf(drivers);
 		shared = List.copyOf(shared);
+		teams.values().forEach(SiteSlugs::requireFormat);
+		drivers.values().forEach(SiteSlugs::requireFormat);
+		shared.forEach(s -> requireFormat(s.slug()));
 	}
 
 	public String team(UUID teamId) {
@@ -29,12 +33,26 @@ public record SiteSlugs(Map<UUID, String> teams, Map<UUID, String> drivers, List
 		return shared.stream().filter(s -> s.kind() == kind).toList();
 	}
 
+	private static void requireFormat(String slug) {
+		if (!SiteSlug.FORMAT.matcher(slug).matches()) {
+			throw new IllegalStateException("Invalid stored site slug: " + slug);
+		}
+	}
+
 	private static String require(Map<UUID, String> slugs, UUID id, String kind) {
 		String slug = slugs.get(id);
 		if (slug == null) {
-			throw new IllegalStateException("No site slug allocated for " + kind + " " + id);
+			throw new MissingSlugException("No site slug allocated for " + kind + " " + id);
 		}
 		return slug;
+	}
+
+	/** Thrown for a team or driver created after the slugs of this generation were allocated. */
+	public static class MissingSlugException extends IllegalStateException {
+
+		public MissingSlugException(String message) {
+			super(message);
+		}
 	}
 
 	/** A slug whose URL now lists every profile that shared it. */

@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
@@ -148,5 +149,22 @@ class SiteGeneratorServiceIT {
         // alltime aggregation uses calculateAlltimeStandings (NOT the legacy seasonId overload).
         verify(standingsService, atLeastOnce()).calculateAlltimeStandings(anyList());
         verify(driverRankingService, atLeastOnce()).calculateAlltimeRanking(anyList());
+    }
+
+    @Test
+    void givenConcurrentSlugAllocation_whenGenerate_thenErrorAndThePreviousOutputStays() throws Exception {
+        // given
+        var outDir = java.nio.file.Files.createTempDirectory("sitegen-it-");
+        var previous = java.nio.file.Files.writeString(outDir.resolve("index.html"), "previous");
+        when(siteProperties.getOutputDir()).thenReturn(outDir.toString());
+        when(siteSlugService.allocate()).thenThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate"));
+
+        // when
+        var result = buildSut().generate();
+
+        // then
+        assertThat(result.getErrors()).as("generation errors").containsExactly(
+                "Generation failed: another generation stored profile URLs at the same time. Try again.");
+        assertThat(previous).as("previous output").hasContent("previous");
     }
 }
