@@ -44,13 +44,22 @@ class RaceResultsMobileE2ETest extends PlaywrightConfig {
 
 	@AfterEach
 	void removeFixture() {
-		testHelper.deleteSeasonCascade(fixture.season());
-		teamRepository.deleteAll(List.of(fixture.homeTeam(), fixture.awayTeam()));
-		driverRepository.delete(driver);
+		if (fixture == null) {
+			return;
+		}
+		try {
+			testHelper.deleteSeasonCascade(fixture.season());
+		} finally {
+			teamRepository.deleteAll(List.of(fixture.homeTeam(), fixture.awayTeam()));
+			if (driver != null) {
+				driverRepository.delete(driver);
+			}
+		}
 	}
 
 	@Test
 	void givenPhoneViewport_whenResultsFormOpened_thenOnlyTheTableScrollsSideways() {
+		// given
 		try (BrowserContext phone = browser.newContext(
 				new Browser.NewContextOptions().setViewportSize(new ViewportSize(390, 844)))) {
 			Page phonePage = phone.newPage();
