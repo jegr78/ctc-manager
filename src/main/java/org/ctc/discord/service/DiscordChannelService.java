@@ -10,6 +10,11 @@ import static org.ctc.discord.DiscordPermissions.VIEW_CHANNEL;
 import static org.ctc.util.LogSanitizer.sanitize;
 import static org.springframework.util.StringUtils.hasText;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.LockTimeoutException;
+import jakarta.persistence.PersistenceException;
+import jakarta.persistence.PessimisticLockException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.Normalizer;
@@ -33,14 +38,17 @@ import org.ctc.discord.event.ChannelCreatedEvent;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
 import org.ctc.discord.exception.DiscordAuthException;
+import org.ctc.discord.exception.DiscordChannelBusyException;
 import org.ctc.discord.exception.DiscordTransientException;
 import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.SeasonPhaseGroup;
 import org.ctc.domain.repository.MatchRepository;
+import org.hibernate.exception.LockAcquisitionException;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,9 +71,20 @@ public class DiscordChannelService {
 	private final DiscordBotIdentityCache botIdentityCache;
 	private final MatchRepository matchRepository;
 	private final ApplicationEventPublisher eventPublisher;
+	private final EntityManager entityManager;
 
+	/**
+	 * Creates the match's Discord channel and webhook. The match row stays locked until the
+	 * association is stored, and a link waits for that lock too. A request for a match that is
+	 * already linked returns {@code false} without creating a second channel.
+	 */
 	@Transactional
-	public void createMatchChannel(Match match) throws DiscordApiException {
+	public boolean createMatchChannel(Match requested) throws DiscordApiException {
+		Match match = lockForChannelChange(requested);
+		if (match.getDiscordChannelId() != null) {
+			log.info("Match {} already has Discord channel {}; nothing created", match.getId(), match.getDiscordChannelId());
+			return false;
+		}
 		DiscordGlobalConfig cfg = configService.getOrInitialize();
 		assertPreconditions(match, cfg);
 
@@ -134,10 +153,12 @@ public class DiscordChannelService {
 				match.getId(), channel.name(), channel.id());
 
 		eventPublisher.publishEvent(new ChannelCreatedEvent(match.getId()));
+		return true;
 	}
 
 	@Transactional
-	public void linkExistingChannel(Match match, String channelId) throws DiscordApiException {
+	public void linkExistingChannel(Match requested, String channelId) throws DiscordApiException {
+		Match match = lockForChannelChange(requested);
 		if (match.getDiscordChannelId() != null) {
 			throw new BusinessRuleException(
 					"Match already has a Discord channel linked: " + match.getDiscordChannelId());
@@ -162,6 +183,27 @@ public class DiscordChannelService {
 		// No ChannelCreatedEvent: linking a prepared channel must not auto-post Team Cards
 		// (DiscordAutoPostListener.onChannelCreated does) — the operator uses the explicit button.
 		log.info("Discord channel linked to match {} → channelId={}", match.getId(), sanitize(channelId));
+	}
+
+	private Match lockForChannelChange(Match requested) {
+		Match match = entityManager.find(Match.class, requested.getId());
+		if (match == null) {
+			throw new EntityNotFoundException("Match", requested.getId());
+		}
+		entityManager.flush();
+		try {
+			entityManager.refresh(match, LockModeType.PESSIMISTIC_WRITE);
+		} catch (jakarta.persistence.EntityNotFoundException _) {
+			throw new EntityNotFoundException("Match", requested.getId());
+		} catch (PessimisticLockException | LockTimeoutException _) {
+			throw new DiscordChannelBusyException();
+		} catch (PersistenceException e) {
+			if (e.getCause() instanceof LockAcquisitionException) {
+				throw new DiscordChannelBusyException();
+			}
+			throw e;
+		}
+		return match;
 	}
 
 	private static String loadWebhookAvatar() {

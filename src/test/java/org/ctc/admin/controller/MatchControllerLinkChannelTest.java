@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -14,6 +15,7 @@ import org.ctc.TestHelper;
 import org.ctc.TestHelper.SeasonFixture;
 import org.ctc.discord.exception.DiscordNotFoundException;
 import org.ctc.discord.service.DiscordChannelService;
+import org.ctc.discord.exception.DiscordChannelBusyException;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Match;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +48,60 @@ class MatchControllerLinkChannelTest {
 	@BeforeEach
 	void setUp() {
 		fixture = testHelper.createFullSeasonFixture("Test_Link");
+	}
+
+	@Test
+	void givenAlreadyLinkedMatch_whenCreateDiscordChannel_thenTheExistingChannelIsReported() throws Exception {
+		// given
+		var matchId = fixture.match().getId();
+		when(discordChannelService.createMatchChannel(any())).thenReturn(false);
+
+		// when
+		mockMvc.perform(post("/admin/matches/" + matchId + "/create-discord-channel"))
+				// then
+				.andExpect(redirectedUrl("/admin/matches/" + matchId))
+				.andExpect(flash().attribute("successMessage", "The match already has a Discord channel."));
+	}
+
+	@Test
+	void givenChannelChangeInProgress_whenCreateDiscordChannel_thenRetryMessageWithoutCategory() throws Exception {
+		// given
+		var matchId = fixture.match().getId();
+		when(discordChannelService.createMatchChannel(any())).thenThrow(new DiscordChannelBusyException());
+
+		// when
+		mockMvc.perform(post("/admin/matches/" + matchId + "/create-discord-channel"))
+				// then
+				.andExpect(redirectedUrl("/admin/matches/" + matchId))
+				.andExpect(flash().attribute("errorMessage", new DiscordChannelBusyException().getMessage()))
+				.andExpect(flash().attributeCount(1));
+	}
+
+	@Test
+	void givenChannelChangeInProgress_whenLinkDiscordChannel_thenRetryMessageWithoutCategory() throws Exception {
+		// given
+		var matchId = fixture.match().getId();
+		doThrow(new DiscordChannelBusyException()).when(discordChannelService).linkExistingChannel(any(), any());
+
+		// when
+		mockMvc.perform(post("/admin/matches/" + matchId + "/link-discord-channel").param("channelId", "c123"))
+				// then
+				.andExpect(redirectedUrl("/admin/matches/" + matchId))
+				.andExpect(flash().attribute("errorMessage", new DiscordChannelBusyException().getMessage()))
+				.andExpect(flash().attributeCount(1));
+	}
+
+	@Test
+	void givenUnlinkedMatch_whenCreateDiscordChannel_thenTheNewChannelIsReported() throws Exception {
+		// given
+		var matchId = fixture.match().getId();
+		when(discordChannelService.createMatchChannel(any())).thenReturn(true);
+
+		// when
+		mockMvc.perform(post("/admin/matches/" + matchId + "/create-discord-channel"))
+				// then
+				.andExpect(redirectedUrl("/admin/matches/" + matchId))
+				.andExpect(flash().attribute("successMessage", "Discord channel created."));
 	}
 
 	@Test

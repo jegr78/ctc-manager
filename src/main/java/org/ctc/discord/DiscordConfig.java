@@ -1,11 +1,14 @@
 package org.ctc.discord;
 
+import java.net.http.HttpClient;
 import java.time.Clock;
+import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 @Configuration
@@ -27,10 +30,16 @@ public class DiscordConfig {
 			@Value("${app.discord.base-url:https://discord.com/api/v10}") String baseUrl,
 			@Value("${app.discord.bot-token:}") String botToken,
 			@org.springframework.beans.factory.annotation.Qualifier("discordUserAgent") String discordUserAgent,
+			@Value("${app.discord.connect-timeout:5s}") Duration connectTimeout,
+			@Value("${app.discord.read-timeout:30s}") Duration readTimeout,
 			DiscordRateLimitInterceptor rateLimitInterceptor,
 			DiscordHostValidator hostValidator) {
 		hostValidator.requireAllowed(baseUrl);
+		var requestFactory = new JdkClientHttpRequestFactory(
+				HttpClient.newBuilder().connectTimeout(connectTimeout).build());
+		requestFactory.setReadTimeout(readTimeout);
 		return RestClient.builder()
+				.requestFactory(requestFactory)
 				.baseUrl(baseUrl)
 				.defaultHeader(HttpHeaders.AUTHORIZATION, "Bot " + botToken)
 				.defaultHeader(HttpHeaders.USER_AGENT, discordUserAgent)

@@ -10,12 +10,16 @@ app:
   # allowed-hosts: positive SSRF whitelist; both clients reject any other host.
   # base-url: production Discord REST endpoint; WireMock ITs override via @DynamicPropertySource.
   # rate-limit.jitter-ms: range "min-max" parsed by DiscordRateLimitInterceptor.
+  # rate-limit.max-retry-after-ms: a longer Retry-After fails the call, since callers may hold a match row lock.
   discord:
     bot-token: ${DISCORD_BOT_TOKEN:}
     allowed-hosts: discord.com
     base-url: https://discord.com/api/v10
+    connect-timeout: 5s
+    read-timeout: 30s
     rate-limit:
       jitter-ms: 100-500
+      max-retry-after-ms: 10000
 
 spring:
   application:

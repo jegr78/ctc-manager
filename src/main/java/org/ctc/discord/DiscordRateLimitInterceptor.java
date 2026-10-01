@@ -31,13 +31,16 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 	private final long jitterMinMs;
 	private final long jitterMaxMs;
 	private final long[] fiveXxBackoffMs;
+	private final long maxRetryAfterMs;
 	private final ConcurrentMap<String, BucketState> buckets = new ConcurrentHashMap<>();
 
 	public DiscordRateLimitInterceptor(
 			Clock clock,
 			@Value("${app.discord.rate-limit.jitter-ms:100-500}") String jitterRange,
-			@Value("${app.discord.rate-limit.fivexx-backoff-ms:}") String fiveXxBackoffCsv) {
+			@Value("${app.discord.rate-limit.fivexx-backoff-ms:}") String fiveXxBackoffCsv,
+			@Value("${app.discord.rate-limit.max-retry-after-ms:10000}") long maxRetryAfterMs) {
 		this.clock = clock;
+		this.maxRetryAfterMs = maxRetryAfterMs;
 		long[] jitter = parseJitter(jitterRange);
 		this.jitterMinMs = jitter[0];
 		this.jitterMaxMs = jitter[1];
@@ -60,8 +63,14 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 							DiscordApiExceptionMapper.TRANSIENT_MESSAGE,
 							new IOException("Rate-limit exhausted after " + MAX_429_RETRIES + " retries"));
 				}
-				long sleepMs = parseRetryAfterMs(response.getHeaders()) + jitterMs();
+				long retryAfterMs = parseRetryAfterMs(response.getHeaders());
 				response.close();
+				if (retryAfterMs > maxRetryAfterMs) {
+					throw new DiscordTransientException(
+							DiscordApiExceptionMapper.TRANSIENT_MESSAGE,
+							new IOException("Retry-After of " + retryAfterMs + " ms exceeds " + maxRetryAfterMs + " ms"));
+				}
+				long sleepMs = retryAfterMs + jitterMs();
 				sleep(sleepMs);
 				four29Attempts++;
 				continue;

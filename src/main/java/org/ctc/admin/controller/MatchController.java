@@ -12,6 +12,7 @@ import org.ctc.discord.DiscordRestClient;
 import org.ctc.discord.dto.ChannelModifyRequest;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
+import org.ctc.discord.exception.DiscordChannelBusyException;
 import org.ctc.discord.service.DiscordChannelService;
 import org.ctc.discord.service.DiscordPostService;
 import org.ctc.domain.exception.BusinessRuleException;
@@ -137,9 +138,11 @@ public class MatchController {
 	@PostMapping("/{id}/create-discord-channel")
 	public String createDiscordChannel(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
 		try {
-			discordChannelService.createMatchChannel(matchService.findById(id));
+			boolean created = discordChannelService.createMatchChannel(matchService.findById(id));
 			String autoPostError = consumeAutoPostError();
-			if (autoPostError != null) {
+			if (!created) {
+				redirectAttributes.addFlashAttribute("successMessage", "The match already has a Discord channel.");
+			} else if (autoPostError != null) {
 				redirectAttributes.addFlashAttribute("errorMessage",
 						"Channel created. Team Cards post failed: " + autoPostError
 								+ " — click Re-Post Team Cards to retry.");
@@ -147,6 +150,8 @@ public class MatchController {
 			} else {
 				redirectAttributes.addFlashAttribute("successMessage", "Discord channel created.");
 			}
+		} catch (DiscordChannelBusyException e) {
+			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
 		} catch (BusinessRuleException e) {
 			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
 			redirectAttributes.addFlashAttribute("errorCategory", "not-found");
@@ -167,6 +172,8 @@ public class MatchController {
 		try {
 			discordChannelService.linkExistingChannel(matchService.findById(id), channelId.trim());
 			redirectAttributes.addFlashAttribute("successMessage", "Discord channel linked.");
+		} catch (DiscordChannelBusyException e) {
+			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
 		} catch (BusinessRuleException e) {
 			applyErrorFlash(redirectAttributes, e, "Link Discord Channel");
 		} catch (DiscordApiException e) {
