@@ -6,10 +6,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 import org.ctc.admin.TestDataService;
 import org.ctc.backup.dto.BackupImportPreview;
 import org.ctc.backup.dto.BackupImportResult;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -69,6 +71,17 @@ class BackupImportNullScoringFkRoundTripIT {
     @Value("${app.backup.staging-dir}")
     private String stagingDirRaw;
 
+    private UUID phaseId;
+    private Map<String, Object> originalScoring;
+
+    @AfterEach
+    void restoreScoring() {
+        if (phaseId != null) {
+            jdbcTemplate.update("UPDATE season_phases SET race_scoring_id = ?, match_scoring_id = ? WHERE id = ?",
+                    originalScoring.get("race_scoring_id"), originalScoring.get("match_scoring_id"), phaseId);
+        }
+    }
+
     @BeforeEach
     void seedFixture() throws IOException {
         testDataService.seed();
@@ -79,8 +92,11 @@ class BackupImportNullScoringFkRoundTripIT {
     void givenPhaseWithNullScoringFks_whenExportWipeImport_thenImportSucceedsAndNullsRoundTrip()
             throws Exception {
         // given — force one phase into the legitimate null-scoring state
-        UUID phaseId = jdbcTemplate.queryForObject(
-                "SELECT id FROM season_phases ORDER BY id LIMIT 1", UUID.class);
+        phaseId = jdbcTemplate.queryForObject(
+                "SELECT sp.id FROM season_phases sp JOIN seasons s ON s.id = sp.season_id "
+                        + "WHERE s.active = false ORDER BY sp.id LIMIT 1", UUID.class);
+        originalScoring = jdbcTemplate.queryForMap(
+                "SELECT race_scoring_id, match_scoring_id FROM season_phases WHERE id = ?", phaseId);
         jdbcTemplate.update(
                 "UPDATE season_phases SET race_scoring_id = NULL, match_scoring_id = NULL WHERE id = ?",
                 phaseId);
