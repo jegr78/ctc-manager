@@ -301,7 +301,7 @@ public class StandingsService {
 		for (PlayoffMatchup matchup : playoffMatchupRepository.findByRoundPlayoffPhaseIdAndWinnerIsNotNull(phase.getId())) {
 			var winner = standings.computeIfAbsent(matchup.getWinner().getId(), id -> new TeamStanding(matchup.getWinner()));
 			winner.addWin();
-			winner.addMatchPoints(matchScoring.getPointsWin());
+			winner.addMatchPoints(pointsWin(matchScoring));
 			boolean winnerIsTeam1 = matchup.getTeam1() != null && matchup.getWinner().getId().equals(matchup.getTeam1().getId());
 			Team loserTeam = winnerIsTeam1 ? matchup.getTeam2() : matchup.getTeam1();
 			if (matchup.isBye() || loserTeam == null) {
@@ -316,7 +316,7 @@ public class StandingsService {
 				winner.addPointsFor(walkoverScore);
 				continue;
 			}
-			loser.addMatchPoints(matchScoring.getPointsLoss());
+			loser.addMatchPoints(pointsLoss(matchScoring));
 			int team1Points = matchup.getHomeScore() != null ? matchup.getHomeScore() : 0;
 			int team2Points = matchup.getAwayScore() != null ? matchup.getAwayScore() : 0;
 			winner.addPointsFor(winnerIsTeam1 ? team1Points : team2Points);
@@ -380,7 +380,7 @@ public class StandingsService {
 			var homeStanding = standingsMap.get(homeId);
 			if (homeStanding != null) {
 				homeStanding.addWin();
-				homeStanding.addMatchPoints(matchScoring.getPointsWin());
+				homeStanding.addMatchPoints(pointsWin(matchScoring));
 			}
 			return;
 		}
@@ -403,7 +403,7 @@ public class StandingsService {
 			var opponentStanding = opponentId != null ? standingsMap.get(opponentId) : null;
 			if (opponentStanding != null) {
 				opponentStanding.addWin();
-				opponentStanding.addMatchPoints(matchScoring.getPointsWin());
+				opponentStanding.addMatchPoints(pointsWin(matchScoring));
 				opponentStanding.addPointsFor(walkoverScore);
 			}
 			return;
@@ -435,26 +435,39 @@ public class StandingsService {
 
 		if (homeTotal > awayTotal) {
 			homeStanding.addWin();
-			homeStanding.addMatchPoints(matchScoring.getPointsWin());
+			homeStanding.addMatchPoints(pointsWin(matchScoring));
 			if (awayStanding != null) {
 				awayStanding.addLoss();
-				awayStanding.addMatchPoints(matchScoring.getPointsLoss());
+				awayStanding.addMatchPoints(pointsLoss(matchScoring));
 			}
 		} else if (homeTotal < awayTotal) {
 			homeStanding.addLoss();
-			homeStanding.addMatchPoints(matchScoring.getPointsLoss());
+			homeStanding.addMatchPoints(pointsLoss(matchScoring));
 			if (awayStanding != null) {
 				awayStanding.addWin();
-				awayStanding.addMatchPoints(matchScoring.getPointsWin());
+				awayStanding.addMatchPoints(pointsWin(matchScoring));
 			}
 		} else {
 			homeStanding.addDraw();
-			homeStanding.addMatchPoints(matchScoring.getPointsDraw());
+			homeStanding.addMatchPoints(pointsDraw(matchScoring));
 			if (awayStanding != null) {
 				awayStanding.addDraw();
-				awayStanding.addMatchPoints(matchScoring.getPointsDraw());
+				awayStanding.addMatchPoints(pointsDraw(matchScoring));
 			}
 		}
+	}
+
+	// A phase without match scoring still counts its games but awards no match points.
+	private static int pointsWin(MatchScoring matchScoring) {
+		return matchScoring == null ? 0 : matchScoring.getPointsWin();
+	}
+
+	private static int pointsDraw(MatchScoring matchScoring) {
+		return matchScoring == null ? 0 : matchScoring.getPointsDraw();
+	}
+
+	private static int pointsLoss(MatchScoring matchScoring) {
+		return matchScoring == null ? 0 : matchScoring.getPointsLoss();
 	}
 
 	private UUID resolveTeamId(UUID teamId, Map<UUID, UUID> successionMap) {

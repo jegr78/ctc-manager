@@ -217,8 +217,11 @@ public class RaceController {
 						rf.getDriverId(), rf.getDriverPsnId(), rf.getTeamShortName(),
 						rf.getPosition(), rf.getQualiPosition(), rf.isFastestLap()))
 				.toList();
-		String message = raceService.saveResults(id, resultData);
-		redirectAttributes.addFlashAttribute("successMessage", message);
+		try {
+			redirectAttributes.addFlashAttribute("successMessage", raceService.saveResults(id, resultData));
+		} catch (BusinessRuleException e) {
+			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+		}
 		return "redirect:/admin/races/" + id + "/results";
 	}
 

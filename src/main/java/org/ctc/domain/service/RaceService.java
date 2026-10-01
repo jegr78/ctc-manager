@@ -19,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class RaceService {
 
+	static final String NO_RACE_SCORING = "This phase has no race scoring. Set one on the phase before entering results.";
+
 	private final RaceRepository raceRepository;
 	private final MatchRepository matchRepository;
 	private final MatchdayRepository matchdayRepository;
@@ -228,6 +230,9 @@ public class RaceService {
 	public String saveResults(UUID raceId, List<RaceResultData> results) {
 		var race = raceRepository.findById(raceId).orElseThrow();
 		PlayoffDecisionGuard.requireOpen(race);
+		if (race.getMatchday().getPhase().getRaceScoring() == null) {
+			throw new BusinessRuleException(NO_RACE_SCORING);
+		}
 
 		race.getResults().clear();
 		raceRepository.saveAndFlush(race);
