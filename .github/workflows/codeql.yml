@@ -57,6 +57,15 @@ jobs:
       - name: Build for CodeQL
         run: ./mvnw compile --no-transfer-progress -DskipTests -Dspring.profiles.active=dev
 
+      - name: Record the open alerts before the analysis
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.ref_name }}
+          OWNER_REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: bash scripts/ci/codeql-gate.sh snapshot "$RUNNER_TEMP/codeql-baseline.txt"
+
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
         with:
@@ -71,56 +80,4 @@ jobs:
           BASE_REF: ${{ github.base_ref || 'master' }}
           OWNER_REPO: ${{ github.repository }}
           EVENT_NAME: ${{ github.event_name }}
-        run: |
-          set -euo pipefail
-
-          fetch_alerts_by_ref() {
-            local ref="$1"
-            gh api -X GET "repos/${OWNER_REPO}/code-scanning/alerts" \
-              -f state=open \
-              -f "ref=refs/heads/${ref}" \
-              --paginate \
-              --jq '
-                .[] | select(
-                  .dismissed_at == null and
-                  (.rule.security_severity_level // "" | IN("high","critical"))
-                ) | "\(.rule.id)|\(.most_recent_instance.location.path)"
-              ' 2>/dev/null | sort -u || true
-          }
-
-          fetch_alerts_by_pr() {
-            local pr="$1"
-            gh api -X GET "repos/${OWNER_REPO}/code-scanning/alerts" \
-              -f state=open \
-              -f "pr=${pr}" \
-              --paginate \
-              --jq '
-                .[] | select(
-                  .dismissed_at == null and
-                  (.rule.security_severity_level // "" | IN("high","critical"))
-                ) | "\(.rule.id)|\(.most_recent_instance.location.path)"
-              ' 2>/dev/null | sort -u || true
-          }
-
-          if [ "${EVENT_NAME}" = "pull_request" ]; then
-            HEAD_ALERTS=$(fetch_alerts_by_pr "${PR_NUMBER}" || true)
-          else
-            HEAD_ALERTS=$(fetch_alerts_by_ref "${HEAD_REF}" || true)
-          fi
-          BASE_ALERTS=$(fetch_alerts_by_ref "${BASE_REF}" || true)
-
-          if [ -z "${BASE_ALERTS}" ] && [ -z "${HEAD_ALERTS}" ]; then
-            echo "No HIGH/CRITICAL alerts on either ref."
-            exit 0
-          fi
-          if [ -z "${BASE_ALERTS}" ] && [ -n "${HEAD_ALERTS}" ]; then
-            echo "::warning::No prior scan data for base ref=${BASE_REF}; treating all HEAD alerts as net-new."
-          fi
-
-          NEW_ALERTS=$(comm -23 <(echo "${HEAD_ALERTS}") <(echo "${BASE_ALERTS}") || true)
-
-          if [ -n "${NEW_ALERTS}" ]; then
-            echo "::error::New HIGH/CRITICAL CodeQL alerts introduced:"
-            echo "${NEW_ALERTS}"
-            exit 1
-          fi
+        run: BASELINE_FILE="$RUNNER_TEMP/codeql-baseline.txt" bash scripts/ci/codeql-gate.sh
