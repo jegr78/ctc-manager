@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       sha:
-        description: 'Master revision to evaluate (default: the tip of master).'
+        description: 'Master revision to evaluate (default: the latest master commit that is not a release or snapshot commit).'
         required: false
         type: string
       dry-run:
@@ -27,28 +27,41 @@ concurrency:
 permissions:
   contents: write
   packages: write
-  checks: read
+  actions: read
 
 jobs:
   release:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
     env:
-      REQUIRED_CHECKS: |
-        build-and-test
-        dockerfile-noble-pin-guard
-        docker-build
-        Analyze (java-kotlin)
+      REQUIRED_JOBS: |
+        .github/workflows/ci.yml:build-and-test
+        .github/workflows/ci.yml:dockerfile-noble-pin-guard
+        .github/workflows/ci.yml:docker-build
+        .github/workflows/codeql.yml:Analyze (java-kotlin)
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha || inputs.sha || 'master' }}
+          ref: ${{ github.event.workflow_run.head_sha || 'master' }}
           fetch-depth: 0
           fetch-tags: true          # required so `git tag` returns remote tags
-          # PAT with repo scope — required to push past branch protection
-          token: ${{ secrets.RELEASE_TOKEN }}
+          persist-credentials: false
+
+      - name: Select the revision of a manual run
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          REQUESTED: ${{ inputs.sha }}
+        run: |
+          if [ -n "${REQUESTED}" ]; then
+            sha=$(git rev-parse --verify "${REQUESTED}^{commit}")
+          else
+            sha=$(git log --format='%H %s' origin/master \
+              | awk '$2 != "release:" && !($2 == "chore:" && $3 == "bump") && !found { print $1; found = 1 }')
+          fi
+          git merge-base --is-ancestor "${sha}" origin/master || { echo "::error::${sha} is not on master"; exit 1; }
+          git checkout --quiet "${sha}"
 
       - name: Gate on the checks of this revision
         id: gate
@@ -69,6 +82,14 @@ jobs:
         id: version
         if: steps.gate.outputs.decision == 'release'
         run: SHA=$(git rev-parse HEAD) bash scripts/ci/release-version.sh
+
+      - name: Login to GHCR
+        if: steps.gate.outputs.decision == 'release' && steps.version.outputs.should_skip != 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Plan the remaining release steps
         id: plan
@@ -116,12 +137,15 @@ jobs:
       # The release commit, its tag and master move together, so a failed push leaves nothing behind.
       - name: Push release commit and tag
         if: steps.plan.outputs.publish == 'true' && steps.version.outputs.resume != 'true'
+        env:
+          # PAT with repo scope, required to push past branch protection.
+          PUSH_URL: https://x-access-token:${{ secrets.RELEASE_TOKEN }}@github.com/${{ github.repository }}.git
         run: |
           VERSION=${{ steps.version.outputs.new_version }}
           git add pom.xml
           git commit -m "release: v${VERSION}" -m "[skip ci]"
           git tag -a "v${VERSION}" -m "Release v${VERSION}"
-          git push --atomic origin HEAD:master "v${VERSION}"
+          git push --atomic "${PUSH_URL}" HEAD:master "v${VERSION}"
 
       - name: Create GitHub Release
         if: steps.plan.outputs.github_release == 'true'
@@ -134,14 +158,6 @@ jobs:
             --generate-notes \
             target/ctc-manager-${{ steps.version.outputs.new_version }}.jar
 
-      - name: Login to GHCR
-        if: steps.plan.outputs.image == 'true'
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build and push Docker image
         if: steps.plan.outputs.image == 'true'
         run: |
@@ -153,6 +169,7 @@ jobs:
           docker push ${IMAGE}:latest
 
       - name: Bump to next SNAPSHOT
+        id: bump
         if: steps.plan.outputs.publish == 'true'
         run: |
           git fetch --quiet origin master
@@ -165,4 +182,11 @@ jobs:
           ./mvnw versions:set -DnewVersion=${{ steps.version.outputs.next_snapshot }} -DgenerateBackupPoms=false
           git add pom.xml
           git commit -m "chore: bump version to ${{ steps.version.outputs.next_snapshot }} [skip ci]"
-          git push origin HEAD:master
+          echo "push=true" >> "$GITHUB_OUTPUT"
+
+      - name: Push the SNAPSHOT bump
+        if: steps.bump.outputs.push == 'true'
+        env:
+          # PAT with repo scope, required to push past branch protection.
+          PUSH_URL: https://x-access-token:${{ secrets.RELEASE_TOKEN }}@github.com/${{ github.repository }}.git
+        run: git push "${PUSH_URL}" HEAD:master

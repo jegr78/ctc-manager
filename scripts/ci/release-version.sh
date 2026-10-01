@@ -9,6 +9,10 @@ shopt -s inherit_errexit
 OUTPUT="${GITHUB_OUTPUT:-/dev/stdout}"
 out() { echo "$1" >> "${OUTPUT}"; }
 
+pom_version() {
+  git show "$1:pom.xml" | perl -0777 -ne 's{<parent>.*?</parent>}{}s; print $1 if m{<version>([^<]+)</version>}'
+}
+
 snapshot_after() {
   local major minor patch
   IFS='.' read -r major minor patch <<< "$1"
@@ -16,10 +20,15 @@ snapshot_after() {
 }
 
 resumed=$(git log --format='%H %P %s' "${SHA}..origin/master" \
-  | awk -v sha="${SHA}" '$2 == sha && $3 == "release:" && $4 ~ /^v[0-9]+\.[0-9]+\.[0-9]+$/ { print $1 " " substr($4, 2) }')
+  | awk -v sha="${SHA}" 'NF == 4 && $2 == sha && $3 == "release:" && $4 ~ /^v[0-9]+\.[0-9]+\.[0-9]+$/ { print $1 " " substr($4, 2) }')
 if [ -n "${resumed}" ]; then
   read -r release_commit version <<< "${resumed}"
   if [ "$(git rev-parse "v${version}^{commit}" 2>/dev/null || true)" = "${release_commit}" ]; then
+    if [ "$(git diff --name-only "${SHA}" "${release_commit}")" != "pom.xml" ] \
+       || [ "$(pom_version "${release_commit}")" != "${version}" ]; then
+      echo "::error::Release commit ${release_commit} of v${version} is not only the pom.xml version change on top of ${SHA}"
+      exit 1
+    fi
     out "resume=true"
     out "new_version=${version}"
     out "next_snapshot=$(snapshot_after "${version}")"
@@ -29,7 +38,8 @@ if [ -n "${resumed}" ]; then
 fi
 out "resume=false"
 
-last_tag=$(git tag --sort=-version:refname --list 'v[0-9]*.[0-9]*.[0-9]*' | head -1)
+last_tag=$(git tag --sort=-version:refname --list 'v[0-9]*.[0-9]*.[0-9]*' \
+  | awk '/^v[0-9]+\.[0-9]+\.[0-9]+$/ && !found { print; found = 1 }')
 if [ -z "${last_tag}" ]; then
   pom_version=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
   version=${pom_version%-SNAPSHOT}

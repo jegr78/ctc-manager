@@ -19,12 +19,15 @@ import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Runs {@code scripts/ci/release-gate.sh} and {@code scripts/ci/release-version.sh} in a
- * temporary clone with a pushed master, and a fake {@code gh} that serves check-run JSON the way
+ * temporary clone with a pushed master, and a fake {@code gh} that serves workflow-run and job JSON the way
  * {@code gh api --paginate --slurp} does, or fails like an API error.
  */
 class ReleaseScriptsTest {
 
-	private static final String REQUIRED = "build-and-test\ndocker-build\nAnalyze (java-kotlin)\n";
+	private static final String CI = ".github/workflows/ci.yml";
+	private static final String CODEQL = ".github/workflows/codeql.yml";
+	private static final String REQUIRED = CI + ":build-and-test\n" + CI + ":docker-build\n" + CODEQL
+			+ ":Analyze (java-kotlin)\n";
 
 	@TempDir
 	Path dir;
@@ -42,13 +45,21 @@ class ReleaseScriptsTest {
 		Path gh = bin.resolve("gh");
 		Files.writeString(gh, """
 				#!/usr/bin/env bash
-				if [ -f "$FAKE_DIR/checks.fail" ]; then
+				[ "$1 $2 $3" = "api --method GET" ] || { echo "unexpected gh call: $*" >&2; exit 2; }
+				case "$4" in
+				  repos/owner/repo/actions/runs) file=runs ;;
+				  repos/owner/repo/actions/runs/*/jobs) file=jobs-$(basename "$(dirname "$4")") ;;
+				  *) echo "unexpected path: $4" >&2; exit 2 ;;
+				esac
+				if [ -f "$FAKE_DIR/$file.fail" ]; then
 				  echo "HTTP 502: Bad Gateway" >&2
 				  exit 1
 				fi
-				printf '[%s]' "$(cat "$FAKE_DIR/checks.json")"
+				printf '[%s]' "$(cat "$FAKE_DIR/$file.json")"
 				""");
 		Files.setPosixFilePermissions(gh, PosixFilePermissions.fromString("rwxr-xr-x"));
+		Files.writeString(work.resolve("pom.xml"), pom("1.3.0-SNAPSHOT"));
+		git("add", "pom.xml");
 		commit("chore: initial commit");
 		git("tag", "-a", "v1.2.3", "-m", "Release v1.2.3");
 		push();
@@ -58,63 +69,79 @@ class ReleaseScriptsTest {
 	class Gate {
 
 		@Test
-		void givenAllRequiredChecksSucceeded_whenGated_thenRelease() throws Exception {
+		void givenAllRequiredJobsSucceeded_whenGated_thenRelease() throws Exception {
 			// given
 			String sha = commitAndPush("fix: a bug");
-			checks(check(1, "build-and-test", "completed", "success"), check(2, "docker-build", "completed", "success"),
-					check(3, "Analyze (java-kotlin)", "completed", "success"));
+			greenRuns();
 
 			// when
 			var run = gate(sha);
 
 			// then
-			assertThat(run.exit()).as("gate exit code").isZero();
+			assertThat(run.exit()).as("gate exit code: %s", run.output()).isZero();
 			assertThat(run.outputs()).as("gate decision").containsEntry("decision", "release");
 		}
 
 		@Test
-		void givenFailedPendingCancelledAndMissingChecks_whenGated_thenSkipNamingEach() throws Exception {
+		void givenFailedCiRunAndCancelledCodeqlRun_whenGated_thenSkipNamingEach() throws Exception {
 			// given
 			String sha = commitAndPush("fix: a bug");
-			checks(check(1, "build-and-test", "completed", "failure"), check(2, "docker-build", "in_progress", null),
-					check(3, "Analyze (java-kotlin)", "completed", "cancelled"));
+			runs(run(1, CI, "completed", "failure"), run(2, CODEQL, "completed", "cancelled"));
 
 			// when
-			var run = gate(sha, REQUIRED + "dockerfile-noble-pin-guard\n");
+			var run = gate(sha);
 
 			// then
 			assertThat(run.exit()).as("gate exit code").isZero();
 			assertThat(run.outputs()).as("gate decision").containsEntry("decision", "skip");
-			assertThat(run.output()).as("skip notice").contains("build-and-test=failure", "docker-build=pending",
-					"Analyze (java-kotlin)=cancelled", "dockerfile-noble-pin-guard=missing");
+			assertThat(run.output()).as("skip notice").contains(CI + "=failure", CODEQL + "=cancelled");
 		}
 
 		@Test
-		void givenOnlyOneRequiredCheckIsStillRunning_whenGated_thenSkip() throws Exception {
+		void givenCodeqlStillRunningAndNoRunOfAnotherRequiredWorkflow_whenGated_thenSkip() throws Exception {
 			// given
 			String sha = commitAndPush("fix: a bug");
-			checks(check(1, "build-and-test", "completed", "success"), check(2, "docker-build", "completed", "success"),
-					check(3, "Analyze (java-kotlin)", "queued", null));
+			runs(run(2, CODEQL, "in_progress", null));
+
+			// when
+			var run = gate(sha, REQUIRED + ".github/workflows/other.yml:job\n");
+
+			// then
+			assertThat(run.outputs()).as("gate decision").containsEntry("decision", "skip");
+			assertThat(run.output()).as("skip notice").contains(CI + "=missing", CODEQL + "=pending",
+					".github/workflows/other.yml=missing");
+		}
+
+		@Test
+		void givenSuccessfulRunWithoutARequiredJob_whenGated_thenSkip() throws Exception {
+			// given
+			String sha = commitAndPush("fix: a bug");
+			runs(run(1, CI, "completed", "success"), run(2, CODEQL, "completed", "success"));
+			jobs(1, job("build-and-test", "completed", "success"), job("docker-build", "completed", "skipped"));
+			jobs(2, job("Analyze (java-kotlin)", "completed", "success"));
+
+			// when
+			var run = gate(sha, REQUIRED + CI + ":dockerfile-noble-pin-guard\n");
+
+			// then
+			assertThat(run.outputs()).as("gate decision").containsEntry("decision", "skip");
+			assertThat(run.output()).as("skip notice").contains("docker-build=skipped",
+					"dockerfile-noble-pin-guard=missing").doesNotContain("build-and-test=");
+		}
+
+		@Test
+		void givenOlderFailedRunAndNewerSuccessfulRun_whenGated_thenTheLatestRunCounts() throws Exception {
+			// given
+			String sha = commitAndPush("fix: a bug");
+			greenRuns();
+			runs(run(1, CI, "completed", "success"), run(0, CI, "completed", "failure"),
+					run(2, CODEQL, "completed", "success"));
 
 			// when
 			var run = gate(sha);
 
 			// then
-			assertThat(run.outputs()).as("gate decision while CodeQL runs").containsEntry("decision", "skip");
-		}
-
-		@Test
-		void givenFailedCheckThatSucceededOnRerun_whenGated_thenTheLatestRunCounts() throws Exception {
-			// given
-			String sha = commitAndPush("fix: a bug");
-			checks(check(9, "build-and-test", "completed", "success"), check(1, "build-and-test", "completed", "failure"),
-					check(2, "docker-build", "completed", "success"), check(3, "Analyze (java-kotlin)", "completed", "success"));
-
-			// when
-			var run = gate(sha);
-
-			// then
-			assertThat(run.outputs()).as("gate decision after a successful rerun").containsEntry("decision", "release");
+			assertThat(run.outputs()).as("gate decision with a newer successful run").containsEntry("decision", "release");
 		}
 
 		@Test
@@ -122,8 +149,7 @@ class ReleaseScriptsTest {
 			// given
 			String sha = commitAndPush("fix: a bug");
 			commitAndPush("feat: something newer");
-			checks(check(1, "build-and-test", "completed", "success"), check(2, "docker-build", "completed", "success"),
-					check(3, "Analyze (java-kotlin)", "completed", "success"));
+			greenRuns();
 
 			// when
 			var run = gate(sha);
@@ -139,8 +165,7 @@ class ReleaseScriptsTest {
 			String sha = commitAndPush("fix: a bug");
 			commit("release: v1.2.4");
 			commitAndPush("chore: bump version to 1.3.0-SNAPSHOT [skip ci]");
-			checks(check(1, "build-and-test", "completed", "success"), check(2, "docker-build", "completed", "success"),
-					check(3, "Analyze (java-kotlin)", "completed", "success"));
+			greenRuns();
 
 			// when
 			var run = gate(sha);
@@ -151,10 +176,10 @@ class ReleaseScriptsTest {
 		}
 
 		@Test
-		void givenCheckRunsApiFails_whenGated_thenTheGateFailsWithoutDecision() throws Exception {
+		void givenWorkflowRunsApiFails_whenGated_thenTheGateFailsWithoutDecision() throws Exception {
 			// given
 			String sha = commitAndPush("fix: a bug");
-			Files.writeString(bin.resolve("checks.fail"), "");
+			Files.writeString(bin.resolve("runs.fail"), "");
 
 			// when
 			var run = gate(sha);
@@ -164,12 +189,34 @@ class ReleaseScriptsTest {
 			assertThat(run.outputs()).as("gate outputs when the API fails").doesNotContainKey("decision");
 		}
 
+		@Test
+		void givenJobsApiFails_whenGated_thenTheGateFailsWithoutDecision() throws Exception {
+			// given
+			String sha = commitAndPush("fix: a bug");
+			greenRuns();
+			Files.writeString(bin.resolve("jobs-2.fail"), "");
+
+			// when
+			var run = gate(sha);
+
+			// then
+			assertThat(run.exit()).as("gate exit code when the jobs API fails").isNotZero();
+			assertThat(run.outputs()).as("gate outputs when the jobs API fails").doesNotContainKey("decision");
+		}
+
+		private void greenRuns() throws IOException {
+			runs(run(1, CI, "completed", "success"), run(2, CODEQL, "completed", "success"));
+			jobs(1, job("build-and-test", "completed", "success"), job("docker-build", "completed", "success"),
+					job("changes", "completed", "success"));
+			jobs(2, job("Analyze (java-kotlin)", "completed", "success"));
+		}
+
 		private Run gate(String sha) throws Exception {
 			return gate(sha, REQUIRED);
 		}
 
 		private Run gate(String sha, String required) throws Exception {
-			return script("release-gate.sh", Map.of("SHA", sha, "REQUIRED_CHECKS", required, "OWNER_REPO", "owner/repo"));
+			return script("release-gate.sh", Map.of("SHA", sha, "REQUIRED_JOBS", required, "OWNER_REPO", "owner/repo"));
 		}
 	}
 
@@ -223,7 +270,7 @@ class ReleaseScriptsTest {
 		void givenEarlierAttemptPushedReleaseCommitAndTag_whenVersionDetermined_thenItResumesThatVersion() throws Exception {
 			// given
 			String sha = commitAndPush("feat: a feature");
-			commit("release: v1.3.0");
+			releaseCommit("1.3.0");
 			git("tag", "-a", "v1.3.0", "-m", "Release v1.3.0");
 			commitAndPush("chore: bump version to 1.4.0-SNAPSHOT [skip ci]");
 
@@ -231,16 +278,54 @@ class ReleaseScriptsTest {
 			var run = version(sha);
 
 			// then
-			assertThat(run.exit()).as("version exit code").isZero();
+			assertThat(run.exit()).as("version exit code: %s", run.output()).isZero();
 			assertThat(run.outputs()).as("version outputs").containsEntry("resume", "true")
 					.containsEntry("new_version", "1.3.0").containsEntry("next_snapshot", "1.4.0-SNAPSHOT");
+		}
+
+		@Test
+		void givenTaggedReleaseCommitThatChangesMoreThanTheVersion_whenVersionDetermined_thenItFails() throws Exception {
+			// given
+			String sha = commitAndPush("feat: a feature");
+			Files.writeString(work.resolve("Other.java"), "class Other {}");
+			git("add", "Other.java");
+			releaseCommit("1.3.0");
+			git("tag", "-a", "v1.3.0", "-m", "Release v1.3.0");
+			push();
+
+			// when
+			var run = version(sha);
+
+			// then
+			assertThat(run.exit()).as("version exit code for a forged release commit").isNotZero();
+			assertThat(run.outputs()).as("version outputs").doesNotContainKey("resume");
+			assertThat(run.output()).as("error").contains("is not only the pom.xml version change");
+		}
+
+		@Test
+		void givenTaggedReleaseCommitWithAnotherPomVersion_whenVersionDetermined_thenItFails() throws Exception {
+			// given
+			String sha = commitAndPush("feat: a feature");
+			Files.writeString(work.resolve("pom.xml"), pom("9.9.9"));
+			git("add", "pom.xml");
+			commit("release: v1.3.0");
+			git("tag", "-a", "v1.3.0", "-m", "Release v1.3.0");
+			push();
+
+			// when
+			var run = version(sha);
+
+			// then
+			assertThat(run.exit()).as("version exit code for a mismatching pom version").isNotZero();
+			assertThat(run.outputs()).as("version outputs").doesNotContainKey("resume");
 		}
 
 		@Test
 		void givenReleaseCommitWithoutItsTag_whenVersionDetermined_thenItDoesNotResume() throws Exception {
 			// given
 			String sha = commitAndPush("fix: a bug");
-			commitAndPush("release: v1.2.4");
+			releaseCommit("1.2.4");
+			push();
 
 			// when
 			var run = version(sha);
@@ -250,18 +335,61 @@ class ReleaseScriptsTest {
 					.containsEntry("new_version", "1.2.4");
 		}
 
+		@Test
+		void givenNonSemverTagAboveTheLastRelease_whenVersionDetermined_thenItIsIgnored() throws Exception {
+			// given
+			git("tag", "-a", "v9.9.9-rc1", "-m", "Release candidate");
+			String sha = commitAndPush("fix: a bug");
+
+			// when
+			var run = version(sha);
+
+			// then
+			assertThat(run.exit()).as("version exit code: %s", run.output()).isZero();
+			assertThat(run.outputs()).as("version outputs").containsEntry("last_tag", "v1.2.3")
+					.containsEntry("new_version", "1.2.4");
+		}
+
 		private Run version(String sha) throws Exception {
 			return script("release-version.sh", Map.of("SHA", sha));
 		}
 	}
 
-	private void checks(String... runs) throws IOException {
-		Files.writeString(bin.resolve("checks.json"), "{\"check_runs\":[" + String.join(",", runs) + "]}");
+	private void runs(String... runs) throws IOException {
+		Files.writeString(bin.resolve("runs.json"), "{\"workflow_runs\":[" + String.join(",", runs) + "]}");
 	}
 
-	private static String check(int id, String name, String status, String conclusion) {
-		return "{\"id\":%d,\"name\":\"%s\",\"status\":\"%s\",\"conclusion\":%s}".formatted(id, name, status,
-				conclusion == null ? "null" : "\"" + conclusion + "\"");
+	private void jobs(int runId, String... jobs) throws IOException {
+		Files.writeString(bin.resolve("jobs-" + runId + ".json"), "{\"jobs\":[" + String.join(",", jobs) + "]}");
+	}
+
+	private static String run(int id, String path, String status, String conclusion) {
+		return "{\"id\":%d,\"path\":\"%s\",\"status\":\"%s\",\"conclusion\":%s}".formatted(id, path, status,
+				json(conclusion));
+	}
+
+	private static String job(String name, String status, String conclusion) {
+		return "{\"name\":\"%s\",\"status\":\"%s\",\"conclusion\":%s}".formatted(name, status, json(conclusion));
+	}
+
+	private static String json(String value) {
+		return value == null ? "null" : "\"" + value + "\"";
+	}
+
+	private static String pom(String version) {
+		return """
+				<project>
+				  <parent><version>4.0.0</version></parent>
+				  <artifactId>ctc-manager</artifactId>
+				  <version>%s</version>
+				</project>
+				""".formatted(version);
+	}
+
+	private void releaseCommit(String version) throws Exception {
+		Files.writeString(work.resolve("pom.xml"), pom(version));
+		git("add", "pom.xml");
+		commit("release: v" + version);
 	}
 
 	private String commitAndPush(String message) throws Exception {
