@@ -318,8 +318,8 @@ class DataAuditServiceIT {
 		assertThat(findings).as("cycle finding").filteredOn(finding -> finding.evidence().startsWith("Succession cycle"))
 				.singleElement().extracting(DataAuditFinding::evidence).asString()
 				.doesNotContain(alpha.getShortName());
-		assertThat(findings).as("reconstructible findings of a chain into a cycle")
-				.noneMatch(finding -> finding.resolution() == RECONSTRUCTIBLE);
+		assertThat(findings).as("findings about the team whose chain runs into the cycle")
+				.noneMatch(finding -> finding.subject().startsWith(alpha.getShortName() + " in season"));
 	}
 
 	@Test
