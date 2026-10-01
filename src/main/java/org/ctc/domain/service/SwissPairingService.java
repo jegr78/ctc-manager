@@ -175,7 +175,7 @@ public class SwissPairingService {
 	}
 
 	/**
-	 * Layout validation: LEAGUE requires groupId=null; GROUPS requires non-null groupId.
+	 * Layout validation: LEAGUE requires groupId=null; GROUPS requires a non-null groupId of this phase.
 	 */
 	private void validateLayoutAndGroupId(SeasonPhase phase, UUID groupId) {
 		if (phase.getLayout() == PhaseLayout.LEAGUE && groupId != null) {
@@ -183,6 +183,9 @@ public class SwissPairingService {
 		}
 		if (phase.getLayout() == PhaseLayout.GROUPS && groupId == null) {
 			throw new IllegalArgumentException("GROUPS layout requires non-null groupId");
+		}
+		if (groupId != null && !resolveGroup(groupId).getPhase().getId().equals(phase.getId())) {
+			throw new IllegalArgumentException("Group does not belong to this phase: " + groupId);
 		}
 	}
 

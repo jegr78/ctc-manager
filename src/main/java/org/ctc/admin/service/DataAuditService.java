@@ -33,7 +33,9 @@ import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.PhaseTeam;
 import org.ctc.domain.model.PlayoffMatchup;
+import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.Race;
+import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.SeasonPhase;
 import org.ctc.domain.model.SeasonTeam;
 import org.ctc.domain.model.SiteSlug;
@@ -44,6 +46,7 @@ import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.PlayoffMatchupRepository;
+import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonTeamRepository;
 import org.ctc.domain.repository.SiteSlugRepository;
@@ -65,6 +68,7 @@ public class DataAuditService {
 	private final MatchRepository matchRepository;
 	private final PlayoffMatchupRepository playoffMatchupRepository;
 	private final RaceRepository raceRepository;
+	private final RaceLineupRepository raceLineupRepository;
 	private final MatchdayRepository matchdayRepository;
 	private final PhaseTeamRepository phaseTeamRepository;
 	private final SeasonTeamRepository seasonTeamRepository;
@@ -83,14 +87,16 @@ public class DataAuditService {
 		List<Match> matches = matchRepository.findAllForBackup();
 		List<PhaseTeam> phaseTeams = phaseTeamRepository.findAllForBackup();
 		List<PlayoffMatchup> matchups = playoffMatchupRepository.findAllForBackup();
+		List<Race> races = raceRepository.findAllForBackup();
+		Legs legs = new Legs(races, raceLineupRepository.findAllForBackup());
 
-		auditMatchAggregates(matches, findings.get(STALE_AGGREGATE));
-		auditPlayoffAggregates(matchups, findings.get(STALE_AGGREGATE));
+		auditMatchAggregates(matches, legs, findings.get(STALE_AGGREGATE));
+		auditPlayoffAggregates(matchups, legs, findings.get(STALE_AGGREGATE));
 		auditPairings(matches, findings.get(PAIRING));
-		auditLegs(raceRepository.findAllForBackup(), findings);
+		auditLegs(races, findings);
 		auditPhaseGroups(matches, phaseTeams, findings.get(PHASE_GROUP));
 		auditSuccession(seasonTeamRepository.findAllForBackup(), phaseTeams, findings.get(SUCCESSION));
-		auditPlayoffs(matchups, findings.get(PLAYOFF));
+		auditPlayoffs(matchups, legs, findings.get(PLAYOFF));
 		auditPublicUrls(findings.get(PUBLIC_URL));
 
 		List<DataAuditReport.Section> sections = findings.entrySet().stream()
@@ -101,23 +107,52 @@ public class DataAuditService {
 		return report;
 	}
 
-	private void auditMatchAggregates(List<Match> matches, List<DataAuditFinding> out) {
+	/** Every leg grouped by its match and its playoff matchup, with the lineups of every leg. */
+	private record Legs(Map<UUID, List<Race>> byMatch, Map<UUID, List<Race>> byMatchup,
+			Map<UUID, Map<UUID, RaceLineup>> lineups) {
+
+		Legs(List<Race> races, List<RaceLineup> lineups) {
+			this(new HashMap<>(), new HashMap<>(), new HashMap<>());
+			for (Race race : races) {
+				if (race.getMatch() != null) {
+					byMatch.computeIfAbsent(race.getMatch().getId(), ignored -> new ArrayList<>()).add(race);
+				}
+				if (race.getPlayoffMatchup() != null) {
+					byMatchup.computeIfAbsent(race.getPlayoffMatchup().getId(), ignored -> new ArrayList<>()).add(race);
+				}
+			}
+			for (RaceLineup lineup : lineups) {
+				this.lineups.computeIfAbsent(lineup.getRace().getId(), ignored -> new HashMap<>())
+						.put(lineup.getDriver().getId(), lineup);
+			}
+		}
+
+		List<Race> of(Match match) {
+			return byMatch.getOrDefault(match.getId(), List.of());
+		}
+
+		List<Race> of(PlayoffMatchup matchup) {
+			return byMatchup.getOrDefault(matchup.getId(), List.of());
+		}
+	}
+
+	private void auditMatchAggregates(List<Match> matches, Legs legs, List<DataAuditFinding> out) {
 		for (Match match : matches) {
 			if (match.isBye() || match.getWalkoverTeam() != null || match.getHomeTeam() == null) {
 				continue;
 			}
-			int[] legs = scoringService.legTotals(match);
-			auditAggregate(describe(match), legs, match.getHomeScore(), match.getAwayScore(), false, out);
+			int[] totals = scoringService.legTotals(legs.of(match), match.getHomeTeam().getId(), legs.lineups());
+			auditAggregate(describe(match), totals, match.getHomeScore(), match.getAwayScore(), false, out);
 		}
 	}
 
-	private void auditPlayoffAggregates(List<PlayoffMatchup> matchups, List<DataAuditFinding> out) {
+	private void auditPlayoffAggregates(List<PlayoffMatchup> matchups, Legs legs, List<DataAuditFinding> out) {
 		for (PlayoffMatchup matchup : matchups) {
 			if (matchup.isBye() || matchup.getWalkoverTeam() != null || matchup.getTeam1() == null) {
 				continue;
 			}
-			int[] legs = scoringService.legTotals(matchup);
-			auditAggregate(describe(matchup), legs, matchup.getHomeScore(), matchup.getAwayScore(),
+			int[] totals = scoringService.legTotals(legs.of(matchup), matchup.getTeam1().getId(), legs.lineups());
+			auditAggregate(describe(matchup), totals, matchup.getHomeScore(), matchup.getAwayScore(),
 					matchup.getWinner() != null, out);
 		}
 	}
@@ -167,10 +202,10 @@ public class DataAuditService {
 	private static void auditLegs(List<Race> races, Map<Category, List<DataAuditFinding>> out) {
 		for (Race race : races) {
 			Match match = race.getMatch();
-			if (match != null && race.getPlayoffMatchup() != null) {
+			if (match != null && race.getPlayoffMatchup() != null && !sameContest(match, race.getPlayoffMatchup())) {
 				out.get(PHASE_GROUP).add(new DataAuditFinding(PHASE_GROUP, AMBIGUOUS, describe(race),
-						"The leg belongs to match %s and to playoff matchup %s".formatted(match.getId(),
-								race.getPlayoffMatchup().getId()),
+						"The leg belongs to match %s and to playoff matchup %s, which differ in phase or teams"
+								.formatted(match.getId(), race.getPlayoffMatchup().getId()),
 						"Decide which of the two the leg belongs to"));
 			}
 			if (match != null && !match.getMatchday().getId().equals(race.getMatchday().getId())) {
@@ -193,6 +228,15 @@ public class DataAuditService {
 						"Decide the leg's orientation; an overridden leg names the match teams swapped"));
 			}
 		}
+	}
+
+	/** An imported playoff leg carries both links; they agree when the match mirrors the matchup. */
+	private static boolean sameContest(Match match, PlayoffMatchup matchup) {
+		boolean samePhase = match.getMatchday().getPhase().getId()
+				.equals(matchup.getRound().getPlayoff().getPhase().getId());
+		boolean sameTeams = sameTeam(match.getHomeTeam(), matchup.getTeam1()) && sameTeam(match.getAwayTeam(), matchup.getTeam2())
+				|| sameTeam(match.getHomeTeam(), matchup.getTeam2()) && sameTeam(match.getAwayTeam(), matchup.getTeam1());
+		return samePhase && sameTeams;
 	}
 
 	private static boolean overridesSwapMatchTeams(Race race, Match match) {
@@ -229,8 +273,12 @@ public class DataAuditService {
 			}
 		}
 		Set<UUID> phasesWithoutRoster = new HashSet<>();
+		Map<UUID, Map<UUID, UUID>> successions = new HashMap<>();
 		for (Match match : matches) {
 			SeasonPhase phase = match.getMatchday().getPhase();
+			if (phase.getPhaseType() == PhaseType.PLAYOFF) {
+				continue;
+			}
 			Map<UUID, PhaseTeam> roster = rosters.get(phase.getId());
 			if (roster == null) {
 				if (phasesWithoutRoster.add(phase.getId())) {
@@ -240,16 +288,22 @@ public class DataAuditService {
 				}
 				continue;
 			}
-			Map<UUID, UUID> succession = phase.getSeason().buildSuccessionMap();
+			Map<UUID, UUID> succession = successions.computeIfAbsent(phase.getSeason().getId(),
+					ignored -> phase.getSeason().buildSuccessionMap());
 			for (Team team : new Team[] {match.getHomeTeam(), match.getAwayTeam()}) {
 				if (team == null) {
 					continue;
 				}
-				PhaseTeam place = roster.get(succession.getOrDefault(team.getId(), team.getId()));
+				UUID counted = succession.getOrDefault(team.getId(), team.getId());
+				PhaseTeam place = roster.get(counted);
+				if (place == null && !counted.equals(team.getId()) && roster.containsKey(team.getId())) {
+					continue;
+				}
 				if (place == null) {
+					String effect = team == match.getHomeTeam() ? "so the standings skip the match"
+							: "so the standings count the match only for " + team(match.getHomeTeam());
 					out.add(new DataAuditFinding(PHASE_GROUP, AMBIGUOUS, describe(match),
-							"%s is not on the roster of phase %s, so the standings skip the match".formatted(team(team),
-									phaseName(phase)),
+							"%s is not on the roster of phase %s, %s".formatted(team(team), phaseName(phase), effect),
 							"Add the team to the phase roster, or move the match to the phase it belongs to"));
 				} else if (match.getMatchday().getGroup() != null && (place.getGroup() == null
 						|| !place.getGroup().getId().equals(match.getMatchday().getGroup().getId()))) {
@@ -267,12 +321,17 @@ public class DataAuditService {
 			List<DataAuditFinding> out) {
 		Map<UUID, SeasonTeam> byId = seasonTeams.stream().collect(Collectors.toMap(SeasonTeam::getId, Function.identity()));
 		Set<UUID> inCycle = new HashSet<>();
+		Set<UUID> reachesCycle = new HashSet<>();
 		for (SeasonTeam start : seasonTeams) {
 			List<UUID> path = new ArrayList<>();
 			SeasonTeam current = start;
-			while (current != null && !path.contains(current.getId()) && !inCycle.contains(current.getId())) {
+			while (current != null && !path.contains(current.getId()) && !inCycle.contains(current.getId())
+					&& !reachesCycle.contains(current.getId())) {
 				path.add(current.getId());
 				current = current.getSuccessor() == null ? null : byId.get(current.getSuccessor().getId());
+			}
+			if (current != null) {
+				reachesCycle.addAll(path);
 			}
 			if (current != null && path.contains(current.getId())) {
 				List<UUID> cycle = path.subList(path.indexOf(current.getId()), path.size());
@@ -296,7 +355,7 @@ public class DataAuditService {
 								successor.getSeason().getName()),
 						"Decide the successor within the same season"));
 			}
-			if (!inCycle.contains(seasonTeam.getId())) {
+			if (!reachesCycle.contains(seasonTeam.getId())) {
 				auditReplacedPlaces(seasonTeam, phaseTeams, out);
 			}
 		}
@@ -332,12 +391,12 @@ public class DataAuditService {
 		}
 	}
 
-	private static void auditPlayoffs(List<PlayoffMatchup> matchups, List<DataAuditFinding> out) {
+	private static void auditPlayoffs(List<PlayoffMatchup> matchups, Legs legs, List<DataAuditFinding> out) {
 		Map<String, List<PlayoffMatchup>> byPosition = new LinkedHashMap<>();
 		for (PlayoffMatchup matchup : matchups) {
 			byPosition.computeIfAbsent(matchup.getRound().getId() + "|" + matchup.getBracketPosition(),
 					ignored -> new ArrayList<>()).add(matchup);
-			auditDecision(matchup, out);
+			auditDecision(matchup, legs, out);
 			auditAdvancement(matchup, out);
 		}
 		byPosition.values().stream().filter(same -> same.size() > 1).forEach(same -> out.add(new DataAuditFinding(
@@ -346,10 +405,10 @@ public class DataAuditService {
 				"Decide which matchup holds the position")));
 	}
 
-	private static void auditDecision(PlayoffMatchup matchup, List<DataAuditFinding> out) {
+	private static void auditDecision(PlayoffMatchup matchup, Legs legs, List<DataAuditFinding> out) {
 		Team winner = matchup.getWinner();
 		String subject = describe(matchup);
-		if (matchup.isBye() && (matchup.getTeam1() != null && matchup.getTeam2() != null || !matchup.getRaces().isEmpty())) {
+		if (matchup.isBye() && (matchup.getTeam1() != null && matchup.getTeam2() != null || !legs.of(matchup).isEmpty())) {
 			out.add(new DataAuditFinding(PLAYOFF, AMBIGUOUS, subject,
 					"Marked as a bye but has two teams or scheduled legs",
 					"Decide whether the matchup is a bye or a played matchup"));
@@ -409,7 +468,7 @@ public class DataAuditService {
 					"The winner is %s, but %s holds the slot of %s that this matchup feeds".formatted(team(winner),
 							team(slot), describe(next)),
 					"Decide which team advances"));
-		} else if (winner == null && slot != null) {
+		} else if (winner == null && slot != null && (matchup.getTeam1() != null || matchup.getTeam2() != null)) {
 			out.add(new DataAuditFinding(PLAYOFF, AMBIGUOUS, subject,
 					"%s holds the slot of %s that this undecided matchup feeds".formatted(team(slot), describe(next)),
 					"Decide this matchup first, or clear the slot"));
@@ -456,7 +515,11 @@ public class DataAuditService {
 			}
 		});
 		unstored.forEach((base, names) -> {
-			if (!base.isEmpty() && (names.size() > 1 || taken.contains(base))) {
+			if (base.isEmpty()) {
+				out.add(new DataAuditFinding(PUBLIC_URL, AMBIGUOUS, "%s profiles without a usable URL".formatted(kind.name().toLowerCase()),
+						"The names give an empty slug: " + String.join(", ", names.stream().sorted().toList()),
+						"Decide a name with letters or digits for each profile"));
+			} else if (names.size() > 1 || taken.contains(base)) {
 				out.add(new DataAuditFinding(PUBLIC_URL, RECONSTRUCTIBLE,
 						"%s URL '%s'".formatted(kind.name().toLowerCase(), base),
 						"Profiles without a stored slug collide on it: " + String.join(", ", names.stream().sorted().toList()),

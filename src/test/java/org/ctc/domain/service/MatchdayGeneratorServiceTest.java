@@ -368,6 +368,20 @@ class MatchdayGeneratorServiceTest {
 	}
 
 	@Test
+	void givenGroupOfAnotherPhase_whenGenerate_thenThrowsIllegalArgumentWithoutMatchdays() {
+		// given
+		var phase = buildGroupsPhase();
+		var other = buildGroupsPhase();
+		var foreignGroup = other.getGroups().get(0);
+
+		// when / then
+		assertThatThrownBy(() -> matchdayGeneratorService.generate(phase.getId(), foreignGroup.getId(), 3, false))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("Group does not belong to this phase: " + foreignGroup.getId());
+		assertThat(matchdayRepository.findByPhaseIdOrderBySortIndexAsc(phase.getId())).as("matchdays of the phase").isEmpty();
+	}
+
+	@Test
 	void givenGroupsLayoutAndNullGroupId_whenGenerate_thenThrowsIllegalArgument() {
 		// given — GROUPS layout phase + null groupId (invalid combination)
 		var phase = buildGroupsPhase();

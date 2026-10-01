@@ -224,7 +224,41 @@ class DataAuditServiceIT {
 		// then
 		assertThat(findings).as("match of a team off the roster").singleElement().satisfies(finding -> {
 			assertThat(finding.resolution()).as("resolution").isEqualTo(AMBIGUOUS);
-			assertThat(finding.evidence()).as("evidence").startsWith(outsider.getShortName() + " is not on the roster");
+			assertThat(finding.evidence()).as("evidence").startsWith(outsider.getShortName() + " is not on the roster")
+					.endsWith("so the standings count the match only for " + alpha.getShortName());
+		});
+	}
+
+	@Test
+	void givenImportedPlayoffLegLinkedToItsMatchAndMatchup_whenAudited_thenNoPhaseFinding() {
+		// given
+		PlayoffMatchup semi = bracket().get(0);
+		Race leg = playoffLeg(semi, bravo, alpha);
+		flushAndClear();
+
+		// when
+		var findings = dataAuditService.audit().findings(PHASE_GROUP).stream()
+				.filter(finding -> finding.subject().contains("Test_Audit_" + id))
+				.toList();
+
+		// then
+		assertThat(findings).as("phase findings of a consistently imported playoff leg %s", leg.getId()).isEmpty();
+	}
+
+	@Test
+	void givenLegLinkedToAMatchOfOtherTeamsThanItsMatchup_whenAudited_thenAmbiguous() {
+		// given
+		PlayoffMatchup semi = bracket().get(0);
+		Race leg = playoffLeg(semi, alpha, charlie);
+		flushAndClear();
+
+		// when
+		var findings = findings(PHASE_GROUP, leg.getId());
+
+		// then
+		assertThat(findings).as("leg with disagreeing links").singleElement().satisfies(finding -> {
+			assertThat(finding.resolution()).as("resolution").isEqualTo(AMBIGUOUS);
+			assertThat(finding.evidence()).as("evidence").endsWith("which differ in phase or teams");
 		});
 	}
 
@@ -270,22 +304,44 @@ class DataAuditServiceIT {
 	}
 
 	@Test
+	void givenReplacedTeamWhoseChainRunsIntoACycle_whenAudited_thenOnlyTheCycleIsReported() {
+		// given
+		seasonTeam(alpha).setSuccessor(seasonTeam(bravo));
+		seasonTeam(bravo).setSuccessor(seasonTeam(charlie));
+		seasonTeam(charlie).setSuccessor(seasonTeam(bravo));
+		flushAndClear();
+
+		// when
+		var findings = findings(SUCCESSION, "Test_Audit_" + id);
+
+		// then
+		assertThat(findings).as("cycle finding").filteredOn(finding -> finding.evidence().startsWith("Succession cycle"))
+				.singleElement().extracting(DataAuditFinding::evidence).asString()
+				.doesNotContain(alpha.getShortName());
+		assertThat(findings).as("reconstructible findings of a chain into a cycle")
+				.noneMatch(finding -> finding.resolution() == RECONSTRUCTIBLE);
+	}
+
+	@Test
 	void givenReplacedTeamThatStillHoldsItsPlace_whenAudited_thenReconstructibleMoveToTheSuccessor() {
 		// given
 		Team successor = testHelper.createTeam("Test Audit Successor " + id, "Test_AUS_" + id);
 		season.addTeam(successor);
 		seasonRepository.save(season);
 		seasonTeam(charlie).setSuccessor(seasonTeam(successor));
+		Match earlier = testHelper.createMatch(matchday, alpha, charlie);
 		flushAndClear();
 
 		// when
 		var findings = findings(SUCCESSION, charlie.getShortName() + " in season");
+		var rosterFindings = findings(PHASE_GROUP, earlier.getId());
 
 		// then
 		assertThat(findings).as("place of a replaced team").singleElement().satisfies(finding -> {
 			assertThat(finding.resolution()).as("resolution").isEqualTo(RECONSTRUCTIBLE);
 			assertThat(finding.correction()).as("correction").isEqualTo("Move the place to the successor " + successor.getShortName());
 		});
+		assertThat(rosterFindings).as("roster findings already covered by the succession finding").isEmpty();
 	}
 
 	@Test
@@ -350,6 +406,23 @@ class DataAuditServiceIT {
 	}
 
 	@Test
+	void givenSlotFilledBeforeItsFeederHasTeams_whenAudited_thenNoPlayoffFinding() {
+		// given
+		List<PlayoffMatchup> bracket = bracket();
+		PlayoffMatchup otherSemi = bracket.get(1);
+		otherSemi.setTeam1(null);
+		otherSemi.setTeam2(null);
+		bracket.get(2).setTeam2(charlie);
+		flushAndClear();
+
+		// when
+		var findings = findings(PLAYOFF, otherSemi.getId());
+
+		// then
+		assertThat(findings).as("findings for a pre-seeded slot").isEmpty();
+	}
+
+	@Test
 	void givenConsistentDecidedMatchup_whenAudited_thenNoPlayoffFinding() {
 		// given
 		List<PlayoffMatchup> bracket = bracket();
@@ -396,6 +469,24 @@ class DataAuditServiceIT {
 		assertThat(findings).as("colliding unstored slugs").singleElement().satisfies(finding -> {
 			assertThat(finding.resolution()).as("resolution").isEqualTo(RECONSTRUCTIBLE);
 			assertThat(finding.evidence()).as("evidence").contains("Test-Slug-" + id, "Test_Slug_" + id);
+		});
+	}
+
+	@Test
+	void givenTeamWhoseNameGivesNoSlug_whenAudited_thenAmbiguous() {
+		// given
+		String name = id.chars().mapToObj(c -> String.valueOf((char) ('α' + Character.digit(c, 16))))
+				.reduce("", String::concat);
+		testHelper.createTeam("Test Audit No Slug " + id, name);
+		flushAndClear();
+
+		// when
+		var findings = findings(PUBLIC_URL, "team profiles without a usable URL");
+
+		// then
+		assertThat(findings).as("profiles without a usable URL").singleElement().satisfies(finding -> {
+			assertThat(finding.resolution()).as("resolution").isEqualTo(AMBIGUOUS);
+			assertThat(finding.evidence()).as("evidence").contains(name);
 		});
 	}
 
@@ -453,6 +544,15 @@ class DataAuditServiceIT {
 				new RaceService.RaceResultData(awayDriver.getId(), awayDriver.getPsnId(), null, 2, 2, false)));
 		flushAndClear();
 		return match;
+	}
+
+	private Race playoffLeg(PlayoffMatchup matchup, Team home, Team away) {
+		Matchday playoffDay = matchdayRepository.save(new Matchday(matchup.getRound().getPlayoff().getPhase(),
+				"Test_Audit PO " + id, 10));
+		Match match = testHelper.createMatch(playoffDay, home, away);
+		Race leg = testHelper.createRace(playoffDay, match);
+		leg.setPlayoffMatchup(matchup);
+		return leg;
 	}
 
 	private List<PlayoffMatchup> bracket() {

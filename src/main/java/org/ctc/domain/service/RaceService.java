@@ -178,6 +178,9 @@ public class RaceService {
 
 		var rejection = validatePairingChange(race, matchday, homeTeam, awayTeam);
 		if (rejection == null) {
+			rejection = validateUniquePairing(race, matchday, homeTeam, awayTeam);
+		}
+		if (rejection == null) {
 			rejection = validateCarAndTrack(matchday.getSeason(), homeTeam, car, track, id);
 		}
 		if (rejection != null) {
@@ -320,6 +323,23 @@ public class RaceService {
 		var legs = race.getMatch() != null ? raceRepository.findByMatchId(race.getMatch().getId()) : List.of(race);
 		if (legs.stream().anyMatch(leg -> !leg.getResults().isEmpty())) {
 			return "Teams, matchday and phase cannot change after results were entered";
+		}
+		return null;
+	}
+
+	/** Rejects a pairing that another match of the matchday already holds, in either orientation; changes nothing. */
+	private String validateUniquePairing(Race race, Matchday matchday, Team homeTeam, Team awayTeam) {
+		if (race.getPlayoffMatchup() != null) {
+			return null;
+		}
+		Match own = race.getMatch();
+		UUID matchdayId = own != null ? own.getMatchday().getId() : matchday.getId();
+		for (Team[] pair : new Team[][] {{homeTeam, awayTeam}, {awayTeam, homeTeam}}) {
+			var other = matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(matchdayId,
+					pair[0].getId(), pair[1].getId());
+			if (other.isPresent() && (own == null || !other.get().getId().equals(own.getId()))) {
+				return "Match already exists: " + pair[0].getShortName() + " vs " + pair[1].getShortName();
+			}
 		}
 		return null;
 	}

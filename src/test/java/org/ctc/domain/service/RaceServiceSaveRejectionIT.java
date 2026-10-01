@@ -134,6 +134,39 @@ class RaceServiceSaveRejectionIT {
 		assertThat(matchRepository.count()).as("a rejected creation must not persist its Match").isEqualTo(matchesBefore);
 	}
 
+	@Test
+	void givenMatchOfTheTwoTeams_whenCreatingARaceInReverseOrientation_thenRejectedWithoutANewMatch() {
+		// given
+		long matchesBefore = matchRepository.count();
+
+		// when
+		var result = raceService.saveRace(null, fixture.matchday().getId(), fixture.awayTeam().getId(),
+				fixture.homeTeam().getId(), null, null, ORIGINAL_TIME, 5, 1, 1, 1, "100%", 0, 1, "clear", "noon", "any", "none");
+
+		// then
+		assertThat(result.success()).as("save of a reversed pairing").isFalse();
+		assertThat(result.message()).isEqualTo("Match already exists: %s vs %s".formatted(fixture.homeTeam().getShortName(),
+				fixture.awayTeam().getShortName()));
+		assertThat(matchRepository.count()).as("matches after the rejected save").isEqualTo(matchesBefore);
+	}
+
+	@Test
+	void givenAnotherMatchOfTheNewPairing_whenEditingARace_thenRejectedAndUnchanged() {
+		// given
+		testHelper.createMatch(fixture.matchday(), fixture.awayTeam(), otherTeam);
+
+		// when
+		var result = raceService.saveRace(fixture.race().getId(), fixture.matchday().getId(), otherTeam.getId(),
+				fixture.awayTeam().getId(), null, null, ORIGINAL_TIME.plusDays(3),
+				99, 9, 9, 9, "50%", 3, 9, "rain", "night", "RS", "RH");
+
+		// then
+		assertThat(result.success()).as("edit onto an existing pairing").isFalse();
+		assertThat(result.message()).isEqualTo("Match already exists: %s vs %s".formatted(fixture.awayTeam().getShortName(),
+				otherTeam.getShortName()));
+		assertRaceUnchanged();
+	}
+
 	private RaceService.SaveResult saveEdit(UUID raceId, Team home, Car car) {
 		return raceService.saveRace(raceId, fixture.matchday().getId(), home.getId(), fixture.awayTeam().getId(),
 				null, car.getId(), ORIGINAL_TIME.plusDays(3),

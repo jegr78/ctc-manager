@@ -110,19 +110,28 @@ public class ScoringService {
 		playoffMatchupRepository.save(matchup);
 	}
 
-	/** Returns the [home, away] totals of the match's scored legs without saving, or {@code null} when no leg has results. */
-	@Transactional(readOnly = true)
-	public int[] legTotals(Match match) {
-		return sumLegs(raceRepository.findByMatchId(match.getId()), match.getHomeTeam().getId());
+	private int[] legTotals(Match match) {
+		return sumLegs(raceRepository.findByMatchId(match.getId()), match.getHomeTeam().getId(), this::lineupsOf);
 	}
 
-	/** Returns the [team1, team2] totals of the matchup's scored legs without saving, or {@code null} when no leg has results. */
-	@Transactional(readOnly = true)
-	public int[] legTotals(PlayoffMatchup matchup) {
-		return sumLegs(raceRepository.findByPlayoffMatchupId(matchup.getId()), matchup.getTeam1().getId());
+	private int[] legTotals(PlayoffMatchup matchup) {
+		return sumLegs(raceRepository.findByPlayoffMatchupId(matchup.getId()), matchup.getTeam1().getId(), this::lineupsOf);
 	}
 
-	private int[] sumLegs(List<Race> legs, UUID homeTeamId) {
+	/**
+	 * Returns the [home, away] totals of the given legs without saving, or {@code null} when no leg has
+	 * results; {@code lineupsByRace} holds every lineup of those legs, keyed by race id, then driver id.
+	 */
+	public int[] legTotals(List<Race> legs, UUID homeTeamId, Map<UUID, Map<UUID, RaceLineup>> lineupsByRace) {
+		return sumLegs(legs, homeTeamId, raceId -> lineupsByRace.getOrDefault(raceId, Map.of()));
+	}
+
+	private Map<UUID, RaceLineup> lineupsOf(UUID raceId) {
+		return raceLineupRepository.findByRaceId(raceId).stream()
+				.collect(Collectors.toMap(lineup -> lineup.getDriver().getId(), Function.identity()));
+	}
+
+	private int[] sumLegs(List<Race> legs, UUID homeTeamId, Function<UUID, Map<UUID, RaceLineup>> lineupsOfRace) {
 		int home = 0;
 		int away = 0;
 		boolean scored = false;
@@ -131,8 +140,7 @@ public class ScoringService {
 				continue;
 			}
 			scored = true;
-			Map<UUID, RaceLineup> lineups = raceLineupRepository.findByRaceId(leg.getId()).stream()
-					.collect(Collectors.toMap(lineup -> lineup.getDriver().getId(), Function.identity()));
+			Map<UUID, RaceLineup> lineups = lineupsOfRace.apply(leg.getId());
 			for (RaceResult result : leg.getResults()) {
 				if (isDriverInTeam(result, leg, homeTeamId, lineups.get(result.getDriver().getId()))) {
 					home += result.getPointsTotal();
