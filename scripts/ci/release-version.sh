@@ -46,8 +46,10 @@ if [ -z "${last_tag}" ]; then
   echo "Initial release: ${version} (from pom.xml ${pom_version})"
 else
   out "last_tag=${last_tag}"
-  subjects=$(git log "${last_tag}..${SHA}" --pretty=format:'%s')
-  bodies=$(git log "${last_tag}..${SHA}" --pretty=format:'%B')
+  # The snapshot bump that follows every release is not a change to release.
+  changes=(--invert-grep -E --grep='^chore: bump version to [0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT \[skip ci\]$')
+  subjects=$(git log "${changes[@]}" "${last_tag}..${SHA}" --pretty=format:'%s')
+  bodies=$(git log "${changes[@]}" "${last_tag}..${SHA}" --pretty=format:'%B')
   if ! printf '%s\n' "${subjects}" | grep -qE '^(feat|fix|docs|refactor|perf|test|style|chore)(\(.+\))?[!]?:'; then
     out "should_skip=true"
     echo "No releasable commits since ${last_tag}, skipping release"

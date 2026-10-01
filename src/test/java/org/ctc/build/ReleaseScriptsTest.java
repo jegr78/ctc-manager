@@ -268,6 +268,34 @@ class ReleaseScriptsTest {
 		}
 
 		@Test
+		void givenOnlyTheSnapshotBumpAndCiCommitsSinceTheLastTag_whenVersionDetermined_thenSkip() throws Exception {
+			// given
+			commit("chore: bump version to 1.3.0-SNAPSHOT [skip ci]");
+			String sha = commitAndPush("ci: tune the workflow");
+
+			// when
+			var run = version(sha);
+
+			// then
+			assertThat(run.exit()).as("version exit code: %s", run.output()).isZero();
+			assertThat(run.outputs()).as("version outputs after a snapshot bump").containsEntry("should_skip", "true")
+					.doesNotContainKey("new_version");
+		}
+
+		@Test
+		void givenChoreCommitAfterTheSnapshotBump_whenVersionDetermined_thenPatchBump() throws Exception {
+			// given
+			commit("chore: bump version to 1.3.0-SNAPSHOT [skip ci]");
+			String sha = commitAndPush("chore: update a dependency");
+
+			// when
+			var run = version(sha);
+
+			// then
+			assertThat(run.outputs()).as("version outputs").containsEntry("new_version", "1.2.4");
+		}
+
+		@Test
 		void givenEarlierAttemptPushedReleaseCommitAndTag_whenVersionDetermined_thenItResumesThatVersion() throws Exception {
 			// given
 			String sha = commitAndPush("feat: a feature");
