@@ -116,7 +116,7 @@ public class DriverRankingPageGenerator {
         tplCtx.setVariable("phaseTabs", phaseTabs);
 
         templateWriter.write("site/driver-ranking", tplCtx, dir.resolve(filename),
-                ctx.activeSeasonSlug(), ctx.activeSeasonName());
+                ctx.outPath(), ctx.activeSeasonSlug(), ctx.activeSeasonName());
     }
 
     /**

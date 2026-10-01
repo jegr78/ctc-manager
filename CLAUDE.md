@@ -219,7 +219,7 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 * **Prod Env Vars:** `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `GOOGLE_CALENDAR_ID`
 * **Google Credentials:** `google.sheets.credentials-path` (default: `google-credentials.json`)
 * **Upload Dir:** `app.upload-dir` (default: `data/dev/uploads`)
-* **Site Output:** `ctc.site.output-dir` (default: `docs/site`)
+* **Site Output:** `ctc.site.output-dir` (default: `docs/site`). Generation writes into a sibling `<dir>.generating-<uuid>`, swaps it in only when complete (keeping `<dir>.previous` during the swap) and locks `<dir>.lock`, so the parent directory must be writable.
 * **Backup Dirs:** `app.backup.staging-dir`, `app.backup.import-backups-dir` (default: `data/<profile>/…`)
 * **Container Paths:** `docker` and `prod` set all four paths below the `ctc-data` volume (`/app/data/{uploads,site,backup-staging,import-backups}`). The uploads directory must not be a mount root and must share a volume with the recovery archives, because restore renames it; no backup directory may lie inside the served upload tree. `ContainerStoragePathsTest` enforces all three.
 

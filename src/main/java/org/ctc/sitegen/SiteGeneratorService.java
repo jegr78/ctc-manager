@@ -2,10 +2,16 @@ package org.ctc.sitegen;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.FileChannel;
+import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.Season;
@@ -52,6 +58,9 @@ public class SiteGeneratorService {
     private final TeamProfilePageGenerator teamProfilePageGenerator;
     private final DriverProfilePageGenerator driverProfilePageGenerator;
     private final SiteSlugService siteSlugService;
+    private static final String STAGING_INFIX = ".generating-";
+
+    private final ReentrantLock generationLock = new ReentrantLock();
 
     @Value("${app.upload-dir:data/dev/uploads}")
     private String uploadDir;
@@ -66,110 +75,255 @@ public class SiteGeneratorService {
         teamProfilePageGenerator.setUploadDir(uploadDir);
     }
 
+    /**
+     * Generates the whole site into a staging directory next to the output directory and
+     * replaces the output only when generation and validation succeeded; a failure leaves the
+     * previous site in place. A generation that starts while another one runs, in this or another
+     * process, is rejected.
+     */
     @Transactional(readOnly = true)
     public GenerationResult generate() {
-        var result = new GenerationResult();
-        Path outPath = Path.of(siteProperties.getOutputDir());
-
-        try {
-            var slugs = siteSlugService.allocate();
-            slugs.shared().forEach(shared -> result.addWarning("Profiles shared the URL " + shared.slug()
-                    + ".html, which now lists them (" + shared.kind().name().toLowerCase(Locale.ENGLISH) + ")"));
-            cleanOutputDirectory(outPath);
-            Files.createDirectories(outPath);
-
-            // Find active season
-            var activeSeason = seasonRepository.findByActiveTrue().orElse(null);
-            String activeSeasonSlug = activeSeason != null ? siteSlugger.slugify(activeSeason.getDisplayLabel()) : "";
-            String activeSeasonName = activeSeason != null ? activeSeason.getDisplayLabel() : "";
-            var allSeasons = seasonRepository.findAll();
-            var productionSeasons = allSeasons.stream()
-                    .filter(s -> !s.getName().contains("Test"))
-                    .toList();
-
-            // Generate index
-            generateIndex(outPath, activeSeason, activeSeasonSlug, activeSeasonName, result);
-
-            // Generate pages for each season
-            for (var season : productionSeasons) {
-                // Skip seasons without a REGULAR phase. Every production Season has one;
-                // skipping mirrors the legacy behaviour where seasons without standings
-                // simply rendered empty pages.
-                if (seasonPhaseService.findByType(season.getId(), org.ctc.domain.model.PhaseType.REGULAR).isEmpty()) {
-                    log.debug("Skipping season {} — no REGULAR phase", season.getName());
-                    continue;
-                }
-                String playoffSeasonSlug = resolvePlayoffSeasonSlug(season);
-                boolean hasPlayoff = playoffSeasonSlug != null;
-                var ctx = new org.ctc.sitegen.model.GenerationContext(
-                        outPath, season, activeSeasonSlug, activeSeasonName,
-                        hasPlayoff, playoffSeasonSlug, slugs);
-                standingsPageGenerator.generate(ctx, result);
-                driverRankingPageGenerator.generate(ctx, result);
-                matchdaysPageGenerator.generateDetails(ctx, result);
-                matchdaysPageGenerator.generateIndex(ctx, result);
-                teamProfilePageGenerator.generate(ctx, result);
-                driverProfilePageGenerator.generate(ctx, result);
-                generatePlayoffBracket(outPath, season, activeSeasonSlug, activeSeasonName, result);
-            }
-
-            // Generate archive
-            generateArchive(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, result);
-
-            // Generate links page
-            generateLinks(outPath, siteProperties.getLinks(), activeSeasonSlug, activeSeasonName, result);
-
-            // Generate overview pages
-            generateTeamsOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, result);
-            generateDriversOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, result);
-
-            // Generate alltime pages (filtered to production seasons only)
-            generateAlltimeStandings(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, result);
-            generateAlltimeDriverRanking(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, result);
-
-            // Copy static assets
-            copyAssets(outPath, result);
-
-            log.info("Site generation complete: {} pages", result.getPagesGenerated());
-        } catch (IOException e) {
-            log.error("Site generation failed", e);
-            result.addError("Generation failed: " + e.getMessage());
-        } catch (DataIntegrityViolationException e) {
-            log.warn("Profile URLs were stored by a concurrent generation", e);
-            result.addError("Generation failed: another generation stored profile URLs at the same time. Try again.");
-        } catch (SiteSlugs.MissingSlugException e) {
-            log.warn("Site generation hit a profile without a URL", e);
-            result.addError("Generation failed: " + e.getMessage() + ". A team or driver was added meanwhile; try again.");
+        if (!generationLock.tryLock()) {
+            return busy();
         }
+        try {
+            Path target = resolveTarget();
+            Files.createDirectories(Objects.requireNonNull(target.getParent(), "output directory has no parent"));
+            Path lockFile = target.resolveSibling(target.getFileName() + ".lock");
+            try (var channel = FileChannel.open(lockFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+                 var processLock = channel.tryLock()) {
+                return processLock == null ? busy() : generateAndPublish(target);
+            } catch (OverlappingFileLockException e) {
+                return busy();
+            }
+        } catch (IOException | IllegalArgumentException e) {
+            log.error("Site generation could not start", e);
+            var result = new GenerationResult();
+            result.addError("Generation failed: " + e.getMessage());
+            return result;
+        } finally {
+            generationLock.unlock();
+        }
+    }
 
+    private static GenerationResult busy() {
+        var result = new GenerationResult();
+        result.addError("A site generation is already running. Try again when it has finished.");
         return result;
     }
 
-    private void cleanOutputDirectory(Path outPath) throws IOException {
-        if (outPath.getNameCount() < 2) {
-            throw new IllegalArgumentException("Refusing to clean dangerously short path: " + outPath);
+    private Path resolveTarget() {
+        Path target = Path.of(siteProperties.getOutputDir()).toAbsolutePath().normalize();
+        if (target.getNameCount() < 2) {
+            throw new IllegalArgumentException("Refusing to publish to dangerously short path: " + target);
         }
-        if (!Files.exists(outPath)) {
-            return; // Non-existent dir — createDirectories() below handles creation.
+        var protectedDirs = new java.util.ArrayList<>(List.of(Path.of("").toAbsolutePath().normalize()));
+        if (uploadDir != null) {
+            protectedDirs.add(Path.of(uploadDir).toAbsolutePath().normalize());
         }
-        log.info("Cleaning output directory: {}", outPath);
-        Files.walkFileTree(outPath, new SimpleFileVisitor<>() {
+        for (Path protectedDir : protectedDirs) {
+            if (protectedDir.startsWith(target)) {
+                throw new IllegalArgumentException(
+                        "Refusing to publish to " + target + ", which contains " + protectedDir);
+            }
+        }
+        return target;
+    }
+
+    private GenerationResult generateAndPublish(Path target) {
+        var result = new GenerationResult();
+        Path staging = null;
+        try {
+            removeStaleStaging(target);
+            restorePrevious(target);
+            staging = Files.createDirectory(target.resolveSibling(target.getFileName() + STAGING_INFIX + UUID.randomUUID()));
+            generateInto(staging, result);
+            if (!result.hasErrors()) {
+                validate(staging);
+                publish(staging, target);
+                log.info("Site generation complete: {} pages", result.getPagesGenerated());
+            }
+        } catch (IOException | RuntimeException e) {
+            log.error("Site generation failed; the previous site stays published", e);
+            result.addError(failureMessage(e));
+        } finally {
+            if (staging != null) {
+                try {
+                    deleteTree(staging);
+                } catch (IOException e) {
+                    log.warn("Could not remove the staging directory {}", staging, e);
+                }
+            }
+        }
+        return result;
+    }
+
+    private static String failureMessage(Exception e) {
+        if (e instanceof DataIntegrityViolationException) {
+            return "Generation failed: another generation stored profile URLs at the same time. Try again.";
+        }
+        if (e instanceof SiteSlugs.MissingSlugException) {
+            return "Generation failed: " + e.getMessage() + ". A team or driver was added meanwhile; try again.";
+        }
+        return "Generation failed: " + e.getMessage();
+    }
+
+    private void generateInto(Path outPath, GenerationResult result) throws IOException {
+        var slugs = siteSlugService.allocate();
+        slugs.shared().forEach(shared -> result.addWarning("Profiles shared the URL " + shared.slug()
+                + ".html, which now lists them (" + shared.kind().name().toLowerCase(Locale.ENGLISH) + ")"));
+
+        // Find active season
+        var activeSeason = seasonRepository.findByActiveTrue().orElse(null);
+        String activeSeasonSlug = activeSeason != null ? siteSlugger.slugify(activeSeason.getDisplayLabel()) : "";
+        String activeSeasonName = activeSeason != null ? activeSeason.getDisplayLabel() : "";
+        var allSeasons = seasonRepository.findAll();
+        var productionSeasons = allSeasons.stream()
+                .filter(s -> !s.getName().contains("Test"))
+                .toList();
+
+        // Generate index
+        generateIndex(outPath, activeSeason, activeSeasonSlug, activeSeasonName, result);
+
+        // Generate pages for each season
+        for (var season : productionSeasons) {
+            // Skip seasons without a REGULAR phase. Every production Season has one;
+            // skipping mirrors the legacy behaviour where seasons without standings
+            // simply rendered empty pages.
+            if (seasonPhaseService.findByType(season.getId(), org.ctc.domain.model.PhaseType.REGULAR).isEmpty()) {
+                log.debug("Skipping season {} — no REGULAR phase", season.getName());
+                continue;
+            }
+            String playoffSeasonSlug = resolvePlayoffSeasonSlug(season);
+            boolean hasPlayoff = playoffSeasonSlug != null;
+            var ctx = new org.ctc.sitegen.model.GenerationContext(
+                    outPath, season, activeSeasonSlug, activeSeasonName,
+                    hasPlayoff, playoffSeasonSlug, slugs);
+            standingsPageGenerator.generate(ctx, result);
+            driverRankingPageGenerator.generate(ctx, result);
+            matchdaysPageGenerator.generateDetails(ctx, result);
+            matchdaysPageGenerator.generateIndex(ctx, result);
+            teamProfilePageGenerator.generate(ctx, result);
+            driverProfilePageGenerator.generate(ctx, result);
+            generatePlayoffBracket(outPath, season, activeSeasonSlug, activeSeasonName, result);
+        }
+
+        // Generate archive
+        generateArchive(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, result);
+
+        // Generate links page
+        generateLinks(outPath, siteProperties.getLinks(), activeSeasonSlug, activeSeasonName, result);
+
+        // Generate overview pages
+        generateTeamsOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, result);
+        generateDriversOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, result);
+
+        // Generate alltime pages (filtered to production seasons only)
+        generateAlltimeStandings(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, result);
+        generateAlltimeDriverRanking(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, result);
+
+        // Copy static assets
+        copyAssets(outPath, result);
+    }
+
+    private static void validate(Path staging) throws IOException {
+        for (String required : List.of("index.html", "archive.html", "assets")) {
+            if (!Files.exists(staging.resolve(required))) {
+                throw new IOException("Generated site is incomplete: " + required + " is missing");
+            }
+        }
+    }
+
+    /**
+     * Swaps the staged site in by renaming directories. An output directory on another file
+     * store than its parent (a mount point) cannot be renamed; it gets the new files copied in,
+     * and the files the new site no longer has are removed afterwards.
+     */
+    private static void publish(Path staging, Path target) throws IOException {
+        if (!Files.exists(target)) {
+            Files.move(staging, target, StandardCopyOption.ATOMIC_MOVE);
+            return;
+        }
+        if (!Files.getFileStore(target).equals(Files.getFileStore(staging))) {
+            copyInto(staging, target);
+            return;
+        }
+        Path previous = previousOf(target);
+        deleteTree(previous);
+        Files.move(target, previous, StandardCopyOption.ATOMIC_MOVE);
+        try {
+            Files.move(staging, target, StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException e) {
+            try {
+                Files.move(previous, target, StandardCopyOption.ATOMIC_MOVE);
+            } catch (IOException restoreFailure) {
+                e.addSuppressed(restoreFailure);
+            }
+            throw e;
+        }
+        deleteTree(previous);
+    }
+
+    /** Copies the staged site over {@code target}, then deletes what the staged site does not contain. */
+    static void copyInto(Path staging, Path target) throws IOException {
+        try (var paths = Files.walk(staging)) {
+            for (Path source : paths.toList()) {
+                Path destination = target.resolve(staging.relativize(source));
+                if (Files.isDirectory(source)) {
+                    Files.createDirectories(destination);
+                } else {
+                    Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+        }
+        try (var paths = Files.walk(target)) {
+            for (Path existing : paths.sorted(Comparator.reverseOrder()).toList()) {
+                if (!existing.equals(target) && !Files.exists(staging.resolve(target.relativize(existing)))) {
+                    deleteTree(existing);
+                }
+            }
+        }
+    }
+
+    private static Path previousOf(Path target) {
+        return target.resolveSibling(target.getFileName() + ".previous");
+    }
+
+    /** Puts back the previous site when an earlier publish stopped between its two renames. */
+    private static void restorePrevious(Path target) throws IOException {
+        Path previous = previousOf(target);
+        if (!Files.exists(target) && Files.isDirectory(previous)) {
+            log.warn("Restoring the previous site from {}", previous);
+            Files.move(previous, target, StandardCopyOption.ATOMIC_MOVE);
+        }
+    }
+
+    private static void removeStaleStaging(Path target) throws IOException {
+        String prefix = target.getFileName() + STAGING_INFIX;
+        try (var siblings = Files.list(Objects.requireNonNull(target.getParent()))) {
+            for (Path sibling : siblings.filter(p -> String.valueOf(p.getFileName()).startsWith(prefix)).toList()) {
+                deleteTree(sibling);
+            }
+        }
+    }
+
+    private static void deleteTree(Path root) throws IOException {
+        if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
+            return;
+        }
+        Files.walkFileTree(root, new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                 Files.delete(file);
-                log.debug("Deleted file: {}", file);
                 return FileVisitResult.CONTINUE;
             }
 
             @Override
             public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-				if (exc != null) {
-					throw exc;
-				}
-                if (!dir.equals(outPath)) {  // do not delete root itself
-                    Files.delete(dir);
-                    log.debug("Deleted directory: {}", dir);
+                if (exc != null) {
+                    throw exc;
                 }
+                Files.delete(dir);
                 return FileVisitResult.CONTINUE;
             }
         });
@@ -197,7 +351,7 @@ public class SiteGeneratorService {
         ctx.setVariable("seasonSlug", null);
         ctx.setVariable("seasonName", null);
         ctx.setVariable("breadcrumbCurrent", null);
-        templateWriter.write("site/index", ctx, outPath.resolve("index.html"), activeSeasonSlug, activeSeasonName);
+        templateWriter.write("site/index", ctx, outPath.resolve("index.html"), outPath, activeSeasonSlug, activeSeasonName);
         result.incrementPages();
     }
 
@@ -225,7 +379,7 @@ public class SiteGeneratorService {
 
         var dir = outPath.resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel()));
         Files.createDirectories(dir);
-        templateWriter.write("site/playoff-bracket", ctx, dir.resolve("playoff.html"), activeSeasonSlug, activeSeasonName);
+        templateWriter.write("site/playoff-bracket", ctx, dir.resolve("playoff.html"), outPath, activeSeasonSlug, activeSeasonName);
         result.incrementPages();
     }
 
@@ -243,7 +397,7 @@ public class SiteGeneratorService {
         ctx.setVariable("seasonSlug", null);
         ctx.setVariable("seasonName", null);
         ctx.setVariable("breadcrumbCurrent", null);
-        templateWriter.write("site/archive", ctx, outPath.resolve("archive.html"), activeSeasonSlug, activeSeasonName);
+        templateWriter.write("site/archive", ctx, outPath.resolve("archive.html"), outPath, activeSeasonSlug, activeSeasonName);
         result.incrementPages();
     }
 
@@ -256,7 +410,7 @@ public class SiteGeneratorService {
         ctx.setVariable("seasonSlug", null);
         ctx.setVariable("seasonName", null);
         ctx.setVariable("breadcrumbCurrent", "Links");
-        templateWriter.write("site/links", ctx, outPath.resolve("links.html"), activeSeasonSlug, activeSeasonName);
+        templateWriter.write("site/links", ctx, outPath.resolve("links.html"), outPath, activeSeasonSlug, activeSeasonName);
         result.incrementPages();
     }
 
@@ -337,7 +491,7 @@ public class SiteGeneratorService {
         ctx.setVariable("seasonSlug", null);
         ctx.setVariable("seasonName", null);
         ctx.setVariable("breadcrumbCurrent", "Teams");
-        templateWriter.write("site/teams", ctx, outPath.resolve("teams.html"), activeSeasonSlug, activeSeasonName);
+        templateWriter.write("site/teams", ctx, outPath.resolve("teams.html"), outPath, activeSeasonSlug, activeSeasonName);
         result.incrementPages();
     }
 
@@ -387,7 +541,7 @@ public class SiteGeneratorService {
         ctx.setVariable("seasonSlug", null);
         ctx.setVariable("seasonName", null);
         ctx.setVariable("breadcrumbCurrent", "Drivers");
-        templateWriter.write("site/drivers", ctx, outPath.resolve("drivers.html"), activeSeasonSlug, activeSeasonName);
+        templateWriter.write("site/drivers", ctx, outPath.resolve("drivers.html"), outPath, activeSeasonSlug, activeSeasonName);
         result.incrementPages();
     }
 
@@ -427,7 +581,7 @@ public class SiteGeneratorService {
         ctx.setVariable("seasonSlug", null);
         ctx.setVariable("seasonName", null);
         ctx.setVariable("breadcrumbCurrent", "Alltime Standings");
-        templateWriter.write("site/alltime-standings", ctx, outPath.resolve("alltime-standings.html"),
+        templateWriter.write("site/alltime-standings", ctx, outPath.resolve("alltime-standings.html"), outPath,
                 activeSeasonSlug, activeSeasonName);
         result.incrementPages();
     }
@@ -467,7 +621,7 @@ public class SiteGeneratorService {
         ctx.setVariable("seasonSlug", null);
         ctx.setVariable("seasonName", null);
         ctx.setVariable("breadcrumbCurrent", "Alltime Driver Ranking");
-        templateWriter.write("site/alltime-driver-ranking", ctx, outPath.resolve("alltime-driver-ranking.html"),
+        templateWriter.write("site/alltime-driver-ranking", ctx, outPath.resolve("alltime-driver-ranking.html"), outPath,
                 activeSeasonSlug, activeSeasonName);
         result.incrementPages();
     }

@@ -174,7 +174,7 @@ public class DriverProfilePageGenerator {
         var dir = ctx.outPath().resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel())).resolve("driver");
         Files.createDirectories(dir);
         templateWriter.write("site/driver-profile", context, dir.resolve(ctx.slugs().driver(driver.getId()) + ".html"),
-                ctx.activeSeasonSlug(), ctx.activeSeasonName());
+                ctx.outPath(), ctx.activeSeasonSlug(), ctx.activeSeasonName());
         result.incrementPages();
     }
 
