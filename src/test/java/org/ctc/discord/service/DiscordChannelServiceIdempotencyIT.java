@@ -162,6 +162,9 @@ class DiscordChannelServiceIdempotencyIT {
 		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c-link/webhooks"))
 				.willReturn(okJson("[{\"id\":\"w-link\",\"name\":\"CTC Manager\",\"channel_id\":\"c-link\","
 						+ "\"token\":\"tok-link\",\"url\":\"" + wm.baseUrl() + "/webhooks/w-link/tok-link\"}]")));
+		wm.stubFor(post(urlPathEqualTo("/api/v10/channels/c-idem/webhooks"))
+				.willReturn(okJson("{\"id\":\"1\",\"token\":\"tok-idem\",\"url\":\"" + wm.baseUrl()
+						+ "/webhooks/1/tok-idem\",\"channel_id\":\"c-idem\"}").withFixedDelay(1500)));
 		var pool = Executors.newSingleThreadExecutor();
 		var creation = pool.submit(() -> channelService.createMatchChannel(stored()));
 		long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);

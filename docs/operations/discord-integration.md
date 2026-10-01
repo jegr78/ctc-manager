@@ -7,7 +7,7 @@ UAT-03 live-smoke procedure, and recurring troubleshooting scenarios.
 
 **Cross-references:**
 
-- Config keys in `application-{dev,local,docker,prod}.yml` and `application.yml`: `app.discord.bot-token`, `app.discord.allowed-hosts`, `app.discord.base-url`, `app.discord.rate-limit.*`, `app.timezone`
+- Config keys in `application-{dev,local,docker,prod}.yml` and `application.yml`: `app.discord.bot-token`, `app.discord.allowed-hosts`, `app.discord.base-url`, `app.discord.connect-timeout`, `app.discord.read-timeout`, `app.discord.rate-limit.*`, `app.timezone`
 - Env-var contract: `DISCORD_BOT_TOKEN` (never written into YAML literals)
 - Java surface: [`DiscordRestClient.java`](../../src/main/java/org/ctc/discord/DiscordRestClient.java), [`DiscordWebhookClient.java`](../../src/main/java/org/ctc/discord/DiscordWebhookClient.java), [`DiscordHostValidator.java`](../../src/main/java/org/ctc/discord/DiscordHostValidator.java), [`DiscordConfigController.java`](../../src/main/java/org/ctc/discord/web/DiscordConfigController.java)
 - Exception hierarchy: [`org.ctc.discord.exception.DiscordApiException`](../../src/main/java/org/ctc/discord/exception/DiscordApiException.java) + 4 sealed permits (`DiscordTransientException`, `DiscordAuthException`, `DiscordNotFoundException`, `DiscordCategoryFullException`)
@@ -321,7 +321,8 @@ until prerequisites are met (with a tooltip listing the missing fields).
 1. **Create Discord Channel** — creates a per-match channel under the
    configured "Current Match Category", auto-creates the channel webhook,
    runs the permission audit, and stores `matches.discord_channel_id`.
-   Pre-flight: both teams have `discord_role_id` set.
+   Pre-flight: both teams have `discord_role_id` set. A repeated or concurrent
+   click on a match that already has a channel creates nothing.
 2. **Post Team Cards** — multipart POST with 2 PNGs (per-team rosters).
 3. **Post Settings** — multipart POST with N PNGs (one per race-setting
    sheet).
@@ -696,9 +697,10 @@ reconfiguration.
    webhook URLs, and forum-channel snowflakes.
 3. For each team, re-open `/admin/teams/{id}/edit` and re-select the new guild's
    role.
-4. For each active match, click "Create Discord Channel" again — the old
-   `discord_channel_id` points at a 404; the operator manually deletes the stale row
-   or re-runs the channel creation flow which overwrites the FK with a fresh channel.
+4. For each active match, clear the stale `matches.discord_channel_id` and
+   `discord_channel_webhook_url` in the database, then click "Create Discord Channel".
+   The button does nothing for a match that still carries a channel ID, so it never
+   replaces a stored channel.
 
 ### 8.2 webhook_token secrecy on backup ZIPs
 
