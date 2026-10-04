@@ -36,7 +36,7 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
 		page.navigate(url("/admin/seasons"));
 
 		// then
-		assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Seasons").setExact(true))).isVisible();
+		assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("All seasons").setExact(true))).isVisible();
 		assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Teams").setExact(true))).isVisible();
 		assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Drivers").setExact(true))).isVisible();
 		assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Matchdays").setExact(true))).isVisible();

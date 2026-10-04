@@ -50,8 +50,9 @@ public class MatchScoringController {
 
 	@PostMapping("/save")
 	public String save(@Valid @ModelAttribute("matchScoringForm") MatchScoringForm form, BindingResult result,
-	                   RedirectAttributes redirectAttributes) {
+	                   Model model, RedirectAttributes redirectAttributes) {
 		if (result.hasErrors()) {
+            model.addAttribute("pageTitle", form.getId() == null ? "New Match-Scoring" : "Edit Match-Scoring");
 			return "admin/match-scoring-form";
 		}
 		try {

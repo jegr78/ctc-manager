@@ -43,6 +43,21 @@ class MatchdayControllerTest {
     @MockitoBean private MatchResultsGraphicService matchResultsGraphicService;
 
     @Test
+    void givenOverlongWeekend_whenSavePairings_thenFieldErrorAndDeadlineRemainVisible() throws Exception {
+        // given
+        var fixture = testHelper.createFullSeasonFixture("Test Pairings Editor");
+        // when / then
+        mockMvc.perform(post("/admin/matchdays/" + fixture.matchday().getId() + "/save-pairings")
+                        .param("id", fixture.matchday().getId().toString())
+                        .param("pickDeadline", "2028-05-20T20:00")
+                        .param("scheduledWeekend", "x".repeat(65)))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeHasFieldErrors("form", "scheduledWeekend"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"scheduledWeekend-error\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("2028-05-20T20:00")));
+    }
+
+    @Test
     void givenExistingMatchday_whenGetMatchdayDetail_thenReturnsDetailView() throws Exception {
         // given
         var season = testHelper.createSeason("MD Detail Season");
@@ -108,7 +123,8 @@ class MatchdayControllerTest {
                 // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/matchday-form"))
-                .andExpect(model().attributeExists("form", "seasons"));
+                .andExpect(model().attributeExists("form", "seasons"))
+                .andExpect(model().attribute("pageTitle", "New Matchday"));
     }
 
     @Test
@@ -136,7 +152,8 @@ class MatchdayControllerTest {
                 // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/matchday-form"))
-                .andExpect(model().attributeExists("form", "season", "seasons"));
+                .andExpect(model().attributeExists("form", "season", "seasons"))
+                .andExpect(model().attribute("pageTitle", "Edit Matchday"));
     }
 
     @Test
@@ -206,7 +223,8 @@ class MatchdayControllerTest {
                 // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/matchday-form"))
-                .andExpect(model().attributeHasFieldErrors("form", "label"));
+                .andExpect(model().attributeHasFieldErrors("form", "label"))
+                .andExpect(model().attribute("pageTitle", "New Matchday"));
     }
 
     @Test

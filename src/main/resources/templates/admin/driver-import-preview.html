@@ -2,24 +2,27 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Driver Import Preview', ~{::section})}">
 <body>
-<section>
+<section class="entity-editor driver-import-preview">
+    <a th:href="@{/admin/drivers/import}" class="back-link">&larr; Back to Driver Import</a>
     <h1>Driver Import Preview</h1>
+    <p class="text-dim mb-md">Choose a season for each tab and review the team changes and driver suggestions. Tabs without a selected season are skipped.</p>
 
-    <form th:action="@{/admin/drivers/import/execute}" method="post">
+    <form class="entity-editor-form" th:action="@{/admin/drivers/import/execute}" method="post">
         <input type="hidden" name="sheetUrl" th:value="${sheetUrl}">
 
-        <th:block th:each="tab : ${preview.tabPreviews()}">
-            <div class="card mb-md">
+        <th:block th:each="tab, tabStat : ${preview.tabPreviews()}">
+            <div class="card mb-md driver-import-tab">
                 <!-- heading uses raw tabName (e.g. "2025_S2") not just the year -->
                 <h2 th:text="${tab.tabName()}"></h2>
 
                 <!-- ambiguous-tab plain banner — clear, never hidden behind a small caption -->
-                <div th:if="${tab.ambiguousReason() != null}" class="alert alert-warning mb-md">
-                    <strong>Ambiguous tab</strong> — rename to <code>{year}_S{N}</code> to disambiguate.
+                <div th:if="${tab.ambiguousReason() != null}" class="driver-import-notice mb-md">
+                    <strong>Ambiguous tab.</strong> Rename to <code>{year}_S{N}</code> to disambiguate.
                     <span> Reason: </span>
                     <span th:text="${tab.ambiguousReason()}"></span>
                 </div>
 
+                <p class="text-dim mb-md">Assign this tab to a season. Leave the selection empty to skip it.</p>
                 <!-- Season dropdown -->
                 <div class="form-group">
                     <label th:for="'seasonId_' + ${tab.tabName()}">Season</label>
@@ -36,11 +39,11 @@
                 <!-- Bucket: New Drivers -->
                 <th:block th:if="${!tab.newDrivers().isEmpty()}">
                     <h3 th:text="'New Drivers (' + ${#lists.size(tab.newDrivers())} + ')'"></h3>
-                    <div class="table-scroll">
+                    <div class="table-scroll" tabindex="0" role="region" th:attr="aria-label=|New drivers in ${tab.tabName()}|">
                         <table>
                             <thead><tr>
-                                <th>PSN ID</th>
-                                <th>Team</th>
+                                <th scope="col">PSN ID</th>
+                                <th scope="col">Team</th>
                             </tr></thead>
                             <tbody>
                                 <tr th:each="row : ${tab.newDrivers()}">
@@ -55,11 +58,11 @@
                 <!-- Bucket: New Assignments -->
                 <th:block th:if="${!tab.newAssignments().isEmpty()}">
                     <h3 th:text="'New Assignments (' + ${#lists.size(tab.newAssignments())} + ')'"></h3>
-                    <div class="table-scroll">
+                    <div class="table-scroll" tabindex="0" role="region" th:attr="aria-label=|New assignments in ${tab.tabName()}|">
                         <table>
                             <thead><tr>
-                                <th>PSN ID</th>
-                                <th>Team</th>
+                                <th scope="col">PSN ID</th>
+                                <th scope="col">Team</th>
                             </tr></thead>
                             <tbody>
                                 <tr th:each="row : ${tab.newAssignments()}">
@@ -72,27 +75,32 @@
                 </th:block>
 
                 <!-- Bucket: Conflicts (Skip checkbox) -->
+
                 <th:block th:if="${!tab.conflicts().isEmpty()}">
                     <h3 th:text="'Conflicts (' + ${#lists.size(tab.conflicts())} + ')'"></h3>
-                    <div class="table-scroll">
+                    <p th:id="'driver-conflict-hint-' + ${tabStat.index}" class="text-dim form-hint--sm">Unchecked conflicts replace the current team with the sheet team. Check Skip to keep the current team.</p>
+                    <div class="table-scroll" tabindex="0" role="region" th:attr="aria-label=|Team conflicts in ${tab.tabName()}|">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>PSN ID</th>
-                                    <th>Current Team</th>
-                                    <th>Sheet Team</th>
-                                    <th>Skip (keep existing)</th>
+                                    <th scope="col">PSN ID</th>
+                                    <th scope="col">Current Team</th>
+                                    <th scope="col">Sheet Team</th>
+                                    <th scope="col">Skip (keep existing)</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr th:each="row : ${tab.conflicts()}">
+                                <tr th:each="row, rowStat : ${tab.conflicts()}">
                                     <td th:text="${row.psnId()}"></td>
                                     <td th:text="${row.existingTeamShortName()}"></td>
                                     <td th:text="${row.sheetTeamShortName()}"></td>
                                     <td>
-                                        <input type="checkbox"
-                                               th:name="'skip_' + ${row.psnId()} + '_' + ${tab.tabName()}"
-                                               value="on">
+                                        <label class="driver-import-decision" th:for="${'driver-skip-' + tabStat.index + '-' + rowStat.index}">
+                                            <input type="checkbox" th:id="${'driver-skip-' + tabStat.index + '-' + rowStat.index}"
+                                                   th:name="'skip_' + ${row.psnId()} + '_' + ${tab.tabName()}" value="on"
+                                                   th:attr="aria-describedby=${'driver-conflict-hint-' + tabStat.index}">
+                                            <span th:text="'Skip ' + ${row.psnId()}"></span>
+                                        </label>
                                     </td>
                                 </tr>
                             </tbody>
@@ -101,27 +109,32 @@
                 </th:block>
 
                 <!-- Bucket: Fuzzy Match Suggestions (Accept checkbox) -->
+
                 <th:block th:if="${!tab.fuzzySuggestions().isEmpty()}">
                     <h3 th:text="'Fuzzy Match Suggestions (' + ${#lists.size(tab.fuzzySuggestions())} + ')'"></h3>
-                    <div class="table-scroll">
+                    <p th:id="'driver-fuzzy-hint-' + ${tabStat.index}" class="text-dim form-hint--sm">Unchecked suggestions create a new driver. Check Accept to link the imported PSN ID to the suggested driver.</p>
+                    <div class="table-scroll" tabindex="0" role="region" th:attr="aria-label=|Suggested driver matches in ${tab.tabName()}|">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>PSN ID</th>
-                                    <th>Suggested Driver</th>
-                                    <th>Team</th>
-                                    <th>Accept (link to existing)</th>
+                                    <th scope="col">PSN ID</th>
+                                    <th scope="col">Suggested Driver</th>
+                                    <th scope="col">Team</th>
+                                    <th scope="col">Accept (link to existing)</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr th:each="row : ${tab.fuzzySuggestions()}">
+                                <tr th:each="row, rowStat : ${tab.fuzzySuggestions()}">
                                     <td th:text="${row.psnId()}"></td>
                                     <td th:text="${row.suggestedPsnId() + ' (' + #numbers.formatDecimal(row.similarity() * 100, 1, 0) + '%)'}"></td>
                                     <td th:text="${row.teamShortName()}"></td>
                                     <td>
-                                        <input type="checkbox"
-                                               th:name="'accept_' + ${row.psnId()} + '_' + ${tab.tabName()}"
-                                               th:value="${row.suggestedDriverId()}">
+                                        <label class="driver-import-decision" th:for="${'driver-accept-' + tabStat.index + '-' + rowStat.index}">
+                                            <input type="checkbox" th:id="${'driver-accept-' + tabStat.index + '-' + rowStat.index}"
+                                                   th:name="'accept_' + ${row.psnId()} + '_' + ${tab.tabName()}" th:value="${row.suggestedDriverId()}"
+                                                   th:attr="aria-describedby=${'driver-fuzzy-hint-' + tabStat.index}">
+                                            <span th:text="'Accept match for ' + ${row.psnId()}"></span>
+                                        </label>
                                     </td>
                                 </tr>
                             </tbody>
@@ -131,12 +144,14 @@
 
                 <!-- Bucket: Unchanged (display-only, no DB write on execute) -->
                 <th:block th:if="${!tab.unchanged().isEmpty()}">
+
                     <h3 th:text="'Unchanged (' + ${#lists.size(tab.unchanged())} + ')'"></h3>
-                    <div class="table-scroll">
+                    <p class="text-dim form-hint--sm">These drivers already have the listed team. No changes will be written for these rows.</p>
+                    <div class="table-scroll" tabindex="0" role="region" th:attr="aria-label=|Unchanged drivers in ${tab.tabName()}|">
                         <table>
                             <thead><tr>
-                                <th>PSN ID</th>
-                                <th>Team</th>
+                                <th scope="col">PSN ID</th>
+                                <th scope="col">Team</th>
                             </tr></thead>
                             <tbody>
                                 <tr th:each="row : ${tab.unchanged()}">
@@ -150,10 +165,12 @@
 
                 <!-- Bucket: Errors (display-only, never imported) -->
                 <th:block th:if="${!tab.errors().isEmpty()}">
+
                     <h3 th:text="'Errors (' + ${#lists.size(tab.errors())} + ')'"></h3>
-                    <div class="table-scroll">
+                    <p class="text-dim form-hint--sm">These rows will not be imported. Correct them in the spreadsheet and preview again.</p>
+                    <div class="table-scroll" tabindex="0" role="region" th:attr="aria-label=|Invalid driver rows in ${tab.tabName()}|">
                         <table>
-                            <thead><tr><th>PSN ID</th><th>Team Code</th><th>Reason</th></tr></thead>
+                            <thead><tr><th scope="col">PSN ID</th><th scope="col">Team Code</th><th scope="col">Reason</th></tr></thead>
                             <tbody>
                                 <tr th:each="row : ${tab.errors()}">
                                     <td th:text="${row.psnId()}"></td>
@@ -169,16 +186,19 @@
         </th:block>
 
         <!-- Ambiguous-season warning banner -->
-        <div class="alert alert-error mb-md"
+        <div class="driver-import-notice mb-md"
              th:if="${hasAmbiguousTabs}">
-            <strong>Warning:</strong> Some tabs have no matching season.
+            <strong>Review season choices.</strong> Some tabs could not be assigned automatically.
             Tabs with no season selected will be skipped on execute.
         </div>
 
         <!-- Execute button — outside per-tab loop, at form bottom -->
-        <div class="actions mt-md">
+        <div class="entity-editor-actions">
+            <span class="text-dim">The spreadsheet is read again when you execute the import.</span>
+            <div class="actions">
             <button type="submit" class="btn btn-primary">Execute Import</button>
             <a th:href="@{/admin/drivers/import}" class="btn btn-secondary">Cancel</a>
+            </div>
         </div>
     </form>
 </section>

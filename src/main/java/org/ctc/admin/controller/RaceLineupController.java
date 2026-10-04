@@ -35,6 +35,7 @@ public class RaceLineupController {
 			teamEntries.add(data.awayEntry());
 		}
 
+		model.addAttribute("pageTitle", "Race Lineup");
 		model.addAttribute("race", data.race());
 		model.addAttribute("teamEntries", teamEntries);
 		model.addAttribute("driverAssignments", raceLineupService.getDriverAssignments(raceId));

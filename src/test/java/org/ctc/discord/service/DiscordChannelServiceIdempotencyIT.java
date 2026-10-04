@@ -2,6 +2,7 @@ package org.ctc.discord.service;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
@@ -21,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 import org.ctc.TestHelper;
 import org.ctc.admin.service.TeamCardService;
 import org.ctc.discord.DiscordPermissions;
+import org.ctc.discord.exception.DiscordChannelBusyException;
 import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.discord.repository.DiscordGlobalConfigRepository;
 import org.ctc.discord.repository.DiscordPostRepository;
@@ -179,8 +181,14 @@ class DiscordChannelServiceIdempotencyIT {
 		assertThat(creation.get(30, TimeUnit.SECONDS)).as("the creation stores its channel").isTrue();
 		pool.shutdown();
 		assertThat(linkFailure).as("link while the match gets a channel")
-				.isInstanceOf(BusinessRuleException.class)
-				.hasMessageContaining("already has a Discord channel");
+				.isInstanceOf(BusinessRuleException.class);
+		if (linkFailure instanceof DiscordChannelBusyException) {
+			assertThat(linkFailure).hasMessage(
+					"Another request is changing this match's Discord channel. Reload the page and try again.");
+		} else {
+			assertThat(linkFailure).hasMessageContaining("already has a Discord channel");
+		}
+		wm.verify(exactly(0), getRequestedFor(urlPathEqualTo("/api/v10/channels/c-link")));
 		assertThat(stored().getDiscordChannelId()).as("channel id").isEqualTo("c-idem");
 		assertThat(stored().getDiscordChannelWebhookUrl()).as("webhook url").isEqualTo(wm.baseUrl() + "/webhooks/1/tok-idem");
 	}

@@ -62,6 +62,34 @@ class MatchdayGeneratorServiceTest {
 	}
 
 	@Test
+	void givenUnequalGroups_whenGetFormData_thenRecommendationsMatchEachGroupRoster() {
+		// given
+		regularPhase.setLayout(PhaseLayout.GROUPS);
+		seasonPhaseRepository.save(regularPhase);
+		var groupA = seasonPhaseGroupRepository.save(new SeasonPhaseGroup(regularPhase, "Test Group A", 0));
+		var groupB = seasonPhaseGroupRepository.save(new SeasonPhaseGroup(regularPhase, "Test Group B", 1));
+		addTeamsToPhase(regularPhase, groupA, 2);
+		addTeamsToPhase(regularPhase, groupB, 3);
+		// when
+		var data = matchdayGeneratorService.getFormData(season.getId());
+		// then
+		assertThat(data.teamCount()).isEqualTo(5);
+		assertThat(data.groups()).extracting(MatchdayGeneratorService.GeneratorGroup::teamCount).containsExactly(2, 3);
+		assertThat(data.groups()).extracting(MatchdayGeneratorService.GeneratorGroup::optimalRounds).containsExactly(1, 3);
+	}
+
+	@Test
+	void givenPhaseRosterWithoutSeasonAssignments_whenGetFormData_thenCountsGeneratorTeams() {
+		// given
+		addTeamsToPhase(regularPhase, null, 4);
+		// when
+		var data = matchdayGeneratorService.getFormData(season.getId());
+		// then
+		assertThat(data.teamCount()).isEqualTo(4);
+		assertThat(data.optimalRounds()).isEqualTo(3);
+	}
+
+	@Test
 	void givenLeagueWith6Teams_whenGenerate_thenCreates5MatchdaysAllTeamsPlayOncePerRound() {
 		// given
 		addTeams(6);

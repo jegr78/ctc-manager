@@ -131,7 +131,56 @@ class DriverSheetImportControllerTest {
                         .param("sheetUrl", "https://sheets.test/d/abc"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/driver-import-preview"))
-                .andExpect(model().attributeExists("preview", "sheetUrl", "seasons"));
+                .andExpect(model().attributeExists("preview", "sheetUrl", "seasons"))
+                .andExpect(content().string(containsString("aria-label=\"New drivers in 2021\"")));
+    }
+
+    @Test
+    void givenConflictAndFuzzyRows_whenPreviewed_thenDecisionsHaveUniqueLabelsAndExecutionParameters() throws Exception {
+        // given
+        testHelper.createSeasonDriver(season2021, existingDriver, teamAhr);
+        var fuzzy = testHelper.createDriver("Test_preview_fuzzy", "Test Preview Fuzzy");
+        stubSheets("https://sheets.test/d/decisions", 2021, List.of(
+                List.of("PSN ID", "Nickname", "Team"),
+                List.of("imp_existing_drv", "Existing", "I_CRL"),
+                List.of("Test_preview_fuzzi", "Incoming", "I_AHR")));
+
+        // when
+        var result = mockMvc.perform(post("/admin/drivers/import/preview")
+                        .param("sheetUrl", "https://sheets.test/d/decisions"))
+                .andExpect(status().isOk()).andReturn();
+        var document = org.jsoup.Jsoup.parse(result.getResponse().getContentAsString());
+
+        // then
+        var skip = document.selectFirst("input[name=skip_imp_existing_drv_2021]");
+        var accept = document.selectFirst("input[name=accept_Test_preview_fuzzi_2021]");
+        assertThat(skip).isNotNull();
+        assertThat(accept).isNotNull();
+        assertThat(skip.id()).isNotBlank();
+        assertThat(accept.id()).isNotBlank().isNotEqualTo(skip.id());
+        assertThat(document.selectFirst("label[for=" + skip.id() + "]").text()).contains("imp_existing_drv");
+        assertThat(document.selectFirst("label[for=" + accept.id() + "]").text()).contains("Test_preview_fuzzi");
+        assertThat(skip.attr("value")).isEqualTo("on");
+        assertThat(accept.attr("value")).isEqualTo(fuzzy.getId().toString());
+        assertThat(skip.closest("form").attr("action")).isEqualTo("/admin/drivers/import/execute");
+        assertThat(document.text()).contains("Unchecked conflicts replace the current team", "Unchecked suggestions create a new driver", "Tabs without a selected season are skipped");
+    }
+
+    @Test
+    void givenUnreadableSheet_whenPreviewFails_thenEnteredUrlRemainsForRetry() throws Exception {
+        // given
+        var sheetUrl = "https://sheets.test/d/retry";
+        when(googleSheetsService.isAvailable()).thenReturn(true);
+        when(googleSheetsService.extractSpreadsheetId(sheetUrl)).thenThrow(new IllegalArgumentException("Invalid spreadsheet"));
+
+        // when
+        var result = mockMvc.perform(post("/admin/drivers/import/preview").param("sheetUrl", sheetUrl))
+                .andExpect(status().isOk()).andExpect(view().name("admin/driver-import")).andReturn();
+
+        // then
+        var document = org.jsoup.Jsoup.parse(result.getResponse().getContentAsString());
+        assertThat(document.selectFirst("#sheetUrl").attr("value")).isEqualTo(sheetUrl);
+        assertThat(document.selectFirst("#sheetUrl").attr("aria-describedby")).isEqualTo("driver-sheet-access");
     }
 
     @Test

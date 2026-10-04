@@ -2,46 +2,74 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Create Playoff', ~{::section})}">
 <body>
-<section>
+<section class="entity-editor playoff-configuration">
+    <a th:href="@{/admin/playoffs(seasonId=${playoffForm.seasonId})}" class="back-link">&larr; Back to Playoffs</a>
     <h1>New Playoff</h1>
+    <nav class="entity-section-nav" aria-label="Playoff form sections">
+        <a href="#playoff-structure">Bracket</a>
+        <a href="#playoff-schedule">Schedule</a>
+    </nav>
     <div class="card">
-        <form th:action="@{/admin/playoffs/save}" th:object="${playoffForm}" method="post">
-            <div class="form-group">
-                <label for="seasonId">Season</label>
-                <select id="seasonId" th:field="*{seasonId}" required>
-                    <option value="">-- Select season --</option>
-                    <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"></option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="name">Name</label>
-                <input type="text" id="name" th:field="*{name}" required placeholder="e.g. CTC 5 Playoffs">
-            </div>
-            <div class="form-group">
-                <label for="numberOfTeams">Number of Teams</label>
-                <select id="numberOfTeams" th:field="*{numberOfTeams}">
-                    <option value="2">2 Teams (Final)</option>
-                    <option value="4">4 Teams (SF + Final)</option>
-                    <option value="8" selected>8 Teams (QF + SF + Final)</option>
-                </select>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="startDate">Start Date</label>
-                    <input type="date" id="startDate" name="startDate" th:value="${playoffForm.startDate != null ? playoffForm.startDate.toString() : ''}">
+        <form class="entity-editor-form" th:action="@{/admin/playoffs/save}" th:object="${playoffForm}" method="post">
+            <fieldset id="playoff-structure">
+                <legend>Bracket setup</legend>
+                    <div class="form-group">
+                        <label for="seasonId">Season</label>
+                        <select id="seasonId" th:field="*{seasonId}" required th:attr="aria-invalid=${#fields.hasErrors('seasonId')},aria-describedby=${#fields.hasErrors('seasonId') ? 'seasonId-error' : null}">
+                            <option value="">-- Select season --</option>
+                            <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"></option>
+                        </select>
+
+                        <p id="seasonId-error" class="field-error" th:if="${#fields.hasErrors('seasonId')}" th:errors="*{seasonId}"></p>
+                    </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="name">Name</label>
+                        <input type="text" id="name" th:field="*{name}" required placeholder="e.g. CTC 5 Playoffs" th:attr="aria-invalid=${#fields.hasErrors('name')},aria-describedby=${#fields.hasErrors('name') ? 'name-error' : null}">
+
+                        <p id="name-error" class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></p>
+                    </div>
+                    <div class="form-group">
+                        <label for="numberOfTeams">Number of teams</label>
+                        <select id="numberOfTeams" th:field="*{numberOfTeams}" th:attr="aria-invalid=${#fields.hasErrors('numberOfTeams')},aria-describedby=${#fields.hasErrors('numberOfTeams') ? 'numberOfTeams-error' : null}">
+                            <option value="2">2 Teams (Final)</option>
+                            <option value="4">4 Teams (SF + Final)</option>
+                            <option value="8">8 Teams (QF + SF + Final)</option>
+                        </select>
+                        <p class="text-dim form-hint--sm">Creates the bracket. Assign teams and seed numbers after saving.</p>
+                        <p id="numberOfTeams-error" class="field-error" th:if="${#fields.hasErrors('numberOfTeams')}" th:errors="*{numberOfTeams}"></p>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="endDate">End Date</label>
-                    <input type="date" id="endDate" name="endDate" th:value="${playoffForm.endDate != null ? playoffForm.endDate.toString() : ''}">
+            </fieldset>
+            <fieldset id="playoff-schedule">
+                <legend>Schedule</legend>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="startDate">Start date</label>
+                        <input type="date" id="startDate" name="startDate" th:value="${playoffForm.startDate != null ? playoffForm.startDate.toString() : ''}" th:attr="aria-invalid=${#fields.hasErrors('startDate')},aria-describedby=${#fields.hasErrors('startDate') ? 'startDate-error' : null}">
+
+                        <p id="startDate-error" class="field-error" th:if="${#fields.hasErrors('startDate')}" th:errors="*{startDate}"></p>
+                    </div>
+                    <div class="form-group">
+                        <label for="endDate">End date</label>
+                        <input type="date" id="endDate" name="endDate" th:value="${playoffForm.endDate != null ? playoffForm.endDate.toString() : ''}" th:attr="aria-invalid=${#fields.hasErrors('endDate')},aria-describedby=${#fields.hasErrors('endDate') ? 'endDate-error' : null}">
+
+                        <p id="endDate-error" class="field-error" th:if="${#fields.hasErrors('endDate')}" th:errors="*{endDate}"></p>
+                    </div>
                 </div>
-            </div>
-            <div class="form-group form-group--max-200">
-                <label for="eventDurationMinutes">Event Duration (min)</label>
-                <input type="number" id="eventDurationMinutes" th:field="*{eventDurationMinutes}" min="10" max="480" placeholder="e.g. 90">
-            </div>
-            <div class="actions mt-md">
-                <button type="submit" class="btn btn-primary">Create Playoff</button>
-                <a th:href="@{/admin/playoffs}" class="btn btn-secondary">Cancel</a>
+                    <div class="form-group">
+                        <label for="eventDurationMinutes">Event duration in minutes</label>
+                        <input type="number" id="eventDurationMinutes" th:field="*{eventDurationMinutes}" min="10" max="480" placeholder="e.g. 90" th:attr="aria-invalid=${#fields.hasErrors('eventDurationMinutes')},aria-describedby=${#fields.hasErrors('eventDurationMinutes') ? 'eventDurationMinutes-error' : null}">
+                        <p class="text-dim form-hint--sm">Optional. Used for calendar events.</p>
+                        <p id="eventDurationMinutes-error" class="field-error" th:if="${#fields.hasErrors('eventDurationMinutes')}" th:errors="*{eventDurationMinutes}"></p>
+                    </div>
+            </fieldset>
+            <div class="entity-editor-actions">
+                <span class="text-dim">New playoff</span>
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary">Create Playoff</button>
+                    <a th:href="@{/admin/playoffs(seasonId=${playoffForm.seasonId})}" class="btn btn-secondary">Cancel</a>
+                </div>
             </div>
         </form>
     </div>

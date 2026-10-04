@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
-<section>
+<section class="entity-detail event-detail">
     <div class="toolbar">
         <div>
             <a th:href="@{/admin/races(matchdayId=${race.matchday.id})}" class="back-link">&larr; Back to Races</a>
@@ -12,107 +12,22 @@
             </h1>
         </div>
         <div class="actions">
-            <a th:href="@{/admin/races/{id}/results(id=${race.id})}" class="btn btn-success">Results</a>
+            <a th:href="@{/admin/races/{id}/results(id=${race.id})}" class="btn btn-primary">Results</a>
             <a th:href="@{/admin/races/{id}/lineup(id=${race.id})}" class="btn btn-secondary">Lineup</a>
-            <a th:href="@{/admin/races/{id}/edit(id=${race.id})}" class="btn btn-primary">Edit</a>
-            <form th:action="@{/admin/races/{id}/delete(id=${race.id})}" method="post"
-                  onsubmit="return confirm('Really delete this race?')">
-                <button type="submit" class="btn btn-danger">Delete</button>
-            </form>
+            <a th:href="@{/admin/races/{id}/edit(id=${race.id})}" class="btn btn-secondary">Edit</a>
+
         </div>
     </div>
 
-    <!-- Generate Graphics -->
-    <div class="action-bar">
-        <!-- Lineup Button -->
-        <form th:if="${canGenerateLineup}" th:action="@{/admin/races/{id}/generate-lineup(id=${race.id})}" method="post">
-            <button type="submit" class="btn btn-primary">Generate Lineup Graphic</button>
-        </form>
-        <span th:if="${!canGenerateLineup && !lineupExists}" class="btn-with-hint">
-            <button class="btn btn-secondary" disabled>Generate Lineup Graphic</button>
-            <small class="text-dim">
-                <span th:if="${lineupMissing}">No lineup assigned.</span>
-                <span th:if="${cardsMissing}">Team cards missing.</span>
-            </small>
-        </span>
-
-        <!-- Results Button -->
-        <form th:if="${canGenerateResults}" th:action="@{/admin/races/{id}/generate-results(id=${race.id})}" method="post">
-            <button type="submit" class="btn btn-primary">Generate Results Graphic</button>
-        </form>
-        <span th:if="${!canGenerateResults && !resultsExist}" class="btn-with-hint">
-            <button class="btn btn-secondary" disabled>Generate Results Graphic</button>
-            <small class="text-dim">
-                <span th:if="${resultsMissing}">No results entered.</span>
-                <span th:if="${cardsMissing}">Team cards missing.</span>
-            </small>
-        </span>
-
-        <!-- Provisional Button -->
-        <form th:if="${canGenerateProvisional}" th:action="@{/admin/races/{id}/generate-provisional(id=${race.id})}" method="post">
-            <button type="submit" class="btn btn-primary">Generate Provisional Graphic</button>
-        </form>
-        <span th:if="${!canGenerateProvisional && !provisionalExists}" class="btn-with-hint">
-            <button class="btn btn-secondary" disabled>Generate Provisional Graphic</button>
-            <small class="text-dim">
-                <span th:if="${resultsMissing}">No results entered.</span>
-                <span th:if="${cardsMissing}">Team cards missing.</span>
-            </small>
-        </span>
-
-        <!-- Settings Button -->
-        <form th:if="${canGenerateSettings}" th:action="@{/admin/races/{id}/generate-settings(id=${race.id})}" method="post">
-            <button type="submit" class="btn btn-primary">Generate Settings Graphic</button>
-        </form>
-        <span th:if="${!canGenerateSettings && !settingsExist}" class="btn-with-hint">
-            <button class="btn btn-secondary" disabled>Generate Settings Graphic</button>
-            <small class="text-dim">
-                <span th:if="${settingsMissing}">Settings incomplete.</span>
-                <span th:if="${cardsMissing}">Team cards missing.</span>
-            </small>
-        </span>
-
-        <!-- Lobby Settings Button -->
-        <form th:if="${canGenerateLobbySettings}" th:action="@{/admin/races/{id}/generate-lobby-settings(id=${race.id})}" method="post">
-            <button type="submit" class="btn btn-primary">Generate Lobby Settings Graphic</button>
-        </form>
-        <span th:if="${!canGenerateLobbySettings && !lobbySettingsExist}" class="btn-with-hint">
-            <button class="btn btn-secondary" disabled>Generate Lobby Settings Graphic</button>
-            <small class="text-dim">
-                <span th:if="${lobbySettingsMissing}">Settings incomplete.</span>
-            </small>
-        </span>
-
-        <!-- Overlay Button -->
-        <form th:if="${canGenerateOverlay}" th:action="@{/admin/races/{id}/generate-overlay(id=${race.id})}" method="post">
-            <button type="submit" class="btn btn-primary">Generate Overlay Graphic</button>
-        </form>
-        <span th:if="${!canGenerateOverlay && !overlayExists}" class="btn-with-hint">
-            <button class="btn btn-secondary" disabled>Generate Overlay Graphic</button>
-            <small class="text-dim">No match data.</small>
-        </span>
-
-        <!-- Calendar Event Button -->
-        <form th:if="${canCreateCalendarEvent}" th:action="@{/admin/races/{id}/create-calendar-event(id=${race.id})}" method="post">
-            <button type="submit" class="btn btn-primary"
-                    th:text="${hasCalendarEvent ? 'Update Calendar Event' : 'Create Calendar Event'}"></button>
-        </form>
-        <span th:if="${!canCreateCalendarEvent && calendarAvailable}" class="btn-with-hint">
-            <button class="btn btn-secondary" disabled>Create Calendar Event</button>
-            <small class="text-dim">Date/time or teams missing.</small>
-        </span>
-    </div>
-
+    <nav class="entity-section-nav" aria-label="Race detail sections"><a href="#race-overview">Overview</a><a href="#race-results">Results</a><a href="#race-graphics">Graphics &amp; calendar</a><a href="#race-discord">Discord</a><a href="#race-attachments">Attachments</a></nav>
     <!-- Score Banner -->
     <div th:if="${homeTotal != null}" class="score-banner">
         <div class="score-banner__team"
              th:with="isWinner=${homeTotal > awayTotal}, isLoser=${homeTotal < awayTotal}">
             <div class="score-banner__label">Home</div>
             <div class="score-banner__name"
-                 th:style="${isWinner ? 'color:#66bb6a;' : (isLoser ? 'color:#ef5350;' : 'color:var(--white);')}"
                  th:text="${race.homeTeam.shortName}"></div>
             <div class="score-banner__value"
-                 th:style="${isWinner ? 'color:#66bb6a;' : (isLoser ? 'color:#ef5350;' : 'color:var(--text-label);')}"
                  th:text="${homeTotal}"></div>
             <div class="score-banner__result-area">
                 <span th:if="${isWinner}" class="result-badge--win">WIN</span>
@@ -126,10 +41,8 @@
              th:with="isWinner=${awayTotal > homeTotal}, isLoser=${awayTotal < homeTotal}">
             <div class="score-banner__label">Away</div>
             <div class="score-banner__name"
-                 th:style="${isWinner ? 'color:#66bb6a;' : (isLoser ? 'color:#ef5350;' : 'color:var(--white);')}"
                  th:text="${race.awayTeam?.shortName}"></div>
             <div class="score-banner__value"
-                 th:style="${isWinner ? 'color:#66bb6a;' : (isLoser ? 'color:#ef5350;' : 'color:var(--text-label);')}"
                  th:text="${awayTotal}"></div>
             <div class="score-banner__result-area">
                 <span th:if="${isWinner}" class="result-badge--win">WIN</span>
@@ -142,7 +55,8 @@
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="race-overview">
+        <h2>Race overview</h2>
         <div class="detail-fields">
             <span class="label">Matchday</span>
             <a th:href="@{/admin/matchdays/{id}(id=${race.matchday.id})}" class="detail-link" th:text="${race.matchday.label}"></a>
@@ -166,12 +80,14 @@
             <span th:if="${race.match == null && race.playoffMatchup == null}">-</span>
         </div>
 
+    </div>
+    <div class="card" id="race-results">
         <div class="detail-section">
             <h2 th:text="'Results (' + ${race.results.size()} + ')'"></h2>
             <div th:if="${!race.results.isEmpty()}">
-                <table>
+                <div class="table-scroll" role="region" aria-label="Race results" tabindex="0"><table>
                     <thead>
-                        <tr><th>Pos</th><th>Team</th><th>Driver</th><th class="td-center">Quali</th><th class="td-right">Race</th><th class="td-right">Quali</th><th class="td-right">FL</th><th class="td-right">Total</th></tr>
+                        <tr><th scope="col">Position</th><th scope="col">Team</th><th scope="col">Driver</th><th scope="col" class="td-center">Qualifying position</th><th scope="col" class="td-right">Race points</th><th scope="col" class="td-right">Qualifying points</th><th scope="col" class="td-right">Fastest lap points</th><th scope="col" class="td-right">Total</th></tr>
                     </thead>
                     <tbody>
                         <tr th:each="result : ${race.results}">
@@ -191,14 +107,97 @@
                             <td class="td-right td-numeric-bold" th:text="${result.pointsTotal}"></td>
                         </tr>
                     </tbody>
-                </table>
+                </table></div>
             </div>
             <div th:if="${race.results.isEmpty()}" class="empty-state empty-state--compact"><p>No results yet.</p></div>
         </div>
     </div>
 
+    <div class="card" id="race-graphics"><h2>Graphics &amp; calendar</h2><p class="text-dim workflow-hint">Generate assets from the saved race data. Missing prerequisites appear below each unavailable action.</p>
+    <!-- Generate Graphics -->
+    <div class="action-bar">
+        <!-- Lineup Button -->
+        <form th:if="${canGenerateLineup}" th:action="@{/admin/races/{id}/generate-lineup(id=${race.id})}" method="post">
+            <button type="submit" class="btn btn-secondary">Generate Lineup Graphic</button>
+        </form>
+        <span th:if="${!canGenerateLineup && !lineupExists}" class="btn-with-hint">
+            <button class="btn btn-secondary" disabled>Generate Lineup Graphic</button>
+            <small class="text-dim">
+                <span th:if="${lineupMissing}">No lineup assigned.</span>
+                <span th:if="${cardsMissing}">Team cards missing.</span>
+            </small>
+        </span>
+
+        <!-- Results Button -->
+        <form th:if="${canGenerateResults}" th:action="@{/admin/races/{id}/generate-results(id=${race.id})}" method="post">
+            <button type="submit" class="btn btn-secondary">Generate Results Graphic</button>
+        </form>
+        <span th:if="${!canGenerateResults && !resultsExist}" class="btn-with-hint">
+            <button class="btn btn-secondary" disabled>Generate Results Graphic</button>
+            <small class="text-dim">
+                <span th:if="${resultsMissing}">No results entered.</span>
+                <span th:if="${cardsMissing}">Team cards missing.</span>
+            </small>
+        </span>
+
+        <!-- Provisional Button -->
+        <form th:if="${canGenerateProvisional}" th:action="@{/admin/races/{id}/generate-provisional(id=${race.id})}" method="post">
+            <button type="submit" class="btn btn-secondary">Generate Provisional Graphic</button>
+        </form>
+        <span th:if="${!canGenerateProvisional && !provisionalExists}" class="btn-with-hint">
+            <button class="btn btn-secondary" disabled>Generate Provisional Graphic</button>
+            <small class="text-dim">
+                <span th:if="${resultsMissing}">No results entered.</span>
+                <span th:if="${cardsMissing}">Team cards missing.</span>
+            </small>
+        </span>
+
+        <!-- Settings Button -->
+        <form th:if="${canGenerateSettings}" th:action="@{/admin/races/{id}/generate-settings(id=${race.id})}" method="post">
+            <button type="submit" class="btn btn-secondary">Generate Settings Graphic</button>
+        </form>
+        <span th:if="${!canGenerateSettings && !settingsExist}" class="btn-with-hint">
+            <button class="btn btn-secondary" disabled>Generate Settings Graphic</button>
+            <small class="text-dim">
+                <span th:if="${settingsMissing}">Settings incomplete.</span>
+                <span th:if="${cardsMissing}">Team cards missing.</span>
+            </small>
+        </span>
+
+        <!-- Lobby Settings Button -->
+        <form th:if="${canGenerateLobbySettings}" th:action="@{/admin/races/{id}/generate-lobby-settings(id=${race.id})}" method="post">
+            <button type="submit" class="btn btn-secondary">Generate Lobby Settings Graphic</button>
+        </form>
+        <span th:if="${!canGenerateLobbySettings && !lobbySettingsExist}" class="btn-with-hint">
+            <button class="btn btn-secondary" disabled>Generate Lobby Settings Graphic</button>
+            <small class="text-dim">
+                <span th:if="${lobbySettingsMissing}">Settings incomplete.</span>
+            </small>
+        </span>
+
+        <!-- Overlay Button -->
+        <form th:if="${canGenerateOverlay}" th:action="@{/admin/races/{id}/generate-overlay(id=${race.id})}" method="post">
+            <button type="submit" class="btn btn-secondary">Generate Overlay Graphic</button>
+        </form>
+        <span th:if="${!canGenerateOverlay && !overlayExists}" class="btn-with-hint">
+            <button class="btn btn-secondary" disabled>Generate Overlay Graphic</button>
+            <small class="text-dim">No match data.</small>
+        </span>
+
+        <!-- Calendar Event Button -->
+        <form th:if="${canCreateCalendarEvent}" th:action="@{/admin/races/{id}/create-calendar-event(id=${race.id})}" method="post">
+            <button type="submit" class="btn btn-secondary"
+                    th:text="${hasCalendarEvent ? 'Update Calendar Event' : 'Create Calendar Event'}"></button>
+        </form>
+        <span th:if="${!canCreateCalendarEvent && calendarAvailable}" class="btn-with-hint">
+            <button class="btn btn-secondary" disabled>Create Calendar Event</button>
+            <small class="text-dim">Date/time or teams missing.</small>
+        </span>
+    </div>
+
+    </div>
     <!-- Discord Actions -->
-    <div class="card">
+    <div class="card" id="race-discord">
         <h2>Discord Actions</h2>
         <div class="discord-actions discord-actions--posts">
             <form th:if="${raceResultsForumPost == null and canPostRaceResultToForum}"
@@ -221,7 +220,7 @@
     </div>
 
     <!-- Attachments -->
-    <div class="card">
+    <div class="card" id="race-attachments">
         <h2 th:text="'Attachments (' + ${race.attachments.size()} + ')'"></h2>
 
         <div th:if="${!race.attachments.isEmpty()}" class="attachment-list">
@@ -258,8 +257,8 @@
             <form th:action="@{/admin/races/{id}/attachments/upload(id=${race.id})}" method="post" enctype="multipart/form-data"
                   class="inline-form">
                 <div class="form-group form-group--inline">
-                    <label>Upload File</label>
-                    <input type="file" name="file" required accept="image/png,image/jpeg,image/gif,image/webp,application/pdf"
+                    <label for="race-attachment-file">Upload file</label>
+                    <input type="file" id="race-attachment-file" name="file" required accept="image/png,image/jpeg,image/gif,image/webp,application/pdf"
                            class="file-input">
                     <small class="text-dim form-hint">PNG, JPG, WebP, GIF, PDF. Max 10 MB</small>
                 </div>
@@ -269,11 +268,11 @@
             <form th:action="@{/admin/races/{id}/attachments/link(id=${race.id})}" method="post"
                   class="inline-form">
                 <div class="form-group form-group--inline">
-                    <label>Add Link</label>
+                    <label for="race-attachment-title">Link title</label>
                     <div class="inline-form">
-                        <input type="text" name="name" placeholder="Title" required
+                        <input type="text" id="race-attachment-title" name="name" placeholder="Title" required
                                class="input-title">
-                        <input type="url" name="url" placeholder="https://..." required
+                        <label for="race-attachment-url" class="sr-only">Link URL</label><input type="url" id="race-attachment-url" name="url" placeholder="https://..." required
                                class="input-url">
                     </div>
                 </div>
@@ -281,6 +280,12 @@
             </form>
         </div>
     </div>
+    <details class="card event-maintenance"><summary>Manage race</summary><p class="text-dim workflow-hint">Delete this race and its related records.</p>
+            <form th:action="@{/admin/races/{id}/delete(id=${race.id})}" method="post"
+                  onsubmit="return confirm('Really delete this race?')">
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+    </details>
 </section>
 </body>
 </html>

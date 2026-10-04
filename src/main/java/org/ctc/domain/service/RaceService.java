@@ -472,7 +472,8 @@ public class RaceService {
 
 	public record RaceFormData(RaceData data, List<Matchday> matchdays, List<Team> teams,
 	                           List<Car> seasonCars, List<Track> seasonTracks,
-	                           Set<UUID> usedCarIds, Set<UUID> usedTrackIds) {
+	                           Set<UUID> usedCarIds, Set<UUID> usedTrackIds,
+	                           Car outOfPoolCar, Track outOfPoolTrack) {
 	}
 
 	public record SaveResult(boolean success, String message, UUID raceId, UUID matchdayId) {

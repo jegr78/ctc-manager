@@ -3,7 +3,8 @@
       th:replace="~{site/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
 <section>
-    <div class="driver-header">
+    <header class="driver-header profile-heading brand-stage">
+        <p class="season-brand">COMMUNITY TEAM CUP</p>
         <h1 class="text-white" th:text="${driver.psnId}"></h1>
         <p class="text-dim" th:if="${driver.nickname != null and !#strings.isEmpty(driver.nickname)}" th:text="${driver.nickname}"></p>
         <p class="season-meta" th:text="${season.displayLabel}"></p>
@@ -12,108 +13,24 @@
             <span>Also known as: </span>
             <span th:each="alias, stat : ${driver.aliases}"><span th:text="${alias.alias}"></span><span th:if="${!stat.last}">, </span></span>
         </p>
-    </div>
+    </header>
 
-    <div class="section" th:if="${!showPhaseBreakdown && profileRows != null && !profileRows.isEmpty()}">
-        <h2 class="section-title" th:text="'Race History — ' + ${season.displayLabel}"></h2>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Matchday</th>
-                        <th>Opponent</th>
-                        <th>Track</th>
-                        <th class="text-center">Pos</th>
-                        <th class="text-center">Quali</th>
-                        <th class="text-center">FL</th>
-                        <th class="text-right">Points</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="row : ${profileRows}">
-                        <td>
-                            <span th:text="${row.result.race.matchday.label}"></span>
-                            <span class="guest-marker" th:if="${row.guest}" aria-label="Guest driver">&#x2605;</span>
-                            <span class="guest-label" th:if="${row.guest}">as guest for <span th:text="${row.fieldingTeamName}"></span></span>
-                        </td>
-                        <td>
-                            <th:block th:with="driverTeamId=${team != null ? team.id : null}">
-                                <span th:if="${row.result.race.homeTeam != null and row.result.race.homeTeam.id != driverTeamId}"
-                                      th:text="${row.result.race.homeTeam.shortName}"></span>
-                                <span th:if="${row.result.race.awayTeam != null and row.result.race.awayTeam.id != driverTeamId}"
-                                      th:text="${row.result.race.awayTeam.shortName}"></span>
-                                <span th:if="${row.result.race.awayTeam == null}">Bye</span>
-                            </th:block>
-                        </td>
-                        <td class="text-dim" th:text="${row.result.race.track?.name ?: '-'}"></td>
-                        <td class="text-center" th:text="${row.result.position}"></td>
-                        <td class="text-center" th:text="${row.result.qualiPosition}"></td>
-                        <td class="text-center" th:text="${row.result.fastestLap ? 'FL' : ''}"></td>
-                        <td class="text-right font-bold text-white" th:text="${row.result.pointsTotal}"></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div><div class="section" th:if="${showPhaseBreakdown}" th:each="entry : ${profileRowsByPhase}">
-        <h3 class="section-title" th:text="${phaseHeadings[entry.key]}">Regular Season Results</h3>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Matchday</th>
-                        <th>Opponent</th>
-                        <th>Track</th>
-                        <th class="text-center">Pos</th>
-                        <th class="text-center">Quali</th>
-                        <th class="text-center">FL</th>
-                        <th class="text-right">Points</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="row : ${entry.value}">
-                        <td>
-                            <span th:text="${row.result.race.matchday.label}"></span>
-                            <span class="guest-marker" th:if="${row.guest}" aria-label="Guest driver">&#x2605;</span>
-                            <span class="guest-label" th:if="${row.guest}">as guest for <span th:text="${row.fieldingTeamName}"></span></span>
-                        </td>
-                        <td>
-                            <th:block th:with="driverTeamId=${team != null ? team.id : null}">
-                                <span th:if="${row.result.race.homeTeam != null and row.result.race.homeTeam.id != driverTeamId}"
-                                      th:text="${row.result.race.homeTeam.shortName}"></span>
-                                <span th:if="${row.result.race.awayTeam != null and row.result.race.awayTeam.id != driverTeamId}"
-                                      th:text="${row.result.race.awayTeam.shortName}"></span>
-                                <span th:if="${row.result.race.awayTeam == null}">Bye</span>
-                            </th:block>
-                        </td>
-                        <td class="text-dim" th:text="${row.result.race.track?.name ?: '-'}"></td>
-                        <td class="text-center" th:text="${row.result.position}"></td>
-                        <td class="text-center" th:text="${row.result.qualiPosition}"></td>
-                        <td class="text-center" th:text="${row.result.fastestLap ? 'FL' : ''}"></td>
-                        <td class="text-right font-bold text-white" th:text="${row.result.pointsTotal}"></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="section section-gap">
+    <div class="section profile-statistics">
         <h2 class="section-title">Statistics</h2>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr><th>Races</th><th>Total</th><th>Avg</th><th>Best Pos.</th></tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td th:text="${totalRaces}"></td>
-                        <td class="font-bold text-white" th:text="${totalPoints}"></td>
-                        <td th:text="${#numbers.formatDecimal(averagePoints, 1, 1)}"></td>
-                        <td th:text="${bestPosition != null ? 'P' + bestPosition : '-'}"></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <dl class="profile-metrics">
+            <div><dt>Total points</dt><dd class="profile-total-points" th:text="${totalPoints}"></dd></div>
+            <div><dt>Races</dt><dd class="profile-total-races" th:text="${totalRaces}"></dd></div>
+            <div><dt>Average points</dt><dd th:text="${#numbers.formatDecimal(averagePoints, 1, 1)}"></dd></div>
+            <div><dt>Best position</dt><dd th:text="${bestPosition != null ? 'P' + bestPosition : '-'}"></dd></div>
+        </dl>
     </div>
+    <th:block th:if="${!showPhaseBreakdown}" th:with="rows=${profileRows}, heading=${'Race History — ' + season.displayLabel}">
+        <div th:insert="~{site/fragments/driver-history :: history}"></div>
+    </th:block>
+    <th:block th:if="${showPhaseBreakdown}" th:each="entry : ${profileRowsByPhase}" th:with="rows=${entry.value}, heading=${phaseHeadings[entry.key]}">
+        <div th:insert="~{site/fragments/driver-history :: history}"></div>
+    </th:block>
+    <script defer th:src="${assetsPath + '/js/statistics.js'}"></script>
 </section>
 </body>
 </html>

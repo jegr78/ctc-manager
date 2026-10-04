@@ -44,6 +44,7 @@ public class DriverController {
     @GetMapping("/new")
     public String create(Model model) {
         model.addAttribute("driverForm", new DriverForm());
+        model.addAttribute("pageTitle", "New Driver");
         return "admin/driver-form";
     }
 
@@ -58,22 +59,34 @@ public class DriverController {
         form.setActive(driver.isActive());
         form.setAliases(driver.getAliases().stream().map(PsnAlias::getAlias).toList());
         model.addAttribute("driverForm", form);
+        model.addAttribute("pageTitle", "Edit Driver");
         model.addAttribute("seasonDrivers", editData.seasonDrivers());
         model.addAttribute("seasons", editData.allSeasons());
         model.addAttribute("teams", editData.allTeams());
         return "admin/driver-form";
     }
 
+    private void prepareEditor(DriverForm form, Model model) {
+        model.addAttribute("pageTitle", form.getId() == null ? "New Driver" : "Edit Driver");
+        if (form.getId() == null) return;
+        var data = driverService.getEditFormData(form.getId());
+        model.addAttribute("seasonDrivers", data.seasonDrivers());
+        model.addAttribute("seasons", data.allSeasons());
+        model.addAttribute("teams", data.allTeams());
+    }
+
     @PostMapping("/save")
     public String save(@Valid @ModelAttribute("driverForm") DriverForm driverForm, BindingResult result,
-                       RedirectAttributes redirectAttributes) {
+                       Model model, RedirectAttributes redirectAttributes) {
         if (result.hasErrors()) {
+            prepareEditor(driverForm, model);
             return "admin/driver-form";
         }
 
         var aliasErrors = driverService.validateAliases(driverForm.getId(), driverForm.getAliases());
         if (!aliasErrors.isEmpty()) {
             aliasErrors.forEach(error -> result.rejectValue("aliases", "alias.conflict", error));
+            prepareEditor(driverForm, model);
             return "admin/driver-form";
         }
 

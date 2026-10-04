@@ -13,6 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -38,7 +39,15 @@ class DriverControllerTest {
 				// then
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/drivers"))
-				.andExpect(model().attributeExists("drivers"));
+				.andExpect(model().attributeExists("drivers"))
+				.andExpect(content().string(containsString("data-admin-list")))
+				.andExpect(content().string(containsString("data-list-search")))
+				.andExpect(content().string(containsString("data-list-reset")))
+				.andExpect(content().string(containsString("data-list-count")))
+				.andExpect(content().string(containsString("data-list-entry")))
+				.andExpect(content().string(containsString("data-list-status")))
+				.andExpect(content().string(containsString("admin-sort-button")))
+				.andExpect(content().string(containsString("aria-sort=\"none\"")));
 	}
 
 	@Test
@@ -50,6 +59,16 @@ class DriverControllerTest {
 				.andExpect(view().name("admin/driver-form"))
 				.andExpect(model().attributeExists("driverForm"));
 	}
+
+    @Test
+    void givenBlankDriverIdentity_whenSave_thenFieldErrorsRemainVisible() throws Exception {
+        mockMvc.perform(post("/admin/drivers/save").param("psnId", "").param("nickname", ""))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeHasFieldErrors("driverForm", "psnId", "nickname"))
+                .andExpect(content().string(containsString("id=\"psnId-error\"")))
+                .andExpect(content().string(containsString("id=\"nickname-error\"")))
+                .andExpect(content().string(containsString("aria-invalid=\"true\"")));
+    }
 
 	@Test
 	void givenValidDriverForm_whenSaveDriver_thenRedirectsAndPersists() throws Exception {
@@ -90,7 +109,10 @@ class DriverControllerTest {
 				// then
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/driver-form"))
-				.andExpect(model().attributeExists("driverForm", "seasonDrivers", "seasons", "teams"));
+				.andExpect(model().attributeExists("driverForm", "seasonDrivers", "seasons", "teams"))
+				.andExpect(content().string(containsString("entity-editor-actions")))
+				.andExpect(content().string(containsString("driver-aliases.js")))
+				.andExpect(content().string(containsString("<legend>Identity</legend>")));
 	}
 
 	@Test
@@ -187,7 +209,8 @@ class DriverControllerTest {
 				// then
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/driver-form"))
-				.andExpect(model().attributeHasErrors("driverForm"));
+				.andExpect(model().attributeHasErrors("driverForm"))
+				.andExpect(model().attributeExists("seasonDrivers", "seasons", "teams"));
 	}
 
 	@Test

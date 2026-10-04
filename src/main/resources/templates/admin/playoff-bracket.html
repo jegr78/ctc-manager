@@ -6,13 +6,6 @@
     <div class="toolbar">
         <h1>Playoffs</h1>
         <div class="actions">
-            <form method="get" th:action="@{/admin/playoffs}" class="btn-with-hint">
-                <select name="seasonId" onchange="this.form.submit()">
-                    <option value="">-- Select season --</option>
-                    <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"
-                            th:selected="${s.id == selectedSeasonId}"></option>
-                </select>
-            </form>
             <a th:if="${selectedSeasonId != null && playoff == null}"
                th:href="@{/admin/playoffs/new(seasonId=${selectedSeasonId})}" class="btn btn-primary">+ New Playoff</a>
             <a th:if="${playoff != null}"

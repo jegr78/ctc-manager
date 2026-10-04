@@ -2,23 +2,29 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Match-Scorings', ~{::section})}">
 <body>
-<section>
+<section class="admin-list scoring-list" data-admin-list data-unit="match scoring" data-plural="match scorings">
     <div class="toolbar">
         <h1>Match-Scorings</h1>
-        <a th:href="@{/admin/match-scorings/new}" class="btn btn-primary">+ New</a>
+        <a th:href="@{/admin/match-scorings/new}" class="btn btn-primary">+ New match scoring</a>
     </div>
-    <div class="card">
-        <div class="table-scroll">
-            <table th:if="${!scorings.isEmpty()}">
+    <p class="admin-list-intro text-dim">Award points for match wins, draws and losses.</p>
+    <div class="card admin-list-card">
+        <div class="admin-list-controls catalog-list-controls" data-list-tools hidden>
+            <label for="scoringSearch"><span>Search</span><input type="search" id="scoringSearch" data-list-search placeholder="Scoring name" autocomplete="off"></label>
+            <button type="button" class="btn btn-secondary" data-list-reset disabled>Reset filters</button>
+            <p class="admin-list-count text-dim" data-list-count role="status"></p>
+        </div>
+        <div class="table-scroll" role="region" aria-label="Match scorings list" tabindex="0">
+            <table data-list-table th:if="${!scorings.isEmpty()}">
                 <thead>
-                    <tr><th>Name</th><th class="td-center">Win</th><th class="td-center">Draw</th><th class="td-center">Loss</th><th>Actions</th></tr>
+                    <tr><th scope="col" class="sortable" data-col="0" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Name" disabled>Name</button></th><th scope="col" class="td-center">Win</th><th scope="col" class="td-center">Draw</th><th scope="col" class="td-center">Loss</th><th scope="col">Actions</th></tr>
                 </thead>
                 <tbody>
-                    <tr th:each="s : ${scorings}">
-                        <td><strong th:text="${s.name}"></strong></td>
-                        <td style="text-align:center; color:#66bb6a; font-weight:700;" th:text="${s.pointsWin}"></td>
-                        <td style="text-align:center; color:var(--text-label); font-weight:700;" th:text="${s.pointsDraw}"></td>
-                        <td style="text-align:center; color:#ef5350; font-weight:700;" th:text="${s.pointsLoss}"></td>
+                    <tr th:each="s : ${scorings}" data-list-entry th:attr="data-search=${s.name}">
+                        <td><a th:href="@{/admin/match-scorings/{id}/edit(id=${s.id})}" class="detail-link"><strong th:text="${s.name}"></strong></a></td>
+                        <td class="scoring-result-points" th:text="${s.pointsWin}"></td>
+                        <td class="scoring-result-points" th:text="${s.pointsDraw}"></td>
+                        <td class="scoring-result-points" th:text="${s.pointsLoss}"></td>
                         <td class="actions">
                             <a th:href="@{/admin/match-scorings/{id}/edit(id=${s.id})}" class="btn btn-secondary btn-sm">Edit</a>
                             <form th:action="@{/admin/match-scorings/{id}/delete(id=${s.id})}" method="post"
@@ -30,8 +36,10 @@
                 </tbody>
             </table>
         </div>
-        <div th:if="${scorings.isEmpty()}" class="empty-state"><p>No match scorings created yet.</p></div>
+        <div th:if="${scorings.isEmpty()}" class="empty-state" data-list-initial-empty><p>No match scorings created yet.</p></div>
+        <div class="empty-state" data-list-empty hidden><p>No matching match scorings. Try another search or reset the filters.</p></div>
     </div>
+    <script defer th:src="@{/admin/js/management-list.js}"></script>
 </section>
 </body>
 </html>

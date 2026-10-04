@@ -45,6 +45,7 @@ public class DriverSheetImportController {
 
     @PostMapping("/preview")
     public String preview(@RequestParam String sheetUrl, Model model) {
+        model.addAttribute("sheetUrl", sheetUrl);
         if (!hasText(sheetUrl)) {
             addCommonAttributes(model);
             model.addAttribute("errorMessage", "Sheet URL must not be blank");

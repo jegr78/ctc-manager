@@ -45,6 +45,20 @@ class MatchControllerTest {
 	}
 
 	@Test
+	void givenOverlongStreamer_whenSaveEdit_thenFieldErrorAndEnteredTeaserRemainVisible() throws Exception {
+		// when / then
+		mockMvc.perform(post("/admin/matches/" + fixture.match().getId() + "/save-edit")
+				.param("id", fixture.match().getId().toString())
+				.param("discordTeaser", "Test preview retained after validation")
+				.param("streamer", "x".repeat(101)))
+				.andExpect(status().isOk())
+				.andExpect(view().name("admin/match-form-edit"))
+				.andExpect(model().attributeHasFieldErrors("matchForm", "streamer"))
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"streamer-error\"")))
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("Test preview retained after validation")));
+	}
+
+	@Test
 	void givenMatchday_whenGetNewMatchForm_thenReturnsMatchForm() throws Exception {
 		// given
 		// fixture provides matchday

@@ -2,146 +2,32 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
-<section>
-    <a th:href="@{/admin/race-scorings}" class="back-link">&larr; Back</a>
-    <h1 th:text="${raceScoringForm.id != null ? 'Edit Race-Scoring' : 'New Race-Scoring'}"></h1>
-
-    <form th:action="@{/admin/race-scorings/save}" method="post" id="scoringForm">
-        <input type="hidden" name="id" th:value="${raceScoringForm.id}">
-
-        <div class="card">
-            <div class="form-group">
-                <label for="name">Name</label>
-                <input type="text" id="name" name="name" th:value="${raceScoringForm.name}" required>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
-                <!-- Left: Race Points -->
-                <div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                        <label style="margin-bottom:0;">Race Points</label>
-                        <span class="text-dim" id="racePointsCount"></span>
-                    </div>
-                    <div id="racePointsRows" style="background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden;"></div>
-                    <div style="display:flex; gap:8px; margin-top:8px;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="addRow('racePoints')">+ Add</button>
-                        <button type="button" class="btn btn-danger btn-sm" onclick="removeRow('racePoints')">Remove</button>
-                    </div>
-                    <input type="hidden" name="racePoints" id="racePointsHidden">
-                </div>
-
-                <!-- Right: Quali + FL -->
-                <div>
-                    <div style="margin-bottom:20px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                            <label style="margin-bottom:0;">Qualifying Points</label>
-                            <span class="text-dim" id="qualiPointsCount"></span>
-                        </div>
-                        <div id="qualiPointsRows" style="background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden;"></div>
-                        <div style="display:flex; gap:8px; margin-top:8px;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="addRow('qualiPoints')">+ Add</button>
-                            <button type="button" class="btn btn-danger btn-sm" onclick="removeRow('qualiPoints')">Remove</button>
-                        </div>
-                        <div class="text-dim" style="font-size:12px; margin-top:4px;">Empty = no qualifying points</div>
-                        <input type="hidden" name="qualiPoints" id="qualiPointsHidden">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="fastestLapPoints">Fastest Lap (Points)</label>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <input type="number" id="fastestLapPoints" name="fastestLapPoints"
-                                   th:value="${raceScoringForm.fastestLapPoints}" min="0" style="width:80px; text-align:right;">
-                            <span class="text-dim" style="font-size:12px;">0 = disabled</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="actions mt-md">
-                <button type="submit" class="btn btn-primary">Save</button>
-                <a th:href="@{/admin/race-scorings}" class="btn btn-secondary">Cancel</a>
-            </div>
+<section class="entity-editor scoring-editor">
+    <div class="toolbar"><div><a th:href="@{/admin/race-scorings}" class="back-link">← Back to Race-Scorings</a><h1 th:text="${raceScoringForm.id != null ? 'Edit Race-Scoring' : 'New Race-Scoring'}"></h1></div></div>
+    <nav class="entity-section-nav" aria-label="Race scoring editing sections"><a href="#scoring-identity">Identity</a><a href="#scoring-points">Points</a></nav>
+    <div class="card">
+    <form class="entity-editor-form" th:action="@{/admin/race-scorings/save}" th:object="${raceScoringForm}" method="post" id="scoringForm">
+        <input type="hidden" th:field="*{id}">
+        <fieldset id="scoring-identity"><legend>Identity</legend><div class="form-group"><label for="name">Name</label><input type="text" id="name" th:field="*{name}" required th:attr="aria-invalid=${#fields.hasErrors('name')},aria-describedby=${#fields.hasErrors('name') ? 'name-error' : null}"><p id="name-error" class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></p></div></fieldset>
+        <div class="scoring-points-grid" id="scoring-points">
+            <fieldset data-points-editor="racePoints"><legend>Race points</legend>
+                <p id="racePoints-hint" class="scoring-hint text-dim">Points must stay the same or decrease as positions go down.</p>
+                <div data-points-source class="form-group"><label for="racePointsHidden">Points from first position onwards</label><input type="text" id="racePointsHidden" name="racePoints" th:value="*{racePoints}" placeholder="e.g. 20,17,14" aria-describedby="racePoints-hint" required><p class="form-hint">Separate position values with commas.</p></div>
+                <div data-points-controls hidden><p id="racePointsCount" data-points-count class="scoring-position-count text-dim" role="status"></p><div id="racePointsRows" class="scoring-position-rows"></div><div class="actions scoring-position-actions"><button type="button" class="btn btn-secondary" data-points-add>+ Add position</button><button type="button" class="btn btn-secondary" data-points-remove>Remove last position</button></div></div>
+                <p id="racePoints-error" class="field-error" th:if="${#fields.hasErrors('racePoints')}" th:errors="*{racePoints}" role="alert"></p>
+            </fieldset>
+            <fieldset data-points-editor="qualiPoints"><legend>Qualifying points</legend>
+                <p id="qualiPoints-hint" class="scoring-hint text-dim">Leave this empty to award no qualifying points.</p>
+                <div data-points-source class="form-group"><label for="qualiPointsHidden">Points from first position onwards</label><input type="text" id="qualiPointsHidden" name="qualiPoints" th:value="*{qualiPoints}" placeholder="e.g. 20,17,14" aria-describedby="qualiPoints-hint" ><p class="form-hint">Separate position values with commas.</p></div>
+                <div data-points-controls hidden><p id="qualiPointsCount" data-points-count class="scoring-position-count text-dim" role="status"></p><div id="qualiPointsRows" class="scoring-position-rows"></div><div class="actions scoring-position-actions"><button type="button" class="btn btn-secondary" data-points-add>+ Add position</button><button type="button" class="btn btn-secondary" data-points-remove>Remove last position</button></div></div>
+                <p id="qualiPoints-error" class="field-error" th:if="${#fields.hasErrors('qualiPoints')}" th:errors="*{qualiPoints}" role="alert"></p>
+            </fieldset>
         </div>
+        <fieldset><legend>Fastest lap</legend><div class="form-group"><label for="fastestLapPoints">Bonus points</label><input type="number" id="fastestLapPoints" th:field="*{fastestLapPoints}" min="0" required th:attr="aria-invalid=${#fields.hasErrors('fastestLapPoints')},aria-describedby=${#fields.hasErrors('fastestLapPoints') ? 'fastestLapPoints-hint fastestLapPoints-error' : 'fastestLapPoints-hint'}" class="scoring-bonus-input"><p id="fastestLapPoints-error" class="field-error" th:if="${#fields.hasErrors('fastestLapPoints')}" th:errors="*{fastestLapPoints}"></p><p id="fastestLapPoints-hint" class="form-hint">Set to 0 to award no fastest-lap bonus.</p></div></fieldset>
+        <div class="entity-editor-actions"><span class="text-dim">Race scoring</span><div class="actions"><button type="submit" class="btn btn-primary">Save</button><a th:href="@{/admin/race-scorings}" class="btn btn-secondary">Cancel</a></div></div>
     </form>
-
-    <script th:inline="javascript">
-        const initialRacePoints = /*[[${raceScoringForm.racePoints}]]*/ '';
-        const initialQualiPoints = /*[[${raceScoringForm.qualiPoints}]]*/ '';
-
-        function createRowElement(type, idx, value) {
-            var row = document.createElement('div');
-            row.style.cssText = 'display:flex; align-items:center; padding:6px 10px; border-bottom:1px solid var(--border);';
-
-            var label = document.createElement('div');
-            label.style.cssText = 'width:30px; font-size:13px; color:var(--accent); font-weight:600; text-align:center;';
-            label.textContent = idx;
-
-            var input = document.createElement('input');
-            input.type = 'number';
-            input.min = '0';
-            input.value = value || '0';
-            input.style.cssText = 'flex:1; background:var(--bg); border:1px solid var(--border); border-radius:4px; padding:5px 8px; color:var(--white); font-weight:600; text-align:right;';
-            input.addEventListener('change', function() { collectValues(type); });
-
-            row.appendChild(label);
-            row.appendChild(input);
-            return row;
-        }
-
-        function initRows(type, csv) {
-            var container = document.getElementById(type + 'Rows');
-            container.replaceChildren();
-            if (!csv || csv.trim() === '') { updateCount(type); return; }
-            csv.split(',').forEach(function(val, i) {
-                container.appendChild(createRowElement(type, i + 1, val.trim()));
-            });
-            updateCount(type);
-        }
-
-        function addRow(type) {
-            var container = document.getElementById(type + 'Rows');
-            var lastVal = 0;
-            if (container.children.length > 0) {
-                var lastInput = container.lastElementChild.querySelector('input');
-                lastVal = parseInt(lastInput.value) || 0;
-            }
-            container.appendChild(createRowElement(type, container.children.length + 1, lastVal));
-            collectValues(type);
-            updateCount(type);
-        }
-
-        function removeRow(type) {
-            var container = document.getElementById(type + 'Rows');
-            if (container.children.length > 0) {
-                container.removeChild(container.lastElementChild);
-                collectValues(type);
-                updateCount(type);
-            }
-        }
-
-        function collectValues(type) {
-            var container = document.getElementById(type + 'Rows');
-            var inputs = container.querySelectorAll('input[type=number]');
-            var values = [];
-            inputs.forEach(function(input) { values.push(input.value); });
-            document.getElementById(type + 'Hidden').value = values.join(',');
-        }
-
-        function updateCount(type) {
-            var container = document.getElementById(type + 'Rows');
-            document.getElementById(type + 'Count').textContent = container.children.length + ' Pos.';
-        }
-
-        initRows('racePoints', initialRacePoints);
-        initRows('qualiPoints', initialQualiPoints);
-        collectValues('racePoints');
-        collectValues('qualiPoints');
-
-        document.getElementById('scoringForm').addEventListener('submit', function() {
-            collectValues('racePoints');
-            collectValues('qualiPoints');
-        });
-    </script>
+    </div>
+    <script defer th:src="@{/admin/js/scoring-editor.js}"></script>
 </section>
 </body>
 </html>

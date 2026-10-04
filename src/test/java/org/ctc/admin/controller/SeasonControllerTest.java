@@ -6,9 +6,12 @@ import org.ctc.domain.model.Team;
 import org.ctc.domain.model.Track;
 import org.ctc.domain.repository.CarRepository;
 import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.SeasonPhaseRepository;
 import org.ctc.domain.repository.TeamRepository;
 import org.ctc.domain.repository.TrackRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -19,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -35,6 +39,8 @@ class SeasonControllerTest {
 	@Autowired
 	private SeasonRepository seasonRepository;
 	@Autowired
+	private SeasonPhaseRepository seasonPhaseRepository;
+	@Autowired
 	private TeamRepository teamRepository;
 	@Autowired
 	private CarRepository carRepository;
@@ -44,13 +50,33 @@ class SeasonControllerTest {
 	private TestHelper testHelper;
 
 	@Test
+	void givenInvalidRoundCount_whenGenerate_thenFormAndReturnContextRemainAvailable() throws Exception {
+		// given
+		var fixture = testHelper.createFullSeasonFixture("Test Generator Validation");
+		// when / then
+		mockMvc.perform(post("/admin/seasons/" + fixture.season().getId() + "/generate")
+				.param("numberOfRounds", "0").param("homeAndAway", "true"))
+				.andExpect(status().isOk())
+				.andExpect(view().name("admin/matchday-generator"))
+				.andExpect(model().attributeHasFieldErrors("generatorForm", "numberOfRounds"))
+				.andExpect(model().attributeExists("season", "phase"))
+				.andExpect(content().string(containsString("id=\"numberOfRounds-error\"")));
+	}
+
+	@Test
 	void whenGetSeasons_thenReturnsSeasonsView() throws Exception {
 		// when
 		mockMvc.perform(get("/admin/seasons"))
 				// then
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/seasons"))
-				.andExpect(model().attributeExists("seasons"));
+				.andExpect(model().attributeExists("seasons"))
+				.andExpect(content().string(containsString("data-admin-list")))
+				.andExpect(content().string(containsString("data-list-search")))
+				.andExpect(content().string(containsString("data-list-reset")))
+				.andExpect(content().string(containsString("data-list-count")))
+				.andExpect(content().string(containsString("data-list-entry")))
+				.andExpect(content().string(containsString("data-list-status")));
 	}
 
 	@Test
@@ -60,7 +86,8 @@ class SeasonControllerTest {
 				// then
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/season-form"))
-				.andExpect(model().attributeExists("seasonForm"));
+				.andExpect(model().attributeExists("seasonForm"))
+				.andExpect(model().attribute("pageTitle", "New Season"));
 	}
 
 
@@ -113,8 +140,30 @@ class SeasonControllerTest {
 				// then
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/season-form"))
-				.andExpect(model().attribute("season", hasProperty("name", is("Edit Test"))));
+				.andExpect(model().attribute("season", hasProperty("name", is("Edit Test"))))
+				.andExpect(model().attribute("pageTitle", "Edit Season"));
 	}
+
+    @Test
+    void givenExistingSeasonAndBlankName_whenSave_thenRelatedModelsAndSubmittedDetailsRemainAvailable() throws Exception {
+        // given
+        var season = testHelper.createSeason("Test Season Editor Validation");
+
+        // when
+        mockMvc.perform(post("/admin/seasons/save")
+                .param("id", season.getId().toString())
+                .param("name", "")
+                .param("year", "2028")
+                .param("number", "3")
+                .param("description", "Updated details"))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/season-form"))
+                .andExpect(model().attributeHasFieldErrors("seasonForm", "name"))
+                .andExpect(model().attributeExists("season", "allTeams", "allCars", "allTracks", "discordIntegrationActive"))
+                .andExpect(model().attribute("pageTitle", "Edit Season"))
+                .andExpect(model().attribute("seasonForm", hasProperty("description", is("Updated details"))));
+    }
 
 	@Test
 	void givenExistingSeason_whenGetSeasonDetail_thenRedirectsToRegularPhaseTab() throws Exception {
@@ -299,4 +348,19 @@ class SeasonControllerTest {
 				.andExpect(view().name("admin/swiss-rounds"))
 				.andExpect(model().attributeExists("season", "pairings", "currentRound", "canGenerateNext"));
 	}
+	@ParameterizedTest
+	@ValueSource(ints = {0, 1})
+	void givenAllPlannedSwissRoundsExist_whenPageRendered_thenNoPendingRoundsAreInvented(int plannedRounds) throws Exception {
+		var season = testHelper.createSeason("Test Completed Swiss Schedule");
+		var regular = season.getPhases().getFirst();
+		regular.setTotalRounds(plannedRounds);
+		seasonPhaseRepository.save(regular);
+		if (plannedRounds == 1) {
+			regular.getMatchdays().add(testHelper.createMatchdayInRegularPhase(season, "Completed Round", 0));
+		}
+		mockMvc.perform(get("/admin/seasons/" + season.getId() + "/swiss"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(org.hamcrest.Matchers.not(containsString("Pairings have not been generated yet."))));
+	}
+
 }

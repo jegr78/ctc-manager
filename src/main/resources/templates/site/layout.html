@@ -7,6 +7,7 @@
     <link rel="apple-touch-icon" sizes="180x180" th:href="${assetsPath + '/img/ctc-logo-white.png'}">
     <title th:text="'CTC - ' + ${title}">Community Team Cup</title>
     <link rel="stylesheet" th:href="${assetsPath != null ? assetsPath + '/css/style.css' : '/assets/css/style.css'}">
+    <script defer th:src="${assetsPath + '/js/navigation.js'}"></script>
 </head>
 <body>
 <a href="#main-content" class="skip-link">Skip to main content</a>
@@ -14,35 +15,52 @@
         <div class="nav-inner">
             <a th:href="${rootPath + '/index.html'}" class="nav-brand">
                 <img th:src="${assetsPath != null ? assetsPath + '/img/ctc-logo-white.png' : '/assets/img/ctc-logo-white.png'}" alt="CTC" class="nav-logo">
-                <span>COMMUNITY TEAM CUP</span>
+                <span class="nav-brand-name">COMMUNITY<small>TEAM CUP</small></span>
             </a>
-            <input type="checkbox" id="nav-toggle" class="nav-toggle-input">
-            <label for="nav-toggle" class="nav-toggle-label" aria-label="Toggle navigation menu" role="button">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-                </svg>
-            </label>
-            <div class="nav-links">
+            <details class="site-menu">
+                <summary aria-label="Main menu">Menu ☰</summary>
+                <div class="nav-links">
+                <a th:href="${rootPath + '/index.html'}"
+                   th:class="${currentPage == 'home'} ? 'nav-link-active' : ''"
+                   th:attr="aria-current=${currentPage == 'home' ? 'page' : null}">Home</a>
+                <a th:if="${activeSeasonSlug != null and !#strings.isEmpty(activeSeasonSlug)}"
+                   th:href="${rootPath + '/season/' + activeSeasonSlug + '/standings.html'}"
+                   th:class="${seasonSlug == activeSeasonSlug} ? 'nav-link-active' : ''"
+                   th:attr="aria-current=${seasonSlug == activeSeasonSlug ? 'location' : null}">Current season</a>
+                <a th:href="${rootPath + '/teams.html'}"
+                   th:class="${currentPage == 'teams'} ? 'nav-link-active' : ''"
+                   th:attr="aria-current=${currentPage == 'teams' ? 'page' : null}">Teams</a>
+                <a th:href="${rootPath + '/drivers.html'}"
+                   th:class="${currentPage == 'drivers'} ? 'nav-link-active' : ''"
+                   th:attr="aria-current=${currentPage == 'drivers' ? 'page' : null}">Drivers</a>
                 <a th:href="${rootPath + '/alltime-standings.html'}"
-                   th:class="${currentPage == 'alltime-standings'} ? 'nav-link-active' : ''">Standings</a>
+                   th:class="${currentPage == 'alltime-standings'} ? 'nav-link-active' : ''"
+                   th:attr="aria-current=${currentPage == 'alltime-standings' ? 'page' : null}">Standings</a>
                 <a th:href="${rootPath + '/alltime-driver-ranking.html'}"
-                   th:class="${currentPage == 'alltime-driver-ranking'} ? 'nav-link-active' : ''">Driver Ranking</a>
+                   th:class="${currentPage == 'alltime-driver-ranking'} ? 'nav-link-active' : ''"
+                   th:attr="aria-current=${currentPage == 'alltime-driver-ranking' ? 'page' : null}">Driver Ranking</a>
                 <a th:href="${rootPath + '/archive.html'}"
-                   th:class="${currentPage == 'archive'} ? 'nav-link-active' : ''">Archive</a>
-            </div>
+                   th:class="${currentPage == 'archive'} ? 'nav-link-active' : ''"
+                   th:attr="aria-current=${currentPage == 'archive' ? 'page' : null}">Archive</a>
+                </div>
+            </details>
         </div>
     </nav>
     <nav class="subnav" aria-label="Season navigation" th:if="${seasonSlug != null and !#strings.isEmpty(seasonSlug)}">
         <div class="subnav-inner">
             <a th:href="${rootPath + '/season/' + seasonSlug + '/standings.html'}"
-               th:class="${currentPage == 'standings'} ? 'subnav-link active' : 'subnav-link'">Standings</a>
+               th:class="${currentPage == 'standings'} ? 'subnav-link active' : 'subnav-link'"
+               th:attr="aria-current=${currentPage == 'standings' ? 'page' : null}">Standings</a>
             <a th:href="${rootPath + '/season/' + seasonSlug + '/matchdays.html'}"
-               th:class="${currentPage == 'matchdays'} ? 'subnav-link active' : 'subnav-link'">Matchdays</a>
+               th:class="${currentPage == 'matchdays'} ? 'subnav-link active' : 'subnav-link'"
+               th:attr="aria-current=${currentPage == 'matchdays' ? 'page' : null}">Matchdays</a>
             <a th:href="${rootPath + '/season/' + seasonSlug + '/driver-ranking.html'}"
-               th:class="${currentPage == 'driver-ranking'} ? 'subnav-link active' : 'subnav-link'">Driver Ranking</a>
+               th:class="${currentPage == 'driver-ranking'} ? 'subnav-link active' : 'subnav-link'"
+               th:attr="aria-current=${currentPage == 'driver-ranking' ? 'page' : null}">Driver Ranking</a>
             <a th:if="${hasPlayoff}"
                th:href="${rootPath + '/season/' + (playoffSeasonSlug != null ? playoffSeasonSlug : seasonSlug) + '/playoff.html'}"
-               th:class="${currentPage == 'playoff'} ? 'subnav-link active' : 'subnav-link'">Playoff</a>
+               th:class="${currentPage == 'playoff'} ? 'subnav-link active' : 'subnav-link'"
+               th:attr="aria-current=${currentPage == 'playoff' ? 'page' : null}">Playoff</a>
         </div>
     </nav>
     <nav class="breadcrumb" aria-label="breadcrumb"
@@ -55,9 +73,9 @@
                th:text="${seasonName}">Season</a>
         </th:block>
         <span class="breadcrumb-sep" aria-hidden="true"> &gt; </span>
-        <span class="breadcrumb-current" th:text="${breadcrumbCurrent}">Page</span>
+        <span class="breadcrumb-current" aria-current="page" th:text="${breadcrumbCurrent}">Page</span>
     </nav>
-    <main class="main" id="main-content">
+    <main class="main" id="main-content" tabindex="-1">
         <div th:replace="${content}"></div>
     </main>
     <footer class="footer">

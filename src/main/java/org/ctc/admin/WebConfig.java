@@ -14,6 +14,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
 
 	private final ImportLockedWriteRejector importLockedWriteRejector;
+	private final SeasonWorkspaceInterceptor seasonWorkspaceInterceptor;
 
 	@Value("${app.upload-dir:uploads}")
 	private String uploadDir;
@@ -26,6 +27,7 @@ public class WebConfig implements WebMvcConfigurer {
 
 	@Override
 	public void addInterceptors(InterceptorRegistry registry) {
+		registry.addInterceptor(seasonWorkspaceInterceptor).addPathPatterns("/admin/**");
 		registry.addInterceptor(importLockedWriteRejector)
 				.addPathPatterns("/admin/**");
 	}

@@ -100,6 +100,45 @@ class StandingsPageGeneratorTest {
         assertThat(Files.readString(generated)).isEqualTo(Files.readString(baseline));
     }
 
+    @Test
+    void givenLeagueStandings_whenGenerate_thenMobileDetailsPreserveScoresAndProfileLinks() throws IOException {
+        // given
+        Document doc = Jsoup.parse(Files.readString(tempDir.resolve("season")
+                .resolve("2026-4-regular-season").resolve("standings.html")));
+
+        // when
+        var rows = doc.select(".standings-table tbody tr");
+        var mobileTeams = doc.select(".mobile-standings details");
+
+        // then
+        assertThat(mobileTeams).hasSameSizeAs(rows).isNotEmpty();
+        for (int index = 0; index < rows.size(); index++) {
+            var row = rows.get(index);
+            var mobile = mobileTeams.get(index);
+            assertThat(mobile.selectFirst("summary .standing-points").text())
+                    .startsWith(row.selectFirst("td:last-child").text());
+            assertThat(mobile.selectFirst("a.entity-link").attr("href"))
+                    .isEqualTo(row.selectFirst("a.entity-link").attr("href"));
+            assertThat(mobile.select("dt").eachText()).contains("Matches played", "Wins", "Draws", "Losses", "Points ratio");
+        }
+    }
+
+    @Test
+    void givenGroupsSeason_whenGenerate_thenMobileDetailsIncludeGroupAndFullTableIsReachable() throws IOException {
+        // given
+        Document doc = Jsoup.parse(Files.readString(tempDir.resolve("season")
+                .resolve("2023-1-season-2023").resolve("standings.html")));
+
+        // when
+        var mobileTeams = doc.select(".mobile-standings details");
+
+        // then
+        assertThat(mobileTeams).isNotEmpty();
+        assertThat(mobileTeams.select("dt").eachText()).contains("Group");
+        assertThat(doc.selectFirst("a[href='#full-standings']")).isNotNull();
+        assertThat(doc.selectFirst("#full-standings table")).isNotNull();
+    }
+
     /**
      * SC1: GROUPS-layout REGULAR phase generates one HTML file per group plus the legacy combined
      * {@code standings.html}. Combined view shows the Group column; per-group view hides it (D-32).

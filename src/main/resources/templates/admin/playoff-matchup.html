@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Matchup', ~{::section})}">
 <body>
-<section>
+<section class="entity-editor playoff-matchup-workspace">
     <div class="toolbar">
         <h1>
             <span th:text="${matchup.round.label}"></span> —
@@ -17,12 +17,66 @@
         </div>
     </div>
 
-    <div th:if="${matchup.winner != null}" class="alert alert-success">
+    <div class="card mb-md matchup-summary">
+        <p class="text-dim" th:text="${playoff.name}"></p>
+        <dl>
+            <div><dt>Format</dt><dd th:text="|Best of ${matchup.round.bestOfLegs} legs|"></dd></div>
+            <div><dt>Legs created</dt><dd th:text="${legs.size()}"></dd></div>
+            <div><dt>Status</dt><dd th:text="${matchup.winner != null ? 'Decided' : (matchup.team1 != null and matchup.team2 != null ? 'Ready to play' : 'Awaiting teams')}"></dd></div>
+        </dl>
+    </div>
+    <div th:if="${matchup.winner != null}" class="alert alert-success matchup-winner">
         Winner: <strong th:text="${matchup.winner.shortName}"></strong>
         <span th:if="${matchup.bye}" class="badge badge-inactive">Bye</span>
         <span th:if="${matchup.walkoverTeam != null}" class="badge badge-inactive" th:text="|w/o ${matchup.walkoverTeam.shortName}|"></span>
         <span th:if="${matchup.decisionReason != null}" class="text-dim" th:text="|Reason: ${matchup.decisionReason}|"></span>
     </div>
+
+    <div class="card">
+        <h2>Legs</h2>
+        <div class="table-scroll" th:if="${!legs.isEmpty()}" tabindex="0" role="region" aria-label="Playoff matchup legs">
+        <table th:if="${!legs.isEmpty()}">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Track</th>
+                    <th scope="col">Car</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Results</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="leg, iter : ${legs}">
+                    <th scope="row" th:text="|Leg ${iter.count}|"></th>
+                    <td th:text="${leg.track?.name ?: '-'}"></td>
+                    <td th:text="${leg.car?.displayName ?: '-'}"></td>
+                    <td th:data-london-time="${leg.dateTime != null ? leg.dateTime.toString().substring(0, 16) : ''}"
+                        th:text="${leg.dateTime != null ? #temporals.format(leg.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></td>
+                    <td>
+                        <span th:if="${leg.results.isEmpty()}" class="badge badge-inactive">Open</span>
+                        <span th:unless="${leg.results.isEmpty()}" class="badge badge-active"
+                              th:text="${leg.results.size() + ' Results'}"></span>
+                    </td>
+                    <td class="actions">
+                        <a th:href="@{/admin/races/{id}(id=${leg.id})}" class="detail-link" th:attr="aria-label=|View leg ${iter.count}|">View</a>
+                        <a th:href="@{/admin/races/{id}/results(id=${leg.id})}" class="btn btn-secondary btn-sm" th:attr="aria-label=|Results for leg ${iter.count}|">Results</a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+        <div th:if="${legs.isEmpty()}" class="empty-state"><p>No legs created yet.</p></div>
+    </div>
+
+    <div th:if="${matchup.winner == null && matchup.team1 != null && matchup.team2 != null && legs.size() < matchup.round.bestOfLegs}" class="card">
+        <h2>Add New Leg</h2>
+        <form th:action="@{/admin/playoffs/matchup/{id}/add-race(id=${matchup.id})}" method="post">
+            <p class="text-dim mb-md">Create the next leg, then open its race to select a track and car, set the date and prepare the lineup.</p>
+            <button type="submit" class="btn btn-primary">Add Leg</button>
+        </form>
+    </div>
+
 
     <div th:if="${byeAllowed}" class="card">
         <h2>Bye</h2>
@@ -68,86 +122,13 @@
         <p class="decision-history" th:text="${matchup.decisionHistory}"></p>
     </div>
 
-    <!-- Legs table -->
-    <div class="card">
-        <h2>Legs</h2>
-        <div class="table-scroll">
-        <table th:if="${!legs.isEmpty()}">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Track</th>
-                    <th>Car</th>
-                    <th th:text="${matchup.team1 != null ? matchup.team1.shortName : 'Team 1'}"></th>
-                    <th></th>
-                    <th th:text="${matchup.team2 != null ? matchup.team2.shortName : 'Team 2'}"></th>
-                    <th>Date</th>
-                    <th>Results</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="leg, iter : ${legs}">
-                    <td th:text="${iter.count}"></td>
-                    <td th:text="${leg.track?.name ?: '-'}"></td>
-                    <td th:text="${leg.car?.displayName ?: '-'}"></td>
-                    <td class="td-center">
-                        <span th:if="${leg.results.isEmpty()}" class="text-dim">—</span>
-                        <span th:unless="${leg.results.isEmpty()}" th:text="${leg.results.size() + ' Drivers'}"></span>
-                    </td>
-                    <td></td>
-                    <td class="td-center">
-                        <span th:if="${leg.results.isEmpty()}" class="text-dim">—</span>
-                        <span th:unless="${leg.results.isEmpty()}" th:text="${leg.results.size() + ' Drivers'}"></span>
-                    </td>
-                    <td th:data-london-time="${leg.dateTime != null ? leg.dateTime.toString().substring(0, 16) : ''}"
-                        th:text="${leg.dateTime != null ? #temporals.format(leg.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></td>
-                    <td>
-                        <span th:if="${leg.results.isEmpty()}" class="badge badge-inactive">Open</span>
-                        <span th:unless="${leg.results.isEmpty()}" class="badge badge-active"
-                              th:text="${leg.results.size() + ' Results'}"></span>
-                    </td>
-                    <td class="actions">
-                        <a th:href="@{/admin/races/{id}(id=${leg.id})}" class="detail-link" style="margin-right:8px;">View</a>
-                        <a th:href="@{/admin/races/{id}/results(id=${leg.id})}" class="btn btn-secondary btn-sm">Results</a>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-        </div>
-        <div th:if="${legs.isEmpty()}" class="empty-state"><p>No legs created yet.</p></div>
-    </div>
-
-    <!-- Add leg form (only if max legs not reached) -->
-    <div th:if="${matchup.winner == null && matchup.team1 != null && matchup.team2 != null && legs.size() < matchup.round.bestOfLegs}" class="card">
-        <h2>Add New Leg</h2>
-        <form th:action="@{/admin/playoffs/matchup/{id}/add-race(id=${matchup.id})}" method="post">
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Track</label>
-                    <input type="text" name="track" placeholder="e.g. Tsukuba Circuit">
-                </div>
-                <div class="form-group">
-                    <label>Car</label>
-                    <input type="text" name="car" placeholder="e.g. Mazda RX-Vision GT3">
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="dateTime">Date &amp; Time</label>
-                <input type="datetime-local" id="dateTime" name="dateTime" class="london-time-input">
-                <small class="text-dim">Stored as London time, displayed in your local timezone</small>
-            </div>
-            <button type="submit" class="btn btn-primary">Add Leg</button>
-        </form>
-    </div>
-
-    <!-- Determine winner -->
     <div th:if="${matchup.winner == null && !legs.isEmpty()}" class="card">
         <h2>Set Winner</h2>
-        <div class="actions" style="gap:16px;flex-wrap:wrap;align-items:center;">
+        <p class="text-dim mb-md">Determine the winner from the recorded points or choose a team with a reason for the decision.</p>
+        <div class="matchup-winner-actions">
             <form th:action="@{/admin/playoffs/matchup/{id}/determine-winner(id=${matchup.id})}" method="post"
                   onsubmit="return confirm('Auto-determine winner by points?')">
-                <button type="submit" class="btn btn-success">Auto-determine</button>
+                <button type="submit" class="btn btn-primary">Auto-determine</button>
             </form>
             <span class="text-dim">or manually:</span>
             <form th:action="@{/admin/playoffs/matchup/{id}/set-winner(id=${matchup.id})}" method="post"
@@ -156,7 +137,7 @@
                     <label for="winnerReason">Reason (required unless the winner leads on points after every leg)</label>
                     <input id="winnerReason" type="text" name="reason" maxlength="500">
                 </div>
-                <div class="actions" style="gap:8px;">
+                <div class="actions">
                     <button type="submit" name="winnerTeamId" th:value="${matchup.team1.id}"
                             class="btn btn-secondary" th:text="${matchup.team1.shortName}"></button>
                     <button type="submit" name="winnerTeamId" th:value="${matchup.team2.id}"

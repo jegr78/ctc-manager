@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Race Lineup', ~{::section})}">
+      th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
-<section>
+<section class="entity-editor lineup-editor">
     <div class="toolbar">
         <h1 th:text="'Lineup — ' + ${race.homeTeam.shortName} + ' vs ' + ${race.awayTeam?.shortName ?: 'Bye'}"></h1>
         <a th:href="@{/admin/races/{id}(id=${race.id})}" class="btn btn-secondary">Back to Race</a>
     </div>
 
-    <form th:action="@{/admin/races/{id}/lineup(id=${race.id})}" method="post">
+    <p class="text-dim workflow-hint">Choose the drivers racing for each team. Guests can be selected from the existing driver directory.</p>
+    <nav class="entity-section-nav" aria-label="Lineup teams"><a th:each="entry : ${teamEntries}" th:href="${'#lineup-' + entry.team.id}" th:text="${entry.team.shortName}"></a></nav>
+    <form class="entity-editor-form" th:action="@{/admin/races/{id}/lineup(id=${race.id})}" method="post">
 
         <datalist id="guestDriverList">
             <option th:each="d : ${allDrivers}"
@@ -16,18 +18,18 @@
                     th:attr="data-id=${d.id}"></option>
         </datalist>
 
-        <div th:each="entry : ${teamEntries}" class="card mb-md">
+        <div th:each="entry : ${teamEntries}" class="card mb-md" th:id="${'lineup-' + entry.team.id}">
             <h2 th:text="${entry.team.shortName + ' — ' + entry.team.name}"></h2>
             <div th:if="${entry.drivers.isEmpty()}" class="empty-state empty-state--compact">
                 <p>No drivers registered for this team.</p>
             </div>
-            <table th:if="${!entry.drivers.isEmpty()}">
+            <div class="table-scroll" th:if="${!entry.drivers.isEmpty()}" role="region" th:attr="aria-label=${entry.team.shortName + ' roster'}" tabindex="0"><table>
                 <thead>
                     <tr>
-                        <th>PSN ID</th>
-                        <th>Nickname</th>
-                        <th th:if="${entry.hasSubTeams}">Sub-Team</th>
-                        <th th:unless="${entry.hasSubTeams}" class="td-center">In Lineup</th>
+                        <th scope="col">PSN ID</th>
+                        <th scope="col">Nickname</th>
+                        <th scope="col" th:if="${entry.hasSubTeams}">Sub-Team</th>
+                        <th scope="col" th:unless="${entry.hasSubTeams}" class="td-center">In Lineup</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -36,7 +38,7 @@
                         <td th:text="${sd.driver.nickname}"></td>
                         <!-- Sub-team: dropdown -->
                         <td th:if="${entry.hasSubTeams}">
-                            <select th:name="'driver_' + ${sd.driver.id}">
+                            <select th:name="'driver_' + ${sd.driver.id}" th:attr="aria-label=${'Sub-team for ' + sd.driver.psnId}">
                                 <option value="">-- Not assigned --</option>
                                 <option th:each="sub : ${entry.subTeams}"
                                         th:value="${sub.id}"
@@ -50,43 +52,44 @@
                             <input type="checkbox"
                                    th:name="'driver_' + ${sd.driver.id}"
                                    th:value="${entry.team.id}"
-                                   th:checked="${driverAssignments.get(sd.driver.id) == entry.team.id}">
+                                   th:checked="${driverAssignments.get(sd.driver.id) == entry.team.id}" th:attr="aria-label=${'Include ' + sd.driver.psnId + ' in lineup for ' + entry.team.shortName}">
                         </td>
                     </tr>
                 </tbody>
-            </table>
+            </table></div>
 
             <div class="guest-section" th:attr="data-team-id=${entry.team.id}">
-                <h3>Guest Drivers</h3>
+                <h3>Guest Drivers</h3><p class="text-dim form-hint--sm lineup-guest-hint">Select an existing driver from the suggestions.</p>
                 <div class="guest-row" th:each="gl : ${guestLineups}"
                      th:if="${gl.team.parentOrSelf.id == entry.team.id}">
-                    <input type="text" class="guest-driver-input" list="guestDriverList"
-                           th:value="${gl.driver.psnId + ' (' + gl.driver.nickname + ')'}">
+                    <div class="form-group guest-driver-field"><label th:for="${'guest-' + entry.team.id + '-' + gl.driver.id}">Guest driver</label>
+                    <input type="text" class="guest-driver-input" list="guestDriverList" th:id="${'guest-' + entry.team.id + '-' + gl.driver.id}"
+                           th:value="${gl.driver.psnId + ' (' + gl.driver.nickname + ')'}"></div>
                     <input type="hidden" class="guest-driver-id"
                            th:name="'guest_' + ${gl.driver.id}" th:value="${gl.team.id}">
-                    <select th:if="${entry.hasSubTeams}" class="guest-subteam">
+                    <label class="guest-subteam-label" th:if="${entry.hasSubTeams}">Sub-team<select class="guest-subteam">
                         <option th:each="sub : ${entry.subTeams}"
                                 th:value="${sub.id}" th:text="${sub.shortName}"
                                 th:selected="${gl.team.id == sub.id}"></option>
-                    </select>
-                    <button type="button" class="btn btn-sm guest-remove">Remove</button>
+                    </select></label>
+                    <button type="button" class="btn btn-secondary btn-sm guest-remove">Remove</button>
                 </div>
                 <div class="guest-row">
-                    <input type="text" class="guest-driver-input" list="guestDriverList">
+                    <div class="form-group guest-driver-field"><label th:for="${'guest-' + entry.team.id + '-new'}">Guest driver</label><input type="text" class="guest-driver-input" list="guestDriverList" th:id="${'guest-' + entry.team.id + '-new'}"></div>
                     <input type="hidden" class="guest-driver-id" name="">
-                    <select th:if="${entry.hasSubTeams}" class="guest-subteam">
+                    <label class="guest-subteam-label" th:if="${entry.hasSubTeams}">Sub-team<select class="guest-subteam">
                         <option th:each="sub : ${entry.subTeams}"
                                 th:value="${sub.id}" th:text="${sub.shortName}"></option>
-                    </select>
-                    <button type="button" class="btn btn-sm guest-remove">Remove</button>
+                    </select></label>
+                    <button type="button" class="btn btn-secondary btn-sm guest-remove">Remove</button>
                 </div>
-                <button type="button" class="btn btn-sm guest-add-row">Add another guest</button>
+                <button type="button" class="btn btn-secondary btn-sm guest-add-row">Add another guest</button>
             </div>
         </div>
 
-        <div class="actions">
-            <button type="submit" class="btn btn-primary">Save Lineup</button>
-        </div>
+        <div class="entity-editor-actions"><span class="text-dim">Race lineup</span><div class="actions">
+            <button type="submit" class="btn btn-primary">Save Lineup</button><a th:href="@{/admin/races/{id}(id=${race.id})}" class="btn btn-secondary">Cancel</a>
+        </div></div>
     </form>
 
     <script th:src="@{/admin/js/guest-lineup.js}"></script>

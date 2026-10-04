@@ -13,16 +13,9 @@
 
     <!-- Filter Bar -->
     <div th:if="${matchday == null}" class="card filter-bar">
-        <form th:action="@{/admin/races}" method="get" class="btn-with-hint">
-            <label class="text-dim text-sm text-nowrap">Season</label>
-            <select name="seasonId" onchange="this.form.submit()" style="min-width:200px;">
-                <option value="">All Seasons</option>
-                <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"
-                        th:selected="${selectedSeasonId != null && selectedSeasonId.equals(s.id)}"></option>
-            </select>
-        </form>
-        <div class="flex-spacer"></div>
-        <input type="text" id="raceFilter" placeholder="Filter by team, track, car..."
+        <a th:href="@{/admin/races}" class="btn btn-secondary btn-sm">All seasons</a>
+        <label for="raceFilter" class="sr-only">Filter races by team, track or car</label>
+        <input type="search" id="raceFilter" placeholder="Filter by team, track, car..."
                style="width:240px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg-input); color:var(--white); font-size:13px;">
     </div>
 
@@ -71,7 +64,7 @@
                     <td th:text="${race.track?.name ?: '-'}" class="text-dim"></td>
                     <td th:text="${race.car?.displayName ?: '-'}" class="text-dim"></td>
                     <td>
-                        <span th:if="${race.playoffMatchup != null}" class="badge" style="background:rgba(79,195,247,0.1); color:var(--accent);">Playoff</span>
+                        <span th:if="${race.playoffMatchup != null}" class="badge">Playoff</span>
                         <span th:if="${race.match != null && race.playoffMatchup == null}" class="badge badge-inactive">Match</span>
                     </td>
                     <td class="td-center">

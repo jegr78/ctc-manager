@@ -3,41 +3,34 @@
       th:replace="~{site/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
 <section>
-    <div class="team-header">
+    <header class="team-header profile-heading brand-stage">
         <img th:if="${teamLogoRelPath}" th:src="${teamLogoRelPath}" class="team-logo" th:alt="${team.shortName}">
         <div>
-            <h1 class="text-white" th:text="${team.shortName + ' — ' + team.name}"></h1>
+            <p class="season-brand">COMMUNITY TEAM CUP</p>
+            <h1 class="text-white" th:text="${team.shortName}"></h1>
+            <p class="profile-team-name" th:text="${team.name}"></p>
             <p class="season-meta" th:text="${season.displayLabel}"></p>
         </div>
-    </div>
+    </header>
 
     <div class="section" th:if="${standing != null}">
         <h2 class="section-title">Record</h2>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr><th>MP</th><th>W</th><th>D</th><th>L</th><th>PR</th><th class="text-right">Pts</th></tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td th:text="${standing.played}"></td>
-                        <td th:text="${standing.wins}"></td>
-                        <td th:text="${standing.draws}"></td>
-                        <td th:text="${standing.losses}"></td>
-                        <td th:text="${standing.pointsRatio}"></td>
-                        <td class="text-right font-bold text-white text-lg" th:text="${standing.points}"></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <dl class="profile-metrics team-metrics">
+            <div><dt>Points</dt><dd class="profile-team-points" th:text="${standing.points}"></dd></div>
+            <div><dt>Matches played</dt><dd th:text="${standing.played}"></dd></div>
+            <div><dt>Wins</dt><dd th:text="${standing.wins}"></dd></div>
+            <div><dt>Draws</dt><dd th:text="${standing.draws}"></dd></div>
+            <div><dt>Losses</dt><dd th:text="${standing.losses}"></dd></div>
+            <div><dt>Points ratio</dt><dd th:text="${standing.pointsRatio}"></dd></div>
+        </dl>
     </div>
 
-    <div class="section" th:if="${drivers != null and not #lists.isEmpty(drivers)}">
+    <div class="section profile-roster" th:if="${drivers != null and not #lists.isEmpty(drivers)}">
         <h2 class="section-title">Drivers</h2>
         <div class="table-wrap">
             <table>
                 <thead>
-                    <tr><th>Driver</th><th class="text-right">Points</th></tr>
+                    <tr><th scope="col">Driver</th><th scope="col" class="text-right">Points</th></tr>
                 </thead>
                 <tbody>
                     <tr th:each="d : ${drivers}">
@@ -49,12 +42,12 @@
                 </tbody>
             </table>
         </div>
-    </div><div class="section section-gap" th:if="${showPhaseBreakdown}">
+    </div><div class="section section-gap profile-phase-breakdown" th:if="${showPhaseBreakdown}">
         <h2 class="section-title">Phase Breakdown</h2>
         <div class="table-wrap">
             <table>
                 <thead>
-                    <tr><th>Phase</th><th class="text-right">Result</th></tr>
+                    <tr><th scope="col">Phase</th><th scope="col" class="text-right">Result</th></tr>
                 </thead>
                 <tbody>
                     <tr th:each="entry : ${phaseBreakdown}">

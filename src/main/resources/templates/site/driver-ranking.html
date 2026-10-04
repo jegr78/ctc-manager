@@ -2,7 +2,10 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{site/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
-<section><nav th:if="${showPhaseTabs}" class="phase-tab-row" role="tablist" aria-label="Phase navigation">
+<section>
+    <header class="standings-heading brand-stage"><p class="season-brand">COMMUNITY TEAM CUP</p>
+        <h1>Driver ranking</h1><p class="text-dim" th:text="${season.displayLabel}"></p>
+    </header><nav th:if="${showPhaseTabs}" class="phase-tab-row" role="tablist" aria-label="Phase navigation">
         <div class="phase-tab-row-inner">
             <a th:each="t : ${phaseTabs}"
                th:href="@{${t.href}}"
@@ -12,34 +15,7 @@
                th:text="${t.label}">Tab</a>
         </div>
     </nav>
-    <div class="section">
-        <h2 class="section-title" th:text="'Driver Ranking — ' + ${season.displayLabel}"></h2>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th><th>Driver</th><th>Team</th>
-                        <th class="text-center">Races</th><th class="text-center">Best</th>
-                        <th class="text-center">Avg</th><th class="text-right">Points</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="r, i : ${driverRanking}">
-                        <td class="font-bold text-white" th:text="${i.count}"></td>
-                        <td class="font-bold">
-                            <a class="entity-link" th:href="${driverSlugMap.get(r.driver.id)}" th:text="${r.driver.psnId}"></a>
-                            <span class="guest-marker" th:if="${r.hasGuestAppearance}" aria-label="Guest driver">&#x2605;</span>
-                        </td>
-                        <td class="text-dim" th:text="${r.team != null ? r.team.shortName : '-'}"></td>
-                        <td class="text-center" th:text="${r.racesCount}"></td>
-                        <td class="text-center" th:text="'P' + ${r.bestPosition}"></td>
-                        <td class="text-center" th:text="${#numbers.formatDecimal(r.averagePoints, 1, 1)}"></td>
-                        <td class="text-right font-bold text-white text-lg" th:text="${r.totalPoints}"></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+    <div class="section" th:replace="~{site/fragments/driver-ranking :: ranking(false)}"></div>
 </section>
 </body>
 </html>

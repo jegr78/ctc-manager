@@ -2,224 +2,71 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('GT7 Sync Preview', ~{::section})}">
 <body>
-<section>
-    <h1>GT7 Sync Preview</h1>
-
-    <form th:action="@{/admin/gt7-sync/execute}" method="post">
-
-        <!-- Cars Section -->
-        <div class="card" style="margin-bottom:24px;">
-            <div class="toolbar mb-md">
-                <div>
-                    <h2 style="font-size:18px;">Cars</h2>
-                    <p class="text-dim" style="margin-top:4px;">
-                        <span th:text="${preview.cars.size()}"></span> cars found &mdash;
-                        <strong th:text="${preview.newCarCount}"></strong> new,
-                        <span th:text="${preview.existingCarCount}"></span> existing
-                    </p>
+<section class="gt7-sync" data-sync-preview>
+    <div class="toolbar"><div><a th:href="@{/admin/gt7-sync}" class="back-link">← Back to GT7 Sync</a><h1>GT7 Sync Preview</h1></div></div>
+    <p class="admin-list-intro text-dim">Review the comparison and choose which new entries to import.</p>
+    <nav class="entity-section-nav" aria-label="Catalog comparison sections"><a href="#sync-cars">Cars</a><a href="#sync-tracks">Tracks</a></nav>
+    <form th:action="@{/admin/gt7-sync/execute}" method="post" data-sync-form data-sync-action="import">
+        <div class="admin-list sync-catalog" id="sync-cars" data-admin-list data-page-size="20" data-unit="car" data-plural="cars">
+            <div class="card admin-list-card">
+                <div class="toolbar"><h2>Cars</h2><p class="text-dim sync-catalog-summary"><strong th:text="${preview.newCarCount}"></strong> new · <span th:text="${preview.existingCarCount}"></span> already in your catalog</p></div>
+                <div class="admin-list-controls" data-list-tools hidden>
+                    <label for="carSearch"><span>Search cars</span><input type="search" id="carSearch" data-list-search placeholder="Manufacturer or car name" autocomplete="off"></label>
+                    <label for="carStatus"><span>Status</span><select id="carStatus" data-list-status><option value="all">All entries</option><option value="NEW">New</option><option value="EXISTS">Already imported</option></select></label>
+                    <button type="button" class="btn btn-secondary" data-list-reset disabled>Reset filters</button>
+                    <p class="admin-list-count text-dim" data-list-count role="status"></p>
                 </div>
-                <div class="actions">
-                    <input type="text" id="carSearch" placeholder="Search cars..." aria-label="Search cars"
-                           class="search-input">
-                    <button type="button" id="toggleCars" class="btn btn-secondary btn-sm">Deselect all new</button>
+                <div class="sync-selection-tools" data-sync-tools hidden><button type="button" class="btn btn-secondary" data-sync-select="selectedCars">Select all new cars</button><button type="button" class="btn btn-secondary" data-sync-clear="selectedCars">Deselect all cars</button></div>
+                <div class="table-scroll" role="region" aria-label="Cars comparison" tabindex="0">
+                    <table id="carsTable" data-list-table>
+                        <thead><tr><th scope="col" class="sync-check-column">Import</th><th scope="col" class="col-thumb">Image</th><th scope="col">Status</th><th scope="col" class="sortable" data-col="3" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Manufacturer" disabled>Manufacturer</button></th><th scope="col" class="sortable" data-col="4" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Name" disabled>Name</button></th></tr></thead>
+                        <tbody><tr th:each="car : ${preview.cars}" class="car-row" data-list-entry th:attr="data-search=${car.name + ' ' + car.manufacturer},data-status=${car.status.name()}">
+                            <td><input th:if="${car.status.name() == 'NEW'}" type="checkbox" name="selectedCars" th:value="${car.gt7Id}" th:attr="aria-label=${'Import ' + car.manufacturer + ' ' + car.name}" checked class="car-check"><span th:unless="${car.status.name() == 'NEW'}" class="text-dim">—</span></td>
+                            <td class="col-thumb"><img th:if="${car.imageUrl != null and !car.imageUrl.isEmpty()}" th:src="${car.imageUrl}" alt="" class="thumb-sm" loading="lazy"></td>
+                            <td><span th:if="${car.status.name() == 'NEW'}" class="badge badge-active">New</span><span th:unless="${car.status.name() == 'NEW'}" class="sync-existing">Already imported</span></td>
+                            <td th:text="${car.manufacturer}"></td>
+                            <td><strong th:text="${car.name}"></strong></td>
+                        </tr></tbody>
+                    </table>
                 </div>
-            </div>
-
-            <div class="table-scroll">
-            <table id="carsTable">
-                <thead>
-                    <tr>
-                        <th style="width:40px;"></th>
-                        <th class="col-thumb"></th>
-                        <th style="width:80px;">Status</th>
-                        <th>Manufacturer</th>
-                        <th>Name</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="car : ${preview.cars}" class="car-row"
-                        th:style="${car.status.name() == 'NEW' ? 'background:var(--success-bg)' : ''}">
-                        <td>
-                            <input th:if="${car.status.name() == 'NEW'}" type="checkbox"
-                                   name="selectedCars" th:value="${car.gt7Id}" checked class="car-check">
-                        </td>
-                        <td class="col-thumb">
-                            <img th:src="${car.imageUrl}" alt="" class="thumb-sm"
-                                 loading="lazy" onerror="this.style.display='none'">
-                        </td>
-                        <td>
-                            <span th:if="${car.status.name() == 'NEW'}" class="badge badge-active">NEW</span>
-                            <span th:if="${car.status.name() == 'EXISTS'}" class="badge" style="background:var(--bg-hover);color:var(--text-dim);">EXISTS</span>
-                        </td>
-                        <td th:text="${car.manufacturer}"></td>
-                        <td th:text="${car.name}"></td>
-                    </tr>
-                </tbody>
-            </table>
-            </div>
-
-            <div id="carNoResults" style="display:none" class="empty-state" aria-live="polite"><p>No matching cars found.</p></div>
-            <div class="pagination pagination-bar" id="carPagination">
-                <span id="carPageInfo" class="text-dim"></span>
-                <div class="actions">
-                    <button type="button" id="carPrevPage" class="btn btn-secondary btn-sm" disabled>Previous</button>
-                    <button type="button" id="carNextPage" class="btn btn-secondary btn-sm">Next</button>
-                </div>
+                <div id="carNoResults" data-list-empty hidden class="empty-state"><p>No matching cars. Try another search or reset the filters.</p></div>
+                <div th:if="${preview.cars.isEmpty()}" data-list-initial-empty class="empty-state"><p>No cars found in the comparison.</p></div>
+                <div class="pagination pagination-bar" id="carPagination" data-list-pagination hidden aria-label="Cars comparison pagination"><span id="carPageInfo" data-list-page-info class="text-dim"></span><div class="actions"><button type="button" id="carPrevPage" data-list-prev class="btn btn-secondary" disabled>Previous</button><button type="button" id="carNextPage" data-list-next class="btn btn-secondary">Next</button></div></div>
             </div>
         </div>
-
-        <!-- Tracks Section -->
-        <div class="card" style="margin-bottom:24px;">
-            <div class="toolbar mb-md">
-                <div>
-                    <h2 style="font-size:18px;">Tracks</h2>
-                    <p class="text-dim" style="margin-top:4px;">
-                        <span th:text="${preview.tracks.size()}"></span> tracks found &mdash;
-                        <strong th:text="${preview.newTrackCount}"></strong> new,
-                        <span th:text="${preview.existingTrackCount}"></span> existing
-                    </p>
+        <div class="admin-list sync-catalog" id="sync-tracks" data-admin-list data-page-size="20" data-unit="track" data-plural="tracks">
+            <div class="card admin-list-card">
+                <div class="toolbar"><h2>Tracks</h2><p class="text-dim sync-catalog-summary"><strong th:text="${preview.newTrackCount}"></strong> new · <span th:text="${preview.existingTrackCount}"></span> already in your catalog</p></div>
+                <div class="admin-list-controls" data-list-tools hidden>
+                    <label for="trackSearch"><span>Search tracks</span><input type="search" id="trackSearch" data-list-search placeholder="Track name or country" autocomplete="off"></label>
+                    <label for="trackStatus"><span>Status</span><select id="trackStatus" data-list-status><option value="all">All entries</option><option value="NEW">New</option><option value="EXISTS">Already imported</option></select></label>
+                    <button type="button" class="btn btn-secondary" data-list-reset disabled>Reset filters</button>
+                    <p class="admin-list-count text-dim" data-list-count role="status"></p>
                 </div>
-                <div class="actions">
-                    <input type="text" id="trackSearch" placeholder="Search tracks..." aria-label="Search tracks"
-                           class="search-input">
-                    <button type="button" id="toggleTracks" class="btn btn-secondary btn-sm">Deselect all new</button>
+                <div class="sync-selection-tools" data-sync-tools hidden><button type="button" class="btn btn-secondary" data-sync-select="selectedTracks">Select all new tracks</button><button type="button" class="btn btn-secondary" data-sync-clear="selectedTracks">Deselect all tracks</button></div>
+                <div class="table-scroll" role="region" aria-label="Tracks comparison" tabindex="0">
+                    <table id="tracksTable" data-list-table>
+                        <thead><tr><th scope="col" class="sync-check-column">Import</th><th scope="col">Status</th><th scope="col" class="sortable" data-col="2" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Name" disabled>Name</button></th><th scope="col" class="sortable" data-col="3" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Country" disabled>Country</button></th></tr></thead>
+                        <tbody><tr th:each="track : ${preview.tracks}" class="track-row" data-list-entry th:attr="data-search=${track.name + ' ' + (track.country ?: '')},data-status=${track.status.name()}">
+                            <td><input th:if="${track.status.name() == 'NEW'}" type="checkbox" name="selectedTracks" th:value="${track.name}" th:attr="aria-label=${'Import ' + track.name}" checked class="track-check"><span th:unless="${track.status.name() == 'NEW'}" class="text-dim">—</span></td>
+                            <td><span th:if="${track.status.name() == 'NEW'}" class="badge badge-active">New</span><span th:unless="${track.status.name() == 'NEW'}" class="sync-existing">Already imported</span></td>
+                            <td><strong th:text="${track.name}"></strong></td>
+                            <td th:text="${track.country}"></td>
+                        </tr></tbody>
+                    </table>
                 </div>
-            </div>
-
-            <div class="table-scroll">
-            <table id="tracksTable">
-                <thead>
-                    <tr>
-                        <th style="width:40px;"></th>
-                        <th style="width:80px;">Status</th>
-                        <th>Name</th>
-                        <th>Country</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="track : ${preview.tracks}" class="track-row"
-                        th:style="${track.status.name() == 'NEW' ? 'background:var(--success-bg)' : ''}">
-                        <td>
-                            <input th:if="${track.status.name() == 'NEW'}" type="checkbox"
-                                   name="selectedTracks" th:value="${track.name}" checked class="track-check">
-                        </td>
-                        <td>
-                            <span th:if="${track.status.name() == 'NEW'}" class="badge badge-active">NEW</span>
-                            <span th:if="${track.status.name() == 'EXISTS'}" class="badge" style="background:var(--bg-hover);color:var(--text-dim);">EXISTS</span>
-                        </td>
-                        <td th:text="${track.name}"></td>
-                        <td th:text="${track.country}"></td>
-                    </tr>
-                </tbody>
-            </table>
-            </div>
-
-            <div id="trackNoResults" style="display:none" class="empty-state" aria-live="polite"><p>No matching tracks found.</p></div>
-            <div class="pagination pagination-bar" id="trackPagination">
-                <span id="trackPageInfo" class="text-dim"></span>
-                <div class="actions">
-                    <button type="button" id="trackPrevPage" class="btn btn-secondary btn-sm" disabled>Previous</button>
-                    <button type="button" id="trackNextPage" class="btn btn-secondary btn-sm">Next</button>
-                </div>
+                <div id="trackNoResults" data-list-empty hidden class="empty-state"><p>No matching tracks. Try another search or reset the filters.</p></div>
+                <div th:if="${preview.tracks.isEmpty()}" data-list-initial-empty class="empty-state"><p>No tracks found in the comparison.</p></div>
+                <div class="pagination pagination-bar" id="trackPagination" data-list-pagination hidden aria-label="Tracks comparison pagination"><span id="trackPageInfo" data-list-page-info class="text-dim"></span><div class="actions"><button type="button" id="trackPrevPage" data-list-prev class="btn btn-secondary" disabled>Previous</button><button type="button" id="trackNextPage" data-list-next class="btn btn-secondary">Next</button></div></div>
             </div>
         </div>
-
-        <!-- Action Buttons -->
-        <div class="actions mt-md">
-            <button type="submit" id="importBtn" class="btn btn-primary">Import Selected</button>
-            <a th:href="@{/admin/gt7-sync}" id="cancelLink" class="btn btn-secondary">Cancel</a>
+        <div class="sync-import-bar">
+            <div><p data-sync-selection role="status" th:text="${preview.newCarCount + ' cars and ' + preview.newTrackCount + ' tracks selected'}"></p><p class="sync-selection-hint text-dim">Selection includes other pages and entries outside the current filters.</p><p class="sync-progress text-dim" data-sync-progress role="status" hidden>Importing selected entries and downloading images. This may take a moment.</p></div>
+            <div class="actions"><button type="submit" id="importBtn" class="btn btn-primary" th:disabled="${preview.newCarCount + preview.newTrackCount == 0}">Import Selected</button><a th:href="@{/admin/gt7-sync}" id="cancelLink" class="btn btn-secondary">Cancel</a></div>
         </div>
     </form>
-
-    <!-- Fullscreen overlay shown during import -->
-    <div id="importOverlay" class="overlay">
-        <div class="overlay-panel">
-            <div class="overlay-title">Importing...</div>
-            <div class="text-dim">Downloading car and track data with images.<br>This may take a moment.</div>
-        </div>
-    </div>
-
-    <script>
-    (function() {
-        function setupTable(config) {
-            var PAGE_SIZE = 50;
-            var table = document.getElementById(config.tableId);
-            if (!table) return;
-
-            var tbody = table.querySelector('tbody');
-            var rows = Array.from(tbody.querySelectorAll('.' + config.rowClass));
-            var search = document.getElementById(config.searchId);
-            var pageInfo = document.getElementById(config.pageInfoId);
-            var prevBtn = document.getElementById(config.prevBtnId);
-            var nextBtn = document.getElementById(config.nextBtnId);
-            var noResults = document.getElementById(config.noResultsId);
-            var toggleBtn = document.getElementById(config.toggleId);
-
-            var filteredRows = rows;
-            var currentPage = 0;
-            var allChecked = true;
-
-            function render() {
-                var totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
-                currentPage = Math.min(currentPage, totalPages - 1);
-                var start = currentPage * PAGE_SIZE;
-                var end = start + PAGE_SIZE;
-
-                rows.forEach(function(r) { r.style.display = 'none'; });
-                filteredRows.slice(start, end).forEach(function(r) { r.style.display = ''; });
-
-                pageInfo.textContent = filteredRows.length + ' ' + config.label + ' \u2014 Page ' + (currentPage + 1) + ' of ' + totalPages;
-                prevBtn.disabled = currentPage === 0;
-                nextBtn.disabled = currentPage >= totalPages - 1;
-                noResults.style.display = filteredRows.length === 0 ? '' : 'none';
-                table.style.display = filteredRows.length === 0 ? 'none' : '';
-            }
-
-            search.addEventListener('input', function() {
-                var q = this.value.toLowerCase();
-                filteredRows = rows.filter(function(r) { return r.textContent.toLowerCase().includes(q); });
-                currentPage = 0;
-                render();
-            });
-
-            prevBtn.addEventListener('click', function() { currentPage--; render(); });
-            nextBtn.addEventListener('click', function() { currentPage++; render(); });
-
-            toggleBtn.addEventListener('click', function() {
-                allChecked = !allChecked;
-                var checks = table.querySelectorAll('.' + config.checkClass);
-                checks.forEach(function(cb) { cb.checked = allChecked; });
-                toggleBtn.textContent = allChecked ? 'Deselect all new' : 'Select all new';
-            });
-
-            render();
-        }
-
-        setupTable({
-            tableId: 'carsTable', rowClass: 'car-row', searchId: 'carSearch',
-            pageInfoId: 'carPageInfo', prevBtnId: 'carPrevPage', nextBtnId: 'carNextPage',
-            noResultsId: 'carNoResults', toggleId: 'toggleCars', checkClass: 'car-check', label: 'cars'
-        });
-
-        setupTable({
-            tableId: 'tracksTable', rowClass: 'track-row', searchId: 'trackSearch',
-            pageInfoId: 'trackPageInfo', prevBtnId: 'trackPrevPage', nextBtnId: 'trackNextPage',
-            noResultsId: 'trackNoResults', toggleId: 'toggleTracks', checkClass: 'track-check', label: 'tracks'
-        });
-
-        // Import button: disable on click, show centered overlay
-        var form = document.querySelector('form');
-        var importBtn = document.getElementById('importBtn');
-        var overlay = document.getElementById('importOverlay');
-        form.addEventListener('submit', function() {
-            importBtn.disabled = true;
-            importBtn.style.opacity = '0.5';
-            importBtn.style.pointerEvents = 'none';
-            importBtn.textContent = 'Importing...';
-            overlay.style.display = 'flex';
-        });
-    })();
-    </script>
+    <script defer th:src="@{/admin/js/management-list.js}"></script>
+    <script defer th:src="@{/admin/js/gt7-sync.js}"></script>
 </section>
 </body>
 </html>
