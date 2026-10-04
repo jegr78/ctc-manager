@@ -41,22 +41,28 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="trackId">Track</label>
-                    <select id="trackId" th:field="*{trackId}">
+                    <select id="trackId" th:field="*{trackId}" th:attr="aria-describedby=${outOfPoolTrack != null ? 'track-pool-hint' : null}">
                         <option value="">Select track</option>
+                        <option th:if="${outOfPoolTrack != null}" th:value="${outOfPoolTrack.id}"
+                                th:text="${outOfPoolTrack.name + ' (not in season pool)'}"></option>
                         <option th:each="t : ${seasonTracks}" th:value="${t.id}"
                                 th:disabled="${usedTrackIds.contains(t.id)}"
                                 th:text="${t.name + (t.country != null ? ' (' + t.country + ')' : '') + (usedTrackIds.contains(t.id) ? ' (already used)' : '')}"></option>
                     </select>
+                    <p id="track-pool-hint" th:if="${outOfPoolTrack != null}" class="text-dim form-hint--sm">The saved track is no longer in this season's pool. Add it back to the pool, choose another track, or explicitly clear the selection before saving.</p>
                     <p th:if="${seasonTracks.isEmpty()}" class="text-dim form-hint--sm">No tracks assigned to this season yet.</p>
                 </div>
                 <div class="form-group">
                     <label for="carId">Car</label>
-                    <select id="carId" th:field="*{carId}">
+                    <select id="carId" th:field="*{carId}" th:attr="aria-describedby=${outOfPoolCar != null ? 'car-pool-hint' : null}">
                         <option value="">Select car</option>
+                        <option th:if="${outOfPoolCar != null}" th:value="${outOfPoolCar.id}"
+                                th:text="${outOfPoolCar.displayName + ' (not in season pool)'}"></option>
                         <option th:each="c : ${seasonCars}" th:value="${c.id}"
                                 th:disabled="${usedCarIds.contains(c.id)}"
                                 th:text="${c.displayName + (usedCarIds.contains(c.id) ? ' (already used)' : '')}"></option>
                     </select>
+                    <p id="car-pool-hint" th:if="${outOfPoolCar != null}" class="text-dim form-hint--sm">The saved car is no longer in this season's pool. Add it back to the pool, choose another car, or explicitly clear the selection before saving.</p>
                     <p th:if="${seasonCars.isEmpty()}" class="text-dim form-hint--sm">No cars assigned to this season yet.</p>
                 </div>
             </div>

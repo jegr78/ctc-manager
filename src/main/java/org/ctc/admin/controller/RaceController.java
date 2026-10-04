@@ -165,6 +165,8 @@ public class RaceController {
 		model.addAttribute("seasonTracks", data.seasonTracks());
 		model.addAttribute("usedCarIds", data.usedCarIds());
 		model.addAttribute("usedTrackIds", data.usedTrackIds());
+		model.addAttribute("outOfPoolCar", data.outOfPoolCar());
+		model.addAttribute("outOfPoolTrack", data.outOfPoolTrack());
 		return "admin/race-form";
 	}
 
@@ -179,6 +181,8 @@ public class RaceController {
 		model.addAttribute("seasonTracks", data.seasonTracks());
 		model.addAttribute("usedCarIds", data.usedCarIds());
 		model.addAttribute("usedTrackIds", data.usedTrackIds());
+		model.addAttribute("outOfPoolCar", data.outOfPoolCar());
+		model.addAttribute("outOfPoolTrack", data.outOfPoolTrack());
 		return "admin/race-form";
 	}
 

@@ -44,7 +44,7 @@ public class RaceFormDataService {
                 List.of(), null, null, null, null, null, null, null, null, null, null, null);
 
         return new RaceService.RaceFormData(data, matchdayRepository.findAll(), teamRepository.findAll(),
-                seasonCars, seasonTracks, Set.of(), Set.of());
+                seasonCars, seasonTracks, Set.of(), Set.of(), null, null);
     }
 
     public RaceService.RaceFormData getRaceFormData(UUID raceId) {
@@ -55,7 +55,9 @@ public class RaceFormDataService {
         return new RaceService.RaceFormData(data, matchdayRepository.findAll(), teamRepository.findAll(),
                 season.getCars(), season.getTracks(),
                 race.getHomeTeam() != null ? getUsedCarIds(season.getId(), race.getHomeTeam().getId(), race.getId()) : Set.of(),
-                race.getHomeTeam() != null ? getUsedTrackIds(season.getId(), race.getHomeTeam().getId(), race.getId()) : Set.of());
+                race.getHomeTeam() != null ? getUsedTrackIds(season.getId(), race.getHomeTeam().getId(), race.getId()) : Set.of(),
+                race.getCar() != null && !season.getCars().contains(race.getCar()) ? race.getCar() : null,
+                race.getTrack() != null && !season.getTracks().contains(race.getTrack()) ? race.getTrack() : null);
     }
 
     public RaceService.ResultsFormData getResultsFormData(UUID raceId) {

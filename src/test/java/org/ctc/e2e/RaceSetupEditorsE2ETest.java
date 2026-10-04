@@ -17,6 +17,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -134,4 +136,75 @@ class RaceSetupEditorsE2ETest extends PlaywrightConfig {
         assertThat(page.locator("#carId")).hasValue(car.getId().toString());
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void givenSavedCarAndTrackRemovedFromPool_whenEditingSettings_thenSelectionsRemainUntilExplicitlyReplaced(boolean javaScriptEnabled) {
+        // given
+        var suffix = UUID.randomUUID().toString().substring(0, 8);
+        var fixture = helper.createFullSeasonFixture("Test Removed Pool " + suffix);
+        var savedCar = cars.save(new Car("Test Saved", "Car " + suffix));
+        var savedTrack = tracks.save(new Track("Test Saved Track " + suffix));
+        var replacementCar = cars.save(new Car("Test Replacement", "Car " + suffix));
+        var replacementTrack = tracks.save(new Track("Test Replacement Track " + suffix));
+        transaction.executeWithoutResult(tx -> {
+            var season = seasons.findById(fixture.season().getId()).orElseThrow();
+            season.getCars().add(replacementCar);
+            season.getTracks().add(replacementTrack);
+            var race = races.findById(fixture.race().getId()).orElseThrow();
+            race.setCar(savedCar);
+            race.setTrack(savedTrack);
+        });
+        try (var context = browser.newContext(new Browser.NewContextOptions().setJavaScriptEnabled(javaScriptEnabled))) {
+            var editor = context.newPage();
+            var editUrl = url("/admin/races/" + fixture.race().getId() + "/edit");
+
+            // when
+            editor.navigate(editUrl);
+            editor.locator("#numberOfLaps").fill("12");
+
+            // then
+            assertThat(editor.locator("#carId")).hasValue(savedCar.getId().toString());
+            assertThat(editor.locator("#trackId")).hasValue(savedTrack.getId().toString());
+            assertThat(editor.locator("#car-pool-hint")).containsText("no longer in this season's pool");
+            assertThat(editor.locator("#track-pool-hint")).containsText("no longer in this season's pool");
+
+            // when
+            editor.locator(".entity-editor-actions button").click();
+
+            // then
+            assertThat(editor).hasURL(editUrl);
+            assertThat(editor.locator(".alert-error")).containsText("Car is not in this season's pool");
+            transaction.executeWithoutResult(tx -> {
+                var race = races.findById(fixture.race().getId()).orElseThrow();
+                assertEquals(savedCar.getId(), race.getCar().getId());
+                assertEquals(savedTrack.getId(), race.getTrack().getId());
+            });
+
+            // when
+            editor.locator("#carId").selectOption(replacementCar.getId().toString());
+            editor.locator(".entity-editor-actions button").click();
+
+            // then
+            assertThat(editor).hasURL(editUrl);
+            assertThat(editor.locator(".alert-error")).containsText("Track is not in this season's pool");
+            transaction.executeWithoutResult(tx -> {
+                var race = races.findById(fixture.race().getId()).orElseThrow();
+                assertEquals(savedCar.getId(), race.getCar().getId());
+                assertEquals(savedTrack.getId(), race.getTrack().getId());
+            });
+
+            // when
+            editor.locator("#carId").selectOption(replacementCar.getId().toString());
+            editor.locator("#trackId").selectOption(replacementTrack.getId().toString());
+            editor.locator("#numberOfLaps").fill("12");
+            editor.locator(".entity-editor-actions button").click();
+
+            // then
+            assertThat(editor).hasURL(url("/admin/races?matchdayId=" + fixture.matchday().getId()));
+            editor.navigate(editUrl);
+            assertThat(editor.locator("#carId")).hasValue(replacementCar.getId().toString());
+            assertThat(editor.locator("#trackId")).hasValue(replacementTrack.getId().toString());
+            assertThat(editor.locator("#numberOfLaps")).hasValue("12");
+        }
+    }
 }
