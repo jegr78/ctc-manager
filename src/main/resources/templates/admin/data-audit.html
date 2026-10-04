@@ -2,42 +2,56 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Data Audit', ~{::section})}">
 <body>
-<section>
+<section class="entity-editor data-audit-workspace">
     <div class="toolbar">
-        <h1>Data Audit</h1>
-    </div>
-
-    <div class="card mb-md">
-        <p>
-            A read-only check of the stored league data. It changes nothing; each finding proposes a
-            correction for a later, reviewed action.
-        </p>
-        <p class="text-dim" th:text="|Generated ${report.generatedAt()} · ${report.total()} findings|">Generated</p>
-        <div class="chip-list">
-            <span th:each="resolution : ${resolutions}" class="badge" th:classappend="${resolution.badgeClass}"
-                  th:text="|${resolution.label}: ${report.count(resolution)}|">Resolution</span>
+        <div>
+            <h1>Data Audit</h1>
+            <p class="text-dim">Review stored league data and the evidence behind each finding.</p>
         </div>
+        <a th:href="@{/admin/data-audit}" class="btn btn-secondary">Run Check Again</a>
     </div>
 
-    <div class="card mb-md" th:each="section : ${report.sections()}"
+    <div class="card mb-md audit-overview">
+        <div class="audit-summary-heading">
+            <div>
+                <h2>Check summary</h2>
+                <p class="text-dim">This check is read-only. Review each proposed correction before making changes to league data.</p>
+            </div>
+            <p class="audit-total"><strong th:text="${report.total()}">0</strong><span th:text="${report.total() == 1 ? 'finding' : 'findings'}">findings</span></p>
+        </div>
+        <p class="text-dim form-hint--sm" th:text="|Checked at ${report.generatedAt()}|">Checked at</p>
+        <dl class="audit-resolution-summary">
+            <div th:each="resolution : ${resolutions}">
+                <dt th:text="${resolution.label}">Resolution</dt>
+                <dd th:text="${report.count(resolution)}">0</dd>
+            </div>
+        </dl>
+        <nav aria-label="Audit categories" class="audit-category-links">
+            <a th:each="section : ${report.sections()}" th:href="|#audit-${#strings.toLowerCase(section.category().name())}|">
+                <span th:text="${section.category().label}">Category</span>
+                <span th:text="|${section.findings().size()} ${section.findings().size() == 1 ? 'finding' : 'findings'}|">0 findings</span>
+            </a>
+        </nav>
+    </div>
+
+    <div class="card mb-md audit-category" th:each="section : ${report.sections()}"
          th:id="${'audit-' + #strings.toLowerCase(section.category().name())}">
         <h2 th:text="|${section.category().label} (${section.findings().size()})|">Category</h2>
-        <p class="text-dim" th:text="|Related: ${section.category().relatedIssues}|">Related</p>
-        <div class="table-scroll" th:if="${!section.findings().isEmpty()}">
+        <div class="table-scroll" th:if="${!section.findings().isEmpty()}" tabindex="0" role="region"
+             th:attr="aria-label=|Findings for ${section.category().label}|">
             <table>
                 <thead>
                     <tr>
-                        <th>Record</th>
-                        <th>Resolution</th>
-                        <th>Evidence</th>
-                        <th>Proposed correction</th>
+                        <th scope="col">Record</th>
+                        <th scope="col">Resolution</th>
+                        <th scope="col">Evidence</th>
+                        <th scope="col">Proposed correction</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr th:each="finding : ${section.findings()}">
-                        <td th:text="${finding.subject()}"></td>
-                        <td><span class="badge" th:classappend="${finding.resolution().badgeClass}"
-                                  th:text="${finding.resolution().label}"></span></td>
+                        <th scope="row" th:text="${finding.subject()}"></th>
+                        <td><span class="audit-resolution" th:text="${finding.resolution().label}"></span></td>
                         <td th:text="${finding.evidence()}"></td>
                         <td th:text="${finding.correction()}"></td>
                     </tr>
@@ -45,7 +59,7 @@
             </table>
         </div>
         <div th:if="${section.findings().isEmpty()}" class="empty-state empty-state--compact">
-            <p>No findings.</p>
+            <p>No findings in this category.</p>
         </div>
     </div>
 </section>

@@ -9,6 +9,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -53,7 +54,12 @@ class TeamControllerTest {
 				// then
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/teams"))
-				.andExpect(model().attributeExists("parentTeams"));
+				.andExpect(model().attributeExists("parentTeams"))
+				.andExpect(content().string(containsString("data-admin-list")))
+				.andExpect(content().string(containsString("data-list-search")))
+				.andExpect(content().string(containsString("data-list-reset")))
+				.andExpect(content().string(containsString("data-list-count")))
+				.andExpect(content().string(containsString("data-list-entry")));
 	}
 
 	@Test
@@ -218,8 +224,22 @@ class TeamControllerTest {
 				// then
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/team-form"))
-				.andExpect(model().attributeExists("teamForm", "team"));
+				.andExpect(model().attributeExists("teamForm", "team"))
+				.andExpect(content().string(containsString("entity-editor-actions")))
+				.andExpect(content().string(containsString("for=\"teamLogo\"")))
+				.andExpect(content().string(containsString("for=\"subShortName\"")));
 	}
+
+    @Test
+    void givenEditedTeamWithBlankName_whenSave_thenEditorRetainsTeamAndShowsFieldError() throws Exception {
+        var team = teamRepository.save(new Team("Test Invalid Editor", "T-INV-EDITOR"));
+        mockMvc.perform(post("/admin/teams/save").param("id", team.getId().toString())
+                        .param("name", "").param("shortName", team.getShortName()))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeHasFieldErrors("teamForm", "name"))
+                .andExpect(model().attributeExists("team"))
+                .andExpect(content().string(containsString("id=\"name-error\"")));
+    }
 
 	@Test
 	void givenExistingTeam_whenSaveUpdatedTeam_thenRedirectsAndUpdates() throws Exception {

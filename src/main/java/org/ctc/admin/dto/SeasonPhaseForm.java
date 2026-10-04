@@ -9,6 +9,7 @@ import lombok.Setter;
 import org.ctc.domain.model.PhaseLayout;
 import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.SeasonFormat;
+import org.springframework.format.annotation.DateTimeFormat;
 
 @Getter
 @Setter
@@ -35,7 +36,9 @@ public class SeasonPhaseForm {
     private UUID raceScoringId;
     private UUID matchScoringId;
 
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate startDate;
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate endDate;
     private Integer totalRounds;     // optional → boxed
     private int legs = 1;            // mandatory default → primitive

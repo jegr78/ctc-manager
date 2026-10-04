@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.MockMvcPrint;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -42,7 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * with the archive and import services mocked out via {@link MockitoBean}.
  */
 @SpringBootTest
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(print = MockMvcPrint.NONE)
 @ActiveProfiles("dev")
 class BackupControllerTest {
 
@@ -69,19 +70,14 @@ class BackupControllerTest {
 
 	@Test
 	void givenAuthenticatedUser_whenPostExport_thenResponseHasContentDispositionMatchingIsoFilename() throws Exception {
-		// when / then — /export returns ResponseEntity<StreamingResponseBody>. Complete the async
-		// lifecycle via asyncDispatch before reading the response (the pattern the sibling backup
-		// export tests use): asserting matchers on a merely-started async request reads the
-		// MockHttpServletResponse while the StreamingResponseBody task thread is still writing it,
-		// intermittently corrupting the non-thread-safe header map (ConcurrentModificationException).
+		// Finish the streaming response before inspecting its non-thread-safe headers.
 		MvcResult result = mockMvc.perform(post("/admin/backup/export"))
-				.andExpect(status().isOk())
 				.andExpect(request().asyncStarted())
-				.andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
-						Matchers.matchesPattern("attachment; filename=\"?ctc-backup-\\d{8}T\\d{6}Z\\.zip\"?")))
 				.andReturn();
 		mockMvc.perform(MockMvcRequestBuilders.asyncDispatch(result))
 				.andExpect(status().isOk())
+				.andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+						Matchers.matchesPattern("attachment; filename=\"?ctc-backup-\\d{8}T\\d{6}Z\\.zip\"?")))
 				.andExpect(content().contentType(MediaType.APPLICATION_OCTET_STREAM_VALUE));
 	}
 

@@ -46,6 +46,7 @@ public class TeamController {
 	@GetMapping("/new")
 	public String create(Model model) {
 		model.addAttribute("teamForm", new TeamForm());
+        model.addAttribute("pageTitle", "New Team");
 		model.addAttribute("discordRoles", discordRoleCache.snapshot());
 		return "admin/team-form";
 	}
@@ -62,6 +63,7 @@ public class TeamController {
 		form.setAccentColor(team.getAccentColor());
 		form.setDiscordRoleId(team.getDiscordRoleId());
 		model.addAttribute("teamForm", form);
+        model.addAttribute("pageTitle", "Edit Team");
 		model.addAttribute("team", team);
 		model.addAttribute("discordRoles", discordRoleCache.snapshot());
 		return "admin/team-form";
@@ -71,6 +73,8 @@ public class TeamController {
 	public String save(@Valid @ModelAttribute("teamForm") TeamForm form, BindingResult result,
 	                   Model model, RedirectAttributes redirectAttributes) {
 		if (result.hasErrors()) {
+            model.addAttribute("pageTitle", form.getId() == null ? "New Team" : "Edit Team");
+            if (form.getId() != null) model.addAttribute("team", teamManagementService.findById(form.getId()));
 			model.addAttribute("discordRoles", discordRoleCache.snapshot());
 			return "admin/team-form";
 		}

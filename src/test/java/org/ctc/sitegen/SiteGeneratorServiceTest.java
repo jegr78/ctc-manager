@@ -654,8 +654,8 @@ class SiteGeneratorServiceTest {
 
         // then
         var doc = Jsoup.parse(Files.readString(seasonDir().resolve("standings.html")));
-        var heading = doc.selectFirst(".section-title");
-        assertNotNull(heading, ".section-title should exist on standings page");
+        var heading = doc.selectFirst(".standings-heading");
+        assertNotNull(heading, "Standings heading should exist");
         assertTrue(heading.text().contains(season.getDisplayLabel()),
                 "standings heading should contain season displayLabel but was: " + heading.text());
     }
@@ -667,8 +667,8 @@ class SiteGeneratorServiceTest {
 
         // then
         var doc = Jsoup.parse(Files.readString(seasonDir().resolve("driver-ranking.html")));
-        var heading = doc.selectFirst(".section-title");
-        assertNotNull(heading, ".section-title should exist on driver-ranking page");
+        var heading = doc.selectFirst(".standings-heading");
+        assertNotNull(heading, ".standings-heading should exist on driver-ranking page");
         assertTrue(heading.text().contains(season.getDisplayLabel()),
                 "driver-ranking heading should contain season displayLabel but was: " + heading.text());
     }
@@ -680,8 +680,8 @@ class SiteGeneratorServiceTest {
 
         // then
         var doc = Jsoup.parse(Files.readString(seasonDir().resolve("matchdays.html")));
-        var heading = doc.selectFirst(".section-title");
-        assertNotNull(heading, ".section-title should exist on matchdays page");
+        var heading = doc.selectFirst(".standings-heading");
+        assertNotNull(heading, ".standings-heading should exist on matchdays page");
         assertTrue(heading.text().contains(season.getDisplayLabel()),
                 "matchdays heading should contain season displayLabel but was: " + heading.text());
     }
@@ -693,8 +693,8 @@ class SiteGeneratorServiceTest {
 
         // then
         var doc = Jsoup.parse(Files.readString(seasonDir().resolve("matchday/spieltag-1.html")));
-        var heading = doc.selectFirst(".section-title");
-        assertNotNull(heading, ".section-title should exist on matchday page");
+        var heading = doc.selectFirst(".standings-heading");
+        assertNotNull(heading, ".standings-heading should exist on matchday page");
         assertTrue(heading.text().contains(season.getDisplayLabel()),
                 "matchday heading should contain season displayLabel but was: " + heading.text());
     }
@@ -1050,25 +1050,21 @@ class SiteGeneratorServiceTest {
 
 
     @Test
-    void givenLayout_whenGenerate_thenNavToggleLabelHasAriaLabel() throws IOException {
+    void givenLayout_whenGenerate_thenNativeMenuHasAccessibleName() throws IOException {
         // when
         siteGeneratorService.generate();
 
         // then
         var html = Files.readString(tempDir.resolve("index.html"));
         var doc = Jsoup.parse(html);
-        var label = doc.selectFirst("label.nav-toggle-label");
-        assertNotNull(label, "Nav toggle label should exist");
-        assertEquals("Toggle navigation menu", label.attr("aria-label"),
-                "Nav toggle label should have correct aria-label");
-        assertEquals("button", label.attr("role"),
-                "Nav toggle label should have role=button");
-
-        // Verify aria-label is NOT on the input
-        var input = doc.selectFirst("input.nav-toggle-input");
-        assertNotNull(input, "Nav toggle input should exist");
-        assertTrue(input.attr("aria-label").isEmpty(),
-                "Nav toggle input should NOT have aria-label");
+        var summary = doc.selectFirst("details.site-menu > summary");
+        assertNotNull(summary, "Native navigation disclosure should exist");
+        assertEquals("Main menu", summary.attr("aria-label"));
+        assertNotNull(summary.parent().selectFirst(".nav-links a[href]"));
+        assertEquals("Home", doc.selectFirst(".nav-links a[aria-current='page']").text());
+        assertEquals("-1", doc.selectFirst("#main-content").attr("tabindex"));
+        assertNotNull(doc.selectFirst("script[src='assets/js/navigation.js'][defer]"));
+        assertTrue(Files.exists(tempDir.resolve("assets/js/navigation.js")));
     }
 
 
@@ -1213,6 +1209,11 @@ class SiteGeneratorServiceTest {
         assertNotNull(firstLink, "Link card should contain an <a> element");
         assertEquals("_blank", firstLink.attr("target"), "External link must open in new tab");
         assertEquals("noopener", firstLink.attr("rel"), "External link must have rel=noopener");
+        assertNotNull(doc.selectFirst(".brand-stage h1"));
+        assertTrue(firstLink.hasClass("link-card-target"));
+        assertEquals("YouTube", firstLink.selectFirst(".link-card-name").text());
+        assertEquals("https://www.youtube.com/@CommunityTeamCup", firstLink.attr("href"));
+        assertTrue(firstLink.text().contains("new tab"));
     }
 
     // LINK-09: Empty state shows message
@@ -1250,6 +1251,30 @@ class SiteGeneratorServiceTest {
         assertNotNull(doc.selectFirst(".breadcrumb"), "Links page must have breadcrumbs");
     }
 
+
+    @Test
+    void whenGenerate_thenDirectoriesHaveLabeledFiltersAndValidProfileLinks() throws IOException {
+        siteGeneratorService.generate();
+
+        for (var page : List.of("teams", "drivers")) {
+            var doc = Jsoup.parse(Files.readString(tempDir.resolve(page + ".html")));
+            assertNotNull(doc.selectFirst(".brand-stage h1"));
+            assertNotNull(doc.selectFirst("label[for=search-input]"));
+            assertNotNull(doc.selectFirst("label[for=season-filter]"));
+            assertEquals("search", doc.selectFirst("#search-input").attr("type"));
+            assertNotNull(doc.selectFirst("button#directory-reset[type=button]"));
+            assertNotNull(doc.selectFirst("#directory-count[role=status]"));
+            assertNotNull(doc.selectFirst("#directory-empty[hidden]"));
+            assertNotNull(doc.selectFirst(".directory-tools[hidden]"));
+            assertNotNull(doc.selectFirst(".overview-table[aria-label][role=table]"));
+            assertTrue(doc.select(".overview-row[role=row]").size() > 0);
+            assertTrue(doc.select("thead th[scope=col][role=columnheader]").size() >= 2);
+            assertNotNull(doc.selectFirst("script[src$=/js/directory.js]"));
+            for (var link : doc.select(".overview-row-name[href]")) {
+                assertTrue(Files.exists(tempDir.resolve(link.attr("href"))), link.attr("href"));
+            }
+        }
+    }
 
     // OVER-01: teams.html exists
 
@@ -1447,6 +1472,19 @@ class SiteGeneratorServiceTest {
         assertTrue(doc.select("table").isEmpty(), "Index page must not contain a standings table");
     }
 
+    @Test
+    void whenGenerate_thenLandingIntroducesCupBeforeSeasonNavigation() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(tempDir.resolve("index.html")));
+        assertEquals("#about-cup", doc.selectFirst(".hero .landing-primary").attr("href"));
+        assertNotNull(doc.selectFirst("#about-cup"));
+        assertTrue(doc.selectFirst("#about-cup").text().contains("head-to-head"));
+        assertNull(doc.selectFirst("meta[http-equiv=refresh]"));
+    }
+
     // LAND-03b: Index page has no match-grid
     @Test
     void whenGenerate_thenIndexHasNoMatchGrid() throws IOException {
@@ -1471,17 +1509,17 @@ class SiteGeneratorServiceTest {
         assertNotNull(link, "Standings tile must link to active season standings page");
     }
 
-    // Index page (home) does not highlight any top-nav item
     @Test
-    void givenIndexPage_whenGenerate_thenNoTopNavItemActive() throws IOException {
+    void givenIndexPage_whenGenerate_thenHomeTopNavItemActive() throws IOException {
         // when
         siteGeneratorService.generate();
 
         // then
         var doc = Jsoup.parse(Files.readString(tempDir.resolve("index.html")));
         var activeTopNavLinks = doc.select(".nav-links .nav-link-active");
-        assertTrue(activeTopNavLinks.isEmpty(),
-                "Index (home) page should not highlight any top-nav item");
+        assertEquals(1, activeTopNavLinks.size());
+        assertEquals("Home", activeTopNavLinks.first().text());
+        assertEquals("page", activeTopNavLinks.first().attr("aria-current"));
     }
 
 
@@ -1530,6 +1568,28 @@ class SiteGeneratorServiceTest {
         assertTrue(doc.select("table").text().contains("GTNR" + uniqueSuffix)
                 || doc.select("table").text().contains("GP1R" + uniqueSuffix),
                 "Alltime standings should contain team names from test data");
+        assertNotNull(doc.selectFirst(".brand-stage h1"));
+        assertNotNull(doc.selectFirst("#full-standings > summary"));
+        assertNotNull(doc.selectFirst("#full-standings .table-wrap[tabindex=0]"));
+        var cards = doc.select(".mobile-standings .standing");
+        var rows = doc.select("#full-standings tbody tr");
+        assertEquals(rows.size(), cards.size());
+        assertFalse(cards.isEmpty());
+        for (int index = 0; index < rows.size(); index++) {
+            var cells = rows.get(index).select("td");
+            var card = cards.get(index);
+            assertEquals(cells.get(0).text(), card.selectFirst(".standing-rank").text());
+            assertEquals(cells.get(1).selectFirst("a").text(), card.selectFirst(".standing-team-name").text());
+            assertEquals(cells.get(7).text(), card.selectFirst(".standing-points > span").text());
+            var values = card.select("dl dd");
+            assertEquals(5, values.size());
+            for (int field = 0; field < values.size(); field++) {
+                assertEquals(cells.get(field + 2).text(), values.get(field).text());
+            }
+            var profile = card.selectFirst(".standing-details a");
+            assertEquals(cells.get(1).selectFirst("a").attr("href"), profile.attr("href"));
+            assertTrue(Files.exists(tempDir.resolve(profile.attr("href"))));
+        }
     }
 
 

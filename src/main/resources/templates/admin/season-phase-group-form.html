@@ -1,34 +1,46 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
+th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
-<section>
-    <a th:href="@{/admin/seasons/{sid}/phases/{pid}(sid=${season.id}, pid=${phase.id})}" class="back-link">&larr; Back to Phase</a>
-    <h1 th:text="${(form.id != null ? 'Edit Group' : 'New Group') + ' — ' + (phase.label != null and !phase.label.isBlank() ? phase.label : phase.phaseType)}"></h1>
+    <section class="entity-editor season-configuration">
+        <a th:href="@{/admin/seasons/{sid}/phases/{pid}(sid=${season.id}, pid=${phase.id})}" class="back-link">&larr; Back to Phase</a>
+        <h1 th:text="${(form.id != null ? 'Edit Group' : 'New Group') + ' — ' + (phase.label != null and !phase.label.isBlank() ? phase.label : phase.phaseType)}">
+        </h1>
 
-    <div th:if="${errorMessage}" class="alert alert-error" th:text="${errorMessage}"></div>
+        <div th:if="${errorMessage}" class="alert alert-error" th:text="${errorMessage}">
+        </div>
 
-    <div class="card">
-        <form th:action="@{/admin/seasons/{sid}/phases/{pid}/groups/save(sid=${season.id}, pid=${phase.id})}"
-              th:object="${form}" method="post">
+        <div class="card">
+            <form class="entity-editor-form" th:action="@{/admin/seasons/{sid}/phases/{pid}/groups/save(sid=${season.id}, pid=${phase.id})}"
+            th:object="${form}" method="post">
             <input type="hidden" th:field="*{id}">
             <input type="hidden" th:field="*{phaseId}">
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="name">Name</label>
-                    <input type="text" id="name" th:field="*{name}" placeholder="e.g. Group A" required>
-                    <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+            <fieldset>
+                <legend>Group identity</legend>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="name">Name</label>
+                        <input type="text" id="name" th:field="*{name}" placeholder="e.g. Group A" required th:attr="aria-invalid=${#fields.hasErrors('name')},aria-describedby=${#fields.hasErrors('name') ? 'name-error' : null}">
+                        <p id="name-error" class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">
+                        </p>
+                    </div>
+                    <div class="form-group">
+                        <label for="sortIndex">Sort order</label>
+                        <input type="number" id="sortIndex" th:field="*{sortIndex}" min="0" th:attr="aria-invalid=${#fields.hasErrors('sortIndex')},aria-describedby=${#fields.hasErrors('sortIndex') ? 'sortIndex-error' : 'sortIndex-hint'}">
+                        <p id="sortIndex-hint" class="text-dim form-hint--sm">Leave blank to append this group to the phase.</p>
+                        <p id="sortIndex-error" class="field-error" th:if="${#fields.hasErrors('sortIndex')}" th:errors="*{sortIndex}">
+                        </p>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="sortIndex">Sort Order (auto if blank)</label>
-                    <input type="number" id="sortIndex" th:field="*{sortIndex}" min="0">
+            </fieldset>
+            <div class="entity-editor-actions">
+                <span class="text-dim" th:text="${season.displayLabel}">
+                </span>
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary">Save Group</button>
+                    <a th:href="@{/admin/seasons/{sid}/phases/{pid}(sid=${season.id}, pid=${phase.id})}" class="btn btn-secondary">Cancel</a>
                 </div>
-            </div>
-
-            <div class="actions mt-md">
-                <button type="submit" class="btn btn-primary">Save Group</button>
-                <a th:href="@{/admin/seasons/{sid}/phases/{pid}(sid=${season.id}, pid=${phase.id})}" class="btn btn-secondary">Cancel</a>
             </div>
         </form>
     </div>

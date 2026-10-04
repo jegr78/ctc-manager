@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
-<section>
+<section class="entity-detail">
     <div class="toolbar">
         <div>
             <a th:href="@{/admin/drivers}" class="back-link">&larr; Back to Drivers</a>
@@ -19,30 +19,23 @@
     </div>
 
     <div class="card">
-        <div class="detail-fields">
-            <span class="label">PSN-ID</span>
-            <span th:text="${driver.psnId}"></span>
-            <span class="label">Nickname</span>
-            <span th:text="${driver.nickname}"></span>
-            <span class="label">PSN Aliases</span>
-            <span th:if="${!driver.aliases.isEmpty()}">
-                <span th:each="alias, stat : ${driver.aliases}"><span th:text="${alias.alias}"></span><span th:if="${!stat.last}">, </span></span>
-            </span>
-            <span th:if="${driver.aliases.isEmpty()}" class="text-dim">—</span>
-            <span class="label">Status</span>
-            <span>
-                <span th:if="${driver.active}" class="badge badge-active">● Active</span>
-                <span th:unless="${driver.active}" class="badge badge-inactive">○ Inactive</span>
-            </span>
-        </div>
+        <h2>Identity</h2>
+        <dl class="entity-facts">
+            <dt>PSN ID</dt><dd th:text="${driver.psnId}"></dd>
+            <dt>Nickname</dt><dd th:text="${driver.nickname}"></dd>
+            <dt>PSN aliases</dt><dd><span th:each="alias, stat : ${driver.aliases}"><span th:text="${alias.alias}"></span><span th:if="${!stat.last}">, </span></span><span th:if="${driver.aliases.isEmpty()}" class="text-dim">No aliases recorded</span></dd>
+            <dt>Status</dt><dd><span th:if="${driver.active}" class="badge badge-active">● Active</span><span th:unless="${driver.active}" class="badge badge-inactive">○ Inactive</span></dd>
+        </dl>
 
         <div class="detail-section">
             <h2 th:text="'Season Assignments (' + ${driver.seasonDrivers.size()} + ')'"></h2>
-            <div th:if="${!driver.seasonDrivers.isEmpty()}" class="chip-list">
-                <span th:each="sd : ${driver.seasonDrivers}" class="chip">
-                    <span th:text="${sd.season.displayLabel}"></span>
-                    <span class="text-dim" th:text="' — ' + ${sd.team.shortName}"></span>
-                </span>
+            <div th:if="${!driver.seasonDrivers.isEmpty()}" class="table-scroll" role="region" aria-label="Season assignments" tabindex="0">
+                <table><thead><tr><th scope="col">Season</th><th scope="col">Team</th></tr></thead>
+                    <tbody><tr th:each="sd : ${driver.seasonDrivers}">
+                        <td><a class="detail-link" th:href="@{/admin/seasons/{id}(id=${sd.season.id})}" th:text="${sd.season.displayLabel}"></a></td>
+                        <td><a class="detail-link" th:href="@{/admin/teams/{id}(id=${sd.team.id})}" th:text="${sd.team.shortName + ' · ' + sd.team.name}"></a></td>
+                    </tr></tbody>
+                </table>
             </div>
             <div th:if="${driver.seasonDrivers.isEmpty()}" class="empty-state empty-state--compact"><p>No season assignments.</p></div>
         </div>

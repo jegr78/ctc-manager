@@ -157,6 +157,7 @@ public class RaceController {
 	@GetMapping("/new")
 	public String create(@RequestParam(required = false) UUID matchdayId, Model model) {
 		var data = raceFormDataService.getNewRaceFormData(matchdayId);
+		model.addAttribute("pageTitle", "New Race");
 		model.addAttribute("raceForm", toRaceForm(data.data()));
 		model.addAttribute("matchdays", data.matchdays());
 		model.addAttribute("teams", data.teams());
@@ -164,12 +165,15 @@ public class RaceController {
 		model.addAttribute("seasonTracks", data.seasonTracks());
 		model.addAttribute("usedCarIds", data.usedCarIds());
 		model.addAttribute("usedTrackIds", data.usedTrackIds());
+		model.addAttribute("outOfPoolCar", data.outOfPoolCar());
+		model.addAttribute("outOfPoolTrack", data.outOfPoolTrack());
 		return "admin/race-form";
 	}
 
 	@GetMapping("/{id}/edit")
 	public String edit(@PathVariable UUID id, Model model) {
 		var data = raceFormDataService.getRaceFormData(id);
+		model.addAttribute("pageTitle", "Edit Race");
 		model.addAttribute("raceForm", toRaceForm(data.data()));
 		model.addAttribute("matchdays", data.matchdays());
 		model.addAttribute("teams", data.teams());
@@ -177,6 +181,8 @@ public class RaceController {
 		model.addAttribute("seasonTracks", data.seasonTracks());
 		model.addAttribute("usedCarIds", data.usedCarIds());
 		model.addAttribute("usedTrackIds", data.usedTrackIds());
+		model.addAttribute("outOfPoolCar", data.outOfPoolCar());
+		model.addAttribute("outOfPoolTrack", data.outOfPoolTrack());
 		return "admin/race-form";
 	}
 

@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
-<section>
+<section class="entity-detail event-detail">
     <div class="toolbar">
         <div>
             <a th:href="@{/admin/matchdays/{id}(id=${match.matchday.id})}"
@@ -19,15 +19,52 @@
         </div>
     </div>
 
+    <nav class="entity-section-nav" aria-label="Match detail sections"><a href="#match-races">Races</a><a href="#match-schedule">Schedule &amp; roles</a><a href="#match-discord">Discord</a></nav>
+    <!-- Races -->
+    <div class="card" id="match-races">
+        <h2 th:text="'Races (' + ${match.races.size()} + ')'"></h2>
+        <div th:if="${match.races.isEmpty()}" class="empty-state empty-state--compact">
+            <p>No races yet.</p>
+        </div>
+        <ul th:if="${!match.races.isEmpty()}" class="match-races-list">
+            <li th:each="race, iter : ${match.races}" class="match-race-entry">
+                <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link"
+                   th:text="'Leg ' + ${iter.count} + ' · ' + ${race.track?.name ?: '—'}"></a>
+                <span class="text-dim" th:text="${race.car?.displayName ?: 'Car not set'}"></span>
+                <div class="actions"><a th:href="@{/admin/races/{id}/edit(id=${race.id})}" class="btn btn-secondary btn-sm">Race setup</a><a th:href="@{/admin/races/{id}/lineup(id=${race.id})}" class="btn btn-secondary btn-sm">Lineup</a><a th:href="@{/admin/races/{id}/results(id=${race.id})}" class="btn btn-secondary btn-sm">Results</a></div>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Schedule -->
+    <div class="card" id="match-schedule">
+        <h2>Schedule &amp; roles</h2>
+        <div class="detail-fields">
+            <span class="label">Lobby Host</span>
+            <span th:text="${match.lobbyHost ?: '-'}"></span>
+            <span class="label">Race Director</span>
+            <span th:text="${match.raceDirector ?: '-'}"></span>
+            <span class="label">Streamer</span>
+            <span th:text="${match.streamer ?: '-'}"></span>
+            <span class="label">Stream Link</span>
+            <span th:text="${match.streamLink ?: '-'}"></span>
+            <span class="label">Discord Teaser</span>
+            <span>
+                <pre class="markdown-source"
+                     th:text="${match.discordTeaser ?: '-'}"></pre>
+            </span>
+        </div>
+    </div>
+
     <!-- Discord Actions -->
-    <div class="card">
-        <h2>Discord Actions</h2>
+    <div class="card" id="match-discord">
+        <h2>Discord</h2><p class="text-dim workflow-hint">Manage the match channel and publish the saved match data.</p><h3 class="workflow-subheading">Channel</h3>
         <div class="discord-actions">
             <form th:if="${match.discordChannelId == null}"
                   th:action="@{/admin/matches/{id}/create-discord-channel(id=${match.id})}"
                   method="post" class="form-inline">
                 <button type="submit"
-                        class="btn btn-primary btn-sm"
+                        class="btn btn-secondary btn-sm"
                         data-testid="create-discord-channel"
                         th:disabled="${match.homeTeam.effectiveDiscordRoleId == null
                                 or match.awayTeam == null
@@ -59,17 +96,19 @@
             <button th:if="${match.discordChannelId != null and match.discordChannelArchivedAt == null}"
                     type="button"
                     class="btn btn-secondary btn-sm"
-                    data-testid="open-archive-modal"
-                    onclick="document.getElementById('archiveModal').classList.add('is-open')">
+                    data-testid="open-archive-modal" hidden
+                    aria-haspopup="dialog" aria-controls="archiveModal">
                 Move to Archive
             </button>
         </div>
 
+        <h3 class="workflow-subheading" th:if="${match.discordChannelId != null}">Posts</h3>
         <div class="discord-actions discord-actions--posts" th:if="${match.discordChannelId != null}">
+            <h4 class="workflow-action-label">Before the race</h4>
             <form th:if="${teamCardsPost == null}"
                   th:action="@{/admin/matches/{id}/post-team-cards(id=${match.id})}"
                   method="post" class="form-inline">
-                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-team-cards">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="post-team-cards">
                     Post Team Cards
                 </button>
             </form>
@@ -91,7 +130,7 @@
             <form th:if="${settingsPost == null and matchHasCompleteSettings}"
                   th:action="@{/admin/matches/{id}/post-settings(id=${match.id})}"
                   method="post" class="form-inline">
-                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-settings">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="post-settings">
                     Post Settings
                 </button>
             </form>
@@ -110,7 +149,7 @@
             <form th:if="${lobbySettingsPost == null and matchHasCompleteSettings}"
                   th:action="@{/admin/matches/{id}/post-lobby-settings(id=${match.id})}"
                   method="post" class="form-inline">
-                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-lobby-settings">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="post-lobby-settings">
                     Post Lobby Settings
                 </button>
             </form>
@@ -129,7 +168,7 @@
             <form th:if="${lineupsPost == null and matchHasCompleteLineups}"
                   th:action="@{/admin/matches/{id}/post-lineups(id=${match.id})}"
                   method="post" class="form-inline">
-                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-lineups">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="post-lineups">
                     Post Lineups
                 </button>
             </form>
@@ -145,10 +184,11 @@
                 </button>
             </form>
 
+            <h4 class="workflow-action-label">Results</h4>
             <form th:if="${provisionalPost == null and matchHasProvisionalData}"
                   th:action="@{/admin/matches/{id}/post-provisional(id=${match.id})}"
                   method="post" class="form-inline">
-                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-provisional">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="post-provisional">
                     Post Provisional Scores
                 </button>
             </form>
@@ -167,7 +207,7 @@
             <form th:if="${matchResultsPost == null and matchCanRenderResults}"
                   th:action="@{/admin/matches/{id}/post-match-results(id=${match.id})}"
                   method="post" class="form-inline">
-                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-match-results">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="post-match-results">
                     Post Match Results
                 </button>
             </form>
@@ -183,10 +223,11 @@
                         th:text="${matchResultsStale ? 'Update Match Results' : 'Re-Post Match Results'}"></button>
             </form>
 
+            <h4 class="workflow-action-label">Schedule &amp; preview</h4>
             <form th:if="${scheduleVisible and schedulePost == null}"
                   th:action="@{/admin/matches/{id}/post-schedule(id=${match.id})}"
                   method="post" class="form-inline">
-                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-schedule">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="post-schedule">
                     Post Schedule
                 </button>
             </form>
@@ -210,7 +251,7 @@
                 <form th:if="${matchPreviewPreFlight.canPost() and matchPreviewPost == null}"
                       th:action="@{/admin/matches/{id}/post-match-preview(id=${match.id})}"
                       method="post" class="form-inline">
-                    <button type="submit" class="btn btn-primary btn-sm" data-testid="post-match-preview">
+                    <button type="submit" class="btn btn-secondary btn-sm" data-testid="post-match-preview">
                         Post Match Preview
                     </button>
                 </form>
@@ -225,72 +266,46 @@
         </div>
     </div>
 
-    <!-- Schedule -->
-    <div class="card">
-        <h2>Schedule</h2>
-        <div class="detail-fields">
-            <span class="label">Lobby Host</span>
-            <span th:text="${match.lobbyHost ?: '-'}"></span>
-            <span class="label">Race Director</span>
-            <span th:text="${match.raceDirector ?: '-'}"></span>
-            <span class="label">Streamer</span>
-            <span th:text="${match.streamer ?: '-'}"></span>
-            <span class="label">Stream Link</span>
-            <span th:text="${match.streamLink ?: '-'}"></span>
-            <span class="label">Discord Teaser</span>
-            <span>
-                <pre class="markdown-source"
-                     th:text="${match.discordTeaser ?: '-'}"></pre>
-            </span>
-        </div>
-    </div>
-
-    <!-- Races -->
-    <div class="card">
-        <h2 th:text="'Races (' + ${match.races.size()} + ')'"></h2>
-        <div th:if="${match.races.isEmpty()}" class="empty-state empty-state--compact">
-            <p>No races yet.</p>
-        </div>
-        <ul th:if="${!match.races.isEmpty()}" class="match-races-list">
-            <li th:each="race, iter : ${match.races}">
-                <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link"
-                   th:text="'Leg ' + ${iter.count} + ' · ' + ${race.track?.name ?: '—'}"></a>
-            </li>
-        </ul>
-    </div>
-
-    <!-- Archive Modal -->
-    <div id="archiveModal" class="modal-overlay">
-        <div class="modal-body modal-body--md">
-            <h3 class="modal-title">Move Channel to Archive</h3>
+    <details id="archiveModal" class="archive-disclosure"
+             th:if="${match.discordChannelId != null and match.discordChannelArchivedAt == null}">
+        <summary>Move channel to archive</summary>
+        <div class="archive-dialog-body modal-body">
+            <h3 id="archive-title" class="modal-title">Move channel to archive</h3>
+            <p id="archive-hint" class="form-hint">Choose the archive category for this channel. The channel and its messages are kept.</p>
             <form th:action="@{/admin/matches/{id}/move-to-archive(id=${match.id})}" method="post">
-                <div th:if="${archiveCategories.isEmpty()}" class="alert alert-warning"
-                     data-testid="archive-all-full-banner">
-                    All archive categories are full — see
-                    <a th:href="@{/docs/operations/discord-integration.html#creating-archive-category}">runbook</a>.
-                </div>
-                <div th:each="cat,iter : ${archiveCategories}" class="form-check">
+                <p th:if="${defaultSelectionId == null}" class="form-guidance archive-unavailable"
+                   data-testid="archive-all-full-banner">
+                    No archive category with space is available.
+                    <a th:href="@{/docs/operations/discord-integration.html#creating-archive-category}">Create an archive category</a>, then reload this page.
+                </p>
+                <fieldset class="archive-categories" aria-describedby="archive-hint" th:if="${!archiveCategories.isEmpty()}">
+                    <legend>Destination category</legend>
+                <div th:each="cat,iter : ${archiveCategories}" class="archive-category">
                     <input type="radio"
                            th:id="'cat-' + ${iter.index}"
                            name="categoryId"
+                           th:disabled="${cat.currentChannelCount >= 50}"
                            th:value="${cat.id}"
                            th:checked="${defaultSelectionId != null and defaultSelectionId.equals(cat.id)}">
-                    <label th:for="'cat-' + ${iter.index}"
-                           th:text="${cat.name} + ' — ' + ${cat.currentChannelCount} + '/50'"></label>
+                    <label th:for="'cat-' + ${iter.index}">
+                        <span class="archive-category-name" th:text="${cat.name}"></span>
+                        <span class="archive-category-count"><span th:text="${cat.currentChannelCount} + '/50 channels'"></span><span th:if="${cat.currentChannelCount >= 50}"> · Full</span></span>
+                    </label>
                 </div>
-                <div class="actions">
+                </fieldset>
+                <div class="actions archive-dialog-actions">
                     <button type="submit"
                             class="btn btn-primary"
                             data-testid="archive-confirm"
-                            th:disabled="${archiveCategories.isEmpty()}">Confirm</button>
+                            th:disabled="${defaultSelectionId == null}">Move channel to archive</button>
                     <button type="button"
                             class="btn btn-secondary"
-                            data-testid="archive-cancel"
-                            onclick="document.getElementById('archiveModal').classList.remove('is-open')">Cancel</button>
+                            data-testid="archive-cancel" hidden>Cancel</button>
                 </div>
             </form>
         </div>
-    </div>
+    </details>
+    <script defer th:src="@{/admin/js/archive-dialog.js}"></script>
 </section>
 </body>
 </html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CTC · Standings design preview</title>
+    <link rel="stylesheet" href="preview.css">
+    <script src="preview.js" defer></script>
+</head>
+<body class="website">
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+    <div class="site-header-inner row between">
+        <a class="brand" href="index.html"><img src="../../src/main/resources/static/site/img/ctc-logo-white.png" alt=""><span class="site-brand-name">COMMUNITY<small>TEAM CUP</small></span></a>
+        <details class="menu"><summary aria-label="Main menu">Menu ☰</summary><nav aria-label="Main navigation"><a href="index.html">Home</a><a href="#main">Current season</a><a href="#latest-results">Latest results</a><a href="#team-alpha">Teams</a><a href="#drivers">Drivers</a></nav></details>
+    </div>
+</header>
+<main id="main" class="site-main">
+    <section class="season-masthead brand-stage" aria-label="Season overview">
+        <div class="season-brand">COMMUNITY TEAM CUP · 2026</div>
+        <div class="site-context">
+            <label class="season-label">Season<select><option>Season 2026</option></select></label>
+            <div class="site-intro"><h1>Team standings</h1></div>
+        </div>
+    </section>
+    <nav class="site-nav" aria-label="Season navigation"><a href="#standings" aria-current="page">Standings</a><a href="#latest-results">Matchdays</a><a href="#drivers">Drivers</a></nav>
+    <div class="filters"><label>Phase<select id="phase-filter"><option>Regular season</option></select></label><label>Group<select id="group-filter"><option value="all">All groups</option><option value="A">Group A</option><option value="B">Group B</option></select></label></div>
+    <section id="standings" aria-label="Team standings">
+        <div class="standings-meta"><span id="standings-count" aria-live="polite">6 teams · All groups</span><span>After matchday 5</span></div>
+        <div class="mobile-standings">
+            <div class="standings-head" aria-hidden="true"><span>#</span><span>Team</span><span class="align-right">Pts</span><span></span></div>
+            <div id="mobile-rows"></div>
+        </div>
+        <details id="full-table" class="full-table">
+            <summary>View full table</summary>
+            <p class="table-help">Scroll sideways for all statistics. MP = matches played · W = wins · D = draws · L = losses · PR = points ratio.</p>
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Complete standings table, scroll horizontally for more columns">
+                <table><thead><tr><th scope="col">#</th><th scope="col">Team</th><th scope="col">Group</th><th scope="col" class="align-right"><abbr title="Matches played">MP</abbr></th><th scope="col" class="align-right"><abbr title="Wins">W</abbr></th><th scope="col" class="align-right"><abbr title="Draws">D</abbr></th><th scope="col" class="align-right"><abbr title="Losses">L</abbr></th><th scope="col" class="align-right"><abbr title="Points ratio">PR</abbr></th><th scope="col" class="align-right">Pts</th></tr></thead><tbody id="desktop-rows"></tbody></table>
+            </div>
+        </details>
+    </section>
+    <section id="latest-results" class="related"><h2>Latest matchday</h2><p>Matchday 5 · Saturday, 5 December</p><div class="match-result row between"><span>Alpha / Bravo</span><strong class="number">124 : 108</strong></div></section>
+    <section id="team-alpha" class="related"><h2>Team Alpha</h2><p><span class="team-name"><i class="team-marker team-yellow"></i>Alpha Racing</span> · Group A</p><p>5 matches · 4 wins · 1 draw · 13 points</p><a href="#standings">Back to standings ↑</a></section>
+    <section id="drivers" class="related"><h2>Driver ranking</h2><p>Driver names lead to their season statistics and race history.</p><div class="match-result row between"><span>1 · Example_Driver</span><strong class="number">86 pts</strong></div></section>
+</main>
+<footer class="site-footer"><p>Community Team Cup</p><p class="preview-note">Design preview · Example data · <a href="admin.html">Compare admin design</a></p></footer>
+</body>
+</html>

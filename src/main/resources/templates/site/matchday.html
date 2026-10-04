@@ -3,46 +3,73 @@
       th:replace="~{site/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
 <section>
+    <header class="standings-heading brand-stage">
+        <p class="season-brand">COMMUNITY TEAM CUP</p>
+        <h1 th:text="${matchday.label}"></h1>
+        <p class="text-dim" th:text="${season.displayLabel}"></p>
+    </header>
+    <a class="matchday-back-link" th:href="${matchdaysIndexHref}">← Matchday overview</a>
     <div class="section">
-        <h2 class="section-title" th:text="${matchday.label + ' — ' + season.displayLabel}"></h2>
-        <div class="match-grid">
-            <div class="match-card" th:each="race : ${races}">
+        <div class="match-grid race-grid">
+            <article class="match-card race-card" th:each="race, i : ${races}">
+                <h2 class="race-number" th:text="${'Race ' + i.count}"></h2>
                 <div class="match-teams">
-                    <span th:class="${race.homeTeamWon ? 'match-team match-team-winner text-white' : 'match-team text-white'}"
+                    <span th:class="${race.homeTeamWon ? 'match-team match-team-winner' : 'match-team'}"
                           th:text="${race.homeTeamShortName}"></span>
                     <span class="match-score" th:if="${race.hasResults}" th:text="${race.score}"></span>
                     <span class="match-score match-score-draw" th:unless="${race.hasResults}">vs</span>
                     <span th:class="${race.awayTeamWon ? 'match-team match-team-winner' : 'match-team'}"
                           th:text="${race.awayTeamShortName}"></span>
                 </div>
-                <div class="match-meta" th:if="${race.track != null or race.car != null}">
-                    <span th:text="${race.track ?: ''}"></span>
-                    <span th:if="${race.track != null && race.car != null}"> — </span>
-                    <span th:text="${race.car ?: ''}"></span>
-                </div>
-
-                <div th:if="${race.hasResults}" class="match-results">
-                    <table>
-                        <thead>
-                            <tr><th>Driver</th><th>Team</th><th class="text-center">Pos</th><th class="text-center">Quali</th><th class="text-center">FL</th><th class="text-right">Pts</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr th:each="result : ${race.results}">
-                                <td class="font-bold">
-                                    <a class="entity-link" th:href="${result.driverProfileUrl}" th:text="${result.driverPsnId}"></a>
-                                </td>
-                                <td class="text-dim" th:text="${result.teamShortName}"></td>
-                                <td class="text-center" th:text="${result.position}"></td>
-                                <td class="text-center" th:text="${result.qualiPosition}"></td>
-                                <td class="text-center" th:text="${result.fastestLap ? 'FL' : ''}"></td>
-                                <td class="text-right font-bold" th:text="${result.pointsTotal}"></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                <dl class="match-meta" th:if="${race.track != null or race.car != null}">
+                    <div th:if="${race.track != null}"><dt>Track</dt><dd th:text="${race.track}"></dd></div>
+                    <div th:if="${race.car != null}"><dt>Car</dt><dd th:text="${race.car}"></dd></div>
+                </dl>
+                <p class="race-empty text-dim" th:unless="${race.hasResults}">No driver results recorded.</p>
+                <details th:if="${race.hasResults}" class="race-driver-results">
+                    <summary><span>Driver results</span><span class="result-count" th:text="${race.results.size() + ' drivers'}"></span></summary>
+                    <div class="mobile-race-results">
+                        <div class="race-mobile-head" aria-hidden="true"><span>Pos</span><span>Driver</span><span>Pts</span><span></span></div>
+                        <details th:each="result : ${race.results}" class="driver-result">
+                            <summary>
+                                <span class="result-position"><span class="sr-only">Position </span><span th:text="${result.position}"></span></span>
+                                <span class="result-driver"><span class="result-driver-name" th:text="${result.driverPsnId}"></span><span class="result-team" th:text="${result.teamShortName}"></span></span>
+                                <span class="result-points"><span class="result-points-value" th:text="${result.pointsTotal}"></span><span class="sr-only"> points</span></span>
+                                <span class="result-chevron" aria-hidden="true">⌄</span>
+                            </summary>
+                            <div class="driver-result-details">
+                                <dl><div><dt>Qualifying position</dt><dd class="result-quali" th:text="${result.qualiPosition}"></dd></div>
+                                    <div><dt>Fastest lap</dt><dd class="result-fastest-lap" th:text="${result.fastestLap ? 'Yes' : 'No'}"></dd></div></dl>
+                                <a class="entity-link" th:href="${result.driverProfileUrl}">View driver profile →</a>
+                            </div>
+                        </details>
+                    </div>
+                    <details class="race-full-table" open>
+                        <summary>Full result table</summary>
+                        <div class="table-wrap match-results">
+                            <table>
+                                <thead>
+                                    <tr><th scope="col">Driver</th><th scope="col">Team</th><th scope="col" class="text-center">Pos</th><th scope="col" class="text-center">Quali</th><th scope="col" class="text-center"><abbr title="Fastest lap">FL</abbr></th><th scope="col" class="text-right">Pts</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="result : ${race.results}">
+                                        <td class="font-bold"><a class="entity-link" th:href="${result.driverProfileUrl}" th:text="${result.driverPsnId}"></a></td>
+                                        <td class="text-dim" th:text="${result.teamShortName}"></td>
+                                        <td class="text-center" th:text="${result.position}"></td>
+                                        <td class="text-center" th:text="${result.qualiPosition}"></td>
+                                        <td class="text-center" th:text="${result.fastestLap ? 'FL' : ''}"></td>
+                                        <td class="text-right font-bold" th:text="${result.pointsTotal}"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                </details>
+            </article>
         </div>
+        <p th:if="${races.isEmpty()}" class="text-dim">No races recorded for this matchday.</p>
     </div>
+    <script th:src="${assetsPath + '/js/race-results.js'}" defer></script>
 </section>
 </body>
 </html>

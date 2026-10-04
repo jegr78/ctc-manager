@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<section th:fragment="panel"
+         class="card error-workspace" id="error-card" aria-labelledby="error-title">
+    <div class="error-heading">
+        <div class="error-status">
+            <span>HTTP status</span>
+            <strong th:text="${status ?: 500}">500</strong>
+        </div>
+        <div>
+            <p class="error-eyebrow">Request could not be completed</p>
+            <h1 id="error-title" th:text="${error ?: 'Request error'}">Request error</h1>
+            <div th:switch="${status}" class="error-guidance text-dim">
+                <p th:case="404">This page or record is unavailable. Check the link or open the relevant season again.</p>
+                <p th:case="403">You do not have access to this page. Ask an administrator to review your permissions.</p>
+                <p th:case="400">Review the message below and correct your input before submitting again.</p>
+                <p th:case="409">This action conflicts with the current data. Review the message below before continuing.</p>
+                <p th:case="*">Return to the previous admin page to review your request, or open seasons to continue.</p>
+            </div>
+        </div>
+    </div>
+    <div th:if="${message != null and !#strings.isEmpty(message)}" class="error-message-panel">
+        <h2>What happened</h2>
+        <p th:text="${message}"></p>
+    </div>
+    <details th:if="${showDetails == true and exceptionType != null}" class="error-details">
+        <summary>Technical details</summary>
+        <p>Exception type: <code th:text="${exceptionType}"></code></p>
+    </details>
+    <div class="actions error-actions">
+        <a th:href="@{/admin/seasons}" class="btn btn-primary">Open seasons</a>
+        <button type="button" class="btn btn-secondary" data-error-back hidden>Back to previous page</button>
+    </div>
+    <script defer th:src="@{/admin/js/error-navigation.js}"></script>
+</section>
+</body>
+</html>

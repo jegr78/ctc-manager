@@ -16,42 +16,7 @@
         This phase has no race scoring. Set one on the phase before entering results.
     </div>
 
-    <style>
-        .fl-toggle {
-            display:inline-flex; position:relative; cursor:pointer; user-select:none;
-        }
-        .fl-toggle input { position:absolute; opacity:0; pointer-events:none; }
-        .fl-indicator {
-            display:inline-flex; align-items:center; justify-content:center;
-            width:36px; height:28px;
-            border-radius:var(--radius-sm);
-            border:1px solid var(--border);
-            background:var(--bg-input);
-            color:var(--text-dim);
-            font-size:11px; font-weight:700; letter-spacing:0.5px;
-            transition:all 0.15s ease;
-        }
-        .fl-toggle input:checked + .fl-indicator {
-            background:rgba(79,195,247,0.15);
-            border-color:var(--accent);
-            color:var(--accent);
-            box-shadow:0 0 8px rgba(79,195,247,0.25);
-        }
-        .fl-toggle:hover .fl-indicator {
-            border-color:var(--text-dim);
-        }
-        .fl-toggle input:focus-visible + .fl-indicator {
-            outline:2px solid var(--border-focus);
-            outline-offset:2px;
-        }
-        .points-cell {
-            font-variant-numeric:tabular-nums; font-weight:600; color:var(--accent);
-            min-width:40px; text-align:center;
-        }
-        .points-breakdown {
-            font-size:11px; color:var(--text-dim); font-variant-numeric:tabular-nums;
-        }
-    </style>
+
 
     <div class="card">
         <form th:action="@{/admin/races/{id}/results(id=${race.id})}" th:object="${raceForm}" method="post" id="resultsForm">
@@ -105,7 +70,7 @@
                 </tfoot>
             </table>
             </div>
-            <div class="actions mt-md">
+            <div class="actions mt-md results-save-bar">
                 <button type="submit" class="btn btn-primary">Save Results</button>
                 <a th:href="@{/admin/races/{id}(id=${race.id})}" class="btn btn-secondary">Cancel</a>
             </div>

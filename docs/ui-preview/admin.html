@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CTC Admin · Matchday design preview</title>
+    <link rel="stylesheet" href="preview.css">
+    <script src="preview.js" defer></script>
+</head>
+<body class="admin">
+<a class="skip" href="#main">Skip to content</a>
+<aside class="sidebar">
+    <a class="brand" href="admin.html"><img src="../../src/main/resources/static/site/img/ctc-logo-white.png" alt=""><span>CTC MANAGER</span></a>
+    <div class="sidebar-label">Season workspace</div>
+    <nav aria-label="Season workspace">
+        <a href="#summary">Overview</a>
+        <a href="#matches" aria-current="page">Matchdays</a>
+        <a href="#results" data-open-panel="results">Results</a>
+        <a href="#graphics" data-open-panel="graphics">Publish</a>
+    </nav>
+    <div class="sidebar-label">League management</div>
+    <nav aria-label="League management">
+        <a href="#lineup">Teams &amp; drivers</a>
+        <a href="#schedule">Cars &amp; tracks</a>
+    </nav>
+    <div class="sidebar-foot">
+        <span class="meta">Design preview</span>
+        <a href="index.html">Open website preview ↗</a>
+    </div>
+</aside>
+<div class="admin-shell">
+    <header class="admin-topbar row between">
+        <label class="season-control"><span class="meta">Season</span><select aria-label="Season"><option>Season 2026</option></select></label>
+        <span class="meta">CTC · League administration</span>
+    </header>
+    <main id="main" class="admin-content">
+        <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="#summary">Season 2026</a><span>/</span><a href="#matches">Matchdays</a><span>/</span>Matchday 5</nav>
+        <div class="page-heading brand-stage brand-stage-admin">
+            <div><p class="eyebrow muted">Regular season · Group A</p><h1>Matchday 5</h1><p class="muted">Saturday, 5 December · 20:00 GMT · 2 legs per match</p></div>
+            <a class="button" href="#schedule">View schedule</a>
+        </div>
+        <section id="summary" class="stats" aria-label="Matchday summary">
+            <div class="stat"><span class="meta">Matches</span><strong>3</strong></div>
+            <div class="stat"><span class="meta">Results complete</span><strong>1 / 3</strong></div>
+            <div class="stat"><span class="meta">Race results</span><strong>3 / 6</strong></div>
+            <div class="stat"><span class="meta">Publication</span><strong>Draft</strong></div>
+        </section>
+        <nav class="workspace-nav" aria-label="Matchday sections">
+            <button type="button" data-panel="matches" aria-pressed="true" aria-controls="matches">Matches <span class="muted">3</span></button>
+            <button type="button" data-panel="results" aria-pressed="false" aria-controls="results">Results</button>
+            <button type="button" data-panel="graphics" aria-pressed="false" aria-controls="graphics">Graphics</button>
+        </nav>
+        <section id="matches" class="panel workspace-panel" aria-labelledby="matches-title">
+            <div class="panel-head row between"><div><h2 id="matches-title">Matches</h2><p class="meta">Pairings, race progress and results in one place.</p></div><a class="button primary" href="#results" data-open-panel="results">Enter results</a></div>
+            <div class="table-tools">
+                <label>Find a team<input id="match-search" type="search" placeholder="Search teams…"></label>
+                <label>Result status<select id="match-status"><option value="all">All matches</option><option value="complete">Complete</option><option value="partial">In progress</option><option value="open">Awaiting results</option></select></label>
+            </div>
+            <div class="table-scroll"><table>
+                <thead><tr><th>Match</th><th>Score</th><th>Race results</th><th>Status</th><th><span class="muted">Action</span></th></tr></thead>
+                <tbody>
+                    <tr data-match-status="complete"><td><div class="pairing"><span class="team-name"><i class="team-marker team-yellow"></i>Alpha</span><span class="muted">/</span><span class="team-name"><i class="team-marker team-red"></i>Bravo</span></div><span class="meta">Saturday · 20:00 GMT</span></td><td class="score">124 : 108</td><td>✓ 2 / 2</td><td><span class="badge badge-complete">✓ Complete</span></td><td><a href="#results" data-open-panel="results">Review</a></td></tr>
+                    <tr data-match-status="partial"><td><div class="pairing"><span class="team-name"><i class="team-marker team-blue"></i>Charlie</span><span class="muted">/</span><span class="team-name"><i class="team-marker team-purple"></i>Delta</span></div><span class="meta">Saturday · 20:30 GMT</span></td><td class="score muted">—</td><td>1 / 2</td><td><span class="badge">◷ In progress</span></td><td><a href="#results" data-open-panel="results">Continue</a></td></tr>
+                    <tr data-match-status="open"><td><div class="pairing"><span class="team-name"><i class="team-marker team-green"></i>Echo</span><span class="muted">/</span><span class="team-name"><i class="team-marker team-white"></i>Foxtrot</span></div><span class="meta">Saturday · 21:00 GMT</span></td><td class="score muted">—</td><td>0 / 2</td><td><span class="badge">Awaiting results</span></td><td><a href="#results" data-open-panel="results">Enter results</a></td></tr>
+                </tbody>
+            </table></div>
+            <p id="match-empty" class="empty" hidden>No matches meet your filters.</p>
+            <p id="match-count" class="notice" aria-live="polite">3 matches</p>
+        </section>
+        <section id="results" class="panel workspace-panel" aria-labelledby="results-title" hidden>
+            <div class="panel-head"><h2 id="results-title">Review results</h2><p class="meta" id="result-context">Alpha / Bravo · Leg 1 · Daytona Tri-Oval</p></div>
+            <form id="result-form">
+                <div class="form-body stack"><p>Match score <strong class="number" id="result-score">124 : 108</strong></p><div class="form-grid"><label><span id="home-points-label">Alpha race points</span><input type="number" min="0" step="1" required value="64" name="home"></label><label><span id="away-points-label">Bravo race points</span><input type="number" min="0" step="1" required value="52" name="away"></label></div><p class="meta">Changes are saved in this preview only.</p></div>
+                <div class="save-bar"><span id="save-status" class="meta" role="status">No unsaved changes</span><button class="primary" type="submit">Save changes</button></div>
+            </form>
+        </section>
+        <section id="graphics" class="panel workspace-panel" aria-labelledby="graphics-title" hidden>
+            <div class="panel-head"><h2 id="graphics-title">Matchday graphics</h2><p class="meta">Check readiness before generating or publishing.</p></div>
+            <div class="graphics-grid"><article class="graphic-card"><h3>Overview</h3><p class="meta">3 pairings · All teams assigned</p><span class="badge">✓ Ready</span></article><article class="graphic-card"><h3>Schedule</h3><p class="meta">All matches have a start time</p><span class="badge">✓ Ready</span></article><article class="graphic-card"><h3>Results</h3><p class="meta">2 matches still need race results</p><a href="#results" data-open-panel="results">Review missing results →</a></article></div>
+            <p class="notice">Downloads and publication are shown as a layout concept in this preview.</p>
+        </section>
+        <section id="schedule" class="panel-head related"><h2>Race schedule</h2><p class="meta">Leg 1 · Daytona Tri-Oval · Chevrolet Camaro ZL1 1LE</p><p class="meta">Leg 2 · Tsukuba Circuit · GT Racing Kart 125 Shifter</p></section>
+        <section id="lineup" class="panel-head"><h2>Teams &amp; drivers</h2><p class="meta">6 teams · Lineups belong to their individual races.</p></section>
+        <p class="preview-note">Design preview · Example data · <a href="index.html">Compare website design</a></p>
+    </main>
+</div>
+</body>
+</html>

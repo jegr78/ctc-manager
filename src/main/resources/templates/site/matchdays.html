@@ -2,7 +2,12 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{site/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
-<section><nav th:if="${showPhaseTabs}" class="phase-tab-row" role="tablist" aria-label="Phase navigation">
+<section>
+    <header class="standings-heading brand-stage">
+        <p class="season-brand">COMMUNITY TEAM CUP</p>
+        <h1>Matchdays</h1>
+        <p class="text-dim" th:text="${season.displayLabel}"></p>
+    </header><nav th:if="${showPhaseTabs}" class="phase-tab-row" role="tablist" aria-label="Phase navigation">
         <div class="phase-tab-row-inner">
             <a th:each="t : ${phaseTabs}"
                th:href="@{${t.href}}"
@@ -22,24 +27,12 @@
         </div>
     </nav>
     <div class="section">
-        <h2 class="section-title" th:text="'Matchdays — ' + ${season.displayLabel}"></h2>
-        <div th:if="${matchdays != null and !matchdays.isEmpty()}" class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Matchday</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="md : ${matchdays}">
-                        <td class="font-bold">
-                            <a class="entity-link"
-                               th:href="${matchdayLinkMap.get(md.id)}"
-                               th:text="${md.label}"></a>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        <div th:if="${matchdays != null and !matchdays.isEmpty()}" class="matchday-index">
+            <a th:each="md : ${matchdays}" class="matchday-link"
+               th:href="${matchdayLinkMap.get(md.id)}">
+                <span><strong th:text="${md.label}"></strong><span class="matchday-link-caption">Races and driver results</span></span>
+                <span aria-hidden="true">→</span>
+            </a>
         </div>
         <p th:if="${matchdays == null or matchdays.isEmpty()}" class="text-dim">No matchdays recorded for this season.</p>
     </div>

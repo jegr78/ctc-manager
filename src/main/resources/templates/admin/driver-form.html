@@ -1,82 +1,62 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Edit Driver', ~{::section})}">
+      th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
-<section>
-    <h1 th:text="${driverForm.id != null ? 'Edit Driver' : 'New Driver'}"></h1>
+<section class="entity-editor">
+    <div class="toolbar"><div><a th:href="@{/admin/drivers}" class="back-link">← Back to Drivers</a>
+        <h1 th:text="${driverForm.id != null ? 'Edit Driver' : 'New Driver'}"></h1></div>
+    </div>
+    <nav class="entity-section-nav" aria-label="Driver editing sections">
+        <a href="#driver-identity">Identity</a><a th:if="${driverForm.id != null}" href="#driver-aliases">Aliases</a>
+        <a href="#driver-status">Status</a><a th:if="${driverForm.id != null}" href="#driver-assignments">Season assignments</a>
+    </nav>
     <div class="card">
-        <form th:action="@{/admin/drivers/save}" th:object="${driverForm}" method="post">
+        <form class="entity-editor-form" th:action="@{/admin/drivers/save}" th:object="${driverForm}" method="post">
             <input type="hidden" th:field="*{id}">
+            <fieldset id="driver-identity"><legend>Identity</legend>
             <div class="form-row">
                 <div class="form-group">
                     <label for="psnId">PSN ID</label>
-                    <input type="text" id="psnId" th:field="*{psnId}" placeholder="e.g. AHR_Hills_93" required>
+                    <input type="text" id="psnId" th:field="*{psnId}" th:attr="aria-invalid=${#fields.hasErrors('psnId')},aria-describedby='psnId-error'" placeholder="e.g. AHR_Hills_93" required>
+                    <p id="psnId-error" class="field-error" th:if="${#fields.hasErrors('psnId')}" th:errors="*{psnId}"></p>
                 </div>
                 <div class="form-group">
                     <label for="nickname">Nickname</label>
-                    <input type="text" id="nickname" th:field="*{nickname}" placeholder="e.g. AHR_Hills_93" required>
+                    <input type="text" id="nickname" th:field="*{nickname}" th:attr="aria-invalid=${#fields.hasErrors('nickname')},aria-describedby='nickname-error'" placeholder="e.g. AHR_Hills_93" required>
+                    <p id="nickname-error" class="field-error" th:if="${#fields.hasErrors('nickname')}" th:errors="*{nickname}"></p>
                 </div>
             </div>
-            <div th:if="${driverForm.id != null}" class="form-group">
-                <label>PSN Aliases</label>
+            </fieldset>
+            <fieldset th:if="${driverForm.id != null}" id="driver-aliases"><legend>PSN aliases</legend>
+                <p id="aliases-hint" class="form-hint">Previous PSN IDs help match imported results.</p>
                 <div id="aliases-container">
-                    <div th:each="alias, stat : ${driverForm.aliases}" class="form-row alias-row">
-                        <input type="text" th:name="'aliases[' + ${stat.index} + ']'" th:value="${alias}" class="alias-input">
-                        <button type="button" class="btn btn-danger btn-xs" onclick="this.parentElement.remove()">Remove</button>
+                    <div th:each="alias, stat : ${driverForm.aliases}" class="alias-row">
+                        <label th:for="${'alias-' + stat.index}" th:text="${'PSN alias ' + stat.count}"></label>
+                        <input type="text" th:id="${'alias-' + stat.index}" th:name="${'aliases[' + stat.index + ']'}" th:value="${alias}" class="alias-input" aria-describedby="aliases-hint aliases-error">
+                        <button type="button" class="btn btn-secondary" data-remove-alias hidden>Remove</button>
                     </div>
                 </div>
-                <button type="button" class="btn btn-secondary btn-xs mt-xs" onclick="addAlias()">Add Alias</button>
-                <div th:if="${#fields.hasErrors('aliases')}" class="field-error">
-                    <span th:each="err : ${#fields.errors('aliases')}" th:text="${err}" class="error-message"></span>
+                <button type="button" class="btn btn-secondary" data-add-alias hidden>Add Alias</button>
+                <div id="aliases-error" th:if="${#fields.hasErrors('aliases')}" class="field-error" role="alert">
+                    <p th:each="err : ${#fields.errors('aliases')}" th:text="${err}"></p>
                 </div>
-            </div>
-            <div class="form-group">
-                <div class="form-check">
-                    <input type="checkbox" id="active" th:field="*{active}">
-                    <label for="active">Active</label>
-                </div>
-            </div>
-            <div class="actions mt-md">
+            </fieldset>
+            <fieldset id="driver-status"><legend>Status</legend>
+                <div class="form-check"><input type="checkbox" id="active" th:field="*{active}"><label for="active">Active</label></div>
+            </fieldset>
+            <div class="entity-editor-actions"><span class="text-dim">Driver details</span><div class="actions">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a th:href="@{/admin/drivers}" class="btn btn-secondary">Cancel</a>
-            </div>
+            </div></div>
         </form>
     </div>
 
-    <script th:inline="javascript">
-        var aliasCounter = /*[[${driverForm.aliases != null ? driverForm.aliases.size() : 0}]]*/ 0;
-        function addAlias() {
-            var container = document.getElementById('aliases-container');
-            var index = aliasCounter++;
-
-            var row = document.createElement('div');
-            row.className = 'form-row alias-row';
-
-            var input = document.createElement('input');
-            input.type = 'text';
-            input.name = 'aliases[' + index + ']';
-            input.placeholder = 'e.g. OldPsnId_123';
-            input.className = 'alias-input';
-
-            var btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'btn btn-danger btn-xs';
-            btn.textContent = 'Remove';
-            btn.addEventListener('click', function() { row.remove(); });
-
-            row.appendChild(input);
-            row.appendChild(btn);
-            container.appendChild(row);
-        }
-    </script>
-
-    <!-- Season assignments (only for existing drivers) -->
-    <div th:if="${driverForm.id != null}" class="card mt-md">
+    <div th:if="${driverForm.id != null}" class="card mt-md" id="driver-assignments">
         <h2>Season Assignments</h2>
         <div class="table-scroll">
             <table th:if="${seasonDrivers != null && !seasonDrivers.isEmpty()}" class="mb-md">
                 <thead>
-                    <tr><th>Season</th><th>Team</th></tr>
+                    <tr><th scope="col">Season</th><th scope="col">Team</th></tr>
                 </thead>
                 <tbody>
                     <tr th:each="sd : ${seasonDrivers}">
@@ -109,6 +89,7 @@
             <button type="submit" class="btn btn-success btn-sm">Save Assignment</button>
         </form>
     </div>
+    <script defer th:src="@{/admin/js/driver-aliases.js}"></script>
 </section>
 </body>
 </html>

@@ -51,8 +51,8 @@ class GlobalModelAdviceActiveRouteTest {
 	}
 
 	@Test
-	void givenGenerateUri_whenActiveRoute_thenReturnsNullForSidebarButton() {
-		assertThat(advice.activeRoute(requestWith("/admin/generate"))).isNull();
+	void givenGenerateUri_whenActiveRoute_thenIdentifiesGenerationPage() {
+		assertThat(advice.activeRoute(requestWith("/admin/generate"))).isEqualTo("generate");
 	}
 
 	@Test

@@ -1,45 +1,57 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Edit Team', ~{::section})}">
+      th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
-<section>
-    <h1 th:text="${teamForm.id != null ? 'Edit Team' : 'New Team'}"></h1>
+<section class="entity-editor">
+    <div class="toolbar"><div><a th:href="@{/admin/teams}" class="back-link">← Back to Teams</a>
+        <h1 th:text="${teamForm.id != null ? 'Edit Team' : 'New Team'}"></h1></div></div>
+    <nav class="entity-section-nav" aria-label="Team editing sections"><a href="#team-identity">Identity</a><a href="#team-discord">Discord role</a>
+        <a th:if="${teamForm.id != null}" href="#team-colors">Brand colors</a><a th:if="${teamForm.id != null}" href="#team-logo">Logo</a>
+        <a th:if="${teamForm.id != null and team != null and team.parentTeam == null}" href="#team-subteams">Sub-teams</a>
+    </nav>
     <div class="card">
-        <form th:action="@{/admin/teams/save}" th:object="${teamForm}" method="post">
+        <form class="entity-editor-form" th:action="@{/admin/teams/save}" th:object="${teamForm}" method="post">
             <input type="hidden" th:field="*{id}">
+            <fieldset id="team-identity"><legend>Identity</legend>
             <div class="form-row">
                 <div class="form-group">
                     <label for="name">Name</label>
-                    <input type="text" id="name" th:field="*{name}" placeholder="e.g. Community League Racing" required>
+                    <input type="text" id="name" th:field="*{name}" th:attr="aria-invalid=${#fields.hasErrors('name')},aria-describedby='name-error'" placeholder="e.g. Community League Racing" required>
+                    <p id="name-error" class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></p>
                 </div>
                 <div class="form-group">
                     <label for="shortName">Short Name</label>
-                    <input type="text" id="shortName" th:field="*{shortName}" placeholder="e.g. CLR" required>
+                    <input type="text" id="shortName" th:field="*{shortName}" th:attr="aria-invalid=${#fields.hasErrors('shortName')},aria-describedby='shortName-error'" placeholder="e.g. CLR" required>
+                    <p id="shortName-error" class="field-error" th:if="${#fields.hasErrors('shortName')}" th:errors="*{shortName}"></p>
                 </div>
             </div>
             <div th:if="${team != null && team.parentTeam != null}" class="form-group">
-                <label>Parent Team</label>
-                <input type="text" th:value="${team.parentTeam.shortName + ' — ' + team.parentTeam.name}" disabled
-                       style="background:var(--bg);color:var(--text-dim);">
+                <p class="form-hint">Parent team</p>
+                <a class="detail-link" th:href="@{/admin/teams/{id}(id=${team.parentTeam.id})}" th:text="${team.parentTeam.shortName + ' · ' + team.parentTeam.name}"></a>
             </div>
-
-            <!-- Discord Role (cache-warm dropdown / cache-empty plain-text fallback) -->
-            <div th:if="${discordRoles != null && !discordRoles.isEmpty()}" class="form-group mt-md">
-                <label for="discordRoleSearch">Discord Role</label>
-                <div class="searchable-dropdown" id="discordRoleDropdown"
-                     data-testid="discord-role-dropdown">
-                    <input type="text" id="discordRoleSearch" placeholder="Search roles..."
-                           autocomplete="off" class="dropdown-input">
-                    <input type="hidden" th:field="*{discordRoleId}">
-                    <div class="dropdown-list" id="discordRoleList">
-                        <div th:each="role : ${discordRoles.values()}"
-                             class="dropdown-item"
-                             th:attr="data-id=${role.id()},data-label=${role.name()}"
-                             th:text="${role.name()}">
-                        </div>
+            </fieldset>
+            <fieldset id="team-discord"><legend>Discord role</legend>
+            <div th:if="${discordRoles != null && !discordRoles.isEmpty()}" class="form-group mt-md"
+                 id="discordRoleDropdown" data-testid="discord-role-dropdown" data-role-picker>
+                <div class="role-search-tools" hidden>
+                    <label for="discordRoleSearch">Find a Discord role</label>
+                    <div class="role-search-row">
+                        <input type="search" id="discordRoleSearch" placeholder="Search roles..." autocomplete="off">
+                        <button type="button" class="btn btn-secondary" data-role-search-reset>Clear search</button>
                     </div>
+                    <p id="discord-role-count" class="form-hint" role="status"></p>
                 </div>
-                <span th:errors="*{discordRoleId}" class="error-badge error-badge--auth"></span>
+                <label for="discordRoleId">Discord role</label>
+                <select th:field="*{discordRoleId}" aria-describedby="discord-role-hint discord-role-error"
+                        th:attr="aria-invalid=${#fields.hasErrors('discordRoleId')}">
+                    <option value="">No Discord role</option>
+                    <option th:if="${!#strings.isEmpty(teamForm.discordRoleId) and !discordRoles.containsKey(teamForm.discordRoleId)}"
+                            th:value="${teamForm.discordRoleId}" data-saved-role
+                            th:text="${teamForm.discordRoleId + ' · not in role cache'}"></option>
+                    <option th:each="role : ${discordRoles.values()}" th:value="${role.id()}" th:text="${role.name()}"></option>
+                </select>
+                <p id="discord-role-hint" class="form-hint">Choose a cached role, or select No Discord role to remove the assignment.</p>
+                <p id="discord-role-error" class="field-error" th:errors="*{discordRoleId}"></p>
             </div>
             <div th:if="${discordRoles == null || discordRoles.isEmpty()}" class="form-group mt-md">
                 <label for="discordRoleId">Discord Role ID</label>
@@ -54,59 +66,56 @@
                 </span>
                 <span th:errors="*{discordRoleId}" class="error-badge error-badge--auth"></span>
             </div>
-
-            <!-- Brand Colors (inline, only when editing) -->
-            <div th:if="${teamForm.id != null}" class="mt-xl">
-                <h3>Brand Colors</h3>
+            </fieldset>
+            <fieldset th:if="${teamForm.id != null}" id="team-colors"><legend>Brand colors</legend>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Primary Color</label>
+                        <label for="primaryColor">Primary color</label>
                         <div class="color-pair">
-                            <input type="color" th:value="${teamForm.primaryColor ?: '#333333'}"
+                            <input type="color" aria-label="Choose primary color" th:value="${teamForm.primaryColor ?: '#333333'}"
                                    class="color-picker-input--lg">
                             <input type="text" th:field="*{primaryColor}" placeholder="#333333"
                                    pattern="#[0-9a-fA-F]{6}" maxlength="7" class="color-text-input--sm">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Secondary Color</label>
+                        <label for="secondaryColor">Secondary color</label>
                         <div class="color-pair">
-                            <input type="color" th:value="${teamForm.secondaryColor ?: '#555555'}"
+                            <input type="color" aria-label="Choose secondary color" th:value="${teamForm.secondaryColor ?: '#555555'}"
                                    class="color-picker-input--lg">
                             <input type="text" th:field="*{secondaryColor}" placeholder="#555555"
                                    pattern="#[0-9a-fA-F]{6}" maxlength="7" class="color-text-input--sm">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Accent Color</label>
+                        <label for="accentColor">Accent color</label>
                         <div class="color-pair">
-                            <input type="color" th:value="${teamForm.accentColor ?: '#4fc3f7'}"
+                            <input type="color" aria-label="Choose accent color" th:value="${teamForm.accentColor ?: '#4fc3f7'}"
                                    class="color-picker-input--lg">
                             <input type="text" th:field="*{accentColor}" placeholder="#4fc3f7"
                                    pattern="#[0-9a-fA-F]{6}" maxlength="7" class="color-text-input--sm">
                         </div>
                     </div>
                 </div>
-            </div>
+            </fieldset>
 
-            <div class="actions mt-md">
+            <div class="entity-editor-actions"><span class="text-dim">Team details</span><div class="actions">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a th:href="@{/admin/teams}" class="btn btn-secondary">Cancel</a>
-            </div>
+            </div></div>
         </form>
     </div>
-
-    <!-- Logo Upload (only when editing) -->
-    <div th:if="${teamForm.id != null}" class="card mt-md">
+    <div th:if="${teamForm.id != null}" class="card mt-md" id="team-logo">
         <h2>Logo</h2>
         <div th:if="${team.logoUrl != null}" class="mb-sm">
-            <img th:src="${team.logoUrl}" alt="" class="logo-preview">
+            <img th:src="${team.logoUrl}" th:alt="${team.shortName + ' logo'}" class="logo-preview">
         </div>
         <div th:if="${team.logoUrl == null}" class="empty-state empty-state--compact"><p>No logo yet.</p></div>
         <form th:action="@{/admin/teams/{id}/logo(id=${team.id})}" method="post" enctype="multipart/form-data" class="mt-xs">
             <div class="inline-form">
                 <div class="form-group form-group--inline">
-                    <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif" required
+                    <label for="teamLogo">Logo file</label>
+                    <input type="file" id="teamLogo" name="logo" accept="image/png,image/jpeg,image/webp,image/gif" required
                            class="file-input">
                     <small class="form-hint">PNG, JPG, WebP, GIF. Max 10 MB.</small>
                 </div>
@@ -114,13 +123,12 @@
             </div>
         </form>
     </div>
-
-    <!-- Sub-Teams section (only for parent teams when editing) -->
-    <div th:if="${teamForm.id != null && (team == null || team.parentTeam == null)}" class="card">
+    <div th:if="${teamForm.id != null && (team == null || team.parentTeam == null)}" class="card" id="team-subteams">
         <h2>Sub-Teams</h2>
+        <div class="table-scroll" role="region" aria-label="Sub-teams" tabindex="0">
         <table th:if="${!team.subTeams.isEmpty()}">
             <thead>
-                <tr><th>Short Name</th><th>Name</th><th>Actions</th></tr>
+                <tr><th scope="col">Short Name</th><th scope="col">Name</th><th scope="col">Actions</th></tr>
             </thead>
             <tbody>
                 <tr th:each="sub : ${team.subTeams}">
@@ -136,15 +144,14 @@
                 </tr>
             </tbody>
         </table>
+        </div>
         <div th:if="${team.subTeams.isEmpty()}" class="empty-state empty-state--md">
             <p>No sub-teams. This team competes directly.</p>
         </div>
         <form th:action="@{/admin/teams/{id}/add-sub-team(id=${team.id})}" method="post"
-              class="inline-form mt-md">
-            <input type="text" name="subShortName" placeholder="Short name (e.g. CLR1)" required
-                   class="search-input" style="width:120px;">
-            <input type="text" name="subName" placeholder="Full name (e.g. CLR 1)" required
-                   class="search-input" style="width:200px;">
+              class="editor-subteam-form mt-md">
+            <div class="form-group"><label for="subShortName">Short name</label><input type="text" id="subShortName" name="subShortName" placeholder="e.g. CLR1" required></div>
+            <div class="form-group"><label for="subName">Full name</label><input type="text" id="subName" name="subName" placeholder="e.g. CLR 1" required></div>
             <button type="submit" class="btn btn-primary btn-sm">Add Sub-Team</button>
         </form>
     </div>

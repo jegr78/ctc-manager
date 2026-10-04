@@ -3,30 +3,39 @@
       th:replace="~{site/layout :: layout('Teams', ~{::section})}">
 <body>
 <section>
-    <div class="section">
-        <h2 class="section-title">Teams</h2>
-        <div class="filter-bar">
-            <input type="text" id="search-input" class="search-input" placeholder="Search teams..." autocomplete="off"/>
-            <select id="season-filter">
-                <option value="">All Seasons</option>
-                <option th:each="entry : ${seasonEntries}"
-                        th:value="${entry.slug()}"
-                        th:text="${entry.season().displayLabel}">Season</option>
-            </select>
+    <div class="section directory-page">
+        <header class="standings-heading brand-stage"><p class="season-brand">COMMUNITY TEAM CUP</p>
+            <h1>Teams</h1><p class="text-dim">Find teams and explore their seasons.</p>
+        </header>
+        <div class="filter-bar directory-tools" hidden>
+            <label for="search-input"><span>Find a team</span>
+                <input type="search" id="search-input" class="search-input" placeholder="Team name" autocomplete="off"/>
+            </label>
+            <label for="season-filter"><span>Season</span>
+                <select id="season-filter">
+                    <option value="">All seasons</option>
+                    <option th:each="entry : ${seasonEntries}" th:value="${entry.slug()}" th:text="${entry.season().displayLabel}">Season</option>
+                </select>
+            </label>
+            <button type="button" id="directory-reset" disabled>Reset filters</button>
+            <p id="directory-count" role="status" th:attr="data-unit='team',data-plural='teams'"></p>
         </div>
-        <table class="overview-table">
-            <thead>
-                <tr>
-                    <th>Team</th>
-                    <th>Seasons</th>
+        <p class="directory-hint text-dim">Profiles open the latest available season. Season links open that season's standings.</p>
+        <p id="directory-empty" hidden>No teams match these filters. Try another search or reset the filters.</p>
+        <p th:if="${teamEntries.isEmpty()}" class="text-dim">No teams recorded.</p>
+        <table class="overview-table teams-directory" role="table" aria-label="Teams and seasons">
+            <thead role="rowgroup">
+                <tr role="row">
+                    <th scope="col" role="columnheader">Team</th>
+                    <th scope="col" role="columnheader">Seasons</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
                 <tr th:each="entry : ${teamEntries}"
-                    class="overview-row"
+                    class="overview-row" role="row"
                     th:attr="data-seasons=${#strings.listJoin(entry.seasonSlugs(), ' ')},
                              data-search=${#strings.toLowerCase(entry.shortName())}">
-                    <td class="overview-row-team-cell">
+                    <td role="cell" class="overview-row-team-cell">
                         <img th:if="${entry.logoRelPath() != null}"
                              th:src="${entry.logoRelPath()}"
                              class="overview-row-logo"
@@ -39,7 +48,7 @@
                               th:text="${entry.shortName()}"
                               class="overview-row-name"></span>
                     </td>
-                    <td class="overview-row-seasons">
+                    <td role="cell" class="overview-row-seasons">
                         <a th:each="slug, stat : ${entry.seasonSlugs()}"
                            th:href="${rootPath + '/season/' + slug + '/standings.html'}"
                            th:text="${entry.seasonLabels()[stat.index]}"
@@ -49,24 +58,7 @@
             </tbody>
         </table>
     </div>
-    <script>
-        (function() {
-            var select = document.getElementById('season-filter');
-            var search = document.getElementById('search-input');
-            var rows = document.querySelectorAll('.overview-row');
-            function filterRows() {
-                var slug = select.value;
-                var query = search.value.toLowerCase().trim();
-                rows.forEach(function(row) {
-                    var matchesSeason = !slug || (row.getAttribute('data-seasons') || '').split(' ').indexOf(slug) >= 0;
-                    var matchesSearch = !query || (row.getAttribute('data-search') || '').indexOf(query) >= 0;
-                    row.style.display = matchesSeason && matchesSearch ? '' : 'none';
-                });
-            }
-            select.addEventListener('change', filterRows);
-            search.addEventListener('input', filterRows);
-        })();
-    </script>
+    <script defer th:src="${assetsPath + '/js/directory.js'}"></script>
 </section>
 </body>
 </html>

@@ -2,81 +2,76 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Team Cards', ~{::section})}">
 <body>
-<section>
+<section class="entity-editor team-cards-workspace">
     <h1>Team Cards</h1>
-    <div class="card">
-        <div class="actions" style="flex-wrap:wrap;">
-            <form th:action="@{/admin/tools/team-cards}" method="get" class="btn-with-hint">
-                <label for="seasonId" class="text-nowrap">Season:</label>
-                <select name="seasonId" id="seasonId" onchange="this.form.submit()"
-                        class="search-input" style="width:auto;">
-                    <option value="" th:if="${seasons.isEmpty()}">No seasons</option>
+    <p class="text-dim mb-md">Generate season artwork for your teams, review the previews and download individual PNGs or a ZIP archive.</p>
+
+    <div class="card mb-md">
+        <form id="teamCardsSeasonForm" th:action="@{/admin/tools/team-cards}" method="get" class="team-cards-season-form">
+            <div class="form-group">
+                <label for="seasonId">Season</label>
+                <select name="seasonId" id="seasonId" required aria-describedby="team-cards-season-hint">
+                    <option value="">-- Select season --</option>
                     <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"
                             th:selected="${s.id == selectedSeasonId}"></option>
                 </select>
-            </form>
-            <div class="actions" style="margin-left:auto;">
-                <form th:if="${season != null}" th:action="@{/admin/tools/team-cards/generate-all}" method="post" class="form-inline" style="display:flex;margin:0;" id="generateAllForm">
+            </div>
+            <button type="submit" class="btn btn-secondary">Show Cards</button>
+        </form>
+        <p id="team-cards-season-hint" class="text-dim form-hint--sm">Choose the season whose team cards you want to manage.</p>
+    </div>
+
+    <div th:if="${season != null and !cardStates.isEmpty()}" class="card mb-md">
+        <div class="toolbar">
+            <div>
+                <h2 th:text="${season.displayLabel}"></h2>
+                <p class="text-dim" th:text="|${cardStates.size()} teams|"></p>
+            </div>
+            <div class="actions">
+                <form th:action="@{/admin/tools/team-cards/generate-all}" method="post" id="generateAllForm" data-generate-cards data-generation-message="Generating all cards for the selected season. This may take a moment.">
                     <input type="hidden" name="seasonId" th:value="${season.id}">
-                    <button type="submit" id="generateAllBtn" class="btn btn-secondary">Generate All</button>
+                    <button type="submit" id="generateAllBtn" class="btn btn-primary">Generate All</button>
                 </form>
-                <a th:if="${season != null}" th:href="@{/admin/tools/team-cards/download-all(seasonId=${season.id})}"
-                   class="btn btn-secondary">Download ZIP</a>
+                <a th:href="@{/admin/tools/team-cards/download-all(seasonId=${season.id})}" class="btn btn-secondary" data-cards-zip>Download ZIP</a>
             </div>
         </div>
+        <p class="text-dim form-hint--sm">Generate All refreshes every team card in this season. The ZIP includes cards that have already been generated.</p>
     </div>
+    <p id="card-generation-status" class="team-card-generation-status" role="status" aria-live="polite" aria-atomic="true" hidden></p>
 
-    <div th:if="${season != null && cardStates != null}" class="mt-md">
-        <div class="card-grid">
-            <div th:each="cs : ${cardStates}" class="card card--compact">
-                <div th:if="${cs.exists()}" class="mb-xs">
-                    <img th:src="${cs.cardPath()}" alt="" class="card-img">
-                </div>
-                <div th:unless="${cs.exists()}" class="img-placeholder">
-                    <span class="text-dim">Not generated</span>
-                </div>
-                <strong th:text="${cs.seasonTeam().team.shortName}"></strong>
-                <span th:if="${cs.seasonTeam().rating != null}" class="text-dim"
-                      th:text="' — Rating: ' + ${cs.seasonTeam().rating}"></span>
-                <div class="actions--tight mt-xs">
-                    <form th:action="@{/admin/tools/team-cards/generate/{id}(id=${cs.seasonTeam().id})}" method="post">
-                        <button type="submit" class="btn btn-primary btn-sm">Generate</button>
-                    </form>
-                    <a th:if="${cs.exists()}"
-                       th:href="@{/admin/tools/team-cards/download/{id}(id=${cs.seasonTeam().id})}"
-                       class="btn btn-secondary btn-sm">Download</a>
-                </div>
+    <div th:if="${season != null and !cardStates.isEmpty()}" class="team-cards-grid">
+        <article th:each="cs : ${cardStates}" class="card team-card-item" th:data-season-team-id="${cs.seasonTeam().id}" th:attr="aria-labelledby=|team-card-heading-${cs.seasonTeam().id}|">
+            <h2 th:id="|team-card-heading-${cs.seasonTeam().id}|" th:text="${cs.seasonTeam().team.shortName}"></h2>
+            <p class="text-dim team-card-full-name" th:text="${cs.seasonTeam().team.name}"></p>
+            <p class="text-dim form-hint--sm" th:text="${cs.seasonTeam().rating != null ? 'Rating: ' + cs.seasonTeam().rating : 'Not rated'}"></p>
+            <a th:if="${cs.exists()}" th:href="${cs.cardPath()}" target="_blank" rel="noopener" class="team-card-preview" th:attr="aria-label=|Open full-size card for ${cs.seasonTeam().team.shortName} in a new tab|">
+                <img th:src="${cs.cardPath()}" th:alt="|Team card for ${cs.seasonTeam().team.name}|">
+                <span>Open full-size preview <span class="text-dim">↗</span></span>
+            </a>
+            <div th:unless="${cs.exists()}" class="team-card-missing-preview">
+                <p class="text-dim">Generate a card to see a preview.</p>
             </div>
-        </div>
+            <p class="team-card-file-state" th:text="${cs.exists() ? 'PNG available' : 'Not generated'}"></p>
+            <div class="actions">
+                <form th:action="@{/admin/tools/team-cards/generate/{id}(id=${cs.seasonTeam().id})}" method="post" data-generate-cards th:attr="data-generation-message=|Generating the card for ${cs.seasonTeam().team.shortName}. This may take a moment.|">
+                    <button type="submit" class="btn btn-secondary btn-sm" th:text="${cs.exists() ? 'Regenerate' : 'Generate'}" th:attr="aria-label=|${cs.exists() ? 'Regenerate' : 'Generate'} card for ${cs.seasonTeam().team.shortName}|"></button>
+                </form>
+                <a th:if="${cs.exists()}" th:href="@{/admin/tools/team-cards/download/{id}(id=${cs.seasonTeam().id})}" class="btn btn-secondary btn-sm" data-card-download th:attr="aria-label=|Download PNG for ${cs.seasonTeam().team.shortName}|">Download PNG</a>
+            </div>
+        </article>
     </div>
 
-    <div th:if="${season == null}" class="card mt-md">
-        <div class="empty-state empty-state--md"><p>Select a season to manage team cards.</p></div>
+    <div th:if="${season != null and cardStates.isEmpty()}" class="card empty-state">
+        <h2>No teams in this season</h2>
+        <p>Add teams to the season before generating cards.</p>
+        <a th:href="@{/admin/seasons/{id}(id=${season.id})}" class="btn btn-secondary">Open Season</a>
     </div>
-
-    <!-- Fullscreen overlay shown during Generate All -->
-    <div id="generateOverlay" class="overlay">
-        <div class="overlay-panel">
-            <div class="overlay-title">Generating team cards...</div>
-            <div class="text-dim">Rendering cards for all teams via headless browser.<br>This may take a moment.</div>
-        </div>
+    <div th:if="${season == null}" class="card empty-state">
+        <h2>Select a season to start</h2>
+        <p th:if="${!seasons.isEmpty()}">Choose a season above to manage its team cards.</p>
+        <p th:if="${seasons.isEmpty()}">Create a season and add its teams before generating cards.</p>
     </div>
-
-    <script>
-    (function() {
-        var form = document.getElementById('generateAllForm');
-        if (!form) return;
-        var btn = document.getElementById('generateAllBtn');
-        var overlay = document.getElementById('generateOverlay');
-        form.addEventListener('submit', function() {
-            btn.disabled = true;
-            btn.style.opacity = '0.5';
-            btn.style.pointerEvents = 'none';
-            btn.textContent = 'Generating...';
-            overlay.style.display = 'flex';
-        });
-    })();
-    </script>
+    <script th:src="@{/admin/js/team-cards.js}"></script>
 </section>
 </body>
 </html>

@@ -4,20 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CTC Admin - Error</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/admin/img/favicon.svg}">
     <link rel="stylesheet" th:href="@{/admin/css/admin.css}">
 </head>
 <body>
-    <main class="container">
-        <div class="card" id="error-card">
-            <h1>
-                <span th:text="${status}">500</span> &mdash; <span th:text="${error}">Error</span>
-            </h1>
-            <p th:if="${message}" th:text="${message}">Something went wrong</p>
-            <div class="actions">
-                <a href="javascript:history.back()" class="btn btn-secondary">Back</a>
-                <a th:href="@{/admin/seasons}" class="btn btn-primary">Home</a>
-            </div>
-        </div>
+    <main class="error-page">
+        <a th:href="@{/admin/seasons}" class="error-page-brand" aria-label="CTC Admin, open seasons">
+            <img th:src="@{/admin/img/ctc-logo-white.png}" alt="">
+            <span>CTC Admin</span>
+        </a>
+        <section th:replace="~{admin/fragments/error-panel :: panel}"></section>
     </main>
 </body>
 </html>

@@ -2,243 +2,172 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Standings', ~{::section})}">
 <body>
-<section>
+<section class="entity-editor standings-workspace">
     <div class="toolbar">
         <div>
             <h1>Standings</h1>
             <p th:if="${selectedSeason != null and !isAlltime}" class="text-dim">
-                <span th:text="${selectedSeason.name}"></span>
+                <span th:text="${selectedSeason.displayLabel}"></span>
                 <span th:if="${phase != null}">
                     <span> — </span>
                     <span th:text="${phase.label != null and !phase.label.isBlank() ? phase.label : phase.phaseType}"></span>
                 </span>
             </p>
         </div>
-        <form method="get" th:action="@{/admin/standings}" class="btn-with-hint">
-            <select name="seasonId" onchange="this.form.submit()">
-                <option value="">-- Select season --</option>
-                <option value="alltime" th:selected="${isAlltime}">Alltime</option>
-                <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"
-                        th:selected="${selectedSeason != null and s.id == selectedSeason.id}"></option>
-            </select>
-        </form>
+        <div class="actions">
+            <a th:if="${selectedSeason != null}" th:href="@{/admin/seasons/{id}(id=${selectedSeason.id})}" class="btn btn-secondary">Open season</a>
+            <a th:unless="${isAlltime}" th:href="@{/admin/standings(seasonId=alltime)}" class="btn btn-secondary">All-time standings</a>
+        </div>
     </div>
 
-    <!-- Two-Row Tabs Row 1: Phase tabs (only when season + REGULAR phase) -->
-    <div th:if="${selectedSeason != null and hasRegularPhase}" class="tab-nav mt-md" role="tablist" aria-label="Phase tabs">
+    <p class="admin-list-intro text-dim">Compare team standings and driver performance. Sorting and searching keep the original ranking positions.</p>
+    <form th:if="${selectedSeason == null}" method="get" th:action="@{/admin/standings}" class="card standings-selection">
+        <div class="standings-season-field">
+            <label for="standings-season">Season</label>
+            <select id="standings-season" name="seasonId" required>
+                <option value="" disabled th:selected="${selectedSeason == null and !isAlltime}">Choose a season</option>
+                <option th:each="season : ${seasons}" th:value="${season.id}" th:text="${season.displayLabel}"
+                        th:selected="${selectedSeason != null and season.id == selectedSeason.id}"></option>
+                <option value="alltime" th:selected="${isAlltime}">All-time</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-secondary">Show standings</button>
+    </form>
+
+    <nav th:if="${selectedSeason != null and hasRegularPhase}" class="tab-nav mt-md" aria-label="Standings phases">
         <a th:each="p : ${allPhases}"
            th:href="@{/admin/standings(phase=${p.id})}"
            th:classappend="${phase != null and p.id == phase.id ? 'tab-active' : ''}"
            class="tab-btn"
+           th:attr="aria-current=${phase != null and p.id == phase.id ? 'page' : null}"
            th:text="${p.label != null and !p.label.isBlank() ? p.label : p.phaseType}">Tab</a>
-    </div>
+    </nav>
 
-    <!-- Two-Row Tabs Row 2: Group sub-tabs (only when GROUPS layout) -->
-    <div th:if="${phase != null and phase.layout.name() == 'GROUPS'}"
-         class="tab-nav tabs-secondary" role="tablist" aria-label="Group sub-tabs">
+    <nav th:if="${phase != null and phase.layout.name() == 'GROUPS'}"
+         class="tab-nav tabs-secondary" aria-label="Standings groups">
         <a th:href="@{/admin/standings(phase=${phase.id})}"
            th:classappend="${selectedGroupId == null ? 'tab-active' : ''}"
-           class="tab-btn">Combined</a>
+           class="tab-btn" th:attr="aria-current=${selectedGroupId == null ? 'page' : null}">Combined</a>
         <a th:each="g : ${groups}"
            th:href="@{/admin/standings(phase=${phase.id}, group=${g.id})}"
            th:classappend="${selectedGroupId != null and selectedGroupId == g.id ? 'tab-active' : ''}"
            class="tab-btn"
+           th:attr="aria-current=${selectedGroupId != null and selectedGroupId == g.id ? 'page' : null}"
            th:text="${g.name}">Group A</a>
-    </div>
+    </nav>
 
-    <!-- Empty: no season selected and not alltime -->
     <div th:if="${selectedSeason == null and !isAlltime}" class="card empty-state mt-md">
         <p>Please select a season.</p>
     </div>
 
-    <!-- Empty-state: season selected but no REGULAR phase -->
     <div th:if="${selectedSeason != null and !hasRegularPhase and !isAlltime}" class="card empty-state mt-md">
         <p>This season has no Regular Phase yet. Create one first to see standings.</p>
         <a th:href="@{/admin/seasons/{id}/phases/new(id=${selectedSeason.id}, phaseType='REGULAR')}" class="btn btn-primary">+ Add Regular Phase</a>
     </div>
 
-    <!-- Empty-state: phase exists but no results -->
-    <div th:if="${phase != null and #lists.isEmpty(standings)}" class="card empty-state mt-md">
-        <p>This phase has no race results yet — standings will appear once results are recorded.</p>
+    <div th:if="${(phase != null or isAlltime) and #lists.isEmpty(standings)}" class="card empty-state mt-md">
+        <p>No team standings available yet. Record match results to see standings.</p>
     </div>
 
-    <!-- Team Standings table (unified with conditional columns) -->
-    <div th:if="${(phase != null and !#lists.isEmpty(standings)) or (isAlltime and standings != null and !standings.isEmpty())}" class="card mt-md">
-        <h2 th:if="${isAlltime}">Team Standings — Alltime</h2>
-        <h2 th:unless="${isAlltime}">Team Standings</h2>
-        <div class="table-scroll">
-            <table id="standingsTable">
+    <div th:if="${(phase != null and !#lists.isEmpty(standings)) or (isAlltime and standings != null and !standings.isEmpty())}" class="card admin-list standings-list mt-md" data-admin-list data-unit="team" data-plural="teams">
+        <h2 th:if="${isAlltime}">Team standings, all-time</h2>
+        <h2 th:unless="${isAlltime}">Team standings</h2>
+        <p class="standings-legend text-dim">MP: matches played · W: wins · D: draws · L: losses · Pts: match points</p>
+        <p th:if="${showBuchholz}" class="standings-legend text-dim">Buchholz is the sum of opponents' match points.</p>
+        <div class="admin-list-controls standings-list-controls" data-list-tools hidden>
+            <label for="teamSearch"><span>Search teams</span><input type="search" id="teamSearch" data-list-search placeholder="Team name or group" autocomplete="off"></label>
+            <button type="button" class="btn btn-secondary" data-list-reset disabled>Reset search</button>
+            <p class="admin-list-count text-dim" data-list-count role="status"></p>
+        </div>
+        <div class="table-scroll" role="region" aria-label="Team standings" tabindex="0">
+            <table id="standingsTable" data-list-table>
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th class="sortable" data-col="1" data-type="text" aria-label="Sort by Team">Team</th>
-                        <th th:if="${showGroupColumn}" class="sortable" data-col="2" data-type="text" aria-label="Sort by Group">Group</th>
-                        <th class="sortable" data-col="3" data-type="num" aria-label="Sort by Played">MP</th>
-                        <th class="sortable" data-col="4" data-type="num" aria-label="Sort by Wins">W</th>
-                        <th class="sortable" data-col="5" data-type="num" aria-label="Sort by Draws">D</th>
-                        <th class="sortable" data-col="6" data-type="num" aria-label="Sort by Losses">L</th>
-                        <th class="sortable td-right" data-col="7" data-type="num" aria-label="Sort by Points">Pts</th>
-                        <th th:if="${showBuchholz}" class="sortable" data-col="8" data-type="num" aria-label="Sort by Buchholz">Buchholz</th>
+                        <th scope="col">Rank</th>
+                        <th scope="col" class="sortable" data-type="text" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Team" disabled>Team</button></th>
+                        <th scope="col" th:if="${showGroupColumn}" class="sortable" data-type="text" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Group" disabled>Group</button></th>
+                        <th scope="col" class="sortable td-right" data-type="num" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Played" disabled>MP</button></th>
+                        <th scope="col" class="sortable td-right" data-type="num" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Wins" disabled>W</button></th>
+                        <th scope="col" class="sortable td-right" data-type="num" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Draws" disabled>D</button></th>
+                        <th scope="col" class="sortable td-right" data-type="num" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Losses" disabled>L</button></th>
+                        <th scope="col" class="sortable td-right" data-type="num" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Points" disabled>Pts</button></th>
+                        <th scope="col" th:if="${showBuchholz}" class="sortable td-right" data-type="num" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Buchholz" disabled>Buchholz</button></th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="standing, iter : ${standings}" class="data-row">
-                        <td th:text="${iter.count}"></td>
+                    <tr th:each="standing, iter : ${standings}" class="data-row" data-list-entry th:attr="data-search=${standing.team.shortName + ' ' + standing.team.name + ' ' + (standing.group != null ? standing.group.name : '')}">
+                        <td class="standings-rank" th:text="${iter.count}"></td>
                         <td>
-                            <strong th:text="${standing.team.shortName}"></strong>
-                            <span class="text-dim" th:text="' ' + ${standing.team.name}"></span>
+                            <a th:href="@{/admin/teams/{id}(id=${standing.team.id})}" class="detail-link"><strong th:text="${standing.team.shortName}"></strong><span class="text-dim standings-team-name" th:text="${standing.team.name}"></span></a>
                         </td>
                         <td th:if="${showGroupColumn}" th:text="${standing.group != null ? standing.group.name : '-'}"></td>
-                        <td th:text="${standing.played}"></td>
-                        <td th:text="${standing.wins}"></td>
-                        <td th:text="${standing.draws}"></td>
-                        <td th:text="${standing.losses}"></td>
+                        <td class="td-right" th:text="${standing.played}"></td>
+                        <td class="td-right" th:text="${standing.wins}"></td>
+                        <td class="td-right" th:text="${standing.draws}"></td>
+                        <td class="td-right" th:text="${standing.losses}"></td>
                         <td class="td-right td-numeric-bold" th:text="${standing.points}"></td>
-                        <td th:if="${showBuchholz}" th:text="${standing.buchholz}"></td>
+                        <td class="td-right" th:if="${showBuchholz}" th:text="${standing.buchholz}"></td>
                     </tr>
                 </tbody>
             </table>
         </div>
+        <div data-list-empty hidden class="empty-state"><p>No matching teams. Try another search or reset it.</p></div>
     </div>
 
-    <!-- Driver Ranking — render only when driverRanking is non-null + non-empty -->
-    <div th:if="${driverRanking != null and !driverRanking.isEmpty()}" class="card mt-md">
+    <div th:if="${driverRanking != null and !driverRanking.isEmpty()}" class="card admin-list standings-list mt-md" data-admin-list data-page-size="20" data-unit="driver" data-plural="drivers">
         <div class="section-header mb-sm">
             <div>
-                <h2 th:if="${isAlltime}" class="form-group--inline">Driver Ranking — Alltime</h2>
-                <h2 th:unless="${isAlltime}" class="form-group--inline">Driver Ranking</h2>
+                <h2 th:if="${isAlltime}" class="form-group--inline">Driver ranking, all-time</h2>
+                <h2 th:unless="${isAlltime}" class="form-group--inline">Driver ranking</h2>
             </div>
-            <input type="text" id="driverSearch" placeholder="Search drivers..." aria-label="Search drivers"
-                   class="search-input">
         </div>
-        <div class="table-scroll">
-            <table id="driverRankingTable">
+        <p class="standings-legend text-dim">Best Pos.: best race finish · Avg: average points per race · ★: guest appearance</p>
+        <p th:if="${phase != null and phase.layout.name() == 'GROUPS'}" class="standings-legend text-dim">Driver ranking includes all groups in this phase.</p>
+        <div class="admin-list-controls standings-list-controls" data-list-tools hidden>
+            <label for="driverSearch"><span>Search drivers</span><input type="search" id="driverSearch" data-list-search placeholder="PSN ID or team" autocomplete="off"></label>
+            <button type="button" class="btn btn-secondary" data-list-reset disabled>Reset search</button>
+            <p class="admin-list-count text-dim" data-list-count role="status"></p>
+        </div>
+        <div class="table-scroll" role="region" aria-label="Driver ranking" tabindex="0">
+            <table id="driverRankingTable" data-list-table>
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th class="sortable" data-col="1" data-type="text" aria-label="Sort by Driver">Driver</th>
-                        <th class="sortable" data-col="2" data-type="text" aria-label="Sort by Team">Team</th>
-                        <th class="sortable" data-col="3" data-type="num" aria-label="Sort by Races">Races</th>
-                        <th class="sortable" data-col="4" data-type="num" aria-label="Sort by Best Position">Best Pos.</th>
-                        <th class="sortable" data-col="5" data-type="num" aria-label="Sort by Average Points">Avg</th>
-                        <th class="sortable td-right" data-col="6" data-type="num" aria-label="Sort by Points">Points</th>
+                        <th scope="col">Rank</th>
+                        <th scope="col" class="sortable" data-type="text" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Driver" disabled>Driver</button></th>
+                        <th scope="col" class="sortable" data-type="text" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Team" disabled>Team</button></th>
+                        <th scope="col" class="sortable td-right" data-type="num" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Races" disabled>Races</button></th>
+                        <th scope="col" class="sortable td-right" data-type="num" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Best Position" disabled>Best Pos.</button></th>
+                        <th scope="col" class="sortable td-right" data-type="num" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Average Points" disabled>Avg</button></th>
+                        <th scope="col" class="sortable td-right" data-type="num" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Points" disabled>Points</button></th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="ranking, iter : ${driverRanking}" class="data-row">
-                        <td th:text="${iter.count}"></td>
+                    <tr th:each="ranking, iter : ${driverRanking}" class="data-row" data-list-entry th:attr="data-search=${ranking.driver.psnId + ' ' + (ranking.team != null ? ranking.team.shortName + ' ' + ranking.team.name : '')}">
+                        <td class="standings-rank" th:text="${iter.count}"></td>
                         <td>
-                            <strong th:text="${ranking.driver.psnId}"></strong>
+                            <a th:href="@{/admin/drivers/{id}(id=${ranking.driver.id})}" class="detail-link"><strong th:text="${ranking.driver.psnId}"></strong></a>
                             <span class="guest-marker" th:if="${ranking.hasGuestAppearance}" aria-label="Guest driver">&#x2605;</span>
                         </td>
                         <td th:text="${ranking.team != null ? ranking.team.shortName : '-'}"></td>
-                        <td th:text="${ranking.racesCount}"></td>
-                        <td th:text="${ranking.bestPosition}"></td>
-                        <td th:text="${#numbers.formatDecimal(ranking.averagePoints, 1, 1)}"></td>
+                        <td class="td-right" th:text="${ranking.racesCount}"></td>
+                        <td class="td-right" th:text="${ranking.bestPosition}"></td>
+                        <td class="td-right" th:attr="data-sort-value=${ranking.averagePoints}" th:text="${#numbers.formatDecimal(ranking.averagePoints, 1, 1)}"></td>
                         <td class="td-right td-numeric-bold" th:text="${ranking.totalPoints}"></td>
                     </tr>
                 </tbody>
             </table>
         </div>
-        <div id="noResults" class="empty-state hidden" aria-live="polite"><p>No matching drivers found.</p></div>
-        <div class="pagination pagination-bar" id="pagination" aria-label="Driver ranking pagination">
-            <span id="pageInfo" class="text-dim"></span>
+        <div id="noResults" data-list-empty hidden class="empty-state"><p>No matching drivers found.</p></div>
+        <div class="pagination pagination-bar" id="pagination" data-list-pagination hidden aria-label="Driver ranking pagination">
+            <span id="pageInfo" data-list-page-info class="text-dim"></span>
             <div class="actions">
-                <button id="prevPage" class="btn btn-secondary btn-sm" disabled>Previous</button>
-                <button id="nextPage" class="btn btn-secondary btn-sm">Next</button>
+                <button type="button" id="prevPage" data-list-prev class="btn btn-secondary btn-sm" disabled>Previous</button>
+                <button type="button" id="nextPage" data-list-next class="btn btn-secondary btn-sm">Next</button>
             </div>
         </div>
     </div>
 
-    <script th:inline="javascript">
-    (function() {
-        function initSortableTable(tableId) {
-            const table = document.getElementById(tableId);
-            if (!table) return;
-            const tbody = table.querySelector('tbody');
-
-            table.querySelectorAll('.sortable').forEach(th => {
-                let sortAsc = true;
-                let lastSorted = false;
-                th.style.cursor = 'pointer';
-                th.addEventListener('click', function() {
-                    const col = parseInt(this.dataset.col);
-                    const type = this.dataset.type || 'text';
-
-                    if (lastSorted) { sortAsc = !sortAsc; } else {
-                        table.querySelectorAll('.sortable').forEach(h => h._lastSorted = false);
-                        sortAsc = type === 'num' ? false : true;
-                    }
-                    lastSorted = true;
-                    this._lastSorted = true;
-
-                    table.querySelectorAll('.sortable').forEach(h => h.dataset.sort = '');
-                    this.dataset.sort = sortAsc ? 'asc' : 'desc';
-
-                    const rows = Array.from(tbody.querySelectorAll('.data-row'));
-                    rows.sort((a, b) => {
-                        const aText = a.children[col].textContent.trim();
-                        const bText = b.children[col].textContent.trim();
-                        if (type === 'num') {
-                            const aNum = parseFloat(aText) || 0;
-                            const bNum = parseFloat(bText) || 0;
-                            return sortAsc ? aNum - bNum : bNum - aNum;
-                        }
-                        return sortAsc ? aText.localeCompare(bText) : bText.localeCompare(aText);
-                    });
-                    rows.forEach(r => tbody.appendChild(r));
-                    rows.forEach((r, i) => { r.children[0].textContent = i + 1; });
-                });
-            });
-        }
-
-        initSortableTable('standingsTable');
-        initSortableTable('driverRankingTable');
-
-        const drTable = document.getElementById('driverRankingTable');
-        if (!drTable) return;
-
-        const PAGE_SIZE = 20;
-        const tbody = drTable.querySelector('tbody');
-        const rows = Array.from(tbody.querySelectorAll('.data-row'));
-        const search = document.getElementById('driverSearch');
-        const pageInfo = document.getElementById('pageInfo');
-        const prevBtn = document.getElementById('prevPage');
-        const nextBtn = document.getElementById('nextPage');
-        const noResults = document.getElementById('noResults');
-
-        let filteredRows = rows;
-        let currentPage = 0;
-
-        function render() {
-            const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
-            currentPage = Math.min(currentPage, totalPages - 1);
-            const start = currentPage * PAGE_SIZE;
-            const end = start + PAGE_SIZE;
-
-            rows.forEach(r => r.classList.add('hidden'));
-            filteredRows.slice(start, end).forEach(r => r.classList.remove('hidden'));
-
-            pageInfo.textContent = filteredRows.length + ' drivers — Page ' + (currentPage + 1) + ' of ' + totalPages;
-            prevBtn.disabled = currentPage === 0;
-            nextBtn.disabled = currentPage >= totalPages - 1;
-            noResults.classList.toggle('hidden', filteredRows.length !== 0);
-            drTable.classList.toggle('hidden', filteredRows.length === 0);
-        }
-
-        search.addEventListener('input', function() {
-            const q = this.value.toLowerCase();
-            filteredRows = rows.filter(r => r.textContent.toLowerCase().includes(q));
-            currentPage = 0;
-            render();
-        });
-
-        prevBtn.addEventListener('click', () => { currentPage--; render(); });
-        nextBtn.addEventListener('click', () => { currentPage++; render(); });
-
-        render();
-    })();
-    </script>
+    <script defer th:src="@{/admin/js/management-list.js}"></script>
 </section>
 </body>
 </html>

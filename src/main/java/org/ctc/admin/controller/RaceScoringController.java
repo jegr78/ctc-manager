@@ -50,8 +50,9 @@ public class RaceScoringController {
 
 	@PostMapping("/save")
 	public String save(@Valid @ModelAttribute("raceScoringForm") RaceScoringForm form, BindingResult result,
-	                   RedirectAttributes redirectAttributes) {
+	                   Model model, RedirectAttributes redirectAttributes) {
 		if (result.hasErrors()) {
+            model.addAttribute("pageTitle", form.getId() == null ? "New Race-Scoring" : "Edit Race-Scoring");
 			return "admin/race-scoring-form";
 		}
 		try {
