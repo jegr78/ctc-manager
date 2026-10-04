@@ -256,8 +256,26 @@ class PlayoffControllerTest {
         // when / then
         mockMvc.perform(get("/admin/playoffs/" + playoff.getId() + "/seed"))
                 .andExpect(model().attribute("seedingFrozen", false))
+                .andExpect(content().string(containsString("for=\"seed-team-0\"")))
+                .andExpect(content().string(containsString("for=\"seed-number-0\"")))
                 .andExpect(content().string(containsString("Save Seeding")))
                 .andExpect(content().string(containsString("Auto-Seed by Number")));
+    }
+
+    @Test
+    void givenBlankPlayoffName_whenSave_thenFieldErrorAndEnteredScheduleRemainVisible() throws Exception {
+        // when / then
+        mockMvc.perform(post("/admin/playoffs/save")
+                        .param("seasonId", season.getId().toString())
+                        .param("name", "")
+                        .param("numberOfTeams", "4")
+                        .param("startDate", "2028-01-01")
+                        .param("endDate", "2028-06-30"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeHasFieldErrors("playoffForm", "name"))
+                .andExpect(content().string(containsString("id=\"name-error\"")))
+                .andExpect(content().string(containsString("value=\"2028-01-01\"")))
+                .andExpect(content().string(containsString("value=\"2028-06-30\"")));
     }
 
     @Test

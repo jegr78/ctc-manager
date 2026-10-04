@@ -177,6 +177,7 @@ public class MatchdayController {
 
     @GetMapping("/new")
     public String create(@RequestParam(required = false) UUID seasonId, Model model) {
+        model.addAttribute("pageTitle", "New Matchday");
         var form = new MatchdayForm();
         if (seasonId != null) {
             form.setSeasonId(seasonId);
@@ -190,6 +191,7 @@ public class MatchdayController {
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
         var matchday = matchdayService.getMatchdayDetail(id).matchday();
+        model.addAttribute("pageTitle", "Edit Matchday");
         var form = new MatchdayForm();
         form.setId(matchday.getId());
         form.setLabel(matchday.getLabel());
@@ -207,6 +209,7 @@ public class MatchdayController {
                        RedirectAttributes redirectAttributes,
                        Model model) {
         if (result.hasErrors()) {
+            model.addAttribute("pageTitle", form.getId() != null ? "Edit Matchday" : "New Matchday");
             model.addAttribute("seasons", matchdayService.getAllSeasons());
             if (form.getSeasonId() != null) {
                 model.addAttribute("season", matchdayService.findSeasonById(form.getSeasonId()));

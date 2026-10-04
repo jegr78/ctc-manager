@@ -65,6 +65,7 @@ public class SeasonPhaseController {
         var rosterState = seasonPhaseService.getRosterEditorState(phaseId);
 
         model.addAttribute("season", season);
+        model.addAttribute("availableTeams", seasonManagementService.getAvailableTeamsForReplacement(seasonId));
         model.addAttribute("phase", phase);
         model.addAttribute("allPhases", allPhases);
         model.addAttribute("groups", seasonPhaseGroupRepository.findByPhaseIdOrderBySortIndex(phaseId));
@@ -111,6 +112,7 @@ public class SeasonPhaseController {
         var rosterState = seasonPhaseService.getRosterEditorState(phaseId);
 
         model.addAttribute("season", season);
+        model.addAttribute("availableTeams", seasonManagementService.getAvailableTeamsForReplacement(seasonId));
         model.addAttribute("phase", phase);
         model.addAttribute("allPhases", seasonPhaseService.findAllPhases(seasonId));
         model.addAttribute("groups", seasonPhaseGroupRepository.findByPhaseIdOrderBySortIndex(phaseId));

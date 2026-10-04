@@ -3,15 +3,20 @@
       th:replace="~{site/layout :: layout('Community Team Cup', ~{::section})}">
 <body>
 <section>
-    <!-- Hero with YouTube background video -->
-    <div class="hero" th:classappend="${videoId != null and !#strings.isEmpty(videoId)} ? ' hero--video'">
+    <div class="hero landing-hero brand-stage" th:classappend="${videoId != null and !#strings.isEmpty(videoId)} ? ' hero--video'">
         <div class="hero-video-bg" th:if="${videoId != null and !#strings.isEmpty(videoId)}">
             <div id="yt-hero-player"></div>
         </div>
         <div class="hero-video-overlay" th:if="${videoId != null and !#strings.isEmpty(videoId)}" aria-hidden="true"></div>
         <div class="hero-content">
-            <h1>COMMUNITY TEAM CUP</h1>
-            <p class="hero-sub">Gran Turismo — Team vs. Team Racing League</p>
+            <p class="season-brand">GRAN TURISMO 7 · TEAM RACING</p>
+            <h1>COMMUNITY<br>TEAM CUP</h1>
+            <p class="landing-lead">A racing league built around teams.</p>
+            <p class="landing-description">Meet the community, discover the competition and follow each season of the cup.</p>
+            <div class="landing-actions">
+                <a href="#about-cup" class="landing-primary">Discover CTC ↓</a>
+                <a href="#explore-cup" class="landing-season-link">Explore the cup →</a>
+            </div>
         </div>
     </div>
     <script th:if="${videoId != null and !#strings.isEmpty(videoId)}" th:inline="javascript">
@@ -59,8 +64,12 @@
     })();
     </script>
 
-    <!-- Tile Navigation -->
-    <div class="tile-grid">
+    <section id="about-cup" class="landing-about" aria-labelledby="about-title">
+        <p class="eyebrow">The competition</p>
+        <h2 id="about-title">Team racing in Gran Turismo 7.</h2>
+        <p>Teams compete in head-to-head matches across a season. Drivers race for their team, with results contributing to the match score and season standings.</p>
+    </section>
+    <nav id="explore-cup" class="tile-grid" aria-label="Explore the cup">
         <a class="tile-card" th:href="${rootPath + '/archive.html'}">
             <div class="tile-card-label">Seasons</div>
             <div class="tile-card-desc">Browse all seasons</div>
@@ -68,8 +77,8 @@
         <a class="tile-card"
            th:if="${activeSeasonSlug != null and !#strings.isEmpty(activeSeasonSlug)}"
            th:href="${rootPath + '/season/' + activeSeasonSlug + '/standings.html'}">
-            <div class="tile-card-label">Standings</div>
-            <div class="tile-card-desc">Current standings</div>
+            <div class="tile-card-label">Current season</div>
+            <div class="tile-card-desc" th:text="${activeSeasonName}">Explore the current season</div>
         </a>
         <a class="tile-card" th:href="${rootPath + '/drivers.html'}">
             <div class="tile-card-label">Drivers</div>
@@ -83,7 +92,7 @@
             <div class="tile-card-label">Links</div>
             <div class="tile-card-desc">Community links</div>
         </a>
-    </div>
+    </nav>
 </section>
 </body>
 </html>

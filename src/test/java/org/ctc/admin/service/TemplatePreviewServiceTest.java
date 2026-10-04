@@ -6,6 +6,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
+import java.nio.charset.StandardCharsets;
+import org.springframework.core.io.ClassPathResource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -17,6 +20,24 @@ class TemplatePreviewServiceTest {
     @BeforeEach
     void setUp() {
         service = new TemplatePreviewService(new TeamCardService(null, null, null, "uploads"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "team-cards,team-card-render", "lineup,lineup-render", "settings,settings-render",
+        "race-results,results-render", "match-results,match-results-render",
+        "matchday-overview,matchday-overview-render", "matchday-schedule,matchday-schedule-render",
+        "matchday-results,matchday-results-render", "overlay,overlay-render",
+        "power-rankings,power-rankings-render", "lobby-settings,lobby-settings-render"
+    })
+    void givenBundledTemplate_whenPreviewRendered_thenSampleDataMatchesTheGraphicContract(String type, String resource) throws Exception {
+        var template = new ClassPathResource("templates/admin/" + resource + ".html")
+                .getContentAsString(StandardCharsets.UTF_8);
+        var html = service.renderPreview(type, template);
+        assertThat(html).contains("<html");
+        if (type.equals("lineup") || type.equals("race-results")) {
+            assertThat(html).contains("Guest driver");
+        }
     }
 
     @Test

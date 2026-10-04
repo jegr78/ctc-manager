@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"><body>
+<th:block th:fragment="opponent" th:with="driverTeamId=${team != null ? team.id : null}">
+    <span th:if="${row.result.race.homeTeam != null and row.result.race.homeTeam.id != driverTeamId}" th:text="${row.result.race.homeTeam.shortName}"></span>
+    <span th:if="${row.result.race.awayTeam != null and row.result.race.awayTeam.id != driverTeamId}" th:text="${row.result.race.awayTeam.shortName}"></span>
+    <span th:if="${row.result.race.awayTeam == null}">Bye</span>
+</th:block>
+<div th:fragment="history" class="section profile-history">
+    <h2 class="section-title" th:text="${heading}"></h2>
+    <p class="text-dim" th:if="${rows.isEmpty()}">No driver results recorded.</p>
+    <div class="mobile-profile-history">
+        <details th:each="row : ${rows}" class="history-entry">
+            <summary><span class="history-identity"><span class="history-matchday" th:text="${row.result.race.matchday.label}"></span>
+                    <span class="guest-label" th:if="${row.guest}"><span class="guest-marker" aria-label="Guest driver">&#x2605;</span> as guest for <span th:text="${row.fieldingTeamName}"></span></span></span>
+                <span class="history-position" th:text="${'P' + row.result.position}"></span>
+                <span><span class="history-points" th:text="${row.result.pointsTotal}"></span><span class="sr-only"> points</span></span>
+                <span class="result-chevron" aria-hidden="true">⌄</span></summary>
+            <div class="history-details"><dl>
+                <div><dt>Opponent</dt><dd class="history-opponent"><th:block th:replace="~{site/fragments/driver-history :: opponent}"></th:block></dd></div>
+                <div><dt>Track</dt><dd class="history-track" th:text="${row.result.race.track?.name ?: '-'}"></dd></div>
+                <div><dt>Qualifying position</dt><dd class="history-quali" th:text="${row.result.qualiPosition}"></dd></div>
+                <div><dt>Fastest lap</dt><dd class="history-fastest-lap" th:text="${row.result.fastestLap ? 'Yes' : 'No'}"></dd></div>
+            </dl><a class="entity-link" th:href="${row.matchdayUrl}">View matchday →</a></div>
+        </details>
+    </div>
+    <details class="responsive-table history-full-table" open th:unless="${rows.isEmpty()}">
+        <summary>Full race history table</summary>
+        <div class="table-wrap"><table>
+            <thead><tr><th scope="col">Matchday</th><th scope="col">Opponent</th><th scope="col">Track</th>
+                <th scope="col" class="text-center">Pos</th><th scope="col" class="text-center">Quali</th>
+                <th scope="col" class="text-center"><abbr title="Fastest lap">FL</abbr></th><th scope="col" class="text-right">Points</th></tr></thead>
+            <tbody><tr th:each="row : ${rows}">
+                <td><a class="entity-link" th:href="${row.matchdayUrl}" th:text="${row.result.race.matchday.label}"></a>
+                    <span class="guest-marker" th:if="${row.guest}" aria-label="Guest driver">&#x2605;</span>
+                    <span class="guest-label" th:if="${row.guest}">as guest for <span th:text="${row.fieldingTeamName}"></span></span></td>
+                <td><th:block th:replace="~{site/fragments/driver-history :: opponent}"></th:block></td>
+                <td class="text-dim" th:text="${row.result.race.track?.name ?: '-'}"></td>
+                <td class="text-center" th:text="${row.result.position}"></td><td class="text-center" th:text="${row.result.qualiPosition}"></td>
+                <td class="text-center" th:text="${row.result.fastestLap ? 'FL' : ''}"></td><td class="text-right font-bold" th:text="${row.result.pointsTotal}"></td>
+            </tr></tbody>
+        </table></div>
+    </details>
+</div>
+</body></html>

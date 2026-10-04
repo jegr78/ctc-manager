@@ -2,22 +2,28 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Race-Scorings', ~{::section})}">
 <body>
-<section>
+<section class="admin-list scoring-list" data-admin-list data-unit="race scoring" data-plural="race scorings">
     <div class="toolbar">
         <h1>Race-Scorings</h1>
-        <a th:href="@{/admin/race-scorings/new}" class="btn btn-primary">+ New</a>
+        <a th:href="@{/admin/race-scorings/new}" class="btn btn-primary">+ New race scoring</a>
     </div>
-    <div class="card">
-        <div class="table-scroll">
-            <table th:if="${!scorings.isEmpty()}">
+    <p class="admin-list-intro text-dim">Award points by finishing position, qualifying position and fastest lap.</p>
+    <div class="card admin-list-card">
+        <div class="admin-list-controls catalog-list-controls" data-list-tools hidden>
+            <label for="scoringSearch"><span>Search</span><input type="search" id="scoringSearch" data-list-search placeholder="Scoring name" autocomplete="off"></label>
+            <button type="button" class="btn btn-secondary" data-list-reset disabled>Reset filters</button>
+            <p class="admin-list-count text-dim" data-list-count role="status"></p>
+        </div>
+        <div class="table-scroll" role="region" aria-label="Race scorings list" tabindex="0">
+            <table data-list-table th:if="${!scorings.isEmpty()}">
                 <thead>
-                    <tr><th>Name</th><th>Race Points</th><th>Quali</th><th>FL</th><th>Actions</th></tr>
+                    <tr><th scope="col" class="sortable" data-col="0" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Name" disabled>Name</button></th><th scope="col">Race points by position</th><th scope="col">Qualifying points</th><th scope="col">Fastest lap</th><th scope="col">Actions</th></tr>
                 </thead>
                 <tbody>
-                    <tr th:each="s : ${scorings}">
-                        <td><strong th:text="${s.name}"></strong></td>
-                        <td class="text-dim" th:text="${s.racePoints}"></td>
-                        <td class="text-dim" th:text="${s.qualiPoints != null ? s.qualiPoints : '—'}"></td>
+                    <tr th:each="s : ${scorings}" data-list-entry th:attr="data-search=${s.name}">
+                        <td><a th:href="@{/admin/race-scorings/{id}/edit(id=${s.id})}" class="detail-link"><strong th:text="${s.name}"></strong></a></td>
+                        <td class="scoring-points" th:text="${s.racePoints.replace(',', ', ')}"></td>
+                        <td class="scoring-points" th:text="${s.qualiPoints != null and !s.qualiPoints.isEmpty() ? s.qualiPoints.replace(',', ', ') : 'Not awarded'}"></td>
                         <td th:text="${s.fastestLapPoints}"></td>
                         <td class="actions">
                             <a th:href="@{/admin/race-scorings/{id}/edit(id=${s.id})}" class="btn btn-secondary btn-sm">Edit</a>
@@ -30,8 +36,10 @@
                 </tbody>
             </table>
         </div>
-        <div th:if="${scorings.isEmpty()}" class="empty-state"><p>No race scorings created yet.</p></div>
+        <div th:if="${scorings.isEmpty()}" class="empty-state" data-list-initial-empty><p>No race scorings created yet.</p></div>
+        <div class="empty-state" data-list-empty hidden><p>No matching race scorings. Try another search or reset the filters.</p></div>
     </div>
+    <script defer th:src="@{/admin/js/management-list.js}"></script>
 </section>
 </body>
 </html>

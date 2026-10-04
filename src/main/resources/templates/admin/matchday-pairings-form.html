@@ -2,34 +2,40 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Edit Matchday Pairings', ~{::section})}">
 <body>
-<section>
+<section class="entity-editor planning-editor">
+    <a th:href="@{/admin/matchdays/{id}(id=${matchday.id})}" class="back-link">&larr; Back to Matchday</a>
     <h1 th:text="'Edit Pairings — ' + ${matchday.label}"></h1>
     <div class="card">
-        <form th:action="@{/admin/matchdays/{id}/save-pairings(id=${form.id})}"
-              th:object="${form}" method="post"
-              data-testid="matchday-pairings-form">
+        <form class="entity-editor-form" th:action="@{/admin/matchdays/{id}/save-pairings(id=${form.id})}"
+              th:object="${form}" method="post" data-testid="matchday-pairings-form">
             <input type="hidden" th:field="*{id}">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="pickDeadline">Pick Deadline</label>
-                    <input type="datetime-local" id="pickDeadline"
-                           th:field="*{pickDeadline}"
-                           data-testid="pickDeadline">
+            <fieldset>
+                <legend>Pick deadline &amp; event window</legend>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="pickDeadline">Pick deadline</label>
+                        <input type="datetime-local" id="pickDeadline" th:field="*{pickDeadline}" data-testid="pickDeadline"
+                               th:attr="aria-invalid=${#fields.hasErrors('pickDeadline')},aria-describedby=${#fields.hasErrors('pickDeadline') ? 'pickDeadline-hint pickDeadline-error' : 'pickDeadline-hint'}">
+                        <p id="pickDeadline-hint" class="text-dim form-hint--sm">Optional date and time by which teams should submit their picks.</p>
+                        <p id="pickDeadline-error" class="field-error" th:if="${#fields.hasErrors('pickDeadline')}" th:errors="*{pickDeadline}"></p>
+                    </div>
+                    <div class="form-group">
+                        <label for="scheduledWeekend">Scheduled weekend</label>
+                        <input type="text" id="scheduledWeekend" th:field="*{scheduledWeekend}" maxlength="64"
+                               placeholder="e.g. 22-24 May or Tue 26 May" data-testid="scheduledWeekend"
+                               th:attr="aria-invalid=${#fields.hasErrors('scheduledWeekend')},aria-describedby=${#fields.hasErrors('scheduledWeekend') ? 'scheduledWeekend-hint scheduledWeekend-error' : 'scheduledWeekend-hint'}">
+                        <p id="scheduledWeekend-hint" class="text-dim form-hint--sm">Optional event window shown in the pairing announcement. Up to 64 characters.</p>
+                        <p id="scheduledWeekend-error" class="field-error" th:if="${#fields.hasErrors('scheduledWeekend')}" th:errors="*{scheduledWeekend}"></p>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="scheduledWeekend">Scheduled Weekend</label>
-                    <input type="text" id="scheduledWeekend"
-                           th:field="*{scheduledWeekend}"
-                           maxlength="64"
-                           placeholder="e.g. 22-24 May or Tue 26 May"
-                           data-testid="scheduledWeekend">
+            </fieldset>
+            <p class="text-dim form-hint--sm mb-md">Saving updates the matchday. Use the pairing actions on the matchday page to publish or update its Discord announcement.</p>
+            <div class="entity-editor-actions">
+                <span class="text-dim" th:text="${matchday.label}"></span>
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary" data-testid="save-pairings">Save Pairings</button>
+                    <a th:href="@{/admin/matchdays/{id}(id=${form.id})}" class="btn btn-secondary">Back to Matchday</a>
                 </div>
-            </div>
-            <div class="actions mt-md">
-                <button type="submit" class="btn btn-primary"
-                        data-testid="save-pairings">Save Pairings</button>
-                <a th:href="@{/admin/matchdays/{id}(id=${form.id})}"
-                   class="btn btn-secondary">Back to Matchday</a>
             </div>
         </form>
     </div>

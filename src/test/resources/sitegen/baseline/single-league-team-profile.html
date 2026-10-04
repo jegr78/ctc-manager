@@ -7,6 +7,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="../../../assets/img/ctc-logo-white.png">
     <title>CTC - Adrenaline Racing</title>
     <link rel="stylesheet" href="../../../assets/css/style.css">
+    <script defer src="../../../assets/js/navigation.js"></script>
 </head>
 <body>
 <a href="#main-content" class="skip-link">Skip to main content</a>
@@ -14,19 +15,21 @@
         <div class="nav-inner">
             <a href="../../../index.html" class="nav-brand">
                 <img src="../../../assets/img/ctc-logo-white.png" alt="CTC" class="nav-logo">
-                <span>COMMUNITY TEAM CUP</span>
+                <span class="nav-brand-name">COMMUNITY<small>TEAM CUP</small></span>
             </a>
-            <input type="checkbox" id="nav-toggle" class="nav-toggle-input">
-            <label for="nav-toggle" class="nav-toggle-label" aria-label="Toggle navigation menu" role="button">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-                </svg>
-            </label>
-            <div class="nav-links">
+            <details class="site-menu">
+                <summary aria-label="Main menu">Menu ☰</summary>
+                <div class="nav-links">
+                <a href="../../../index.html">Home</a>
+                <a href="../../../season/2026-4-regular-season/standings.html"
+                   class="nav-link-active" aria-current="location">Current season</a>
+                <a href="../../../teams.html">Teams</a>
+                <a href="../../../drivers.html">Drivers</a>
                 <a href="../../../alltime-standings.html">Standings</a>
                 <a href="../../../alltime-driver-ranking.html">Driver Ranking</a>
                 <a href="../../../archive.html">Archive</a>
-            </div>
+                </div>
+            </details>
         </div>
     </nav>
     <nav class="subnav" aria-label="Season navigation">
@@ -48,45 +51,38 @@
                href="../../../season/2026-4-regular-season/standings.html">Regular Season</a>
         
         <span class="breadcrumb-sep" aria-hidden="true"> &gt; </span>
-        <span class="breadcrumb-current">ADR</span>
+        <span class="breadcrumb-current" aria-current="page">ADR</span>
     </nav>
-    <main class="main" id="main-content">
+    <main class="main" id="main-content" tabindex="-1">
         <section>
-    <div class="team-header">
-        <img src="../../../assets/img/logos/teams/a6c8696a-0319-448e-8284-f02c15bf15b4/ADR.png" class="team-logo" alt="ADR">
+    <header class="team-header profile-heading brand-stage">
+        <img src="../../../assets/img/logos/teams/8333219f-c497-4912-ae79-39a6df824b36/ADR.png" class="team-logo" alt="ADR">
         <div>
-            <h1 class="text-white">ADR — Adrenaline Racing</h1>
+            <p class="season-brand">COMMUNITY TEAM CUP</p>
+            <h1 class="text-white">ADR</h1>
+            <p class="profile-team-name">Adrenaline Racing</p>
             <p class="season-meta">2026 | #4 | Regular Season</p>
         </div>
-    </div>
+    </header>
 
     <div class="section">
         <h2 class="section-title">Record</h2>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr><th>MP</th><th>W</th><th>D</th><th>L</th><th>PR</th><th class="text-right">Pts</th></tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>5</td>
-                        <td>3</td>
-                        <td>0</td>
-                        <td>2</td>
-                        <td>294:286</td>
-                        <td class="text-right font-bold text-white text-lg">9</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <dl class="profile-metrics team-metrics">
+            <div><dt>Points</dt><dd class="profile-team-points">9</dd></div>
+            <div><dt>Matches played</dt><dd>5</dd></div>
+            <div><dt>Wins</dt><dd>3</dd></div>
+            <div><dt>Draws</dt><dd>0</dd></div>
+            <div><dt>Losses</dt><dd>2</dd></div>
+            <div><dt>Points ratio</dt><dd>294:286</dd></div>
+        </dl>
     </div>
 
-    <div class="section">
+    <div class="section profile-roster">
         <h2 class="section-title">Drivers</h2>
         <div class="table-wrap">
             <table>
                 <thead>
-                    <tr><th>Driver</th><th class="text-right">Points</th></tr>
+                    <tr><th scope="col">Driver</th><th scope="col" class="text-right">Points</th></tr>
                 </thead>
                 <tbody>
                     <tr>

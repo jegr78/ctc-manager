@@ -2,11 +2,11 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
-<section>
+<section class="entity-detail">
     <div class="toolbar">
         <div>
             <a th:href="@{/admin/teams}" class="back-link">&larr; Back to Teams</a>
-            <h1 th:text="${team.name}"></h1>
+            <div class="entity-heading"><img th:if="${team.logoUrl != null}" th:src="${team.logoUrl}" th:alt="${team.shortName + ' logo'}" class="entity-logo"><div><h1 th:text="${team.name}"></h1><p class="text-dim" th:text="${team.shortName}"></p></div></div>
         </div>
         <div class="actions">
             <a th:href="@{/admin/teams/{id}/edit(id=${team.id})}" class="btn btn-primary">Edit</a>
@@ -18,19 +18,13 @@
     </div>
 
     <div class="card">
-        <div class="detail-fields">
-            <span class="label">Name</span>
-            <span th:text="${team.name}"></span>
-            <span class="label">Short Name</span>
-            <span th:text="${team.shortName}"></span>
-            <span class="label">Logo</span>
-            <span th:text="${team.logoUrl ?: '-'}"></span>
-            <span class="label">Parent Team</span>
-            <span th:if="${team.parentTeam != null}">
-                <a th:href="@{/admin/teams/{id}(id=${team.parentTeam.id})}" class="detail-link" th:text="${team.parentTeam.name}"></a>
-            </span>
-            <span th:if="${team.parentTeam == null}">-</span>
-        </div>
+        <h2>Identity</h2>
+        <dl class="entity-facts">
+            <dt>Name</dt><dd th:text="${team.name}"></dd>
+            <dt>Short name</dt><dd th:text="${team.shortName}"></dd>
+            <dt>Logo</dt><dd th:text="${team.logoUrl != null ? 'Configured' : 'No logo uploaded'}"></dd>
+            <dt>Parent team</dt><dd><a th:if="${team.parentTeam != null}" th:href="@{/admin/teams/{id}(id=${team.parentTeam.id})}" class="detail-link" th:text="${team.parentTeam.name}"></a><span th:if="${team.parentTeam == null}">Independent team</span></dd>
+        </dl>
 
         <div th:if="${team.hasSubTeams()}" class="detail-section">
             <h2 th:text="'Sub-Teams (' + ${team.subTeams.size()} + ')'"></h2>
@@ -79,7 +73,6 @@
                     </div>
                 </details>
             </div>
-            <!-- Seasons without drivers -->
             <div th:each="s : ${seasonsWithoutDrivers}">
                 <details class="season-accordion">
                     <summary class="season-header">

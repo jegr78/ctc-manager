@@ -2,52 +2,52 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('New Match', ~{::section})}">
 <body>
-<section>
+<section class="entity-editor match-editor">
     <a th:href="@{/admin/matchdays/{id}(id=${matchday.id})}" class="back-link">&larr; Back to [[${matchday.label}]]</a>
     <h1>New Match</h1>
 
-    <form th:action="@{/admin/matches/save}" method="post">
+    <form class="entity-editor-form" th:action="@{/admin/matches/save}" method="post">
         <input type="hidden" name="matchdayId" th:value="${matchday.id}">
 
         <div class="card">
+            <fieldset>
+                <legend>Teams &amp; match type</legend>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="homeTeamId">Home Team *</label>
+                    <label for="homeTeamId">Home team</label>
                     <select id="homeTeamId" name="homeTeamId" required>
                         <option value="">-- Select --</option>
                         <option th:each="t : ${teams}" th:value="${t.id}" th:text="${t.shortName + ' — ' + t.name}"></option>
                     </select>
                 </div>
                 <div class="form-group" id="awayTeamGroup">
-                    <label for="awayTeamId">Away Team</label>
-                    <select id="awayTeamId" name="awayTeamId">
+                    <label for="awayTeamId">Away team</label>
+                    <select id="awayTeamId" name="awayTeamId" aria-describedby="away-team-hint">
                         <option value="">-- Select --</option>
                         <option th:each="t : ${teams}" th:value="${t.id}" th:text="${t.shortName + ' — ' + t.name}"></option>
                     </select>
+                    <p id="away-team-hint" class="text-dim form-hint--sm">Leave blank if the opponent is not yet known.</p>
                 </div>
             </div>
 
             <div class="form-check mb-md">
-                <input type="checkbox" id="bye" name="bye" value="true">
+                <input type="checkbox" id="bye" name="bye" value="true" aria-describedby="bye-hint" aria-controls="awayTeamGroup">
                 <label for="bye">Bye</label>
             </div>
 
-            <div class="actions">
+            <p id="bye-hint" class="text-dim form-hint--sm">A bye gives the home team a matchday without an opponent.</p>
+            </fieldset>
+            <div class="entity-editor-actions">
+                <span class="text-dim" th:text="${matchday.label}"></span>
+                <div class="actions">
                 <button type="submit" class="btn btn-primary">Create</button>
                 <a th:href="@{/admin/matchdays/{id}(id=${matchday.id})}" class="btn btn-secondary">Cancel</a>
+                </div>
             </div>
         </div>
     </form>
 
-    <script>
-    (function() {
-        var bye = document.getElementById('bye');
-        var awayGroup = document.getElementById('awayTeamGroup');
-        function toggle() { awayGroup.style.display = bye.checked ? 'none' : ''; }
-        bye.addEventListener('change', toggle);
-        toggle();
-    })();
-    </script>
+    <script th:src="@{/admin/js/match-editor.js}" defer></script>
 </section>
 </body>
 </html>

@@ -1,64 +1,41 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{site/layout :: layout('Archive', ~{::section})}">
-<body>
-<section>
-    <div class="section">
-        <h2 class="section-title">Season Archive</h2>
-        <div class="table-wrap">
-            <table id="archiveTable">
-                <thead>
-                    <tr>
-                        <th class="sortable" data-sort-key="year" data-sort="desc"
-                            aria-label="Sort by season year">Season</th>
-                        <th>Period</th>
-                        <th>Status</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="entry : ${seasonEntries}" th:attr="data-year=${entry.season.year}">
-                        <td class="font-bold text-white">
-                            <span th:text="${entry.season.name}"></span>
-                            <p class="season-meta" th:text="${entry.season.year + ' | #' + entry.season.number}"></p>
-                        </td>
-                        <td class="text-dim">
-                            <span th:if="${entry.startDate}" th:text="${entry.startDate}"></span>
-                            <span th:if="${entry.startDate != null and entry.endDate != null}"> — </span>
-                            <span th:if="${entry.endDate}" th:text="${entry.endDate}"></span>
-                        </td>
-                        <td>
-                            <span th:if="${entry.season.active}" class="text-accent">Active</span>
-                            <span th:unless="${entry.season.active}" class="text-dim">Completed</span>
-                        </td>
-                        <td class="text-right">
-                            <a class="entity-link" th:href="'season/' + ${entry.slug} + '/standings.html'">Standings</a>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{site/layout :: layout('Archive', ~{::section})}">
+<body><section>
+    <header class="standings-heading brand-stage"><p class="season-brand">COMMUNITY TEAM CUP</p>
+        <h1>Season archive</h1><p class="text-dim">Explore seasons, standings and race results.</p>
+    </header>
+    <div class="archive-tools" hidden>
+        <div><label for="archive-search">Find a season</label><input type="search" id="archive-search" placeholder="Season name or year" autocomplete="off"></div>
+        <div><label for="archive-order">Season order</label><select id="archive-order"><option value="desc">Newest first</option><option value="asc">Oldest first</option></select></div>
+        <p id="archive-count" class="text-dim" role="status"></p>
     </div>
-    <script>
-        (function() {
-            var table = document.getElementById('archiveTable');
-            if (!table) return;
-            var header = table.querySelector('th.sortable[data-sort-key="year"]');
-            var tbody = table.querySelector('tbody');
-            if (!header || !tbody) return;
-            header.addEventListener('click', function() {
-                var asc = header.getAttribute('data-sort') !== 'asc';
-                header.setAttribute('data-sort', asc ? 'asc' : 'desc');
-                Array.from(tbody.querySelectorAll('tr'))
-                    .sort(function(a, b) {
-                        var ya = parseInt(a.getAttribute('data-year'), 10) || 0;
-                        var yb = parseInt(b.getAttribute('data-year'), 10) || 0;
-                        return asc ? ya - yb : yb - ya;
-                    })
-                    .forEach(function(row) { tbody.appendChild(row); });
-            });
-        })();
-    </script>
-</section>
-</body>
-</html>
+    <p id="archive-no-matches" class="text-dim" hidden>No seasons match your search.</p>
+    <p th:if="${seasonEntries.isEmpty()}" class="text-dim">No seasons available.</p>
+    <div class="mobile-archive">
+        <article th:each="entry : ${seasonEntries}" class="archive-season"
+                 th:attr="data-year=${entry.season.year}, data-number=${entry.season.number}, data-search=${entry.season.name + ' ' + entry.season.year + ' ' + entry.season.number}">
+            <a th:href="${'season/' + entry.slug + '/standings.html'}">
+                <span class="archive-status" th:text="${entry.season.active ? 'Active' : 'Inactive'}"></span>
+                <h2 th:text="${entry.season.name}"></h2><p class="season-meta" th:text="${entry.season.year + ' | #' + entry.season.number}"></p>
+                <p class="archive-period text-dim"><span th:if="${entry.startDate}" th:text="${entry.startDate}"></span><span th:if="${entry.startDate != null and entry.endDate != null}"> — </span><span th:if="${entry.endDate}" th:text="${entry.endDate}"></span></p>
+                <span class="archive-open">View standings →</span>
+            </a>
+        </article>
+    </div>
+    <details class="responsive-table archive-full-table" open>
+        <summary>Full season table</summary>
+        <div class="table-wrap"><table id="archiveTable">
+            <thead><tr><th scope="col" class="sortable" data-sort-key="year" data-sort="desc" aria-sort="descending" aria-label="Sort by season year"><button type="button" id="archive-sort">Season</button></th>
+                <th scope="col">Period</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Season links</span></th></tr></thead>
+            <tbody><tr th:each="entry : ${seasonEntries}"
+                       th:attr="data-year=${entry.season.year}, data-number=${entry.season.number}, data-search=${entry.season.name + ' ' + entry.season.year + ' ' + entry.season.number}">
+                <td class="font-bold"><span th:text="${entry.season.name}"></span><p class="season-meta" th:text="${entry.season.year + ' | #' + entry.season.number}"></p></td>
+                <td class="text-dim"><span th:if="${entry.startDate}" th:text="${entry.startDate}"></span><span th:if="${entry.startDate != null and entry.endDate != null}"> — </span><span th:if="${entry.endDate}" th:text="${entry.endDate}"></span></td>
+                <td th:text="${entry.season.active ? 'Active' : 'Inactive'}"></td>
+                <td class="text-right"><a class="entity-link" th:href="${'season/' + entry.slug + '/standings.html'}">Standings</a></td>
+            </tr></tbody>
+        </table></div>
+    </details>
+    <script defer th:src="${assetsPath + '/js/statistics.js'}"></script>
+    <script defer th:src="${assetsPath + '/js/archive.js'}"></script>
+</section></body></html>

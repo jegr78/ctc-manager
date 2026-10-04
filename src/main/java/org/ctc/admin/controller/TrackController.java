@@ -31,6 +31,7 @@ public class TrackController {
 	@GetMapping("/new")
 	public String create(Model model) {
 		model.addAttribute("trackForm", new TrackForm());
+        model.addAttribute("pageTitle", "New Track");
 		return "admin/track-form";
 	}
 
@@ -42,6 +43,7 @@ public class TrackController {
 		form.setName(track.getName());
 		form.setCountry(track.getCountry());
 		model.addAttribute("trackForm", form);
+        model.addAttribute("pageTitle", "Edit Track");
 		model.addAttribute("track", track);
 		return "admin/track-form";
 	}
@@ -60,8 +62,10 @@ public class TrackController {
 
 	@PostMapping("/save")
 	public String save(@Valid @ModelAttribute TrackForm trackForm, BindingResult result,
-	                   RedirectAttributes redirectAttributes) {
+	                   Model model, RedirectAttributes redirectAttributes) {
 		if (result.hasErrors()) {
+            model.addAttribute("pageTitle", trackForm.getId() == null ? "New Track" : "Edit Track");
+            if (trackForm.getId() != null) model.addAttribute("track", trackService.findById(trackForm.getId()));
 			return "admin/track-form";
 		}
 		try {

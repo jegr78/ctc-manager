@@ -2,36 +2,36 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Backup', ~{::section})}">
 <body>
-<section>
-    <h1>Backup Import — Preview</h1>
+<section class="entity-editor backup-workspace backup-preview-workspace">
+    <h1>Backup Import: Preview</h1>
 
-    <div class="card mb-md">
+    <p class="text-dim mb-md">Review the archive and compare its row counts with the current database before continuing.</p>
+    <div class="card mb-md backup-file-summary">
         <p><strong>File:</strong> <span th:text="${preview.originalFilename}">backup.zip</span></p>
         <p><strong>Size:</strong> <span th:text="${#numbers.formatDecimal(preview.fileSizeBytes / (1024.0 * 1024.0), 1, 2)}">0.00</span> MB</p>
         <p><strong>Uploads:</strong> <span th:text="${preview.uploadFileCount}">0</span> files</p>
         <p><strong>Total imported rows:</strong> <span th:text="${preview.totalImportedRows}">0</span></p>
     </div>
 
-    <div class="alert alert-success mb-md" role="status">
-        Schema version <span th:text="${preview.schemaVersion}">1</span> matches.
+    <div class="alert alert-success mb-md backup-schema-status" role="status">
+        <span th:if="${preview.schemaMatches}">Schema version <span th:text="${preview.schemaVersion}">3</span> matches.</span>
+        <span th:unless="${preview.schemaMatches}">Schema version <span th:text="${preview.schemaVersion}">1</span> is supported for import into the current schema.</span>
     </div>
+    <h2>Records in the backup</h2>
+    <p class="text-dim mb-md">Counts compare the number of rows only. Equal counts can still contain different records. Restoring replaces the current data with the backup contents.</p>
 
     <div class="card-grid mb-md">
         <div class="card card--compact" th:each="card : ${preview.entityCounts}">
             <h3 th:text="${card.humanLabel}">Entity</h3>
-            <p>
-                <strong th:text="${card.currentRows}">0</strong>
-                →
-                <strong th:text="${card.importedRows}">0</strong>
-            </p>
-            <span class="badge mt-xs"
-                  th:classappend="${card.importedRows lt card.currentRows ? ' alert-error' : (card.importedRows gt card.currentRows ? ' alert-success' : ' badge-inactive')}"
-                  th:text="${card.importedRows - card.currentRows}"
-                  th:aria-label="${(card.importedRows - card.currentRows) + ' rows ' + (card.importedRows lt card.currentRows ? '(data loss)' : (card.importedRows gt card.currentRows ? '(gain)' : '(unchanged)'))}">0</span>
+            <dl class="backup-record-counts">
+                <div><dt>Current</dt><dd th:text="${card.currentRows}">0</dd></div>
+                <div><dt>In backup</dt><dd th:text="${card.importedRows}">0</dd></div>
+            </dl>
+            <p class="backup-count-difference" th:text="${card.importedRows == card.currentRows ? 'Same row count' : (card.importedRows lt card.currentRows ? (card.currentRows - card.importedRows) + ' fewer rows in backup' : (card.importedRows - card.currentRows) + ' more rows in backup')}">Same row count</p>
         </div>
     </div>
 
-    <div class="actions">
+    <div class="actions backup-flow-actions">
         <form th:action="@{/admin/backup/import-cancel}" method="post">
             <input type="hidden" name="stagingId" th:value="${preview.stagingId}">
             <button type="submit" class="btn btn-secondary">Cancel</button>

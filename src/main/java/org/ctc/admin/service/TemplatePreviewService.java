@@ -11,6 +11,8 @@ import org.ctc.admin.dto.MatchdayGraphicData;
 import org.ctc.admin.dto.MatchdayGraphicData.MatchGraphicRow;
 import org.ctc.admin.dto.PowerRankingsGraphicData;
 import org.ctc.admin.dto.PowerRankingsGraphicData.PowerRankingEntry;
+import org.ctc.admin.service.LineupGraphicService.DriverPairing;
+import org.ctc.admin.service.ResultsGraphicService.DriverResultRow;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
@@ -82,12 +84,12 @@ public class TemplatePreviewService {
     private Context buildLineupContext() {
         var ctx = buildRaceHeaderContext();
         var pairings = List.of(
-                new LineupPairing("Player_One", "P1", "Player_Seven", "P7"),
-                new LineupPairing("Player_Two", "P2", "Player_Eight", "P8"),
-                new LineupPairing("Player_Three", "P3", "Player_Nine", "P9"),
-                new LineupPairing("Player_Four", "P4", "Player_Ten", "P10"),
-                new LineupPairing("Player_Five", "P5", "Player_Eleven", "P11"),
-                new LineupPairing("Player_Six", "P6", "Player_Twelve", "P12")
+                new DriverPairing("Player_One", "P1", "Player_Seven", "P7", true, false),
+                new DriverPairing("Player_Two", "P2", "Player_Eight", "P8", false, true),
+                new DriverPairing("Player_Three", "P3", "Player_Nine", "P9", false, false),
+                new DriverPairing("Player_Four", "P4", "Player_Ten", "P10", false, false),
+                new DriverPairing("Player_Five", "P5", "Player_Eleven", "P11", false, false),
+                new DriverPairing("Player_Six", "P6", "Player_Twelve", "P12", false, false)
         );
         ctx.setVariable("pairings", pairings);
         return ctx;
@@ -140,12 +142,12 @@ public class TemplatePreviewService {
     private Context buildRaceResultsContext() {
         var ctx = buildRaceHeaderContext();
         var rows = List.of(
-                new ResultRow("Player_One", "P1", 25, 22, "Player_Seven", "P7"),
-                new ResultRow("Player_Two", "P2", 20, 18, "Player_Eight", "P8"),
-                new ResultRow("Player_Three", "P3", 17, 15, "Player_Nine", "P9"),
-                new ResultRow("Player_Four", "P4", 14, 12, "Player_Ten", "P10"),
-                new ResultRow("Player_Five", "P5", 11, 9, "Player_Eleven", "P11"),
-                new ResultRow("Player_Six", "P6", 8, 6, "Player_Twelve", "P12")
+                new DriverResultRow("Player_One", "P1", 25, 22, "Player_Seven", "P7", true, false),
+                new DriverResultRow("Player_Two", "P2", 20, 18, "Player_Eight", "P8", false, true),
+                new DriverResultRow("Player_Three", "P3", 17, 15, "Player_Nine", "P9", false, false),
+                new DriverResultRow("Player_Four", "P4", 14, 12, "Player_Ten", "P10", false, false),
+                new DriverResultRow("Player_Five", "P5", 11, 9, "Player_Eleven", "P11", false, false),
+                new DriverResultRow("Player_Six", "P6", 8, 6, "Player_Twelve", "P12", false, false)
         );
         ctx.setVariable("resultRows", rows);
         ctx.setVariable("homeTotal", 95);
@@ -418,10 +420,6 @@ public class TemplatePreviewService {
             super(message);
         }
     }
-
-    public record LineupPairing(String homeDriver, String homeNickname, String awayDriver, String awayNickname) {}
-
-    public record ResultRow(String homeDriver, String homeNickname, int homePoints, int awayPoints, String awayDriver, String awayNickname) {}
 
     public record RaceRow(String label, int homePoints, int awayPoints) {}
 }

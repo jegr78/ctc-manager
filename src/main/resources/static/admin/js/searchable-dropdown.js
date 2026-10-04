@@ -1,79 +1,40 @@
-(function() {
-    document.querySelectorAll('.searchable-dropdown').forEach(function(container) {
-        var input = container.querySelector('.dropdown-input');
-        var hidden = container.querySelector('input[type="hidden"]');
-        var list = container.querySelector('.dropdown-list');
-        var items = Array.from(list.querySelectorAll('.dropdown-item'));
+(function () {
+    document.querySelectorAll('[data-role-picker]').forEach(function (picker) {
+        const tools = picker.querySelector('.role-search-tools');
+        const input = picker.querySelector('input[type="search"]');
+        const select = picker.querySelector('select');
+        const reset = picker.querySelector('[data-role-search-reset]');
+        const count = picker.querySelector('[role="status"]');
+        if (!tools || !input || !select || !reset || !count) return;
+        const blank = select.options[0];
+        const options = Array.from(select.options).slice(1);
+        const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+        options.sort(function (left, right) { return collator.compare(left.text, right.text); });
+        const cached = options.filter(function (option) { return !option.hasAttribute('data-saved-role'); });
 
-        // Pre-select if hidden has value
-        var preselected = items.find(function(item) {
-            return item.dataset.id === hidden.value;
-        });
-        if (preselected) {
-            input.value = preselected.dataset.label;
+        function filter() {
+            const value = select.value;
+            const query = input.value.trim().toLocaleLowerCase();
+            const matches = cached.filter(function (option) {
+                return option.text.toLocaleLowerCase().includes(query) || option.value.includes(query);
+            });
+            const selected = options.find(function (option) { return option.value === value; });
+            const visible = matches.slice();
+            if (selected && !visible.includes(selected)) visible.unshift(selected);
+            select.replaceChildren(blank, ...visible);
+            select.value = value;
+            reset.disabled = input.value.length === 0;
+            count.textContent = matches.length + (matches.length === 1 ? ' matching role' : ' matching roles')
+                + (query && selected && !matches.includes(selected) ? '. Selected role stays available.' : '.');
         }
-
-        input.addEventListener('focus', function() {
-            list.style.display = 'block';
+        input.addEventListener('input', filter);
+        select.addEventListener('blur', filter);
+        reset.addEventListener('click', function () {
+            input.value = '';
+            filter();
+            input.focus();
         });
-
-        input.addEventListener('input', function() {
-            var q = this.value.toLowerCase();
-            items.forEach(function(item) {
-                var match = item.dataset.label.toLowerCase().includes(q)
-                         || item.textContent.toLowerCase().includes(q);
-                item.style.display = match ? '' : 'none';
-            });
-            list.style.display = 'block';
-            hidden.value = '';
-        });
-
-        items.forEach(function(item) {
-            item.addEventListener('click', function() {
-                if (this.classList.contains('disabled')) return;
-                input.value = this.dataset.label;
-                hidden.value = this.dataset.id;
-                list.style.display = 'none';
-            });
-        });
-
-        document.addEventListener('click', function(e) {
-            if (!container.contains(e.target)) {
-                list.style.display = 'none';
-            }
-        });
+        filter();
+        tools.hidden = false;
     });
-
-    // Dynamic update when home team changes
-    var homeSelect = document.getElementById('homeTeamId');
-    var matchdaySelect = document.getElementById('matchdayId');
-    if (homeSelect && matchdaySelect) {
-        homeSelect.addEventListener('change', updateUsedSelections);
-    }
-
-    function updateUsedSelections() {
-        var homeTeamId = homeSelect ? homeSelect.value : '';
-        var matchdayOption = matchdaySelect ? matchdaySelect.selectedOptions[0] : null;
-        var seasonId = matchdayOption ? matchdayOption.dataset.seasonId : '';
-        if (!homeTeamId || !seasonId) return;
-
-        var raceIdInput = document.querySelector('input[name="id"]');
-        var excludeRaceId = raceIdInput ? raceIdInput.value : '';
-        var url = '/admin/races/used-selections?seasonId=' + seasonId
-                + '&homeTeamId=' + homeTeamId;
-        if (excludeRaceId) url += '&excludeRaceId=' + excludeRaceId;
-
-        fetch(url)
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                document.querySelectorAll('#carList .dropdown-item').forEach(function(item) {
-                    item.classList.toggle('disabled',
-                        data.usedCarIds && data.usedCarIds.indexOf(item.dataset.id) !== -1);
-                });
-                document.querySelectorAll('#trackList .dropdown-item').forEach(function(item) {
-                    item.classList.toggle('disabled',
-                        data.usedTrackIds && data.usedTrackIds.indexOf(item.dataset.id) !== -1);
-                });
-            });
-    }
 })();

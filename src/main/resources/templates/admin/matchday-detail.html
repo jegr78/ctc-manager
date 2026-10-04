@@ -2,8 +2,13 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
-<section>
-    <div class="toolbar">
+<section class="matchday-workspace">
+    <nav class="workspace-breadcrumb" aria-label="Breadcrumb">
+        <a th:href="@{/admin/seasons/{id}(id=${matchday.season.id})}" th:text="${matchday.season.displayLabel}"></a>
+        <span aria-hidden="true"> / </span>
+        <a th:href="@{/admin/matchdays(seasonId=${matchday.season.id})}">Matchdays</a>
+    </nav>
+    <div class="toolbar brand-stage">
         <div>
             <a th:href="@{/admin/matchdays(seasonId=${matchday.season.id})}" class="back-link">&larr; Back to Matchdays</a>
             <h1 th:text="${matchday.label}"></h1>
@@ -18,26 +23,32 @@
         </div>
     </div>
 
+    <div class="workspace-summary" aria-label="Matchday summary">
+        <div><span>Matches</span><strong th:text="${matchday.matches.size()}"></strong></div>
+        <div><span>Legs per match</span><strong th:text="${matchday.phase.legs}"></strong></div>
+        <div><span>Schedule</span><strong th:text="${hasSchedule ? 'Available' : 'Not scheduled'}"></strong></div>
+        <div><span>Results</span><strong th:text="${hasResults ? 'Available' : 'Awaiting results'}"></strong></div>
+    </div>
+    <nav class="workspace-sections" aria-label="Matchday sections">
+        <a href="#matchday-matches">Matches</a>
+        <a href="#matchday-graphics">Graphics</a>
+        <a th:if="${!lineupsByTeam.isEmpty()}" href="#matchday-lineup">Lineups</a>
+        <a th:if="${matchdayDiscordActive}" href="#matchday-discord">Discord</a>
+    </nav>
     <div class="card">
-        <div class="detail-fields">
-            <span class="label">Label</span>
-            <span th:text="${matchday.label}"></span>
-            <span class="label">Sort Index</span>
-            <span th:text="${matchday.sortIndex}"></span>
-            <span class="label">Season</span>
-            <a th:href="@{/admin/seasons/{id}(id=${matchday.season.id})}" class="detail-link" th:text="${matchday.season.displayLabel}"></a>
-        </div>
-
-        <!-- Matches -->
-        <div class="detail-section">
+        <div class="detail-section" id="matchday-matches">
             <div class="section-header">
                 <h2 th:text="'Matches (' + ${matchday.matches.size()} + ')'"></h2>
                 <a th:href="@{/admin/matches/new(matchdayId=${matchday.id})}" class="btn btn-primary btn-sm">+ Match</a>
             </div>
 
+            <div th:if="${!matchday.matches.isEmpty()}" class="matchday-filters">
+                <label for="matchday-search">Find a team<input id="matchday-search" type="search" placeholder="Search teams…"></label>
+                <label for="matchday-status">Result status<select id="matchday-status"><option value="all">All matches</option><option value="scored">Scored</option><option value="open">Awaiting results</option><option value="walkover">Walkovers</option><option value="bye">Byes</option></select></label>
+            </div>
             <div th:if="${!matchday.matches.isEmpty()}" class="match-list">
-                <div th:each="match : ${matchday.matches}" class="match-row">
-                    <!-- Match Header -->
+                <div th:each="match : ${matchday.matches}" class="match-row"
+                     th:attr="data-teams=${match.homeTeam.shortName + ' ' + (match.awayTeam != null ? match.awayTeam.shortName : '')},data-result-status=${match.bye ? 'bye' : (match.walkoverTeam != null ? 'walkover' : (match.homeScore != null and match.awayScore != null ? 'scored' : 'open'))}">
                     <div class="match-header"
                          th:styleappend="${match.bye ? 'opacity:0.6;' : ''}"
                          th:classappend="${!match.races.isEmpty() ? '' : ''}">
@@ -77,8 +88,6 @@
                                data-testid="match-row-detail-link">&rarr; Detail</a>
                         </div>
                     </div>
-
-                    <!-- Legs (only show for multi-leg or when legs exist) -->
                     <div th:if="${matchday.phase.legs > 1 && !match.races.isEmpty()}" class="legs-container">
                         <div th:each="race, iter : ${match.races}" class="leg-row"
                              th:styleappend="${!iter.last ? 'border-bottom:1px solid var(--border);' : ''}">
@@ -101,8 +110,6 @@
                             </form>
                         </div>
                     </div>
-
-                    <!-- Single leg: link directly to the race -->
                     <div th:if="${matchday.phase.legs <= 1 && !match.races.isEmpty()}" class="legs-container--single">
                         <div th:each="race : ${match.races}" class="single-leg-row">
                             <div class="leg-detail" th:text="${(race.track?.name ?: '') + (race.car != null ? ' · ' + race.car.displayName : '')}"></div>
@@ -115,11 +122,10 @@
                     </div>
                 </div>
             </div>
+            <p th:if="${!matchday.matches.isEmpty()}" id="matchday-filter-status" class="text-dim matchday-filter-status" role="status"></p>
             <div th:if="${matchday.matches.isEmpty()}" class="empty-state empty-state--compact"><p>No matches yet.</p></div>
         </div>
-
-        <!-- Graphics -->
-        <div class="detail-section mt-lg">
+        <div class="detail-section mt-lg" id="matchday-graphics">
             <h2>Graphics</h2>
             <div class="graphics-actions">
                 <form th:if="${hasMatches}" th:action="@{/admin/matchdays/{id}/download-overview(id=${matchday.id})}" method="post" class="form-inline">
@@ -148,7 +154,7 @@
             <p class="text-dim graphics-hint">Graphics are generated on-the-fly and downloaded as PNG (1920&#215;1080).</p>
         </div>
 
-        <div th:if="${!lineupsByTeam.isEmpty()}" class="detail-section mt-lg">
+        <div th:if="${!lineupsByTeam.isEmpty()}" class="detail-section mt-lg" id="matchday-lineup">
             <h2>Lineup</h2>
             <div th:each="entry : ${lineupsByTeam}" class="lineup-entry">
                 <h3 th:text="${entry.key}"></h3>
@@ -162,7 +168,7 @@
             </div>
         </div>
 
-        <div th:if="${matchdayDiscordActive}" class="detail-section mt-lg">
+        <div th:if="${matchdayDiscordActive}" class="detail-section mt-lg" id="matchday-discord">
             <h2>Discord Actions</h2>
             <div class="discord-actions discord-actions--posts">
                 <span th:if="${not canPostMatchdayResults and matchdayOverviewPost == null}"
@@ -259,6 +265,7 @@
             </div>
         </div>
     </div>
+    <script defer th:src="@{/admin/js/matchday-workspace.js}"></script>
 </section>
 </body>
 </html>

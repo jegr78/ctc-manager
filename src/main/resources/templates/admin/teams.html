@@ -2,23 +2,28 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Teams', ~{::section})}">
 <body>
-<section>
+<section class="admin-list" data-admin-list data-page-size="0" data-unit="team group" data-plural="team groups">
     <div class="toolbar">
         <h1>Teams</h1>
         <a th:href="@{/admin/teams/new}" class="btn btn-primary">+ New Team</a>
     </div>
-    <div class="card">
-        <div class="table-scroll">
-        <table th:if="${!parentTeams.isEmpty()}">
+    <p class="admin-list-intro text-dim">Manage teams and their sub-teams. Search results keep each team group together.</p>
+    <div class="card admin-list-card">
+        <div class="admin-list-controls" data-list-tools hidden>
+            <label for="listSearch"><span>Search</span><input type="search" id="listSearch" data-list-search placeholder="Team name or short name" autocomplete="off"></label>
+            <button type="button" class="btn btn-secondary" data-list-reset disabled>Reset filters</button>
+            <p class="admin-list-count text-dim" data-list-count role="status"></p>
+        </div>
+        <div class="table-scroll" role="region" aria-label="Teams list" tabindex="0">
+        <table data-list-table th:if="${!parentTeams.isEmpty()}">
             <thead>
-                <tr><th>Short Name</th><th>Name</th><th>Logo</th><th>Actions</th></tr>
+                <tr><th scope="col">Short Name</th><th scope="col">Name</th><th scope="col">Logo</th><th scope="col">Actions</th></tr>
             </thead>
-            <tbody>
-                <th:block th:each="team : ${parentTeams}">
-                    <tr>
+            <tbody th:each="team : ${parentTeams}" data-list-entry>
+                    <tr th:attr="data-search=${team.shortName + ' ' + team.name}">
                         <td><a th:href="@{/admin/teams/{id}(id=${team.id})}" class="detail-link"><strong th:text="${team.shortName}"></strong></a></td>
                         <td th:text="${team.name}"></td>
-                        <td th:text="${team.logoUrl != null ? '✓' : '-'}"></td>
+                        <td><span class="admin-logo-status" th:text="${team.logoUrl != null ? 'Configured' : 'Not set'}"></span></td>
                         <td class="actions">
                             <a th:href="@{/admin/teams/{id}/edit(id=${team.id})}" class="btn btn-secondary btn-sm">Edit</a>
                             <form th:action="@{/admin/teams/{id}/delete(id=${team.id})}" method="post"
@@ -27,10 +32,10 @@
                             </form>
                         </td>
                     </tr>
-                    <tr th:each="sub : ${team.subTeams}" class="sub-team-row">
+                    <tr th:each="sub : ${team.subTeams}" class="sub-team-row" th:attr="data-search=${sub.shortName + ' ' + sub.name}">
                         <td class="td-indent"><a th:href="@{/admin/teams/{id}(id=${sub.id})}" class="detail-link" th:text="'↳ ' + ${sub.shortName}"></a></td>
                         <td th:text="${sub.name}"></td>
-                        <td th:text="${sub.logoUrl != null ? '✓' : '-'}"></td>
+                        <td><span class="admin-logo-status" th:text="${sub.logoUrl != null ? 'Configured' : 'Not set'}"></span></td>
                         <td class="actions">
                             <a th:href="@{/admin/teams/{id}/edit(id=${sub.id})}" class="btn btn-secondary btn-sm">Edit</a>
                             <form th:action="@{/admin/teams/{pid}/remove-sub-team(pid=${team.id})}" method="post"
@@ -40,12 +45,13 @@
                             </form>
                         </td>
                     </tr>
-                </th:block>
             </tbody>
         </table>
         </div>
-        <div th:if="${parentTeams.isEmpty()}" class="empty-state"><p>No teams created yet.</p></div>
+        <div th:if="${parentTeams.isEmpty()}" class="empty-state" data-list-initial-empty><p>No teams created yet.</p></div>
+        <div data-list-empty hidden class="empty-state"><p>No matching team groups. Try another search or reset the filters.</p></div>
     </div>
+    <script defer th:src="@{/admin/js/management-list.js}"></script>
 </section>
 </body>
 </html>

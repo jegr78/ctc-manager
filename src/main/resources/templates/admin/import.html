@@ -2,325 +2,118 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Import', ~{::section})}">
 <body>
-<section>
+<section class="entity-editor import-entry-editor">
     <h1>Import</h1>
+    <p class="text-dim mb-md">Choose a source and destination for race results. You can review the data before importing.</p>
 
     <div th:if="${errorMessage}" class="alert alert-error mb-md">
         <p>
-            <span th:if="${errorCategory}"
-                  class="error-badge"
+            <span th:if="${errorCategory}" class="error-badge"
                   th:classappend="|error-badge--${#strings.toLowerCase(errorCategory)}|"
                   th:text="${errorCategory}"></span>
             <span th:text="${errorMessage}"></span>
         </p>
     </div>
 
-    <!-- Source Tabs -->
-    <div class="tab-nav">
-        <button id="tabCsv" class="btn btn-primary btn-tab" onclick="switchSource('csv')">CSV Upload</button>
-        <button th:if="${sheetsAvailable}" id="tabSheet" class="btn btn-secondary btn-tab" onclick="switchSource('sheet')">Google Sheet</button>
-    </div>
+    <div class="card entity-editor-form">
+        <fieldset>
+            <legend>1. Choose source</legend>
+            <div class="actions import-source-options">
+                <button type="button" id="tabCsv" class="btn btn-secondary" aria-pressed="true" aria-controls="panelCsv" data-import-source="csv">CSV Upload</button>
+                <button type="button" th:if="${sheetsAvailable}" id="tabSheet" class="btn btn-secondary" aria-pressed="false" aria-controls="panelSheet" data-import-source="sheet">Google Sheet</button>
+            </div>
+            <p th:unless="${sheetsAvailable}" class="text-dim form-hint--sm">Google Sheet import is available after Google credentials have been configured.</p>
+        </fieldset>
 
-    <div class="card card--tab-content">
-
-        <!-- Shared metadata fields -->
-        <div class="form-row">
+        <fieldset>
+            <legend>2. Choose destination</legend>
+            <div class="import-target-grid">
             <div class="form-group">
                 <label for="seasonId">Season</label>
-                <select id="seasonId" name="seasonId" required form="importForm">
+                <select id="seasonId" name="seasonId" required form="csvForm">
                     <option value="">-- Select season --</option>
                     <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"></option>
                 </select>
             </div>
-        </div>
-
-        <!-- Import Type Toggle -->
-        <div class="form-row mb-sm">
-            <div class="form-group">
-                <label>Import Type</label>
-                <div class="actions" style="gap:12px;">
-                    <label class="radio-label">
-                        <input type="radio" name="importType" value="regular" checked
-                               onchange="switchImportType('regular')"> Regular Season
-                    </label>
-                    <label class="radio-label">
-                        <input type="radio" name="importType" value="playoff"
-                               onchange="switchImportType('playoff')"> Playoff
-                    </label>
+            <fieldset class="import-type-options">
+                <legend>Import type</legend>
+                <div class="actions">
+                    <label class="radio-label"><input type="radio" name="importType" value="regular" checked form="csvForm"> Regular Season</label>
+                    <label class="radio-label"><input type="radio" name="importType" value="playoff" form="csvForm"> Playoff</label>
                 </div>
+            </fieldset>
             </div>
-        </div>
 
-        <!-- Regular Season: Matchday -->
-        <div id="regularFields">
-            <div class="form-row">
+            <div id="regularFields">
                 <div class="form-group">
                     <label for="matchdayId">Matchday</label>
-                    <select id="matchdayId" name="matchdayId" disabled>
+                    <select id="matchdayId" name="matchdayId" form="csvForm" disabled required aria-describedby="import-target-status">
                         <option value="">-- Select matchday --</option>
                     </select>
-                    <a href="#" id="newMatchdayToggle" style="display:none;color:var(--accent);font-size:13px;margin-top:6px;text-decoration:none;cursor:pointer;"
-                       onclick="toggleNewMatchday(event)">+ New Matchday</a>
-                    <div id="newMatchdayPanel" style="display:none;margin-top:8px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);">
-                        <div class="form-row" style="align-items:end;gap:8px;">
-                            <div class="form-group" style="flex:1;">
-                                <label for="newMatchdayLabel" class="text-sm">Label</label>
-                                <input type="text" id="newMatchdayLabel" placeholder="e.g. Matchday 7">
+                    <button type="button" id="newMatchdayToggle" class="btn btn-secondary btn-sm" hidden aria-expanded="false" aria-controls="newMatchdayPanel">New Matchday</button>
+                    <div id="newMatchdayPanel" class="import-create-panel" hidden>
+                        <p id="newMatchdayHint" class="text-dim mb-sm" hidden>No matchdays yet for this season. Create one to continue.</p>
+                        <div class="import-create-row">
+                            <div class="form-group">
+                                <label for="newMatchdayLabel">New matchday label</label>
+                                <input type="text" id="newMatchdayLabel" placeholder="e.g. Matchday 7" aria-describedby="newMatchdayError">
                             </div>
-                            <button type="button" class="btn btn-primary" onclick="createMatchday()">Create</button>
+                            <button type="button" id="newMatchdayCreate" class="btn btn-secondary">Create matchday</button>
                         </div>
-                        <div id="newMatchdayError" style="display:none;color:var(--danger);font-size:13px;margin-top:4px;"></div>
-                        <div id="newMatchdayHint" style="display:none;color:var(--text-dim);font-size:13px;margin-top:4px;">No matchdays yet for this season.</div>
+                        <p id="newMatchdayError" class="field-error" role="alert" hidden></p>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Playoff: Matchup Dropdown -->
-        <div id="playoffFields" style="display:none;">
-            <div class="form-row">
+            <div id="playoffFields" hidden>
                 <div class="form-group">
                     <label for="playoffMatchupId">Playoff Matchup</label>
-                    <select id="playoffMatchupId" name="playoffMatchupId">
+                    <select id="playoffMatchupId" name="playoffMatchupId" form="csvForm" disabled required aria-describedby="playoff-target-hint">
                         <option value="">-- Select matchup --</option>
-                        <option th:each="m : ${playoffMatchups}"
-                                th:value="${m.id}"
-                                th:data-season="${m.seasonDisplayLabel}"
-                                th:text="${m.displayLabel()}"></option>
+                        <option th:each="m : ${playoffMatchups}" th:value="${m.id}" th:data-season="${m.seasonDisplayLabel}" th:text="${m.displayLabel()}"></option>
                     </select>
+                    <p id="playoff-target-hint" class="text-dim form-hint--sm">Choose a matchup belonging to the selected season. Only ready, incomplete matchups are listed.</p>
                 </div>
             </div>
-        </div>
+            <p id="import-target-status" class="text-dim form-hint--sm" role="status">Select a season to load its matchdays.</p>
+            <button type="button" id="retryMatchdays" class="btn btn-secondary btn-sm" hidden>Retry loading matchdays</button>
+        </fieldset>
 
-        <!-- CSV Upload Panel -->
         <div id="panelCsv">
-            <p class="text-dim mb-sm">
-                CSV format: <code>Team, PSN ID, Position, Quali, FL</code>
-                (Separator: comma, semicolon or tab)
-            </p>
             <form id="csvForm" th:action="@{/admin/import/preview}" method="post" enctype="multipart/form-data">
-                <div class="form-group">
-                    <label for="file">CSV File</label>
-                    <input type="file" id="file" name="file" accept=".csv,.txt,.tsv" required>
+                <fieldset>
+                    <legend>3. Select file</legend>
+                    <div class="form-group">
+                        <label for="file">CSV File</label>
+                        <input type="file" id="file" name="file" accept=".csv,.txt,.tsv" required aria-describedby="csv-format-hint">
+                        <p id="csv-format-hint" class="text-dim form-hint--sm">Expected columns: <code>Team, PSN ID, Position, Quali, FL</code>. Commas, semicolons and tabs are supported.</p>
+                    </div>
+                </fieldset>
+                <div class="entity-editor-actions">
+                    <span class="text-dim">Preview checks the data. Results are imported in the next step.</span>
+                    <div class="actions"><button type="submit" class="btn btn-primary">Preview</button></div>
                 </div>
-                <button type="submit" class="btn btn-primary">Preview</button>
             </form>
         </div>
 
-        <!-- Google Sheet Panel -->
-        <div id="panelSheet" style="display:none;" th:if="${sheetsAvailable}">
-            <p class="text-dim mb-sm">
-                Paste a Google Sheets URL. The sheet must be shared with the service account.
-            </p>
+        <div id="panelSheet" hidden th:if="${sheetsAvailable}">
             <form id="sheetForm" th:action="@{/admin/import/preview-sheet}" method="post">
-                <div class="form-group">
-                    <label for="sheetUrl">Google Sheet URL</label>
-                    <input type="url" id="sheetUrl" name="sheetUrl"
-                           placeholder="https://docs.google.com/spreadsheets/d/..." required>
+                <fieldset>
+                    <legend>3. Select spreadsheet</legend>
+                    <div class="form-group">
+                        <label for="sheetUrl">Google Sheet URL</label>
+                        <input type="url" id="sheetUrl" name="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." required aria-describedby="sheet-access-hint">
+                        <p id="sheet-access-hint" class="text-dim form-hint--sm">Share the spreadsheet with the service account before previewing its race sheets.</p>
+                    </div>
+                </fieldset>
+                <div class="entity-editor-actions">
+                    <span class="text-dim">Preview checks the data. Results are imported in the next step.</span>
+                    <div class="actions"><button type="submit" class="btn btn-primary">Preview</button></div>
                 </div>
-                <button type="submit" class="btn btn-primary">Preview</button>
             </form>
         </div>
     </div>
-
-    <script th:inline="javascript">
-        function switchSource(source) {
-            var csvBtn = document.getElementById('tabCsv');
-            var sheetBtn = document.getElementById('tabSheet');
-            var csvPanel = document.getElementById('panelCsv');
-            var sheetPanel = document.getElementById('panelSheet');
-
-            if (source === 'csv') {
-                csvBtn.className = 'btn btn-primary btn-tab';
-                if (sheetBtn) sheetBtn.className = 'btn btn-secondary btn-tab';
-                csvPanel.style.display = '';
-                if (sheetPanel) sheetPanel.style.display = 'none';
-            } else {
-                csvBtn.className = 'btn btn-secondary btn-tab';
-                if (sheetBtn) sheetBtn.className = 'btn btn-primary btn-tab';
-                csvPanel.style.display = 'none';
-                if (sheetPanel) sheetPanel.style.display = '';
-            }
-        }
-
-        function switchImportType(type) {
-            var regularFields = document.getElementById('regularFields');
-            var playoffFields = document.getElementById('playoffFields');
-            var matchdaySelect = document.getElementById('matchdayId');
-
-            if (type === 'regular') {
-                regularFields.style.display = '';
-                playoffFields.style.display = 'none';
-            } else {
-                regularFields.style.display = 'none';
-                playoffFields.style.display = '';
-            }
-        }
-
-        // Load matchdays when season changes
-        function loadMatchdays() {
-            var seasonId = document.getElementById('seasonId').value;
-            var matchdaySelect = document.getElementById('matchdayId');
-            var toggle = document.getElementById('newMatchdayToggle');
-            var panel = document.getElementById('newMatchdayPanel');
-            var hint = document.getElementById('newMatchdayHint');
-
-            if (!seasonId) {
-                matchdaySelect.disabled = true;
-                // Reset to default option
-                while (matchdaySelect.options.length > 1) {
-                    matchdaySelect.remove(1);
-                }
-                matchdaySelect.selectedIndex = 0;
-                toggle.style.display = 'none';
-                panel.style.display = 'none';
-                return;
-            }
-
-            fetch('/admin/matchdays/by-season?seasonId=' + encodeURIComponent(seasonId))
-                .then(function(r) { return r.json(); })
-                .then(function(matchdays) {
-                    // Clear existing options except the first placeholder
-                    while (matchdaySelect.options.length > 1) {
-                        matchdaySelect.remove(1);
-                    }
-                    matchdaySelect.selectedIndex = 0;
-                    matchdays.forEach(function(md) {
-                        var opt = document.createElement('option');
-                        opt.value = md.id;
-                        opt.textContent = md.label;
-                        opt.dataset.sortIndex = md.sortIndex;
-                        matchdaySelect.appendChild(opt);
-                    });
-                    matchdaySelect.disabled = false;
-                    toggle.style.display = '';
-
-                    // Auto-expand creation panel if no matchdays exist
-                    if (matchdays.length === 0) {
-                        panel.style.display = '';
-                        hint.style.display = '';
-                        matchdaySelect.disabled = true;
-                        toggle.textContent = '- Cancel';
-                    } else {
-                        panel.style.display = 'none';
-                        hint.style.display = 'none';
-                    }
-                })
-                .catch(function() {
-                    matchdaySelect.options[0].textContent = 'Error loading matchdays';
-                });
-        }
-
-        function toggleNewMatchday(event) {
-            event.preventDefault();
-            var panel = document.getElementById('newMatchdayPanel');
-            var toggle = document.getElementById('newMatchdayToggle');
-            var select = document.getElementById('matchdayId');
-            var error = document.getElementById('newMatchdayError');
-            var hint = document.getElementById('newMatchdayHint');
-
-            if (panel.style.display === 'none') {
-                panel.style.display = '';
-                toggle.textContent = '- Cancel';
-                select.disabled = true;
-                select.value = '';
-                document.getElementById('newMatchdayLabel').focus();
-            } else {
-                panel.style.display = 'none';
-                toggle.textContent = '+ New Matchday';
-                select.disabled = false;
-                error.style.display = 'none';
-                hint.style.display = 'none';
-                document.getElementById('newMatchdayLabel').value = '';
-            }
-        }
-
-        function createMatchday() {
-            var seasonId = document.getElementById('seasonId').value;
-            var label = document.getElementById('newMatchdayLabel').value.trim();
-            var error = document.getElementById('newMatchdayError');
-
-            if (!label) {
-                error.textContent = 'Label must not be empty';
-                error.style.display = '';
-                return;
-            }
-
-            csrfFetch('/admin/matchdays/create-inline', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({seasonId: seasonId, label: label})
-            })
-            .then(function(r) {
-                if (r.ok) return r.json();
-                if (r.status === 409) throw new Error('Matchday already exists');
-                throw new Error('Error creating matchday');
-            })
-            .then(function(md) {
-                var select = document.getElementById('matchdayId');
-                var opt = document.createElement('option');
-                opt.value = md.id;
-                opt.textContent = md.label;
-                opt.dataset.sortIndex = md.sortIndex;
-                select.appendChild(opt);
-                select.value = md.id;
-                select.disabled = false;
-
-                // Collapse panel
-                document.getElementById('newMatchdayPanel').style.display = 'none';
-                document.getElementById('newMatchdayToggle').textContent = '+ New Matchday';
-                document.getElementById('newMatchdayLabel').value = '';
-                document.getElementById('newMatchdayHint').style.display = 'none';
-                error.style.display = 'none';
-
-                // Brief visual confirmation
-                select.style.borderColor = 'var(--accent)';
-                setTimeout(function() { select.style.borderColor = ''; }, 1500);
-            })
-            .catch(function(e) {
-                error.textContent = e.message;
-                error.style.display = '';
-            });
-        }
-
-        // Sync shared fields into form before submit
-        function syncFields(form) {
-            var fields = ['seasonId', 'matchdayId', 'playoffMatchupId'];
-            fields.forEach(function(name) {
-                var source = document.getElementById(name);
-                if (!source) return;
-                // Remove existing hidden field if present
-                var existing = form.querySelector('input[name="' + name + '"], select[name="' + name + '"]');
-                if (!existing) {
-                    var hidden = document.createElement('input');
-                    hidden.type = 'hidden';
-                    hidden.name = name;
-                    hidden.value = source.value;
-                    form.appendChild(hidden);
-                } else if (existing.tagName === 'INPUT' && existing.type === 'hidden') {
-                    existing.value = source.value;
-                }
-            });
-        }
-
-        // Hook into form submissions
-        document.getElementById('csvForm').addEventListener('submit', function() {
-            syncFields(this);
-        });
-
-        var sheetForm = document.getElementById('sheetForm');
-        if (sheetForm) {
-            sheetForm.addEventListener('submit', function() {
-                syncFields(this);
-            });
-        }
-
-        // Season change triggers matchday loading
-        document.getElementById('seasonId').addEventListener('change', loadMatchdays);
-
-        // Set initial state
-        switchImportType('regular');
-    </script>
+    <script th:src="@{/admin/js/import-entry.js}" defer></script>
 </section>
 </body>
 </html>

@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Edit Race', ~{::section})}">
+      th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
-<section>
+<section class="entity-editor race-setup-editor">
+    <a th:href="@{/admin/races(matchdayId=${raceForm.matchdayId})}" class="back-link">← Back to Races</a>
     <h1 th:text="${raceForm.id != null ? 'Edit Race' : 'New Race'}"></h1>
+    <nav class="entity-section-nav" aria-label="Race editing sections"><a href="#race-pairing">Pairing</a><a href="#race-catalog">Car &amp; track</a><a href="#race-settings">Race settings</a><a href="#race-schedule">Schedule</a></nav>
     <div class="card">
-        <form th:action="@{/admin/races/save}" th:object="${raceForm}" method="post">
+        <form class="entity-editor-form" th:action="@{/admin/races/save}" th:object="${raceForm}" method="post">
             <input type="hidden" th:field="*{id}">
+            <fieldset id="race-pairing"><legend>Pairing</legend>
             <div class="form-group">
                 <label for="matchdayId">Matchday</label>
                 <select id="matchdayId" th:field="*{matchdayId}" required>
@@ -32,66 +35,34 @@
                     </select>
                 </div>
             </div>
+            </fieldset>
+            <fieldset id="race-catalog"><legend>Car &amp; track</legend>
+            <p class="text-dim setup-hint">Choose from this season's catalog. Entries already used by the home team are unavailable.</p>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="trackSearch">Track</label>
-                    <div class="searchable-dropdown" id="trackDropdown"
-                         th:if="${seasonTracks != null && !seasonTracks.isEmpty()}">
-                        <input type="text" id="trackSearch" placeholder="Search tracks..."
-                               autocomplete="off" class="dropdown-input">
-                        <input type="hidden" name="trackId" th:value="${raceForm.trackId}" id="trackId">
-                        <div class="dropdown-list" id="trackList">
-                            <div th:each="t : ${seasonTracks}"
-                                 class="dropdown-item"
-                                 th:classappend="${usedTrackIds != null && usedTrackIds.contains(t.id)} ? 'disabled' : ''"
-                                 th:attr="data-id=${t.id},data-label=${t.name}"
-                                 th:text="${t.name + (t.country != null ? ' (' + t.country + ')' : '')}">
-                            </div>
-                        </div>
-                    </div>
-                    <div th:if="${seasonTracks == null || seasonTracks.isEmpty()}" class="text-dim form-hint--sm">
-                        No tracks assigned to this season yet.
-                    </div>
-                    <div th:if="${usedTrackIds != null && !usedTrackIds.isEmpty()}"
-                         class="info-hint">
-                        <div class="info-hint__label">Already used this season</div>
-                        <div class="info-hint__content">
-                            <span th:each="t : ${seasonTracks}" th:if="${usedTrackIds.contains(t.id)}"
-                                  th:text="${t.name}" style="display:inline-block;margin-right:8px;"></span>
-                        </div>
-                    </div>
+                    <label for="trackId">Track</label>
+                    <select id="trackId" th:field="*{trackId}">
+                        <option value="">Select track</option>
+                        <option th:each="t : ${seasonTracks}" th:value="${t.id}"
+                                th:disabled="${usedTrackIds.contains(t.id)}"
+                                th:text="${t.name + (t.country != null ? ' (' + t.country + ')' : '') + (usedTrackIds.contains(t.id) ? ' (already used)' : '')}"></option>
+                    </select>
+                    <p th:if="${seasonTracks.isEmpty()}" class="text-dim form-hint--sm">No tracks assigned to this season yet.</p>
                 </div>
                 <div class="form-group">
-                    <label for="carSearch">Car</label>
-                    <div class="searchable-dropdown" id="carDropdown"
-                         th:if="${seasonCars != null && !seasonCars.isEmpty()}">
-                        <input type="text" id="carSearch" placeholder="Search cars..."
-                               autocomplete="off" class="dropdown-input">
-                        <input type="hidden" name="carId" th:value="${raceForm.carId}" id="carId">
-                        <div class="dropdown-list" id="carList">
-                            <div th:each="c : ${seasonCars}"
-                                 class="dropdown-item"
-                                 th:classappend="${usedCarIds != null && usedCarIds.contains(c.id)} ? 'disabled' : ''"
-                                 th:attr="data-id=${c.id},data-label=${c.manufacturer + ' — ' + c.name}"
-                                 th:text="${c.manufacturer + ' — ' + c.name}">
-                            </div>
-                        </div>
-                    </div>
-                    <div th:if="${seasonCars == null || seasonCars.isEmpty()}" class="text-dim form-hint--sm">
-                        No cars assigned to this season yet.
-                    </div>
-                    <div th:if="${usedCarIds != null && !usedCarIds.isEmpty()}"
-                         class="info-hint">
-                        <div class="info-hint__label">Already used this season</div>
-                        <div class="info-hint__content">
-                            <span th:each="c : ${seasonCars}" th:if="${usedCarIds.contains(c.id)}"
-                                  th:text="${c.displayName}" style="display:inline-block;margin-right:8px;"></span>
-                        </div>
-                    </div>
+                    <label for="carId">Car</label>
+                    <select id="carId" th:field="*{carId}">
+                        <option value="">Select car</option>
+                        <option th:each="c : ${seasonCars}" th:value="${c.id}"
+                                th:disabled="${usedCarIds.contains(c.id)}"
+                                th:text="${c.displayName + (usedCarIds.contains(c.id) ? ' (already used)' : '')}"></option>
+                    </select>
+                    <p th:if="${seasonCars.isEmpty()}" class="text-dim form-hint--sm">No cars assigned to this season yet.</p>
                 </div>
             </div>
-            <!-- Race Settings -->
-            <h3 class="mt-xl mb-sm">Race Settings</h3>
+            <p class="text-dim form-hint--sm" data-used-selection-status role="status"></p>
+            </fieldset>
+            <fieldset id="race-settings"><legend>Race settings</legend>
             <div class="form-row">
                 <div class="form-group">
                     <label for="numberOfLaps">Number of Laps</label>
@@ -147,6 +118,8 @@
                 </div>
             </div>
 
+            </fieldset>
+            <fieldset id="race-schedule"><legend>Schedule</legend>
             <div class="form-group">
                 <label for="dateTime">Date &amp; Time</label>
                 <input type="datetime-local" id="dateTime" name="dateTime" class="london-time-input"
@@ -154,12 +127,14 @@
                        th:value="${raceForm.dateTime != null ? raceForm.dateTime.toString().substring(0, 16) : ''}">
                 <small class="text-dim">Stored as London time, displayed in your local timezone</small>
             </div>
-            <div class="actions mt-md">
-                <button type="submit" class="btn btn-primary">Save</button>
-                <a th:href="@{/admin/races}" class="btn btn-secondary">Cancel</a>
-            </div>
+            </fieldset>
+            <div class="entity-editor-actions"><span class="text-dim">Race setup</span><div class="actions">
+                <button type="submit" class="btn btn-primary">Save Race</button>
+                <a th:href="@{/admin/races(matchdayId=${raceForm.matchdayId})}" class="btn btn-secondary">Cancel</a>
+            </div></div>
         </form>
     </div>
+    <script th:src="@{/admin/js/race-setup.js}"></script>
 </section>
 </body>
 </html>

@@ -2,61 +2,59 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Generate Matchdays', ~{::section})}">
 <body>
-<section>
-    <div class="toolbar">
-        <div>
-            <a th:href="@{/admin/seasons/{id}(id=${season.id})}" class="back-link">&larr; Back to Season</a>
-            <h1 th:text="'Generate Matchdays — ' + ${season.displayLabel}"></h1>
-        </div>
-    </div>
-
+<section class="entity-editor planning-editor">
+    <a th:href="@{/admin/seasons/{id}(id=${season.id})}" class="back-link">&larr; Back to Season</a>
+    <h1>Generate Matchdays</h1>
+    <p class="text-dim planning-context" th:text="${season.displayLabel}"></p>
     <div class="card">
-        <p class="text-dim" th:text="'Eligible teams: ' + ${teamCount} + ' · Optimal rounds for full round-robin: ' + ${optimalRounds}"></p>
-
-        <form th:action="@{/admin/seasons/{id}/generate(id=${season.id})}" th:object="${generatorForm}" method="post">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="numberOfRounds">Number of Rounds</label>
-                    <input type="number" id="numberOfRounds" th:field="*{numberOfRounds}" min="1" required>
+        <form class="entity-editor-form" th:action="@{/admin/seasons/{id}/generate(id=${season.id})}"
+              th:object="${generatorForm}" method="post" id="matchday-generator-form"
+              th:attr="data-team-count=${teamCount},data-optimal-rounds=${optimalRounds}">
+            <fieldset>
+                <legend>Teams &amp; rounds</legend>
+                <p class="text-dim mb-md" th:text="'Teams in the regular phase: ' + ${teamCount}"></p>
+                <div class="form-group" th:if="${phase.layout.name() == 'GROUPS'}">
+                    <label for="groupId">Group</label>
+                    <select id="groupId" th:field="*{groupId}" required aria-describedby="group-hint">
+                        <option th:each="g : ${generatorGroups}" th:value="${g.id}" th:text="${g.name + ' · ' + g.teamCount + ' teams'}"
+                                th:attr="data-team-count=${g.teamCount},data-optimal-rounds=${g.optimalRounds}"></option>
+                    </select>
+                    <p id="group-hint" class="text-dim form-hint--sm">Creates matchdays for this group only. At least two assigned teams are needed.</p>
                 </div>
-                <div class="form-group">
-                    <div class="form-check mt-xl">
-                        <input type="checkbox" id="homeAndAway" th:field="*{homeAndAway}">
-                        <label for="homeAndAway">Home &amp; Away</label>
+                <p id="generator-roster" class="text-dim mb-md" th:text="${phase.layout.name() == 'GROUPS' ? 'Team counts for each group are shown in the selection above.' : 'Recommended rounds for a full round-robin: ' + optimalRounds}"></p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="numberOfRounds">Number of rounds</label>
+                        <input type="number" id="numberOfRounds" th:field="*{numberOfRounds}" min="1" required
+                               th:attr="aria-invalid=${#fields.hasErrors('numberOfRounds')},aria-describedby=${#fields.hasErrors('numberOfRounds') ? 'rounds-hint numberOfRounds-error' : 'rounds-hint'}">
+                        <p id="rounds-hint" class="text-dim form-hint--sm">Up to this many rounds before return fixtures. Each generated round creates one matchday.</p>
+                        <p id="numberOfRounds-error" class="field-error" th:if="${#fields.hasErrors('numberOfRounds')}" th:errors="*{numberOfRounds}"></p>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" id="homeAndAway" th:field="*{homeAndAway}" aria-describedby="home-away-hint">
+                            <label for="homeAndAway">Home &amp; Away</label>
+                        </div>
+                        <p id="home-away-hint" class="text-dim form-hint--sm">Adds return fixtures with home and away teams swapped. This doubles the matchdays.</p>
                     </div>
                 </div>
+            </fieldset>
+            <div class="generator-preview">
+                <h2>Generation summary</h2>
+                <output id="summary" for="numberOfRounds homeAndAway" aria-live="polite">Choose the number of rounds above. Home &amp; Away doubles the matchdays.</output>
+                <p class="text-dim form-hint--sm">The round count is capped at one full round-robin for the selected teams.</p>
+                <p class="text-dim form-hint--sm">Existing matchdays in this phase or group must be removed before generating a new schedule.</p>
             </div>
-            <div class="form-group" th:if="${phase.layout.name() == 'GROUPS'}">
-                <label for="groupId">Group</label>
-                <select id="groupId" th:field="*{groupId}" required>
-                    <option th:each="g : ${phase.groups}" th:value="${g.id}" th:text="${g.name}"></option>
-                </select>
-            </div>
-
-            <p id="summary" class="text-dim mt-xs"></p>
-
-            <div class="actions mt-md">
-                <button type="submit" class="btn btn-primary">Generate</button>
-                <a th:href="@{/admin/seasons/{id}(id=${season.id})}" class="btn btn-secondary">Cancel</a>
+            <div class="entity-editor-actions">
+                <span class="text-dim" th:text="${season.displayLabel}"></span>
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary">Generate</button>
+                    <a th:href="@{/admin/seasons/{id}(id=${season.id})}" class="btn btn-secondary">Cancel</a>
+                </div>
             </div>
         </form>
     </div>
-
-    <script>
-    (function() {
-        var rounds = document.getElementById('numberOfRounds');
-        var ha = document.getElementById('homeAndAway');
-        var summary = document.getElementById('summary');
-        function update() {
-            var r = parseInt(rounds.value) || 0;
-            var total = ha.checked ? r * 2 : r;
-            summary.textContent = 'Total matchdays: ' + total;
-        }
-        rounds.addEventListener('input', update);
-        ha.addEventListener('change', update);
-        update();
-    })();
-    </script>
+    <script th:src="@{/admin/js/matchday-generator.js}" defer></script>
 </section>
 </body>
 </html>

@@ -28,13 +28,6 @@ import org.ctc.sitegen.model.GenerationContext;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 
-/**
- * Helper bean for {@code site/driver-profile.html} page generation.
- *
- * <p>When the season has &ge;2 phases and the driver has results in &ge;2 of them, results are
- * grouped by phase with a heading per section. Single-phase seasons render a flat result list.
- * One profile URL per (season, driver) — no per-phase URL forks.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -138,7 +131,7 @@ public class DriverProfilePageGenerator {
                 resultsByPhase.put(pt, phaseResults);
             }
             // Edge case: driver only participated in one phase even though season has >=2.
-            // Fall back to showPhaseBreakdown=false to keep SC4 byte-identity for that driver.
+
             if (resultsByPhase.size() < 2) {
                 showPhaseBreakdown = false;
                 resultsByPhase = new LinkedHashMap<>();
@@ -180,11 +173,12 @@ public class DriverProfilePageGenerator {
 
     private DriverProfileRow toProfileRow(RaceResult result, Map<String, RaceLineup> guestLookup) {
         RaceLineup lineup = guestLookup.get(result.getRace().getId() + ":" + result.getDriver().getId());
+        String matchdayUrl = "../matchday/" + siteSlugger.slugify(result.getRace().getMatchday().getLabel()) + ".html";
         return lineup != null
-                ? new DriverProfileRow(result, true, lineup.getTeam().getShortName())
-                : new DriverProfileRow(result, false, null);
+                ? new DriverProfileRow(result, true, lineup.getTeam().getShortName(), matchdayUrl)
+                : new DriverProfileRow(result, false, null, matchdayUrl);
     }
 
-    public record DriverProfileRow(RaceResult result, boolean guest, String fieldingTeamName) {
+    public record DriverProfileRow(RaceResult result, boolean guest, String fieldingTeamName, String matchdayUrl) {
     }
 }

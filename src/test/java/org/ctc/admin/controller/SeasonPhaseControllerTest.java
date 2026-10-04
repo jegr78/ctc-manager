@@ -4,6 +4,7 @@ import org.ctc.TestHelper;
 import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.repository.SeasonPhaseRepository;
 import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.service.SeasonPhaseService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,8 +34,27 @@ class SeasonPhaseControllerTest {
     private SeasonPhaseRepository seasonPhaseRepository;
     @Autowired
     private TestHelper testHelper;
+    @Autowired
+    private SeasonPhaseService phaseService;
     @jakarta.persistence.PersistenceContext
     private jakarta.persistence.EntityManager entityManager;
+
+    @Test
+    void givenPhaseAndUnassignedTeam_whenOpenOverview_thenReplacementChoicesAreAvailable() throws Exception {
+        // given
+        var fixture = testHelper.createFullSeasonFixture("Test-Overview replacement");
+        var candidate = testHelper.createTeam("Test-Overview successor", "T-OV-SUCCESSOR");
+        var phase = fixture.matchday().getPhase();
+        var group = phaseService.createGroup(phase.getId(), "Test-Overview group", 0);
+        var base = "/admin/seasons/" + fixture.season().getId() + "/phases/" + phase.getId();
+
+        // when / then
+        for (var path : java.util.List.of(base, base + "/groups/" + group.getId())) {
+            mockMvc.perform(get(path)).andExpect(status().isOk())
+                    .andExpect(model().attribute("availableTeams", org.hamcrest.Matchers.hasItem(
+                            org.hamcrest.Matchers.hasProperty("id", org.hamcrest.Matchers.is(candidate.getId())))));
+        }
+    }
 
     // UI-02 (D-09 IDOR-safety)
     @Test

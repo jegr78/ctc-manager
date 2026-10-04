@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="ranking(alltime)" class="driver-ranking-content">
+    <p th:if="${driverRanking.isEmpty()}" class="text-dim">No driver results recorded.</p>
+    <div class="mobile-driver-ranking" th:unless="${driverRanking.isEmpty()}">
+        <div class="ranking-mobile-head" aria-hidden="true"><span>#</span><span>Driver</span><span>Pts</span><span></span></div>
+        <details th:each="r, i : ${driverRanking}" class="ranking-driver"
+                 th:with="teamName=${alltime ? (driverTeamsMap.containsKey(r.driver.id) ? #strings.listJoin(driverTeamsMap.get(r.driver.id), ', ') : '-') : (r.team != null ? r.team.shortName : '-')}">
+            <summary><span class="ranking-rank" th:text="${i.count}"></span>
+                <span class="ranking-identity"><span class="ranking-name" th:text="${r.driver.psnId}"></span><span class="guest-marker" th:if="${r.hasGuestAppearance}" aria-label="Guest driver">&#x2605;</span><span class="ranking-team" th:text="${teamName}"></span></span>
+                <span><span class="ranking-points" th:text="${r.totalPoints}"></span><span class="sr-only"> points</span></span>
+                <span class="result-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="ranking-driver-details"><dl>
+                <div><dt>Races</dt><dd class="ranking-races" th:text="${r.racesCount}"></dd></div>
+                <div><dt>Best position</dt><dd class="ranking-best" th:text="${'P' + r.bestPosition}"></dd></div>
+                <div><dt>Average points</dt><dd class="ranking-average" th:text="${#numbers.formatDecimal(r.averagePoints, 1, 1)}"></dd></div>
+            </dl><a class="entity-link" th:href="${driverSlugMap.get(r.driver.id)}">View driver profile →</a></div>
+        </details>
+    </div>
+    <details class="responsive-table ranking-full-table" open>
+        <summary>Full ranking table</summary>
+        <div class="table-wrap"><table>
+            <thead><tr><th scope="col">#</th><th scope="col">Driver</th><th scope="col" th:text="${alltime ? 'Team(s)' : 'Team'}"></th>
+                <th scope="col" class="text-center">Races</th><th scope="col" class="text-center">Best</th>
+                <th scope="col" class="text-center"><abbr title="Average points">Avg</abbr></th><th scope="col" class="text-right">Points</th></tr></thead>
+            <tbody><tr th:each="r, i : ${driverRanking}">
+                <td class="font-bold" th:text="${i.count}"></td>
+                <td class="font-bold"><a class="entity-link" th:href="${driverSlugMap.get(r.driver.id)}" th:text="${r.driver.psnId}"></a>
+                    <span class="guest-marker" th:if="${r.hasGuestAppearance}" aria-label="Guest driver">&#x2605;</span></td>
+                <td class="text-dim" th:text="${alltime ? (driverTeamsMap.containsKey(r.driver.id) ? #strings.listJoin(driverTeamsMap.get(r.driver.id), ', ') : '-') : (r.team != null ? r.team.shortName : '-')}"></td>
+                <td class="text-center" th:text="${r.racesCount}"></td><td class="text-center" th:text="${'P' + r.bestPosition}"></td>
+                <td class="text-center" th:text="${#numbers.formatDecimal(r.averagePoints, 1, 1)}"></td>
+                <td class="text-right font-bold text-lg" th:text="${r.totalPoints}"></td>
+            </tr></tbody>
+        </table></div>
+    </details>
+    <script defer th:src="${assetsPath + '/js/statistics.js'}"></script>
+</div>
+</body>
+</html>

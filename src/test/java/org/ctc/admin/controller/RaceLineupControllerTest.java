@@ -54,7 +54,8 @@ class RaceLineupControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/race-lineup"))
 				.andExpect(model().attributeExists("race", "teamEntries", "driverAssignments",
-						"guestLineups", "allDrivers"));
+						"guestLineups", "allDrivers"))
+				.andExpect(model().attribute("pageTitle", "Race Lineup"));
 	}
 
 	@Test

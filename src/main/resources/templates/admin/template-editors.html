@@ -2,87 +2,97 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Template Editors', ~{::section})}">
 <body>
-<section>
+<section class="entity-editor template-editor-workspace">
     <div class="toolbar">
         <div><h1>Template Editors</h1></div>
     </div>
 
-    <!-- Tabs -->
-    <div class="editor-tab-bar">
+    <p class="text-dim mb-md">Choose a graphic template, edit its HTML and refresh the preview. Save Template applies your changes to future graphics; Reset restores the bundled default.</p>
+    <nav class="editor-tab-bar" aria-label="Graphic templates">
         <a th:href="@{/admin/tools/template-editors(tab='team-cards')}"
            th:classappend="${activeTab == 'team-cards' ? 'tab-active' : ''}"
+           th:attr="aria-current=${activeTab == 'team-cards' ? 'page' : null}"
            class="tab-btn">Team Cards</a>
         <a th:href="@{/admin/tools/template-editors(tab='lineup')}"
            th:classappend="${activeTab == 'lineup' ? 'tab-active' : ''}"
+           th:attr="aria-current=${activeTab == 'lineup' ? 'page' : null}"
            class="tab-btn">Race Lineup</a>
         <a th:href="@{/admin/tools/template-editors(tab='settings')}"
            th:classappend="${activeTab == 'settings' ? 'tab-active' : ''}"
+           th:attr="aria-current=${activeTab == 'settings' ? 'page' : null}"
            class="tab-btn">Race Settings</a>
         <a th:href="@{/admin/tools/template-editors(tab='race-results')}"
            th:classappend="${activeTab == 'race-results' ? 'tab-active' : ''}"
+           th:attr="aria-current=${activeTab == 'race-results' ? 'page' : null}"
            class="tab-btn">Race Results</a>
         <a th:href="@{/admin/tools/template-editors(tab='match-results')}"
            th:classappend="${activeTab == 'match-results' ? 'tab-active' : ''}"
+           th:attr="aria-current=${activeTab == 'match-results' ? 'page' : null}"
            class="tab-btn">Match Results</a>
         <a th:href="@{/admin/tools/template-editors(tab='matchday-overview')}"
            th:classappend="${activeTab == 'matchday-overview' ? 'tab-active' : ''}"
+           th:attr="aria-current=${activeTab == 'matchday-overview' ? 'page' : null}"
            class="tab-btn">Matchday Overview</a>
         <a th:href="@{/admin/tools/template-editors(tab='matchday-schedule')}"
            th:classappend="${activeTab == 'matchday-schedule' ? 'tab-active' : ''}"
+           th:attr="aria-current=${activeTab == 'matchday-schedule' ? 'page' : null}"
            class="tab-btn">Matchday Schedule</a>
         <a th:href="@{/admin/tools/template-editors(tab='matchday-results')}"
            th:classappend="${activeTab == 'matchday-results' ? 'tab-active' : ''}"
+           th:attr="aria-current=${activeTab == 'matchday-results' ? 'page' : null}"
            class="tab-btn">Matchday Results</a>
         <a th:href="@{/admin/tools/template-editors(tab='overlay')}"
            th:classappend="${activeTab == 'overlay' ? 'tab-active' : ''}"
+           th:attr="aria-current=${activeTab == 'overlay' ? 'page' : null}"
            class="tab-btn">Stream Overlay</a>
         <a th:href="@{/admin/tools/template-editors(tab='power-rankings')}"
            th:classappend="${activeTab == 'power-rankings' ? 'tab-active' : ''}"
+           th:attr="aria-current=${activeTab == 'power-rankings' ? 'page' : null}"
            class="tab-btn">Power Rankings</a>
         <a th:href="@{/admin/tools/template-editors(tab='lobby-settings')}"
            th:classappend="${activeTab == 'lobby-settings' ? 'tab-active' : ''}"
+           th:attr="aria-current=${activeTab == 'lobby-settings' ? 'page' : null}"
            class="tab-btn">Lobby Settings</a>
-    </div>
-
-    <!-- Team Cards Tab -->
+    </nav>
     <div th:if="${activeTab == 'team-cards'}" class="editor-tab-content" data-template-type="team-cards" data-preview-mode="portrait">
         <div class="editor-status-row">
-            <span th:if="${teamCardIsCustom}" class="badge badge-active badge-sm">Custom</span>
-            <span th:unless="${teamCardIsCustom}" class="badge badge-inactive badge-sm">Default</span>
+            <span th:if="${teamCardIsCustom}" class="badge badge-active badge-sm">Custom template</span>
+            <span th:unless="${teamCardIsCustom}" class="badge badge-inactive badge-sm">Default template</span>
         </div>
-        <!-- Preview -->
-        <div class="card editor-card-flush">
-            <div class="editor-card-header">
-                <strong>Preview</strong>
-                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
-            </div>
-            <div class="editor-preview-area">
-                <div class="editor-preview-portrait">
-                    <iframe class="preview-frame editor-iframe-portrait" sandbox="allow-same-origin"></iframe>
-                </div>
-            </div>
-        </div>
-        <!-- Editor + Variables -->
         <div class="editor-grid">
             <div class="card editor-card-column">
                 <div class="editor-card-header">
-                    <strong>Template (HTML + Thymeleaf)</strong>
+                    <label for="template-source">Template HTML + Thymeleaf</label>
                     <form th:action="@{/admin/tools/template-editors/team-cards/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
                 <form th:action="@{/admin/tools/template-editors/team-cards/save}" method="post" class="editor-form">
-                    <textarea name="template" class="template-textarea" th:text="${teamCardTemplate}"></textarea>
+                    <textarea id="template-source" aria-describedby="template-source-hint" spellcheck="false" name="template" class="template-textarea" th:text="${teamCardTemplate}"></textarea>
+                    <p id="template-source-hint" class="text-dim template-source-hint">Refresh previews the current text without saving it. Tab moves to the next control.</p>
                     <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
+            <div class="card editor-card-flush">
+                <div class="editor-card-header">
+                    <h2>Preview</h2>
+                    <button type="button" class="btn btn-secondary btn-sm refresh-preview-btn">Refresh</button>
+                </div>
+                <p id="template-preview-status" class="template-preview-status" role="status" aria-live="polite" aria-atomic="true">Loading preview...</p>
+                <noscript><p class="template-preview-status">Enable JavaScript to load the preview.</p></noscript>
+                <div class="editor-preview-area">
+                    <div class="editor-preview-portrait">
+                        <iframe title="Graphic template preview" class="preview-frame editor-iframe-portrait" sandbox="allow-same-origin"></iframe>
+                    </div>
+                </div>
+            </div>
             <div class="card editor-info-card">
-                <strong>Available Variables</strong>
+                <h2>Available Variables</h2>
                 <table class="editor-var-table">
-                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <thead><tr><th scope="col">Variable</th><th scope="col">Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>rating</code></td><td>Team rating (Integer or null)</td></tr>
                         <tr><td><code>teamName</code></td><td>Team display name</td></tr>
@@ -108,46 +118,45 @@
             </div>
         </div>
     </div>
-
-    <!-- Lineup Tab -->
     <div th:if="${activeTab == 'lineup'}" class="editor-tab-content" data-template-type="lineup" data-preview-mode="landscape">
         <div class="editor-status-row">
-            <span th:if="${lineupIsCustom}" class="badge badge-active badge-sm">Custom</span>
-            <span th:unless="${lineupIsCustom}" class="badge badge-inactive badge-sm">Default</span>
+            <span th:if="${lineupIsCustom}" class="badge badge-active badge-sm">Custom template</span>
+            <span th:unless="${lineupIsCustom}" class="badge badge-inactive badge-sm">Default template</span>
         </div>
-        <!-- Preview -->
-        <div class="card editor-card-flush">
-            <div class="editor-card-header">
-                <strong>Preview</strong>
-                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
-            </div>
-            <div class="editor-preview-area">
-                <div class="editor-preview-landscape">
-                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
-                </div>
-            </div>
-        </div>
-        <!-- Editor + Variables -->
         <div class="editor-grid">
             <div class="card editor-card-column">
                 <div class="editor-card-header">
-                    <strong>Template (HTML + Thymeleaf)</strong>
+                    <label for="template-source">Template HTML + Thymeleaf</label>
                     <form th:action="@{/admin/tools/template-editors/lineup/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
                 <form th:action="@{/admin/tools/template-editors/lineup/save}" method="post" class="editor-form">
-                    <textarea name="template" class="template-textarea" th:text="${lineupTemplate}"></textarea>
+                    <textarea id="template-source" aria-describedby="template-source-hint" spellcheck="false" name="template" class="template-textarea" th:text="${lineupTemplate}"></textarea>
+                    <p id="template-source-hint" class="text-dim template-source-hint">Refresh previews the current text without saving it. Tab moves to the next control.</p>
                     <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
+            <div class="card editor-card-flush">
+                <div class="editor-card-header">
+                    <h2>Preview</h2>
+                    <button type="button" class="btn btn-secondary btn-sm refresh-preview-btn">Refresh</button>
+                </div>
+                <p id="template-preview-status" class="template-preview-status" role="status" aria-live="polite" aria-atomic="true">Loading preview...</p>
+                <noscript><p class="template-preview-status">Enable JavaScript to load the preview.</p></noscript>
+                <div class="editor-preview-area">
+                    <div class="editor-preview-landscape">
+                        <iframe title="Graphic template preview" class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
+                    </div>
+                </div>
+            </div>
             <div class="card editor-info-card">
-                <strong>Available Variables</strong>
+                <h2>Available Variables</h2>
                 <table class="editor-var-table">
-                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <thead><tr><th scope="col">Variable</th><th scope="col">Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>seasonYear</code></td><td>Year from season name</td></tr>
                         <tr><td><code>matchdayName</code></td><td>Matchday label (e.g. "MD 1")</td></tr>
@@ -156,7 +165,8 @@
                         <tr><td><code>awayCardBase64</code></td><td>Away team card PNG as data URI</td></tr>
                         <tr><td><code>homePosition</code></td><td>Home team standings position</td></tr>
                         <tr><td><code>awayPosition</code></td><td>Away team standings position</td></tr>
-                        <tr><td><code>pairings</code></td><td>List of {homeDriver, awayDriver}</td></tr>
+                        <tr><td><code>pairings</code></td><td>Driver pairs with names, nicknames and guest markers</td></tr>
+                        <tr><td><code>p.homeIsGuest / p.awayIsGuest</code></td><td>Whether the driver is a guest</td></tr>
                         <tr><td><code>ctcLogoBase64</code></td><td>CTC logo as data URI</td></tr>
                         <tr><td><code>fontBase64</code></td><td>Conthrax font as data URI</td></tr>
                     </tbody>
@@ -173,46 +183,45 @@
             </div>
         </div>
     </div>
-
-    <!-- Settings Tab -->
     <div th:if="${activeTab == 'settings'}" class="editor-tab-content" data-template-type="settings" data-preview-mode="landscape">
         <div class="editor-status-row">
-            <span th:if="${settingsIsCustom}" class="badge badge-active badge-sm">Custom</span>
-            <span th:unless="${settingsIsCustom}" class="badge badge-inactive badge-sm">Default</span>
+            <span th:if="${settingsIsCustom}" class="badge badge-active badge-sm">Custom template</span>
+            <span th:unless="${settingsIsCustom}" class="badge badge-inactive badge-sm">Default template</span>
         </div>
-        <!-- Preview -->
-        <div class="card editor-card-flush">
-            <div class="editor-card-header">
-                <strong>Preview</strong>
-                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
-            </div>
-            <div class="editor-preview-area">
-                <div class="editor-preview-landscape">
-                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
-                </div>
-            </div>
-        </div>
-        <!-- Editor + Variables -->
         <div class="editor-grid">
             <div class="card editor-card-column">
                 <div class="editor-card-header">
-                    <strong>Template (HTML + Thymeleaf)</strong>
+                    <label for="template-source">Template HTML + Thymeleaf</label>
                     <form th:action="@{/admin/tools/template-editors/settings/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
                 <form th:action="@{/admin/tools/template-editors/settings/save}" method="post" class="editor-form">
-                    <textarea name="template" class="template-textarea" th:text="${settingsTemplate}"></textarea>
+                    <textarea id="template-source" aria-describedby="template-source-hint" spellcheck="false" name="template" class="template-textarea" th:text="${settingsTemplate}"></textarea>
+                    <p id="template-source-hint" class="text-dim template-source-hint">Refresh previews the current text without saving it. Tab moves to the next control.</p>
                     <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
+            <div class="card editor-card-flush">
+                <div class="editor-card-header">
+                    <h2>Preview</h2>
+                    <button type="button" class="btn btn-secondary btn-sm refresh-preview-btn">Refresh</button>
+                </div>
+                <p id="template-preview-status" class="template-preview-status" role="status" aria-live="polite" aria-atomic="true">Loading preview...</p>
+                <noscript><p class="template-preview-status">Enable JavaScript to load the preview.</p></noscript>
+                <div class="editor-preview-area">
+                    <div class="editor-preview-landscape">
+                        <iframe title="Graphic template preview" class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
+                    </div>
+                </div>
+            </div>
             <div class="card editor-info-card">
-                <strong>Available Variables</strong>
+                <h2>Available Variables</h2>
                 <table class="editor-var-table">
-                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <thead><tr><th scope="col">Variable</th><th scope="col">Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>seasonYear</code></td><td>Year from season</td></tr>
                         <tr><td><code>matchdayName</code></td><td>Matchday label (e.g. "MD 1")</td></tr>
@@ -249,46 +258,45 @@
             </div>
         </div>
     </div>
-
-    <!-- Race Results Tab -->
     <div th:if="${activeTab == 'race-results'}" class="editor-tab-content" data-template-type="race-results" data-preview-mode="landscape">
         <div class="editor-status-row">
-            <span th:if="${raceResultsIsCustom}" class="badge badge-active badge-sm">Custom</span>
-            <span th:unless="${raceResultsIsCustom}" class="badge badge-inactive badge-sm">Default</span>
+            <span th:if="${raceResultsIsCustom}" class="badge badge-active badge-sm">Custom template</span>
+            <span th:unless="${raceResultsIsCustom}" class="badge badge-inactive badge-sm">Default template</span>
         </div>
-        <!-- Preview -->
-        <div class="card editor-card-flush">
-            <div class="editor-card-header">
-                <strong>Preview</strong>
-                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
-            </div>
-            <div class="editor-preview-area">
-                <div class="editor-preview-landscape">
-                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
-                </div>
-            </div>
-        </div>
-        <!-- Editor + Variables -->
         <div class="editor-grid">
             <div class="card editor-card-column">
                 <div class="editor-card-header">
-                    <strong>Template (HTML + Thymeleaf)</strong>
+                    <label for="template-source">Template HTML + Thymeleaf</label>
                     <form th:action="@{/admin/tools/template-editors/race-results/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
                 <form th:action="@{/admin/tools/template-editors/race-results/save}" method="post" class="editor-form">
-                    <textarea name="template" class="template-textarea" th:text="${raceResultsTemplate}"></textarea>
+                    <textarea id="template-source" aria-describedby="template-source-hint" spellcheck="false" name="template" class="template-textarea" th:text="${raceResultsTemplate}"></textarea>
+                    <p id="template-source-hint" class="text-dim template-source-hint">Refresh previews the current text without saving it. Tab moves to the next control.</p>
                     <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
+            <div class="card editor-card-flush">
+                <div class="editor-card-header">
+                    <h2>Preview</h2>
+                    <button type="button" class="btn btn-secondary btn-sm refresh-preview-btn">Refresh</button>
+                </div>
+                <p id="template-preview-status" class="template-preview-status" role="status" aria-live="polite" aria-atomic="true">Loading preview...</p>
+                <noscript><p class="template-preview-status">Enable JavaScript to load the preview.</p></noscript>
+                <div class="editor-preview-area">
+                    <div class="editor-preview-landscape">
+                        <iframe title="Graphic template preview" class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
+                    </div>
+                </div>
+            </div>
             <div class="card editor-info-card">
-                <strong>Available Variables</strong>
+                <h2>Available Variables</h2>
                 <table class="editor-var-table">
-                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <thead><tr><th scope="col">Variable</th><th scope="col">Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>seasonYear</code></td><td>Year from season</td></tr>
                         <tr><td><code>matchdayName</code></td><td>Matchday label (e.g. "MD 1")</td></tr>
@@ -299,7 +307,8 @@
                         <tr><td><code>awayTotal</code></td><td>Away team total points</td></tr>
                         <tr><td><code>homeIsWinner</code></td><td>True if home total > away total</td></tr>
                         <tr><td><code>awayIsWinner</code></td><td>True if away total > home total</td></tr>
-                        <tr><td><code>resultRows</code></td><td>List of {homeDriver, homePoints, awayPoints, awayDriver}</td></tr>
+                        <tr><td><code>resultRows</code></td><td>Driver results with names, points and guest markers</td></tr>
+                        <tr><td><code>row.homeIsGuest / row.awayIsGuest</code></td><td>Whether the driver is a guest</td></tr>
                         <tr><td><code>ctcLogoBase64</code></td><td>CTC logo as data URI</td></tr>
                         <tr><td><code>fontBase64</code></td><td>Conthrax font as data URI</td></tr>
                     </tbody>
@@ -316,46 +325,45 @@
             </div>
         </div>
     </div>
-
-    <!-- Match Results Tab -->
     <div th:if="${activeTab == 'match-results'}" class="editor-tab-content" data-template-type="match-results" data-preview-mode="landscape">
         <div class="editor-status-row">
-            <span th:if="${matchResultsIsCustom}" class="badge badge-active badge-sm">Custom</span>
-            <span th:unless="${matchResultsIsCustom}" class="badge badge-inactive badge-sm">Default</span>
+            <span th:if="${matchResultsIsCustom}" class="badge badge-active badge-sm">Custom template</span>
+            <span th:unless="${matchResultsIsCustom}" class="badge badge-inactive badge-sm">Default template</span>
         </div>
-        <!-- Preview -->
-        <div class="card editor-card-flush">
-            <div class="editor-card-header">
-                <strong>Preview</strong>
-                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
-            </div>
-            <div class="editor-preview-area">
-                <div class="editor-preview-landscape">
-                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
-                </div>
-            </div>
-        </div>
-        <!-- Editor + Variables -->
         <div class="editor-grid">
             <div class="card editor-card-column">
                 <div class="editor-card-header">
-                    <strong>Template (HTML + Thymeleaf)</strong>
+                    <label for="template-source">Template HTML + Thymeleaf</label>
                     <form th:action="@{/admin/tools/template-editors/match-results/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
                 <form th:action="@{/admin/tools/template-editors/match-results/save}" method="post" class="editor-form">
-                    <textarea name="template" class="template-textarea" th:text="${matchResultsTemplate}"></textarea>
+                    <textarea id="template-source" aria-describedby="template-source-hint" spellcheck="false" name="template" class="template-textarea" th:text="${matchResultsTemplate}"></textarea>
+                    <p id="template-source-hint" class="text-dim template-source-hint">Refresh previews the current text without saving it. Tab moves to the next control.</p>
                     <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
+            <div class="card editor-card-flush">
+                <div class="editor-card-header">
+                    <h2>Preview</h2>
+                    <button type="button" class="btn btn-secondary btn-sm refresh-preview-btn">Refresh</button>
+                </div>
+                <p id="template-preview-status" class="template-preview-status" role="status" aria-live="polite" aria-atomic="true">Loading preview...</p>
+                <noscript><p class="template-preview-status">Enable JavaScript to load the preview.</p></noscript>
+                <div class="editor-preview-area">
+                    <div class="editor-preview-landscape">
+                        <iframe title="Graphic template preview" class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
+                    </div>
+                </div>
+            </div>
             <div class="card editor-info-card">
-                <strong>Available Variables</strong>
+                <h2>Available Variables</h2>
                 <table class="editor-var-table">
-                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <thead><tr><th scope="col">Variable</th><th scope="col">Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>seasonYear</code></td><td>Year from season</td></tr>
                         <tr><td><code>matchdayName</code></td><td>Matchday label (e.g. "MD 1")</td></tr>
@@ -383,46 +391,45 @@
             </div>
         </div>
     </div>
-
-    <!-- Matchday Overview Tab -->
     <div th:if="${activeTab == 'matchday-overview'}" class="editor-tab-content" data-template-type="matchday-overview" data-preview-mode="landscape">
         <div class="editor-status-row">
-            <span th:if="${matchdayOverviewIsCustom}" class="badge badge-active badge-sm">Custom</span>
-            <span th:unless="${matchdayOverviewIsCustom}" class="badge badge-inactive badge-sm">Default</span>
+            <span th:if="${matchdayOverviewIsCustom}" class="badge badge-active badge-sm">Custom template</span>
+            <span th:unless="${matchdayOverviewIsCustom}" class="badge badge-inactive badge-sm">Default template</span>
         </div>
-        <!-- Preview -->
-        <div class="card editor-card-flush">
-            <div class="editor-card-header">
-                <strong>Preview</strong>
-                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
-            </div>
-            <div class="editor-preview-area">
-                <div class="editor-preview-landscape">
-                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
-                </div>
-            </div>
-        </div>
-        <!-- Editor + Variables -->
         <div class="editor-grid">
             <div class="card editor-card-column">
                 <div class="editor-card-header">
-                    <strong>Template (HTML + Thymeleaf)</strong>
+                    <label for="template-source">Template HTML + Thymeleaf</label>
                     <form th:action="@{/admin/tools/template-editors/matchday-overview/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
                 <form th:action="@{/admin/tools/template-editors/matchday-overview/save}" method="post" class="editor-form">
-                    <textarea name="template" class="template-textarea" th:text="${matchdayOverviewTemplate}"></textarea>
+                    <textarea id="template-source" aria-describedby="template-source-hint" spellcheck="false" name="template" class="template-textarea" th:text="${matchdayOverviewTemplate}"></textarea>
+                    <p id="template-source-hint" class="text-dim template-source-hint">Refresh previews the current text without saving it. Tab moves to the next control.</p>
                     <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
+            <div class="card editor-card-flush">
+                <div class="editor-card-header">
+                    <h2>Preview</h2>
+                    <button type="button" class="btn btn-secondary btn-sm refresh-preview-btn">Refresh</button>
+                </div>
+                <p id="template-preview-status" class="template-preview-status" role="status" aria-live="polite" aria-atomic="true">Loading preview...</p>
+                <noscript><p class="template-preview-status">Enable JavaScript to load the preview.</p></noscript>
+                <div class="editor-preview-area">
+                    <div class="editor-preview-landscape">
+                        <iframe title="Graphic template preview" class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
+                    </div>
+                </div>
+            </div>
             <div class="card editor-info-card">
-                <strong>Available Variables</strong>
+                <h2>Available Variables</h2>
                 <table class="editor-var-table">
-                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <thead><tr><th scope="col">Variable</th><th scope="col">Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>data.matchdayLabel</code></td><td>Matchday label (e.g. "Match Day 3")</td></tr>
                         <tr><td><code>data.seasonName</code></td><td>Season name</td></tr>
@@ -452,46 +459,45 @@
             </div>
         </div>
     </div>
-
-    <!-- Matchday Schedule Tab -->
     <div th:if="${activeTab == 'matchday-schedule'}" class="editor-tab-content" data-template-type="matchday-schedule" data-preview-mode="landscape">
         <div class="editor-status-row">
-            <span th:if="${matchdayScheduleIsCustom}" class="badge badge-active badge-sm">Custom</span>
-            <span th:unless="${matchdayScheduleIsCustom}" class="badge badge-inactive badge-sm">Default</span>
+            <span th:if="${matchdayScheduleIsCustom}" class="badge badge-active badge-sm">Custom template</span>
+            <span th:unless="${matchdayScheduleIsCustom}" class="badge badge-inactive badge-sm">Default template</span>
         </div>
-        <!-- Preview -->
-        <div class="card editor-card-flush">
-            <div class="editor-card-header">
-                <strong>Preview</strong>
-                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
-            </div>
-            <div class="editor-preview-area">
-                <div class="editor-preview-landscape">
-                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
-                </div>
-            </div>
-        </div>
-        <!-- Editor + Variables -->
         <div class="editor-grid">
             <div class="card editor-card-column">
                 <div class="editor-card-header">
-                    <strong>Template (HTML + Thymeleaf)</strong>
+                    <label for="template-source">Template HTML + Thymeleaf</label>
                     <form th:action="@{/admin/tools/template-editors/matchday-schedule/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
                 <form th:action="@{/admin/tools/template-editors/matchday-schedule/save}" method="post" class="editor-form">
-                    <textarea name="template" class="template-textarea" th:text="${matchdayScheduleTemplate}"></textarea>
+                    <textarea id="template-source" aria-describedby="template-source-hint" spellcheck="false" name="template" class="template-textarea" th:text="${matchdayScheduleTemplate}"></textarea>
+                    <p id="template-source-hint" class="text-dim template-source-hint">Refresh previews the current text without saving it. Tab moves to the next control.</p>
                     <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
+            <div class="card editor-card-flush">
+                <div class="editor-card-header">
+                    <h2>Preview</h2>
+                    <button type="button" class="btn btn-secondary btn-sm refresh-preview-btn">Refresh</button>
+                </div>
+                <p id="template-preview-status" class="template-preview-status" role="status" aria-live="polite" aria-atomic="true">Loading preview...</p>
+                <noscript><p class="template-preview-status">Enable JavaScript to load the preview.</p></noscript>
+                <div class="editor-preview-area">
+                    <div class="editor-preview-landscape">
+                        <iframe title="Graphic template preview" class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
+                    </div>
+                </div>
+            </div>
             <div class="card editor-info-card">
-                <strong>Available Variables</strong>
+                <h2>Available Variables</h2>
                 <table class="editor-var-table">
-                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <thead><tr><th scope="col">Variable</th><th scope="col">Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>data.matchdayLabel</code></td><td>Matchday label</td></tr>
                         <tr><td><code>data.seasonName</code></td><td>Season name</td></tr>
@@ -515,46 +521,45 @@
             </div>
         </div>
     </div>
-
-    <!-- Matchday Results Tab -->
     <div th:if="${activeTab == 'matchday-results'}" class="editor-tab-content" data-template-type="matchday-results" data-preview-mode="landscape">
         <div class="editor-status-row">
-            <span th:if="${matchdayResultsIsCustom}" class="badge badge-active badge-sm">Custom</span>
-            <span th:unless="${matchdayResultsIsCustom}" class="badge badge-inactive badge-sm">Default</span>
+            <span th:if="${matchdayResultsIsCustom}" class="badge badge-active badge-sm">Custom template</span>
+            <span th:unless="${matchdayResultsIsCustom}" class="badge badge-inactive badge-sm">Default template</span>
         </div>
-        <!-- Preview -->
-        <div class="card editor-card-flush">
-            <div class="editor-card-header">
-                <strong>Preview</strong>
-                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
-            </div>
-            <div class="editor-preview-area">
-                <div class="editor-preview-landscape">
-                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
-                </div>
-            </div>
-        </div>
-        <!-- Editor + Variables -->
         <div class="editor-grid">
             <div class="card editor-card-column">
                 <div class="editor-card-header">
-                    <strong>Template (HTML + Thymeleaf)</strong>
+                    <label for="template-source">Template HTML + Thymeleaf</label>
                     <form th:action="@{/admin/tools/template-editors/matchday-results/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
                 <form th:action="@{/admin/tools/template-editors/matchday-results/save}" method="post" class="editor-form">
-                    <textarea name="template" class="template-textarea" th:text="${matchdayResultsTemplate}"></textarea>
+                    <textarea id="template-source" aria-describedby="template-source-hint" spellcheck="false" name="template" class="template-textarea" th:text="${matchdayResultsTemplate}"></textarea>
+                    <p id="template-source-hint" class="text-dim template-source-hint">Refresh previews the current text without saving it. Tab moves to the next control.</p>
                     <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
+            <div class="card editor-card-flush">
+                <div class="editor-card-header">
+                    <h2>Preview</h2>
+                    <button type="button" class="btn btn-secondary btn-sm refresh-preview-btn">Refresh</button>
+                </div>
+                <p id="template-preview-status" class="template-preview-status" role="status" aria-live="polite" aria-atomic="true">Loading preview...</p>
+                <noscript><p class="template-preview-status">Enable JavaScript to load the preview.</p></noscript>
+                <div class="editor-preview-area">
+                    <div class="editor-preview-landscape">
+                        <iframe title="Graphic template preview" class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
+                    </div>
+                </div>
+            </div>
             <div class="card editor-info-card">
-                <strong>Available Variables</strong>
+                <h2>Available Variables</h2>
                 <table class="editor-var-table">
-                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <thead><tr><th scope="col">Variable</th><th scope="col">Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>data.matchdayLabel</code></td><td>Matchday label</td></tr>
                         <tr><td><code>data.seasonName</code></td><td>Season name</td></tr>
@@ -579,46 +584,45 @@
             </div>
         </div>
     </div>
-
-    <!-- Stream Overlay Tab -->
     <div th:if="${activeTab == 'overlay'}" class="editor-tab-content" data-template-type="overlay" data-preview-mode="landscape">
         <div class="editor-status-row">
-            <span th:if="${overlayIsCustom}" class="badge badge-active badge-sm">Custom</span>
-            <span th:unless="${overlayIsCustom}" class="badge badge-inactive badge-sm">Default</span>
+            <span th:if="${overlayIsCustom}" class="badge badge-active badge-sm">Custom template</span>
+            <span th:unless="${overlayIsCustom}" class="badge badge-inactive badge-sm">Default template</span>
         </div>
-        <!-- Preview -->
-        <div class="card editor-card-flush">
-            <div class="editor-card-header">
-                <strong>Preview</strong>
-                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
-            </div>
-            <div class="editor-preview-area editor-preview-area--overlay">
-                <div class="editor-preview-landscape">
-                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
-                </div>
-            </div>
-        </div>
-        <!-- Editor + Variables -->
         <div class="editor-grid">
             <div class="card editor-card-column">
                 <div class="editor-card-header">
-                    <strong>Template (HTML + Thymeleaf)</strong>
+                    <label for="template-source">Template HTML + Thymeleaf</label>
                     <form th:action="@{/admin/tools/template-editors/overlay/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
                 <form th:action="@{/admin/tools/template-editors/overlay/save}" method="post" class="editor-form">
-                    <textarea name="template" class="template-textarea" th:text="${overlayTemplate}"></textarea>
+                    <textarea id="template-source" aria-describedby="template-source-hint" spellcheck="false" name="template" class="template-textarea" th:text="${overlayTemplate}"></textarea>
+                    <p id="template-source-hint" class="text-dim template-source-hint">Refresh previews the current text without saving it. Tab moves to the next control.</p>
                     <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
+            <div class="card editor-card-flush">
+                <div class="editor-card-header">
+                    <h2>Preview</h2>
+                    <button type="button" class="btn btn-secondary btn-sm refresh-preview-btn">Refresh</button>
+                </div>
+                <p id="template-preview-status" class="template-preview-status" role="status" aria-live="polite" aria-atomic="true">Loading preview...</p>
+                <noscript><p class="template-preview-status">Enable JavaScript to load the preview.</p></noscript>
+                <div class="editor-preview-area editor-preview-area--overlay">
+                    <div class="editor-preview-landscape">
+                        <iframe title="Graphic template preview" class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
+                    </div>
+                </div>
+            </div>
             <div class="card editor-info-card">
-                <strong>Available Variables</strong>
+                <h2>Available Variables</h2>
                 <table class="editor-var-table">
-                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <thead><tr><th scope="col">Variable</th><th scope="col">Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>homeTeamName</code></td><td>Home team full name</td></tr>
                         <tr><td><code>homeTeamShortName</code></td><td>Home team short name</td></tr>
@@ -652,46 +656,45 @@
             </div>
         </div>
     </div>
-
-    <!-- Power Rankings Tab -->
     <div th:if="${activeTab == 'power-rankings'}" class="editor-tab-content" data-template-type="power-rankings" data-preview-mode="landscape">
         <div class="editor-status-row">
-            <span th:if="${powerRankingsIsCustom}" class="badge badge-active badge-sm">Custom</span>
-            <span th:unless="${powerRankingsIsCustom}" class="badge badge-inactive badge-sm">Default</span>
+            <span th:if="${powerRankingsIsCustom}" class="badge badge-active badge-sm">Custom template</span>
+            <span th:unless="${powerRankingsIsCustom}" class="badge badge-inactive badge-sm">Default template</span>
         </div>
-        <!-- Preview -->
-        <div class="card editor-card-flush">
-            <div class="editor-card-header">
-                <strong>Preview</strong>
-                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
-            </div>
-            <div class="editor-preview-area">
-                <div class="editor-preview-landscape">
-                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
-                </div>
-            </div>
-        </div>
-        <!-- Editor + Variables -->
         <div class="editor-grid">
             <div class="card editor-card-column">
                 <div class="editor-card-header">
-                    <strong>Template (HTML + Thymeleaf)</strong>
+                    <label for="template-source">Template HTML + Thymeleaf</label>
                     <form th:action="@{/admin/tools/template-editors/power-rankings/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
                 <form th:action="@{/admin/tools/template-editors/power-rankings/save}" method="post" class="editor-form">
-                    <textarea name="template" class="template-textarea" th:text="${powerRankingsTemplate}"></textarea>
+                    <textarea id="template-source" aria-describedby="template-source-hint" spellcheck="false" name="template" class="template-textarea" th:text="${powerRankingsTemplate}"></textarea>
+                    <p id="template-source-hint" class="text-dim template-source-hint">Refresh previews the current text without saving it. Tab moves to the next control.</p>
                     <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
+            <div class="card editor-card-flush">
+                <div class="editor-card-header">
+                    <h2>Preview</h2>
+                    <button type="button" class="btn btn-secondary btn-sm refresh-preview-btn">Refresh</button>
+                </div>
+                <p id="template-preview-status" class="template-preview-status" role="status" aria-live="polite" aria-atomic="true">Loading preview...</p>
+                <noscript><p class="template-preview-status">Enable JavaScript to load the preview.</p></noscript>
+                <div class="editor-preview-area">
+                    <div class="editor-preview-landscape">
+                        <iframe title="Graphic template preview" class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
+                    </div>
+                </div>
+            </div>
             <div class="card editor-info-card">
-                <strong>Available Variables</strong>
+                <h2>Available Variables</h2>
                 <table class="editor-var-table">
-                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <thead><tr><th scope="col">Variable</th><th scope="col">Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>data.title</code></td><td>Title (e.g. "Power Rankings 2026")</td></tr>
                         <tr><td><code>data.subtitle</code></td><td>Subtitle (free text)</td></tr>
@@ -721,46 +724,45 @@
             </div>
         </div>
     </div>
-
-    <!-- Lobby Settings Tab -->
     <div th:if="${activeTab == 'lobby-settings'}" class="editor-tab-content" data-template-type="lobby-settings" data-preview-mode="landscape">
         <div class="editor-status-row">
-            <span th:if="${lobbySettingsIsCustom}" class="badge badge-active badge-sm">Custom</span>
-            <span th:unless="${lobbySettingsIsCustom}" class="badge badge-inactive badge-sm">Default</span>
+            <span th:if="${lobbySettingsIsCustom}" class="badge badge-active badge-sm">Custom template</span>
+            <span th:unless="${lobbySettingsIsCustom}" class="badge badge-inactive badge-sm">Default template</span>
         </div>
-        <!-- Preview -->
-        <div class="card editor-card-flush">
-            <div class="editor-card-header">
-                <strong>Preview</strong>
-                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
-            </div>
-            <div class="editor-preview-area">
-                <div class="editor-preview-landscape">
-                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
-                </div>
-            </div>
-        </div>
-        <!-- Editor + Variables -->
         <div class="editor-grid">
             <div class="card editor-card-column">
                 <div class="editor-card-header">
-                    <strong>Template (HTML + Thymeleaf)</strong>
+                    <label for="template-source">Template HTML + Thymeleaf</label>
                     <form th:action="@{/admin/tools/template-editors/lobby-settings/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
                 <form th:action="@{/admin/tools/template-editors/lobby-settings/save}" method="post" class="editor-form">
-                    <textarea name="template" class="template-textarea" th:text="${lobbySettingsTemplate}"></textarea>
+                    <textarea id="template-source" aria-describedby="template-source-hint" spellcheck="false" name="template" class="template-textarea" th:text="${lobbySettingsTemplate}"></textarea>
+                    <p id="template-source-hint" class="text-dim template-source-hint">Refresh previews the current text without saving it. Tab moves to the next control.</p>
                     <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
+            <div class="card editor-card-flush">
+                <div class="editor-card-header">
+                    <h2>Preview</h2>
+                    <button type="button" class="btn btn-secondary btn-sm refresh-preview-btn">Refresh</button>
+                </div>
+                <p id="template-preview-status" class="template-preview-status" role="status" aria-live="polite" aria-atomic="true">Loading preview...</p>
+                <noscript><p class="template-preview-status">Enable JavaScript to load the preview.</p></noscript>
+                <div class="editor-preview-area">
+                    <div class="editor-preview-landscape">
+                        <iframe title="Graphic template preview" class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
+                    </div>
+                </div>
+            </div>
             <div class="card editor-info-card">
-                <strong>Available Variables</strong>
+                <h2>Available Variables</h2>
                 <table class="editor-var-table">
-                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <thead><tr><th scope="col">Variable</th><th scope="col">Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>fontBase64</code></td><td>Conthrax font as data URI</td></tr>
                         <tr><td><code>ctcLogoBase64</code></td><td>CTC logo as data URI</td></tr>
@@ -800,67 +802,7 @@
         </div>
     </div>
 
-    <script>
-        document.querySelectorAll('.template-textarea').forEach(function(el) {
-            el.addEventListener('keydown', function(e) {
-                if (e.key === 'Tab') {
-                    e.preventDefault();
-                    var start = this.selectionStart;
-                    var end = this.selectionEnd;
-                    this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
-                    this.selectionStart = this.selectionEnd = start + 4;
-                }
-            });
-        });
-
-        async function refreshPreview(tabEl) {
-            var templateType = tabEl.dataset.templateType;
-            var textarea = tabEl.querySelector('.template-textarea');
-            var iframe = tabEl.querySelector('.preview-frame');
-            var btn = tabEl.querySelector('.refresh-preview-btn');
-
-            if (btn) {
-                btn.disabled = true;
-                btn.textContent = 'Loading...';
-            }
-
-            try {
-                var response = await csrfFetch('/admin/tools/template-editors/' + templateType + '/preview', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: 'template=' + encodeURIComponent(textarea.value)
-                });
-
-                if (!response.ok) {
-                    var errorText = await response.text();
-                    alert('Preview failed: ' + errorText);
-                    return;
-                }
-
-                var html = await response.text();
-                iframe.srcdoc = html;
-            } catch (err) {
-                alert('Preview failed: ' + err.message);
-            } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.textContent = 'Refresh';
-                }
-            }
-        }
-
-        // Auto-load preview on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            var activeTab = document.querySelector('[data-template-type]');
-            if (activeTab) {
-                refreshPreview(activeTab);
-
-                activeTab.querySelector('.refresh-preview-btn').addEventListener('click', function() {
-                    refreshPreview(activeTab);
-                });
-            }
-        });
-    </script>
+    <script th:src="@{/admin/js/template-editor.js}"></script>
 </section>
 </body>
 </html>

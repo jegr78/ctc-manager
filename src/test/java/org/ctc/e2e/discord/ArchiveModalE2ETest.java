@@ -15,6 +15,7 @@ import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.ViewportSize;
+import com.microsoft.playwright.options.AriaRole;
 import org.ctc.TestHelper;
 import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.discord.repository.DiscordGlobalConfigRepository;
@@ -78,10 +79,10 @@ class ArchiveModalE2ETest extends PlaywrightConfig {
 	}
 
 	private Match seedMatchWithChannel(String suffix) {
-		Season season = helper.createSeason("ModalE2E " + suffix);
+		Season season = helper.createSeason("Test-Archive " + suffix);
 		Matchday md = helper.createMatchdayInRegularPhase(season, "MD-" + suffix, 0);
-		Team home = helper.createTeam("Home " + suffix, "hm" + suffix);
-		Team away = helper.createTeam("Away " + suffix, "am" + suffix);
+		Team home = helper.createTeam("Test-Home " + suffix, "hm" + suffix);
+		Team away = helper.createTeam("Test-Away " + suffix, "am" + suffix);
 		Match match = helper.createMatch(md, home, away);
 		match.setDiscordChannelId("c1");
 		return matchRepository.save(match);
@@ -134,10 +135,12 @@ class ArchiveModalE2ETest extends PlaywrightConfig {
 		// then — modal becomes visible, both radio buttons render with counts, num=2 is checked (highest-num with room)
 		assertThat(page.locator("[name='categoryId']")).hasCount(2);
 		assertThat(page.locator("label[for='cat-0']"))
-				.containsText("Match Days Archive " + year + " — 47/50");
+				.containsText("Match Days Archive " + year);
 		assertThat(page.locator("label[for='cat-1']"))
-				.containsText("Match Days Archive " + year + " (2) — 10/50");
+				.containsText("Match Days Archive " + year + " (2)");
 		assertThat(page.locator("#cat-1")).isChecked();
+        assertThat(page.locator("label[for='cat-0']")).containsText("47/50 channels");
+        assertThat(page.locator("label[for='cat-1']")).containsText("10/50 channels");
 		assertThat(page.locator("[data-testid='archive-confirm']")).isEnabled();
 	}
 
@@ -151,10 +154,11 @@ class ArchiveModalE2ETest extends PlaywrightConfig {
 		page.navigate(url("/admin/matches/" + match.getId()));
 		page.click("[data-testid='open-archive-modal']");
 
-		// then — single 50/50 radio, no default check, Confirm is enabled (categories present) but pre-submit blocked by server
-		// Confirm enabled because archiveCategories is NOT empty; warning banner only renders when list is empty
 		assertThat(page.locator("[name='categoryId']")).hasCount(1);
 		assertThat(page.locator("[name='categoryId']").first()).not().isChecked();
+        assertThat(page.locator("[name='categoryId']").first()).isDisabled();
+        assertThat(page.locator("[data-testid='archive-all-full-banner']")).containsText("No archive category with space is available.");
+        assertThat(page.locator("[data-testid='archive-confirm']")).isDisabled();
 	}
 
 	@Test
@@ -211,6 +215,59 @@ class ArchiveModalE2ETest extends PlaywrightConfig {
 			Object scrollWidth = mobilePage.evaluate("document.body.scrollWidth");
 			Object clientWidth = mobilePage.evaluate("document.body.clientWidth");
 			org.assertj.core.api.Assertions.assertThat(scrollWidth).isEqualTo(clientWidth);
+            org.assertj.core.api.Assertions.assertThat((Boolean) mobilePage.locator("#archiveModal").evaluate(
+                    "dialog => { const bounds = dialog.getBoundingClientRect(); return bounds.left >= 0 && bounds.right <= innerWidth && bounds.height <= innerHeight; }"))
+                    .isTrue();
 		}
 	}
+    @Test
+    void givenArchiveDialog_whenKeyboardDismiss_thenFocusReturnsToTheTrigger() {
+        stubGuildChannelsWithTwoCategoriesHavingRoom(currentYear());
+        Match match = seedMatchWithChannel("Keyboard");
+        page.navigate(url("/admin/matches/" + match.getId()));
+        var trigger = page.locator("[data-testid='open-archive-modal']");
+        trigger.click();
+        assertThat(page.getByRole(AriaRole.DIALOG, new Page.GetByRoleOptions().setName("Move channel to archive").setExact(true))).isVisible();
+        assertThat(page.locator("#cat-1")).isFocused();
+        page.keyboard().press("Tab");
+        assertThat(page.locator("[data-testid='archive-confirm']")).isFocused();
+        page.keyboard().press("Tab");
+        assertThat(page.locator("[data-testid='archive-cancel']")).isFocused();
+        page.keyboard().press("Tab");
+        assertThat(page.locator("#cat-1")).isFocused();
+        page.keyboard().press("Escape");
+        assertThat(trigger).isFocused();
+        assertThat(page.locator("#archiveModal")).not().isVisible();
+        trigger.click();
+        page.locator("[data-testid='archive-cancel']").click();
+        assertThat(trigger).isFocused();
+        trigger.click();
+        page.locator("#cat-0").check();
+        page.keyboard().press("Escape");
+        trigger.click();
+        assertThat(page.locator("#cat-0")).isChecked();
+        page.locator("#archiveModal").click(new com.microsoft.playwright.Locator.ClickOptions().setPosition(-10, -10));
+        assertThat(trigger).isFocused();
+        wm.verify(0, patchRequestedFor(urlPathEqualTo("/api/v10/channels/c1")));
+    }
+
+    @Test
+    void givenNoJavaScript_whenChooseArchiveCategory_thenNativeFormStillArchivesTheChannel() {
+        stubGuildChannelsWithTwoCategoriesHavingRoom(currentYear());
+        wm.stubFor(patch(urlPathEqualTo("/api/v10/channels/c1"))
+                .willReturn(okJson("{\"id\":\"c1\",\"name\":\"md1\",\"type\":0,\"parent_id\":\"cat-1\"}")));
+        Match match = seedMatchWithChannel("Native");
+        try (var nativeContext = browser.newContext(new Browser.NewContextOptions().setJavaScriptEnabled(false).setViewportSize(390, 768))) {
+            var nativePage = nativeContext.newPage();
+            nativePage.navigate(url("/admin/matches/" + match.getId()));
+            assertThat(nativePage.locator("[data-testid='open-archive-modal']")).not().isVisible();
+            nativePage.locator("#archiveModal > summary").click();
+            nativePage.locator("#cat-0").check();
+            nativePage.locator("[data-testid='archive-confirm']").click();
+            assertThat(nativePage.locator(".alert-success")).containsText("Channel moved to archive.");
+            wm.verify(patchRequestedFor(urlPathEqualTo("/api/v10/channels/c1"))
+                    .withRequestBody(matchingJsonPath("$.parent_id", equalTo("cat-1"))));
+        }
+    }
+
 }

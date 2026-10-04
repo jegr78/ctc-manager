@@ -110,15 +110,22 @@ public class MatchdayGeneratorService {
 		log.info("Generated {} matchdays for phase {} group {}", sortIndex - 1, phaseId, groupId);
 	}
 
+	@Transactional(readOnly = true)
 	public GeneratorFormData getFormData(UUID seasonId) {
 		var season = seasonRepository.findById(seasonId)
 				.orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
-		var regularPhaseOpt = seasonPhaseService.findByType(seasonId, PhaseType.REGULAR);
-		SeasonPhase phase = regularPhaseOpt.orElse(null);
-		var teams = season.getEligibleTeams();
-		int n = teams.size();
-		int optimalRounds = n % 2 == 0 ? n - 1 : n;
-		return new GeneratorFormData(season, phase, n, optimalRounds);
+		var phase = seasonPhaseService.findRegularPhase(seasonId);
+		int n = phaseTeamRepository.findByPhaseId(phase.getId()).size();
+		var groups = seasonPhaseGroupRepository.findByPhaseIdOrderBySortIndex(phase.getId()).stream()
+				.map(group -> {
+					int count = phaseTeamRepository.findByPhaseIdAndGroupId(phase.getId(), group.getId()).size();
+					return new GeneratorGroup(group.getId(), group.getName(), count, optimalRounds(count));
+				}).toList();
+		return new GeneratorFormData(season, phase, n, optimalRounds(n), groups);
+	}
+
+	private int optimalRounds(int teamCount) {
+		return teamCount < 2 ? 0 : (teamCount % 2 == 0 ? teamCount - 1 : teamCount);
 	}
 
 	/**
@@ -216,6 +223,10 @@ public class MatchdayGeneratorService {
 	 * Form data for the matchday generator UI. Carries both {@link Season} and
 	 * {@link SeasonPhase} for template compatibility.
 	 */
-	public record GeneratorFormData(Season season, SeasonPhase phase, int teamCount, int optimalRounds) {
+	public record GeneratorFormData(Season season, SeasonPhase phase, int teamCount, int optimalRounds,
+	                                List<GeneratorGroup> groups) {
+	}
+
+	public record GeneratorGroup(UUID id, String name, int teamCount, int optimalRounds) {
 	}
 }

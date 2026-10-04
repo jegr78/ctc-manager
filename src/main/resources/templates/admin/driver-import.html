@@ -2,13 +2,14 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Import Drivers from Sheet', ~{::section})}">
 <body>
-<section>
+<section class="entity-editor driver-import-editor">
+    <a th:href="@{/admin/drivers}" class="back-link">&larr; Back to Drivers</a>
     <h1>Import Drivers from Google Sheet</h1>
+    <p class="text-dim mb-md">Review drivers and their season teams before importing the spreadsheet.</p>
 
     <div th:if="${errorMessage}" class="alert alert-error mb-md">
         <p>
-            <span th:if="${errorCategory}"
-                  class="error-badge"
+            <span th:if="${errorCategory}" class="error-badge"
                   th:classappend="|error-badge--${#strings.toLowerCase(errorCategory)}|"
                   th:text="${errorCategory}"></span>
             <span th:text="${errorMessage}"></span>
@@ -16,19 +17,27 @@
     </div>
 
     <div class="card">
-        <div th:if="${!sheetsAvailable}" class="alert alert-error mb-md">
-            <p>Google Sheets is not configured. Check service account credentials.</p>
+        <div th:if="${!sheetsAvailable}" class="driver-import-unavailable">
+            <h2>Google Sheets is not configured</h2>
+            <p class="text-dim mb-md">Configure the service account credentials to preview a driver spreadsheet.</p>
+            <a th:href="@{/admin/drivers}" class="btn btn-secondary">Back to Drivers</a>
         </div>
-
-        <form th:if="${sheetsAvailable}" th:action="@{/admin/drivers/import/preview}" method="post">
-            <div class="form-group">
-                <label for="sheetUrl">Google Sheet URL</label>
-                <input type="url" id="sheetUrl" name="sheetUrl"
-                       placeholder="https://docs.google.com/spreadsheets/d/..." required>
-            </div>
-            <div class="actions mt-md">
-                <button type="submit" class="btn btn-primary">Preview</button>
-                <a th:href="@{/admin/drivers}" class="btn btn-secondary">Cancel</a>
+        <form class="entity-editor-form" th:if="${sheetsAvailable}" th:action="@{/admin/drivers/import/preview}" method="post">
+            <fieldset>
+                <legend>Spreadsheet source</legend>
+                <div class="form-group">
+                    <label for="sheetUrl">Google Sheet URL</label>
+                    <input type="url" id="sheetUrl" name="sheetUrl" th:value="${sheetUrl}" placeholder="https://docs.google.com/spreadsheets/d/..." required aria-describedby="driver-sheet-access">
+                    <p id="driver-sheet-access" class="text-dim form-hint--sm">Share the spreadsheet with the service account before previewing it.</p>
+                </div>
+                <p class="text-dim form-hint--sm">Use season tab names such as <code>2026_S1</code>. A year alone can be ambiguous when several seasons share that year.</p>
+            </fieldset>
+            <div class="entity-editor-actions">
+                <span class="text-dim">The preview shows new drivers, team changes and matching suggestions.</span>
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary">Preview</button>
+                    <a th:href="@{/admin/drivers}" class="btn btn-secondary">Cancel</a>
+                </div>
             </div>
         </form>
     </div>

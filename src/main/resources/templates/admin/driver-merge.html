@@ -2,98 +2,96 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
-<section>
-    <!-- State 1: Select target driver -->
+<section class="entity-editor driver-merge-editor">
+    <a th:href="@{/admin/drivers/{id}(id=${source.id})}" class="back-link">&larr; Back to Driver: <span th:text="${source.psnId}"></span></a>
+
     <div th:if="${preview == null}">
-        <div class="toolbar">
-            <div>
-                <a th:href="@{/admin/drivers/{id}(id=${source.id})}" class="back-link">&larr; Back to Driver: <span th:text="${source.psnId}"></span></a>
-                <h1>Merge Driver: <span th:text="${source.psnId}"></span></h1>
-            </div>
-        </div>
-
+        <h1>Merge Driver: <span th:text="${source.psnId}"></span></h1>
+        <p class="text-dim mb-md">Combine duplicate driver profiles. Select the driver to keep, then review the changes before confirming.</p>
         <div class="card">
-            <div class="detail-fields">
-                <span class="label">Source Driver</span>
-                <span><span th:text="${source.psnId}"></span> (<span th:text="${source.nickname}"></span>)</span>
-            </div>
-
-            <form th:action="@{/admin/drivers/{id}/merge/preview(id=${source.id})}" method="post">
-                <div class="form-group">
-                    <label for="targetId">Merge into (target driver)</label>
-                    <select name="targetId" id="targetId" required>
-                        <option value="">-- Select target driver --</option>
-                        <option th:each="d : ${allDrivers}" th:value="${d.id}" th:text="${d.psnId + ' (' + d.nickname + ')'}"></option>
-                    </select>
-                </div>
-                <div class="actions">
-                    <button type="submit" class="btn btn-primary">Select Target</button>
-                    <a th:href="@{/admin/drivers/{id}(id=${source.id})}" class="btn btn-secondary">Back to Driver</a>
+            <form class="entity-editor-form" th:action="@{/admin/drivers/{id}/merge/preview(id=${source.id})}" method="post">
+                <fieldset>
+                    <legend>Choose the driver to keep</legend>
+                    <dl class="entity-facts">
+                        <dt>Source driver</dt>
+                        <dd><strong th:text="${source.psnId}"></strong><br><span class="text-dim" th:text="${source.nickname}"></span></dd>
+                    </dl>
+                    <div class="form-group">
+                        <label for="targetId">Target driver, kept after merge</label>
+                        <select name="targetId" id="targetId" required aria-describedby="merge-target-hint">
+                            <option value="">-- Select target driver --</option>
+                            <option th:each="d : ${allDrivers}" th:value="${d.id}" th:text="${d.psnId + ' (' + d.nickname + ')'}"></option>
+                        </select>
+                        <p id="merge-target-hint" class="text-dim form-hint--sm">The source profile will be removed after confirmation. The target keeps its PSN ID and nickname.</p>
+                    </div>
+                </fieldset>
+                <div class="entity-editor-actions">
+                    <span class="text-dim">Previewing does not change any driver data.</span>
+                    <div class="actions">
+                        <button type="submit" class="btn btn-primary">Preview Merge</button>
+                        <a th:href="@{/admin/drivers/{id}(id=${source.id})}" class="btn btn-secondary">Cancel</a>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- State 2: Preview + Confirm -->
     <div th:if="${preview != null}">
-        <div class="toolbar">
-            <div>
-                <a th:href="@{/admin/drivers/{id}(id=${source.id})}" class="back-link">&larr; Back to Driver: <span th:text="${source.psnId}"></span></a>
-                <h1>Merge Preview: <span th:text="${source.psnId}"></span> &rarr; <span th:text="${target.psnId}"></span></h1>
+        <h1>Merge Preview</h1>
+        <p class="text-dim mb-md">Review the direction and affected records before merging these driver profiles.</p>
+        <div class="driver-merge-direction mb-md">
+            <div class="card" data-merge-source>
+                <h2>Source driver</h2>
+                <a th:href="@{/admin/drivers/{id}(id=${source.id})}" class="driver-merge-name" th:text="${source.psnId}"></a>
+                <p class="text-dim" th:text="${source.nickname}"></p>
+                <p class="driver-merge-outcome">Removed after merge</p>
+            </div>
+            <div class="card" data-merge-target>
+                <h2>Target driver</h2>
+                <a th:href="@{/admin/drivers/{id}(id=${target.id})}" class="driver-merge-name" th:text="${target.psnId}"></a>
+                <p class="text-dim" th:text="${target.nickname}"></p>
+                <p class="driver-merge-outcome">Kept after merge</p>
             </div>
         </div>
 
-        <div class="card">
-            <h2>References to Reassign</h2>
-
-            <div th:if="${preview.totalToReassign() > 0 or preview.totalDuplicates() > 0}" class="table-scroll">
+        <div class="card mb-md">
+            <h2>Data to transfer</h2>
+            <p id="merge-records-hint" class="text-dim mb-md">If both drivers have an entry for the same season or race, the target entry is kept and the source entry is removed.</p>
+            <div th:if="${preview.totalToReassign() > 0 or preview.totalDuplicates() > 0}" class="table-scroll" tabindex="0" role="region" aria-label="Driver records affected by merge" aria-describedby="merge-records-hint">
                 <table>
                     <thead>
-                        <tr>
-                            <th>FK Table</th>
-                            <th>Reassign</th>
-                            <th>Duplicates Dropped</th>
-                        </tr>
+                        <tr><th scope="col">Record type</th><th scope="col">Transfer to target</th><th scope="col">Source duplicates removed</th></tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>SeasonDriver</td>
-                            <td th:text="${preview.seasonDriversToReassign()}"></td>
-                            <td th:text="${preview.seasonDriversDuplicate()}"></td>
-                        </tr>
-                        <tr>
-                            <td>RaceLineup</td>
-                            <td th:text="${preview.raceLineupsToReassign()}"></td>
-                            <td th:text="${preview.raceLineupsDuplicate()}"></td>
-                        </tr>
-                        <tr>
-                            <td>RaceResult</td>
-                            <td th:text="${preview.raceResultsToReassign()}"></td>
-                            <td th:text="${preview.raceResultsDuplicate()}"></td>
-                        </tr>
-                        <tr>
-                            <td>PsnAlias</td>
-                            <td th:text="${preview.psnAliasesToReassign()}"></td>
-                            <td><span class="text-dim">&mdash;</span></td>
-                        </tr>
+                        <tr><th scope="row">Season assignments</th><td th:text="${preview.seasonDriversToReassign()}"></td><td th:text="${preview.seasonDriversDuplicate()}"></td></tr>
+                        <tr><th scope="row">Race lineups</th><td th:text="${preview.raceLineupsToReassign()}"></td><td th:text="${preview.raceLineupsDuplicate()}"></td></tr>
+                        <tr><th scope="row">Race results</th><td th:text="${preview.raceResultsToReassign()}"></td><td th:text="${preview.raceResultsDuplicate()}"></td></tr>
+                        <tr><th scope="row">Existing PSN aliases</th><td th:text="${preview.psnAliasesToReassign()}"></td><td><span class="text-dim">None</span></td></tr>
                     </tbody>
                 </table>
             </div>
-
             <div th:if="${preview.totalToReassign() == 0 and preview.totalDuplicates() == 0}" class="empty-state empty-state--compact">
-                <h3>No References Found</h3>
-                <p>This driver has no season, lineup, result, or alias entries. The merge will only delete the source driver.</p>
+                <h3>No existing records to transfer</h3>
+                <p>The source has no season assignments, race lineups, results or existing aliases.</p>
             </div>
+            <p class="text-dim form-hint--sm">The source PSN ID is also added as an alias of the target unless it is already registered.</p>
+        </div>
 
-            <form th:action="@{/admin/drivers/{id}/merge(id=${source.id})}" method="post"
-                  th:attr="onsubmit='return confirm(\'Really merge ' + ${source.psnId} + ' into ' + ${target.psnId} + '? This cannot be undone.\')'">
-                <input type="hidden" name="targetId" th:value="${target.id}">
+        <form class="entity-editor-form" th:action="@{/admin/drivers/{id}/merge(id=${source.id})}" method="post"
+              onsubmit="return confirm('Merge these drivers and remove the source profile? This cannot be undone.')">
+            <input type="hidden" name="targetId" th:value="${target.id}">
+            <div class="driver-merge-warning mb-md">
+                <h2>Permanent change</h2>
+                <p>The source profile will be deleted. Transferred records belong to the target. This merge cannot be undone.</p>
+            </div>
+            <div class="entity-editor-actions">
+                <span class="text-dim">Confirm only after reviewing both profiles and the affected records.</span>
                 <div class="actions">
                     <button type="submit" class="btn btn-danger">Confirm Merge</button>
-                    <a th:href="@{/admin/drivers/{id}/merge(id=${source.id})}" class="btn btn-secondary">Back</a>
+                    <a th:href="@{/admin/drivers/{id}/merge(id=${source.id})}" class="btn btn-secondary">Change Target</a>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
 </section>
 </body>
