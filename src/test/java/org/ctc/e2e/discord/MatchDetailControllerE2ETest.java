@@ -78,10 +78,11 @@ class MatchDetailControllerE2ETest extends PlaywrightConfig {
 		// when
 		page.navigate(url("/admin/matches/" + match.getId()));
 
-		// then — page header + Discord Actions panel + Schedule + Races
+		// then — race-first overview, schedule and Discord actions
 		assertThat(page.locator("h1")).containsText("heA");
 		assertThat(page.locator("h1")).containsText("aeA");
-		assertThat(page.locator("h2").first()).containsText("Discord Actions");
+		assertThat(page.locator("h2").first()).containsText("Races");
+		assertThat(page.locator("#match-discord h2")).hasText("Discord");
 		assertThat(page.locator("[data-testid='create-discord-channel']")).isVisible();
 		assertThat(page.locator("[data-testid='create-discord-channel']")).isDisabled();
 		assertThat(page.locator("section h2").filter(

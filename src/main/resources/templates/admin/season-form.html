@@ -1,61 +1,88 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Edit Season', ~{::section})}">
+th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
-<section>
-    <h1 th:text="${seasonForm.id != null ? 'Edit Season' : 'New Season'}"></h1>
-    <div class="card">
-        <form th:action="@{/admin/seasons/save}" th:object="${seasonForm}" method="post">
-            <input type="hidden" th:field="*{id}">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="name">Name</label>
-                    <input type="text" id="name" th:field="*{name}" placeholder="e.g. Regular Season" required>
-                    <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
-                </div>
-                <div class="form-group">
-                    <div class="form-check mt-xl">
+    <section class="entity-editor season-configuration">
+        <a th:href="@{/admin/seasons}" class="back-link">← Back to Seasons</a>
+        <h1 th:text="${seasonForm.id != null ? 'Edit Season' : 'New Season'}">
+        </h1>
+        <nav class="entity-section-nav" aria-label="Season editing sections">
+            <a href="#season-identity">Season details</a>
+            <a th:if="${seasonForm.id != null}" href="#season-teams">Teams</a>
+            <a th:if="${seasonForm.id != null}" href="#carPool">Cars</a>
+            <a th:if="${seasonForm.id != null}" href="#trackPool">Tracks</a>
+            <a th:if="${seasonForm.id != null and discordIntegrationActive}" href="#discordIntegration">Discord</a>
+        </nav>
+        <div class="card">
+            <form class="entity-editor-form" th:action="@{/admin/seasons/save}" th:object="${seasonForm}" method="post">
+                <input type="hidden" th:field="*{id}">
+                <fieldset id="season-identity">
+                    <legend>Season details</legend>
+                    <div class="form-group">
+                        <label for="name">Name</label>
+                        <input type="text" id="name" th:field="*{name}" placeholder="e.g. Regular Season" required th:attr="aria-invalid=${#fields.hasErrors('name')},aria-describedby=${#fields.hasErrors('name') ? 'name-error' : null}">
+                        <p id="name-error" class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">
+                        </p>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="year">Year</label>
+                            <input type="number" id="year" th:field="*{year}" min="2020" max="2099" required th:attr="aria-invalid=${#fields.hasErrors('year')},aria-describedby=${#fields.hasErrors('year') ? 'year-error' : null}">
+                            <p id="year-error" class="field-error" th:if="${#fields.hasErrors('year')}" th:errors="*{year}">
+                            </p>
+                        </div>
+                        <div class="form-group">
+                            <label for="number">Number</label>
+                            <input type="number" id="number" th:field="*{number}" min="1" max="99" required th:attr="aria-invalid=${#fields.hasErrors('number')},aria-describedby=${#fields.hasErrors('number') ? 'number-error' : null}">
+                            <p id="number-error" class="field-error" th:if="${#fields.hasErrors('number')}" th:errors="*{number}">
+                            </p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <input type="text" id="description" th:field="*{description}" placeholder="e.g. Group A" th:attr="aria-invalid=${#fields.hasErrors('description')},aria-describedby=${#fields.hasErrors('description') ? 'description-error' : null}">
+                        <p id="description-error" class="field-error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}">
+                        </p>
+                    </div>
+                    <div class="form-check">
                         <input type="checkbox" id="active" th:field="*{active}">
-                        <label for="active">Active Season</label>
+                        <label for="active">Active season</label>
+                    </div>
+                </fieldset>
+                <div class="entity-editor-actions">
+                    <span class="text-dim">Season details</span>
+                    <div class="actions">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <a th:href="@{/admin/seasons}" class="btn btn-secondary">Cancel</a>
                     </div>
                 </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="year">Year *</label>
-                    <input type="number" id="year" th:field="*{year}" min="2020" max="2099" required>
-                </div>
-                <div class="form-group">
-                    <label for="number">Number *</label>
-                    <input type="number" id="number" th:field="*{number}" min="1" max="99" required>
-                </div>
-                <div class="form-group">
-                    <label for="description">Description</label>
-                    <input type="text" id="description" th:field="*{description}" placeholder="e.g. Group A">
-                </div>
-            </div>
-
-            <div class="actions mt-md">
-                <button type="submit" class="btn btn-primary">Save</button>
-                <a th:href="@{/admin/seasons}" class="btn btn-secondary">Cancel</a>
-            </div>
-        </form>
-    </div>
-
-    <!-- Team assignment (only when editing) -->
-    <div th:if="${seasonForm.id != null}" class="card">
-        <h2>Teams in this Season</h2>
-        <table th:if="${!season.teams.isEmpty()}">
-            <thead>
-                <tr><th>Short Name</th><th>Name</th><th>Type</th><th>Actions</th></tr>
-            </thead>
-            <tbody>
-                <tr th:each="team : ${season.teams}">
-                    <td><strong th:text="${team.shortName}"></strong></td>
-                    <td th:text="${team.name}"></td>
-                    <td>
-                        <span th:if="${team.subTeam}" class="badge badge-inactive"
-                              th:text="'Sub → ' + ${team.parentOrSelf.shortName}"></span>
+            </form>
+        </div>
+        <p th:if="${seasonForm.id != null}" class="text-dim configuration-hint">Season details and the assignments below are saved separately. Each assignment action takes effect immediately.</p>
+        <!-- Team assignment (only when editing) -->
+        <div th:if="${seasonForm.id != null}" class="card" id="season-teams">
+            <h2>Teams in this Season</h2>
+            <table th:if="${!season.teams.isEmpty()}">
+                <thead>
+                    <tr>
+                        <th>Short Name</th>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="team : ${season.teams}">
+                        <td>
+                            <strong th:text="${team.shortName}">
+                            </strong>
+                        </td>
+                        <td th:text="${team.name}">
+                        </td>
+                        <td>
+                            <span th:if="${team.subTeam}" class="badge badge-inactive"
+                            th:text="'Sub → ' + ${team.parentOrSelf.shortName}">
+                        </span>
                         <span th:unless="${team.subTeam}" class="badge badge-active">Parent</span>
                     </td>
                     <td>
@@ -71,293 +98,318 @@
             <p>No teams assigned yet.</p>
         </div>
         <form th:action="@{/admin/seasons/{id}/add-team(id=${season.id})}" method="post"
-              class="inline-form mt-md">
-            <select name="teamId" required>
-                <option value="">-- Add team --</option>
-                <option th:each="t : ${allTeams}" th:value="${t.id}"
-                        th:text="${t.shortName + ' — ' + t.name + (t.subTeam ? ' (Sub of ' + t.parentOrSelf.shortName + ')' : '')}"
-                        th:if="${!season.teams.contains(t)}"></option>
-            </select>
-            <button type="submit" class="btn btn-primary btn-sm">Add</button>
-        </form>
-    </div>
-    <!-- Car Pool (only when editing) -->
-    <div th:if="${seasonForm.id != null}" class="card mt-md" id="carPool">
-        <h2 th:text="'Car Pool (' + ${season.cars.size()} + ')'">Car Pool</h2>
-        <div class="transfer-picker">
-            <div class="transfer-list">
-                <form th:action="@{/admin/seasons/{id}/cars/add(id=${season.id})}" method="post" id="addCarsForm">
-                    <div class="transfer-header">
-                        <span class="text-dim">Available</span>
-                        <div class="color-pair">
-                            <input type="text" id="availableCarsFilter" placeholder="Filter..." class="transfer-filter">
-                            <button type="submit" class="btn btn-primary btn-sm" title="Add selected">&rarr;</button>
+        class="inline-form mt-md">
+        <label for="season-add-team" class="sr-only">Team to add</label>
+        <select id="season-add-team" name="teamId" required>
+            <option value="">-- Add team --</option>
+            <option th:each="t : ${allTeams}" th:value="${t.id}"
+            th:text="${t.shortName + ' — ' + t.name + (t.subTeam ? ' (Sub of ' + t.parentOrSelf.shortName + ')' : '')}"
+            th:if="${!season.teams.contains(t)}">
+        </option>
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">Add</button>
+</form>
+</div>
+<!-- Car Pool (only when editing) -->
+<div th:if="${seasonForm.id != null}" class="card mt-md" id="carPool">
+    <h2 th:text="'Car Pool (' + ${season.cars.size()} + ')'">Car Pool</h2>
+    <div class="transfer-picker">
+        <div class="transfer-list">
+            <form th:action="@{/admin/seasons/{id}/cars/add(id=${season.id})}" method="post" id="addCarsForm">
+                <div class="transfer-header">
+                    <span class="text-dim">Available</span>
+                    <div class="color-pair">
+                        <div class="transfer-filter-field">
+                            <label for="availableCarsFilter">Search available cars</label>
+                            <input type="search" id="availableCarsFilter" placeholder="Search..." class="transfer-filter">
                         </div>
+                        <button type="submit" class="btn btn-primary btn-sm" title="Add selected">Add selected</button>
                     </div>
-                    <div class="transfer-items" id="availableCars">
-                        <label th:each="car : ${allCars}" th:if="${!season.cars.contains(car)}" class="transfer-item transfer-selectable">
-                            <input type="checkbox" name="carIds" th:value="${car.id}">
-                            <span th:text="${car.manufacturer + ' — ' + car.name}"></span>
-                        </label>
-                        <div th:if="${allCars.isEmpty()}" class="transfer-empty">No cars available. Create cars first.</div>
-                    </div>
-                </form>
-            </div>
-            <div class="transfer-list">
-                <form th:action="@{/admin/seasons/{id}/cars/remove(id=${season.id})}" method="post" id="removeCarsForm">
-                    <div class="transfer-header">
-                        <span class="text-dim" th:text="'Assigned (' + ${season.cars.size()} + ')'">Assigned</span>
-                        <div class="color-pair">
-                            <input type="text" id="assignedCarsFilter" placeholder="Filter..." class="transfer-filter">
-                            <button type="submit" class="btn btn-danger btn-sm" title="Remove selected">&larr;</button>
-                        </div>
-                    </div>
-                    <div class="transfer-items" id="assignedCars">
-                        <label th:each="car : ${season.cars}" class="transfer-item transfer-selectable">
-                            <input type="checkbox" name="carIds" th:value="${car.id}">
-                            <span th:text="${car.manufacturer + ' — ' + car.name}"></span>
-                        </label>
-                        <div th:if="${season.cars.isEmpty()}" class="transfer-empty">No cars assigned yet.</div>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div class="transfer-items" id="availableCars">
+                    <label th:each="car : ${allCars}" th:if="${!season.cars.contains(car)}" class="transfer-item transfer-selectable">
+                        <input type="checkbox" name="carIds" th:value="${car.id}">
+                        <span th:text="${car.manufacturer + ' — ' + car.name}">
+                        </span>
+                    </label>
+                    <div th:if="${allCars.isEmpty()}" class="transfer-empty">No cars available. Create cars first.</div>
+                </div>
+            </form>
         </div>
-    </div>
-
-    <!-- Track Pool (only when editing) -->
-    <div th:if="${seasonForm.id != null}" class="card mt-md" id="trackPool">
-        <h2 th:text="'Track Pool (' + ${season.tracks.size()} + ')'">Track Pool</h2>
-        <div class="transfer-picker">
-            <div class="transfer-list">
-                <form th:action="@{/admin/seasons/{id}/tracks/add(id=${season.id})}" method="post" id="addTracksForm">
-                    <div class="transfer-header">
-                        <span class="text-dim">Available</span>
-                        <div class="color-pair">
-                            <input type="text" id="availableTracksFilter" placeholder="Filter..." class="transfer-filter">
-                            <button type="submit" class="btn btn-primary btn-sm" title="Add selected">&rarr;</button>
+        <div class="transfer-list">
+            <form th:action="@{/admin/seasons/{id}/cars/remove(id=${season.id})}" method="post" id="removeCarsForm">
+                <div class="transfer-header">
+                    <span class="text-dim" th:text="'Assigned (' + ${season.cars.size()} + ')'">Assigned</span>
+                    <div class="color-pair">
+                        <div class="transfer-filter-field">
+                            <label for="assignedCarsFilter">Search assigned cars</label>
+                            <input type="search" id="assignedCarsFilter" placeholder="Search..." class="transfer-filter">
                         </div>
+                        <button type="submit" class="btn btn-danger btn-sm" title="Remove selected">Remove selected</button>
                     </div>
-                    <div class="transfer-items" id="availableTracks">
-                        <label th:each="track : ${allTracks}" th:if="${!season.tracks.contains(track)}" class="transfer-item transfer-selectable">
-                            <input type="checkbox" name="trackIds" th:value="${track.id}">
-                            <span th:text="${track.name}"></span>
-                        </label>
-                        <div th:if="${allTracks.isEmpty()}" class="transfer-empty">No tracks available. Create tracks first.</div>
-                    </div>
-                </form>
-            </div>
-            <div class="transfer-list">
-                <form th:action="@{/admin/seasons/{id}/tracks/remove(id=${season.id})}" method="post" id="removeTracksForm">
-                    <div class="transfer-header">
-                        <span class="text-dim" th:text="'Assigned (' + ${season.tracks.size()} + ')'">Assigned</span>
-                        <div class="color-pair">
-                            <input type="text" id="assignedTracksFilter" placeholder="Filter..." class="transfer-filter">
-                            <button type="submit" class="btn btn-danger btn-sm" title="Remove selected">&larr;</button>
-                        </div>
-                    </div>
-                    <div class="transfer-items" id="assignedTracks">
-                        <label th:each="track : ${season.tracks}" class="transfer-item transfer-selectable">
-                            <input type="checkbox" name="trackIds" th:value="${track.id}">
-                            <span th:text="${track.name}"></span>
-                        </label>
-                        <div th:if="${season.tracks.isEmpty()}" class="transfer-empty">No tracks assigned yet.</div>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Discord Integration (only when editing AND a forum-channel is configured) -->
-    <div th:if="${seasonForm.id != null and discordIntegrationActive}"
-         class="card mt-md" id="discordIntegration">
-        <h2>Discord Integration</h2>
-        <p th:if="${discordIntegrationWarning}" class="alert alert-warning" th:text="${discordIntegrationWarning}"></p>
-
-        <div class="form-row">
-            <div class="form-group">
-                <label>Race-Results Forum Thread</label>
-                <div th:if="${linkedRaceResultsThread != null}" class="discord-actions">
-                    <span class="badge badge-active"
-                          th:text="${linkedRaceResultsThread.name} + ' (' + ${linkedRaceResultsThread.id} + ')'"></span>
-                    <button type="button" class="btn btn-secondary btn-sm"
-                            data-testid="link-race-results-change"
-                            onclick="document.getElementById('linkRaceResultsModal').style.display='block'">
-                        Change Link
-                    </button>
-                    <form th:action="@{/admin/seasons/{id}/unlink-thread(id=${seasonForm.id})}"
-                          method="post" class="inline-form">
-                        <input type="hidden" name="type" value="race-results">
-                        <button type="submit" class="btn btn-danger btn-sm"
-                                data-testid="unlink-race-results">Unlink</button>
-                    </form>
                 </div>
-                <div th:if="${linkedRaceResultsThread == null}" class="discord-actions">
-                    <span class="badge badge-inactive">not linked</span>
-                    <button type="button" class="btn btn-primary btn-sm"
-                            data-testid="link-race-results-open"
-                            th:disabled="${raceResultsThreadOptions.isEmpty()}"
-                            onclick="document.getElementById('linkRaceResultsModal').style.display='block'">
-                        Link existing Thread...
-                    </button>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Standings Forum Thread</label>
-                <div th:if="${linkedStandingsThread != null}" class="discord-actions">
-                    <span class="badge badge-active"
-                          th:text="${linkedStandingsThread.name} + ' (' + ${linkedStandingsThread.id} + ')'"></span>
-                    <button type="button" class="btn btn-secondary btn-sm"
-                            data-testid="link-standings-change"
-                            onclick="document.getElementById('linkStandingsModal').style.display='block'">
-                        Change Link
-                    </button>
-                    <form th:action="@{/admin/seasons/{id}/unlink-thread(id=${seasonForm.id})}"
-                          method="post" class="inline-form">
-                        <input type="hidden" name="type" value="standings">
-                        <button type="submit" class="btn btn-danger btn-sm"
-                                data-testid="unlink-standings">Unlink</button>
-                    </form>
-                </div>
-                <div th:if="${linkedStandingsThread == null}" class="discord-actions">
-                    <span class="badge badge-inactive">not linked</span>
-                    <button type="button" class="btn btn-primary btn-sm"
-                            data-testid="link-standings-open"
-                            th:disabled="${standingsThreadOptions.isEmpty()}"
-                            onclick="document.getElementById('linkStandingsModal').style.display='block'">
-                        Link existing Thread...
-                    </button>
-                </div>
-            </div>
-
-            <div th:if="${canPostStandings and !allPhases.isEmpty()}"
-                 class="discord-actions discord-actions--posts mt-md"
-                 data-testid="standings-post-cluster">
-                <form th:action="@{/admin/seasons/{id}/post-standings(id=${seasonForm.id})}"
-                      method="post" class="form-inline">
-                    <input th:if="${_csrf != null}" type="hidden"
-                           th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                    <select th:if="${allPhases.size() > 1}" name="phaseId"
-                            class="form-control form-control-sm" data-testid="post-standings-phase-select">
-                        <option th:each="p : ${allPhases}"
-                                th:value="${p.id}"
-                                th:text="${p.phaseType.name()}"></option>
-                    </select>
-                    <input th:if="${allPhases.size() == 1}" type="hidden" name="phaseId"
-                           th:value="${allPhases[0].id}" data-testid="post-standings-phase-hidden"/>
-                    <button type="submit" class="btn btn-primary btn-sm" data-testid="post-standings">
-                        Post Standings
-                    </button>
-                </form>
-                <ul class="text-dim text-xs" data-testid="standings-phase-status-list">
-                    <li th:each="row : ${phaseStandingsRows}">
-                        <span th:text="${row.phase.phaseType.name()}"></span>:
-                        <span th:if="${row.post == null}" data-testid="standings-phase-status-none">never posted</span>
-                        <span th:if="${row.post != null and row.stale}"
-                              class="badge badge-warning" data-testid="standings-phase-status-stale">Update needed</span>
-                        <span th:if="${row.post != null and !row.stale}"
-                              class="badge badge-active" data-testid="standings-phase-status-fresh">Posted</span>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <!-- Link Race-Results Thread Modal -->
-    <div th:if="${seasonForm.id != null and discordIntegrationActive}"
-         id="linkRaceResultsModal" class="modal-overlay">
-        <div class="modal-body modal-body--md">
-            <h3 class="modal-title">Link Race-Results Forum Thread</h3>
-            <form th:action="@{/admin/seasons/{id}/link-thread(id=${seasonForm.id})}" method="post">
-                <input type="hidden" name="type" value="race-results">
-                <div th:if="${raceResultsThreadOptions.isEmpty()}" class="alert alert-warning"
-                     data-testid="link-race-results-empty">
-                    No threads available in the configured race-results forum channel.
-                </div>
-                <div th:each="t,iter : ${raceResultsThreadOptions}" class="form-check">
-                    <input type="radio"
-                           th:id="'race-results-thread-' + ${iter.index}"
-                           name="threadId"
-                           th:value="${t.id}"
-                           th:checked="${t.pinned()}">
-                    <label th:for="'race-results-thread-' + ${iter.index}"
-                           th:text="${t.name} + ' (' + ${t.id} + ')'
-                                    + (${t.pinned()} ? ' [pinned]' : '')
-                                    + (${t.archived()} ? ' [archived]' : '')"></label>
-                </div>
-                <div class="actions">
-                    <button type="submit" class="btn btn-primary"
-                            data-testid="link-race-results-confirm"
-                            th:disabled="${raceResultsThreadOptions.isEmpty()}">Confirm</button>
-                    <button type="button" class="btn btn-secondary"
-                            data-testid="link-race-results-cancel"
-                            onclick="document.getElementById('linkRaceResultsModal').style.display='none'">Cancel</button>
+                <div class="transfer-items" id="assignedCars">
+                    <label th:each="car : ${season.cars}" class="transfer-item transfer-selectable">
+                        <input type="checkbox" name="carIds" th:value="${car.id}">
+                        <span th:text="${car.manufacturer + ' — ' + car.name}">
+                        </span>
+                    </label>
+                    <div th:if="${season.cars.isEmpty()}" class="transfer-empty">No cars assigned yet.</div>
                 </div>
             </form>
         </div>
     </div>
+</div>
 
-    <!-- Link Standings Thread Modal -->
-    <div th:if="${seasonForm.id != null and discordIntegrationActive}"
-         id="linkStandingsModal" class="modal-overlay">
-        <div class="modal-body modal-body--md">
-            <h3 class="modal-title">Link Standings Forum Thread</h3>
-            <form th:action="@{/admin/seasons/{id}/link-thread(id=${seasonForm.id})}" method="post">
-                <input type="hidden" name="type" value="standings">
-                <div th:if="${standingsThreadOptions.isEmpty()}" class="alert alert-warning"
-                     data-testid="link-standings-empty">
-                    No threads available in the configured standings forum channel.
+<!-- Track Pool (only when editing) -->
+<div th:if="${seasonForm.id != null}" class="card mt-md" id="trackPool">
+    <h2 th:text="'Track Pool (' + ${season.tracks.size()} + ')'">Track Pool</h2>
+    <div class="transfer-picker">
+        <div class="transfer-list">
+            <form th:action="@{/admin/seasons/{id}/tracks/add(id=${season.id})}" method="post" id="addTracksForm">
+                <div class="transfer-header">
+                    <span class="text-dim">Available</span>
+                    <div class="color-pair">
+                        <div class="transfer-filter-field">
+                            <label for="availableTracksFilter">Search available tracks</label>
+                            <input type="search" id="availableTracksFilter" placeholder="Search..." class="transfer-filter">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm" title="Add selected">Add selected</button>
+                    </div>
                 </div>
-                <div th:each="t,iter : ${standingsThreadOptions}" class="form-check">
-                    <input type="radio"
-                           th:id="'standings-thread-' + ${iter.index}"
-                           name="threadId"
-                           th:value="${t.id}"
-                           th:checked="${t.pinned()}">
-                    <label th:for="'standings-thread-' + ${iter.index}"
-                           th:text="${t.name} + ' (' + ${t.id} + ')'
-                                    + (${t.pinned()} ? ' [pinned]' : '')
-                                    + (${t.archived()} ? ' [archived]' : '')"></label>
+                <div class="transfer-items" id="availableTracks">
+                    <label th:each="track : ${allTracks}" th:if="${!season.tracks.contains(track)}" class="transfer-item transfer-selectable">
+                        <input type="checkbox" name="trackIds" th:value="${track.id}">
+                        <span th:text="${track.name}">
+                        </span>
+                    </label>
+                    <div th:if="${allTracks.isEmpty()}" class="transfer-empty">No tracks available. Create tracks first.</div>
                 </div>
-                <div class="actions">
-                    <button type="submit" class="btn btn-primary"
-                            data-testid="link-standings-confirm"
-                            th:disabled="${standingsThreadOptions.isEmpty()}">Confirm</button>
-                    <button type="button" class="btn btn-secondary"
-                            data-testid="link-standings-cancel"
-                            onclick="document.getElementById('linkStandingsModal').style.display='none'">Cancel</button>
+            </form>
+        </div>
+        <div class="transfer-list">
+            <form th:action="@{/admin/seasons/{id}/tracks/remove(id=${season.id})}" method="post" id="removeTracksForm">
+                <div class="transfer-header">
+                    <span class="text-dim" th:text="'Assigned (' + ${season.tracks.size()} + ')'">Assigned</span>
+                    <div class="color-pair">
+                        <div class="transfer-filter-field">
+                            <label for="assignedTracksFilter">Search assigned tracks</label>
+                            <input type="search" id="assignedTracksFilter" placeholder="Search..." class="transfer-filter">
+                        </div>
+                        <button type="submit" class="btn btn-danger btn-sm" title="Remove selected">Remove selected</button>
+                    </div>
+                </div>
+                <div class="transfer-items" id="assignedTracks">
+                    <label th:each="track : ${season.tracks}" class="transfer-item transfer-selectable">
+                        <input type="checkbox" name="trackIds" th:value="${track.id}">
+                        <span th:text="${track.name}">
+                        </span>
+                    </label>
+                    <div th:if="${season.tracks.isEmpty()}" class="transfer-empty">No tracks assigned yet.</div>
                 </div>
             </form>
         </div>
     </div>
+</div>
 
-    <script>
+<!-- Discord Integration (only when editing AND a forum-channel is configured) -->
+<div th:if="${seasonForm.id != null and discordIntegrationActive}"
+class="card mt-md" id="discordIntegration">
+<h2>Discord Integration</h2>
+<p th:if="${discordIntegrationWarning}" class="alert alert-warning" th:text="${discordIntegrationWarning}">
+</p>
+
+<div class="form-row">
+    <div class="form-group">
+        <label>Race-Results Forum Thread</label>
+        <div th:if="${linkedRaceResultsThread != null}" class="discord-actions">
+            <span class="badge badge-active"
+            th:text="${linkedRaceResultsThread.name} + ' (' + ${linkedRaceResultsThread.id} + ')'">
+        </span>
+        <button type="button" class="btn btn-secondary btn-sm"
+        data-testid="link-race-results-change"
+        onclick="document.getElementById('linkRaceResultsModal').style.display='block'">
+        Change Link
+    </button>
+    <form th:action="@{/admin/seasons/{id}/unlink-thread(id=${seasonForm.id})}"
+    method="post" class="inline-form">
+    <input type="hidden" name="type" value="race-results">
+    <button type="submit" class="btn btn-danger btn-sm"
+    data-testid="unlink-race-results">Unlink</button>
+</form>
+</div>
+<div th:if="${linkedRaceResultsThread == null}" class="discord-actions">
+    <span class="badge badge-inactive">not linked</span>
+    <button type="button" class="btn btn-primary btn-sm"
+    data-testid="link-race-results-open"
+    th:disabled="${raceResultsThreadOptions.isEmpty()}"
+    onclick="document.getElementById('linkRaceResultsModal').style.display='block'">
+    Link existing Thread...
+</button>
+</div>
+</div>
+<div class="form-group">
+    <label>Standings Forum Thread</label>
+    <div th:if="${linkedStandingsThread != null}" class="discord-actions">
+        <span class="badge badge-active"
+        th:text="${linkedStandingsThread.name} + ' (' + ${linkedStandingsThread.id} + ')'">
+    </span>
+    <button type="button" class="btn btn-secondary btn-sm"
+    data-testid="link-standings-change"
+    onclick="document.getElementById('linkStandingsModal').style.display='block'">
+    Change Link
+</button>
+<form th:action="@{/admin/seasons/{id}/unlink-thread(id=${seasonForm.id})}"
+method="post" class="inline-form">
+<input type="hidden" name="type" value="standings">
+<button type="submit" class="btn btn-danger btn-sm"
+data-testid="unlink-standings">Unlink</button>
+</form>
+</div>
+<div th:if="${linkedStandingsThread == null}" class="discord-actions">
+    <span class="badge badge-inactive">not linked</span>
+    <button type="button" class="btn btn-primary btn-sm"
+    data-testid="link-standings-open"
+    th:disabled="${standingsThreadOptions.isEmpty()}"
+    onclick="document.getElementById('linkStandingsModal').style.display='block'">
+    Link existing Thread...
+</button>
+</div>
+</div>
+
+<div th:if="${canPostStandings and !allPhases.isEmpty()}"
+class="discord-actions discord-actions--posts mt-md"
+data-testid="standings-post-cluster">
+<form th:action="@{/admin/seasons/{id}/post-standings(id=${seasonForm.id})}"
+method="post" class="form-inline">
+<input th:if="${_csrf != null}" type="hidden"
+th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+<select th:if="${allPhases.size() > 1}" name="phaseId"
+    class="form-control form-control-sm" data-testid="post-standings-phase-select">
+    <option th:each="p : ${allPhases}"
+    th:value="${p.id}"
+    th:text="${p.phaseType.name()}">
+</option>
+</select>
+<input th:if="${allPhases.size() == 1}" type="hidden" name="phaseId"
+th:value="${allPhases[0].id}" data-testid="post-standings-phase-hidden"/>
+<button type="submit" class="btn btn-primary btn-sm" data-testid="post-standings">
+    Post Standings
+</button>
+</form>
+<ul class="text-dim text-xs" data-testid="standings-phase-status-list">
+    <li th:each="row : ${phaseStandingsRows}">
+        <span th:text="${row.phase.phaseType.name()}">
+        </span>:
+        <span th:if="${row.post == null}" data-testid="standings-phase-status-none">never posted</span>
+        <span th:if="${row.post != null and row.stale}"
+        class="badge badge-warning" data-testid="standings-phase-status-stale">Update needed</span>
+    <span th:if="${row.post != null and !row.stale}"
+    class="badge badge-active" data-testid="standings-phase-status-fresh">Posted</span>
+</li>
+</ul>
+</div>
+</div>
+</div>
+
+<!-- Link Race-Results Thread Modal -->
+<div th:if="${seasonForm.id != null and discordIntegrationActive}"
+id="linkRaceResultsModal" class="modal-overlay">
+<div class="modal-body modal-body--md">
+    <h3 class="modal-title">Link Race-Results Forum Thread</h3>
+    <form th:action="@{/admin/seasons/{id}/link-thread(id=${seasonForm.id})}" method="post">
+        <input type="hidden" name="type" value="race-results">
+        <div th:if="${raceResultsThreadOptions.isEmpty()}" class="alert alert-warning"
+        data-testid="link-race-results-empty">
+        No threads available in the configured race-results forum channel.
+    </div>
+    <div th:each="t,iter : ${raceResultsThreadOptions}" class="form-check">
+        <input type="radio"
+        th:id="'race-results-thread-' + ${iter.index}"
+        name="threadId"
+        th:value="${t.id}"
+        th:checked="${t.pinned()}">
+        <label th:for="'race-results-thread-' + ${iter.index}"
+        th:text="${t.name} + ' (' + ${t.id} + ')'
+        + (${t.pinned()} ? ' [pinned]' : '')
+        + (${t.archived()} ? ' [archived]' : '')">
+    </label>
+</div>
+<div class="actions">
+    <button type="submit" class="btn btn-primary"
+    data-testid="link-race-results-confirm"
+    th:disabled="${raceResultsThreadOptions.isEmpty()}">Confirm</button>
+<button type="button" class="btn btn-secondary"
+data-testid="link-race-results-cancel"
+onclick="document.getElementById('linkRaceResultsModal').style.display='none'">Cancel</button>
+</div>
+</form>
+</div>
+</div>
+
+<!-- Link Standings Thread Modal -->
+<div th:if="${seasonForm.id != null and discordIntegrationActive}"
+id="linkStandingsModal" class="modal-overlay">
+<div class="modal-body modal-body--md">
+    <h3 class="modal-title">Link Standings Forum Thread</h3>
+    <form th:action="@{/admin/seasons/{id}/link-thread(id=${seasonForm.id})}" method="post">
+        <input type="hidden" name="type" value="standings">
+        <div th:if="${standingsThreadOptions.isEmpty()}" class="alert alert-warning"
+        data-testid="link-standings-empty">
+        No threads available in the configured standings forum channel.
+    </div>
+    <div th:each="t,iter : ${standingsThreadOptions}" class="form-check">
+        <input type="radio"
+        th:id="'standings-thread-' + ${iter.index}"
+        name="threadId"
+        th:value="${t.id}"
+        th:checked="${t.pinned()}">
+        <label th:for="'standings-thread-' + ${iter.index}"
+        th:text="${t.name} + ' (' + ${t.id} + ')'
+        + (${t.pinned()} ? ' [pinned]' : '')
+        + (${t.archived()} ? ' [archived]' : '')">
+    </label>
+</div>
+<div class="actions">
+    <button type="submit" class="btn btn-primary"
+    data-testid="link-standings-confirm"
+    th:disabled="${standingsThreadOptions.isEmpty()}">Confirm</button>
+<button type="button" class="btn btn-secondary"
+data-testid="link-standings-cancel"
+onclick="document.getElementById('linkStandingsModal').style.display='none'">Cancel</button>
+</div>
+</form>
+</div>
+</div>
+
+<script>
     (function() {
-        function setupFilter(inputId, containerId) {
-            var input = document.getElementById(inputId);
-            var container = document.getElementById(containerId);
-            if (!input || !container) return;
-            input.addEventListener('input', function() {
-                var q = this.value.toLowerCase();
-                container.querySelectorAll('.transfer-item').forEach(function(item) {
-                    item.style.display = item.textContent.toLowerCase().includes(q) ? '' : 'none';
-                });
-            });
-        }
-        setupFilter('availableCarsFilter', 'availableCars');
-        setupFilter('assignedCarsFilter', 'assignedCars');
-        setupFilter('availableTracksFilter', 'availableTracks');
-        setupFilter('assignedTracksFilter', 'assignedTracks');
+    function setupFilter(inputId, containerId) {
+    var input = document.getElementById(inputId);
+    var container = document.getElementById(containerId);
+    if (!input || !container) return;
+    input.addEventListener('input', function() {
+    var q = this.value.toLowerCase();
+    container.querySelectorAll('.transfer-item').forEach(function(item) {
+    item.style.display = item.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+    });
+    }
+    setupFilter('availableCarsFilter', 'availableCars');
+    setupFilter('assignedCarsFilter', 'assignedCars');
+    setupFilter('availableTracksFilter', 'availableTracks');
+    setupFilter('assignedTracksFilter', 'assignedTracks');
 
-        // Prevent submit if no checkboxes selected
-        document.querySelectorAll('#addCarsForm, #removeCarsForm, #addTracksForm, #removeTracksForm').forEach(function(form) {
-            form.addEventListener('submit', function(e) {
-                if (!form.querySelector('input[type="checkbox"]:checked')) {
-                    e.preventDefault();
-                }
-            });
-        });
+    // Prevent submit if no checkboxes selected
+    document.querySelectorAll('#addCarsForm, #removeCarsForm, #addTracksForm, #removeTracksForm').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+    if (!form.querySelector('input[type="checkbox"]:checked')) {
+    e.preventDefault();
+    }
+    });
+    });
     })();
-    </script>
+</script>
 </section>
 </body>
 </html>

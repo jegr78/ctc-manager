@@ -6,6 +6,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -75,19 +76,21 @@ class MatchEditFormIT {
 	}
 
 	@Test
-	void givenOversizedTeaser_whenPostSaveEdit_thenRendersFormWithErrorBadge() throws Exception {
+	void givenOversizedTeaser_whenPostSaveEdit_thenRendersFormWithFieldError() throws Exception {
 		// given
 		Match match = seedMatch("O");
 		String oversized = "x".repeat(2001);
 
-		// when / then — form re-renders with the error badge; nothing persisted
+		// when / then
 		mockMvc.perform(post("/admin/matches/" + match.getId() + "/save-edit")
 						.with(csrf())
 						.param("id", match.getId().toString())
 						.param("discordTeaser", oversized))
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/match-form-edit"))
-				.andExpect(content().string(containsString("error-badge--auth")));
+				.andExpect(model().attributeHasFieldErrors("matchForm", "discordTeaser"))
+				.andExpect(content().string(containsString("id=\"discordTeaser-error\"")))
+				.andExpect(content().string(containsString("aria-invalid=\"true\"")));
 
 		// and — field unchanged in DB
 		Match reloaded = matchRepository.findById(match.getId()).orElseThrow();

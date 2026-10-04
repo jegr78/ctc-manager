@@ -150,7 +150,8 @@ class RaceControllerTest {
 				// then
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/race-form"))
-				.andExpect(model().attributeExists("raceForm", "matchdays", "teams"));
+				.andExpect(model().attributeExists("raceForm", "matchdays", "teams"))
+				.andExpect(model().attribute("pageTitle", "New Race"));
 	}
 
 	@Test
@@ -160,7 +161,8 @@ class RaceControllerTest {
 				// then
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/race-form"))
-				.andExpect(model().attributeExists("raceForm", "matchdays", "teams", "seasonCars", "seasonTracks"));
+				.andExpect(model().attributeExists("raceForm", "matchdays", "teams", "seasonCars", "seasonTracks"))
+				.andExpect(model().attribute("pageTitle", "Edit Race"));
 	}
 
 	@Test

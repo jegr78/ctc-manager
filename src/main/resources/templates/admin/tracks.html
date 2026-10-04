@@ -2,30 +2,34 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Tracks', ~{::section})}">
 <body>
-<section>
+<section class="admin-list catalog-list" data-admin-list data-page-size="20" data-unit="track" data-plural="tracks">
     <div class="toolbar">
         <h1>Tracks</h1>
         <div class="actions">
-            <input type="text" id="trackSearch" placeholder="Search tracks..." aria-label="Search tracks"
-                   class="search-input">
             <a th:href="@{/admin/tracks/new}" class="btn btn-primary">+ New Track</a>
         </div>
     </div>
-    <div class="card">
-        <div class="table-scroll">
-        <table th:if="${!tracks.isEmpty()}" id="tracksTable">
+    <p class="admin-list-intro text-dim">Manage circuits and layouts available for race setup.</p>
+    <div class="card admin-list-card">
+        <div class="admin-list-controls catalog-list-controls" data-list-tools hidden>
+            <label for="trackSearch"><span>Search</span><input type="search" id="trackSearch" data-list-search placeholder="Track name or country" autocomplete="off"></label>
+            <button type="button" class="btn btn-secondary" data-list-reset disabled>Reset filters</button>
+            <p class="admin-list-count text-dim" data-list-count role="status"></p>
+        </div>
+        <div class="table-scroll" role="region" aria-label="Tracks list" tabindex="0">
+        <table th:if="${!tracks.isEmpty()}" id="tracksTable" data-list-table>
             <thead>
                 <tr>
-                    <th class="col-thumb"></th>
-                    <th class="sortable" data-col="1" aria-label="Sort by Name">Name</th>
-                    <th class="sortable" data-col="2" aria-label="Sort by Country">Country</th>
-                    <th>Actions</th>
+                    <th scope="col" class="col-thumb">Image</th>
+                    <th scope="col" class="sortable" data-col="1" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Name" disabled>Name</button></th>
+                    <th scope="col" class="sortable" data-col="2" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Country" disabled>Country</button></th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
-                <tr th:each="track : ${tracks}" class="track-row">
-                    <td class="col-thumb"><img th:if="${track.imageUrl}" th:src="${track.imageUrl}" alt="" class="thumb-sm"></td>
-                    <td th:text="${track.name}"></td>
+                <tr th:each="track : ${tracks}" class="track-row" data-list-entry th:attr="data-search=${track.name + ' ' + (track.country ?: '')}">
+                    <td class="col-thumb"><img th:if="${track.imageUrl}" th:src="${track.imageUrl}" alt="" class="thumb-sm"><span th:unless="${track.imageUrl}" class="text-dim catalog-image-status">Not set</span></td>
+                    <td><a th:href="@{/admin/tracks/{id}/edit(id=${track.id})}" class="detail-link"><strong th:text="${track.name}"></strong></a></td>
                     <td th:text="${track.country}"></td>
                     <td class="actions">
                         <a th:href="@{/admin/tracks/{id}/edit(id=${track.id})}" class="btn btn-secondary btn-sm">Edit</a>
@@ -38,86 +42,18 @@
             </tbody>
         </table>
         </div>
-        <div id="noResults" style="display:none" class="empty-state" aria-live="polite"><p>No matching tracks found.</p></div>
-        <div class="pagination pagination-bar" id="pagination" aria-label="Tracks pagination">
-            <span id="pageInfo" class="text-dim"></span>
+        <div id="noResults" data-list-empty hidden class="empty-state"><p>No matching tracks. Try another search or reset the filters.</p></div>
+        <div class="pagination pagination-bar" id="pagination" data-list-pagination hidden aria-label="Tracks pagination">
+            <span id="pageInfo" data-list-page-info class="text-dim"></span>
             <div class="actions">
-                <button id="prevPage" class="btn btn-secondary btn-sm" disabled>Previous</button>
-                <button id="nextPage" class="btn btn-secondary btn-sm">Next</button>
+                <button type="button" id="prevPage" data-list-prev class="btn btn-secondary btn-sm" disabled>Previous</button>
+                <button type="button" id="nextPage" data-list-next class="btn btn-secondary btn-sm">Next</button>
             </div>
         </div>
-        <div th:if="${tracks.isEmpty()}" class="empty-state"><p>No tracks created yet.</p></div>
+        <div th:if="${tracks.isEmpty()}" class="empty-state" data-list-initial-empty><p>No tracks created yet.</p></div>
     </div>
 
-    <script th:inline="javascript">
-    (function() {
-        const PAGE_SIZE = 20;
-        const table = document.getElementById('tracksTable');
-        if (!table) return;
-
-        const tbody = table.querySelector('tbody');
-        const rows = Array.from(tbody.querySelectorAll('.track-row'));
-        const search = document.getElementById('trackSearch');
-        const pageInfo = document.getElementById('pageInfo');
-        const prevBtn = document.getElementById('prevPage');
-        const nextBtn = document.getElementById('nextPage');
-        const noResults = document.getElementById('noResults');
-
-        let filteredRows = rows;
-        let currentPage = 0;
-        let sortCol = -1;
-        let sortAsc = true;
-
-        function render() {
-            const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
-            currentPage = Math.min(currentPage, totalPages - 1);
-            const start = currentPage * PAGE_SIZE;
-            const end = start + PAGE_SIZE;
-
-            rows.forEach(r => r.style.display = 'none');
-            filteredRows.slice(start, end).forEach(r => r.style.display = '');
-
-            pageInfo.textContent = filteredRows.length + ' tracks — Page ' + (currentPage + 1) + ' of ' + totalPages;
-            prevBtn.disabled = currentPage === 0;
-            nextBtn.disabled = currentPage >= totalPages - 1;
-            noResults.style.display = filteredRows.length === 0 ? '' : 'none';
-            table.style.display = filteredRows.length === 0 ? 'none' : '';
-        }
-
-        search.addEventListener('input', function() {
-            const q = this.value.toLowerCase();
-            filteredRows = rows.filter(r => r.textContent.toLowerCase().includes(q));
-            currentPage = 0;
-            render();
-        });
-
-        prevBtn.addEventListener('click', () => { currentPage--; render(); });
-        nextBtn.addEventListener('click', () => { currentPage++; render(); });
-
-        // Sortable columns
-        table.querySelectorAll('.sortable').forEach(th => {
-            th.style.cursor = 'pointer';
-            th.addEventListener('click', function() {
-                const col = parseInt(this.dataset.col);
-                if (sortCol === col) { sortAsc = !sortAsc; } else { sortCol = col; sortAsc = true; }
-
-                table.querySelectorAll('.sortable').forEach(h => h.dataset.sort = '');
-                this.dataset.sort = sortAsc ? 'asc' : 'desc';
-
-                filteredRows.sort((a, b) => {
-                    const aVal = a.children[col].textContent.trim().toLowerCase();
-                    const bVal = b.children[col].textContent.trim().toLowerCase();
-                    return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-                });
-                filteredRows.forEach(r => tbody.appendChild(r));
-                currentPage = 0;
-                render();
-            });
-        });
-
-        render();
-    })();
-    </script>
+    <script defer th:src="@{/admin/js/management-list.js}"></script>
 </section>
 </body>
 </html>

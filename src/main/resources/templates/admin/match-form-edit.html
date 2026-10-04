@@ -2,72 +2,82 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Edit Match', ~{::section})}">
 <body>
-<section>
-    <a th:href="@{/admin/matches/{id}(id=${match.id})}" class="back-link"
-       data-testid="match-edit-back-link">&larr; Back to Match</a>
-    <h1>
-        Edit:
-        <span th:text="${match.homeTeam.shortName}"></span>
-        <span th:text="' vs '"></span>
-        <span th:text="${match.awayTeam != null ? match.awayTeam.shortName : 'Bye'}"></span>
-    </h1>
-
-    <form th:action="@{/admin/matches/{id}/save-edit(id=${match.id})}"
-          method="post" th:object="${matchForm}">
-        <input type="hidden" th:field="*{id}">
-
-        <div class="card">
-            <div class="form-group">
-                <label for="discordTeaser">Discord Teaser (Markdown)</label>
-                <textarea id="discordTeaser" th:field="*{discordTeaser}"
-                          rows="6" maxlength="2000"></textarea>
-                <span th:errors="*{discordTeaser}" class="error-badge error-badge--auth"></span>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="streamLink">Stream Link</label>
-                    <input id="streamLink" type="text" th:field="*{streamLink}" maxlength="500">
-                    <span th:errors="*{streamLink}" class="error-badge error-badge--auth"></span>
+<section class="entity-editor match-editor">
+    <a th:href="@{/admin/matches/{id}(id=${match.id})}" class="back-link" data-testid="match-edit-back-link">&larr; Back to Match</a>
+    <h1>Edit Match</h1>
+    <p class="text-dim match-editor-context">
+        <span th:text="${match.matchday.label}"></span> ·
+        <span th:text="${match.homeTeam.shortName}"></span> vs
+        <span th:text="${match.awayTeam != null ? match.awayTeam.shortName : (match.bye ? 'Bye' : 'TBD')}"></span>
+    </p>
+    <nav class="entity-section-nav" aria-label="Match editing sections">
+        <a href="#match-broadcast">Preview &amp; stream</a>
+        <a href="#match-roles">Event roles</a>
+        <a th:unless="${match.bye}" href="#match-decision">Walkover</a>
+    </nav>
+    <div class="card">
+        <form class="entity-editor-form" th:action="@{/admin/matches/{id}/save-edit(id=${match.id})}" method="post" th:object="${matchForm}">
+            <input type="hidden" th:field="*{id}">
+            <fieldset id="match-broadcast">
+                <legend>Preview &amp; stream</legend>
+                    <div class="form-group">
+                        <label for="discordTeaser">Discord teaser</label>
+                        <textarea id="discordTeaser" th:field="*{discordTeaser}" rows="6" maxlength="2000" th:attr="aria-invalid=${#fields.hasErrors('discordTeaser')},aria-describedby=${#fields.hasErrors('discordTeaser') ? 'discordTeaser-error' : 'discordTeaser-hint'}"></textarea>
+                        <p id="discordTeaser-hint" class="text-dim form-hint--sm">Optional preview text. Markdown is supported, up to 2,000 characters.</p>
+                        <p id="discordTeaser-error" class="field-error" th:if="${#fields.hasErrors('discordTeaser')}" th:errors="*{discordTeaser}"></p>
+                    </div>
+                    <div class="form-group">
+                        <label for="streamLink">Stream link</label>
+                        <input id="streamLink" type="text" th:field="*{streamLink}" maxlength="500" th:attr="aria-invalid=${#fields.hasErrors('streamLink')},aria-describedby=${#fields.hasErrors('streamLink') ? 'streamLink-error' : 'streamLink-hint'}">
+                        <p id="streamLink-hint" class="text-dim form-hint--sm">Optional link to the match broadcast.</p>
+                        <p id="streamLink-error" class="field-error" th:if="${#fields.hasErrors('streamLink')}" th:errors="*{streamLink}"></p>
+                    </div>
+            </fieldset>
+            <fieldset id="match-roles">
+                <legend>Event roles</legend>
+                <div class="form-row match-role-fields">
+                    <div class="form-group">
+                        <label for="lobbyHost">Lobby host</label>
+                        <input id="lobbyHost" type="text" th:field="*{lobbyHost}" maxlength="100" th:attr="aria-invalid=${#fields.hasErrors('lobbyHost')},aria-describedby=${#fields.hasErrors('lobbyHost') ? 'lobbyHost-error' : 'lobbyHost-hint'}">
+                        <p id="lobbyHost-hint" class="text-dim form-hint--sm">Optional. Up to 100 characters.</p>
+                        <p id="lobbyHost-error" class="field-error" th:if="${#fields.hasErrors('lobbyHost')}" th:errors="*{lobbyHost}"></p>
+                    </div>
+                    <div class="form-group">
+                        <label for="raceDirector">Race director</label>
+                        <input id="raceDirector" type="text" th:field="*{raceDirector}" maxlength="100" th:attr="aria-invalid=${#fields.hasErrors('raceDirector')},aria-describedby=${#fields.hasErrors('raceDirector') ? 'raceDirector-error' : 'raceDirector-hint'}">
+                        <p id="raceDirector-hint" class="text-dim form-hint--sm">Optional. Up to 100 characters.</p>
+                        <p id="raceDirector-error" class="field-error" th:if="${#fields.hasErrors('raceDirector')}" th:errors="*{raceDirector}"></p>
+                    </div>
+                    <div class="form-group">
+                        <label for="streamer">Streamer</label>
+                        <input id="streamer" type="text" th:field="*{streamer}" maxlength="100" th:attr="aria-invalid=${#fields.hasErrors('streamer')},aria-describedby=${#fields.hasErrors('streamer') ? 'streamer-error' : 'streamer-hint'}">
+                        <p id="streamer-hint" class="text-dim form-hint--sm">Optional. Up to 100 characters.</p>
+                        <p id="streamer-error" class="field-error" th:if="${#fields.hasErrors('streamer')}" th:errors="*{streamer}"></p>
+                    </div>
                 </div>
+            </fieldset>
+            <fieldset id="match-decision" th:unless="${match.bye}">
+                <legend>Walkover</legend>
                 <div class="form-group">
-                    <label for="lobbyHost">Lobby Host</label>
-                    <input id="lobbyHost" type="text" th:field="*{lobbyHost}" maxlength="100">
-                    <span th:errors="*{lobbyHost}" class="error-badge error-badge--auth"></span>
+                    <label for="walkoverTeamId">Forfeiting team</label>
+                    <select id="walkoverTeamId" th:field="*{walkoverTeamId}" data-testid="match-edit-walkover" th:attr="aria-invalid=${#fields.hasErrors('walkoverTeamId')},aria-describedby=${#fields.hasErrors('walkoverTeamId') ? 'walkoverTeamId-error' : 'walkoverTeamId-hint'}">
+                        <option value="">No walkover</option>
+                        <option th:value="${match.homeTeam.id}" th:text="${match.homeTeam.shortName + ' (Home)'}"></option>
+                        <option th:unless="${match.awayTeam == null}" th:value="${match.awayTeam.id}" th:text="${match.awayTeam.shortName + ' (Away)'}"></option>
+                    </select>
+                    <p id="walkoverTeamId-hint" class="text-dim form-hint--sm">The selected team forfeits the match. The opponent wins. Select No walkover to remove this decision.</p>
+                    <p id="walkoverTeamId-error" class="field-error" th:if="${#fields.hasErrors('walkoverTeamId')}" th:errors="*{walkoverTeamId}"></p>
+                </div>
+            </fieldset>
+            <div class="entity-editor-actions">
+                <span class="text-dim" th:text="${match.matchday.label}"></span>
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary" data-testid="match-edit-save">Save</button>
+                    <a th:href="@{/admin/matches/{id}(id=${match.id})}" class="btn btn-secondary" data-testid="match-edit-cancel">Cancel</a>
                 </div>
             </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="raceDirector">Race Director</label>
-                    <input id="raceDirector" type="text" th:field="*{raceDirector}" maxlength="100">
-                    <span th:errors="*{raceDirector}" class="error-badge error-badge--auth"></span>
-                </div>
-                <div class="form-group">
-                    <label for="streamer">Streamer</label>
-                    <input id="streamer" type="text" th:field="*{streamer}" maxlength="100">
-                    <span th:errors="*{streamer}" class="error-badge error-badge--auth"></span>
-                </div>
-            </div>
-
-            <div class="form-group" th:unless="${match.bye}">
-                <label for="walkoverTeamId">Walkover</label>
-                <select id="walkoverTeamId" th:field="*{walkoverTeamId}" data-testid="match-edit-walkover">
-                    <option value="">No walkover</option>
-                    <option th:value="${match.homeTeam.id}"
-                            th:text="${match.homeTeam.shortName + ' (Home)'}"></option>
-                    <option th:unless="${match.awayTeam == null}" th:value="${match.awayTeam.id}"
-                            th:text="${match.awayTeam.shortName + ' (Away)'}"></option>
-                </select>
-            </div>
-
-            <div class="actions">
-                <button type="submit" class="btn btn-primary" data-testid="match-edit-save">Save</button>
-                <a th:href="@{/admin/matches/{id}(id=${match.id})}"
-                   class="btn btn-secondary" data-testid="match-edit-cancel">Cancel</a>
-            </div>
-        </div>
-    </form>
+        </form>
+    </div>
 </section>
 </body>
 </html>

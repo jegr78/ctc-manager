@@ -2,18 +2,28 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Generate Site', ~{::section})}">
 <body>
-<section>
+<section class="entity-editor site-generation-workspace">
     <h1>Generate Static Website</h1>
-    <div class="card">
-        <p class="text-dim mb-md">
-            Generates all HTML pages of the public CTC website into the output directory.
-            The generated pages can then be deployed to GitHub Pages.
-        </p>
-        <form th:action="@{/admin/generate}" method="post">
-            <button type="submit" class="btn btn-success btn-lg">
-                Generate Site
-            </button>
-        </form>
+    <p class="text-dim mb-md">Build the public CTC website from the current league data.</p>
+
+    <div class="site-generation-grid">
+        <div class="card site-generation-action">
+            <h2>Generate the website</h2>
+            <p>Generate all public HTML pages and website assets in the configured output directory.</p>
+            <p class="text-dim">The generated site replaces the previous output after a successful build. Generation may take a moment.</p>
+            <form th:action="@{/admin/generate}" method="post">
+                <button type="submit" class="btn btn-primary">Generate Site</button>
+            </form>
+            <p class="text-dim form-hint--sm">The result lists the number of generated pages and any warnings or errors.</p>
+        </div>
+        <div class="card site-generation-guide">
+            <h2>From league data to public pages</h2>
+            <ol>
+                <li><strong>Review the data</strong><p>Check seasons, results and standings. Use Data Audit to review consistency findings and their proposed corrections.</p><a th:href="@{/admin/data-audit}" class="btn btn-secondary btn-sm">Open Data Audit</a></li>
+                <li><strong>Generate and preview</strong><p>Generate the site, review the result and check the output before publishing.</p></li>
+                <li><strong>Publish the output</strong><p>Deploy the generated files to GitHub Pages through your publishing workflow.</p></li>
+            </ol>
+        </div>
     </div>
 </section>
 </body>

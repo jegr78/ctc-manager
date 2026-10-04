@@ -31,6 +31,7 @@ public class CarController {
 	@GetMapping("/new")
 	public String create(Model model) {
 		model.addAttribute("carForm", new CarForm());
+        model.addAttribute("pageTitle", "New Car");
 		return "admin/car-form";
 	}
 
@@ -42,6 +43,7 @@ public class CarController {
 		form.setManufacturer(car.getManufacturer());
 		form.setName(car.getName());
 		model.addAttribute("carForm", form);
+        model.addAttribute("pageTitle", "Edit Car");
 		model.addAttribute("car", car);
 		return "admin/car-form";
 	}
@@ -60,8 +62,10 @@ public class CarController {
 
 	@PostMapping("/save")
 	public String save(@Valid @ModelAttribute CarForm carForm, BindingResult result,
-	                   RedirectAttributes redirectAttributes) {
+	                   Model model, RedirectAttributes redirectAttributes) {
 		if (result.hasErrors()) {
+            model.addAttribute("pageTitle", carForm.getId() == null ? "New Car" : "Edit Car");
+            if (carForm.getId() != null) model.addAttribute("car", carService.findById(carForm.getId()));
 			return "admin/car-form";
 		}
 		try {

@@ -2,23 +2,30 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Seasons', ~{::section})}">
 <body>
-<section>
+<section class="admin-list" data-admin-list data-page-size="0" data-unit="season" data-plural="seasons">
     <div class="toolbar">
         <h1>Seasons</h1>
         <a th:href="@{/admin/seasons/new}" class="btn btn-primary">+ New Season</a>
     </div>
-    <div class="card">
-        <div class="table-scroll">
-            <table th:if="${!seasons.isEmpty()}">
+    <p class="admin-list-intro text-dim">Open a season to manage phases, teams and matchdays.</p>
+    <div class="card admin-list-card">
+        <div class="admin-list-controls" data-list-tools hidden>
+            <label for="listSearch"><span>Search</span><input type="search" id="listSearch" data-list-search placeholder="Season name, year or number" autocomplete="off"></label>
+            <label for="listStatus"><span>Status</span><select id="listStatus" data-list-status><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+            <button type="button" class="btn btn-secondary" data-list-reset disabled>Reset filters</button>
+            <p class="admin-list-count text-dim" data-list-count role="status"></p>
+        </div>
+        <div class="table-scroll" role="region" aria-label="Seasons list" tabindex="0">
+            <table data-list-table th:if="${!seasons.isEmpty()}">
                 <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="season : ${seasons}">
+                    <tr th:each="season : ${seasons}" data-list-entry th:attr="data-search=${season.displayLabel},data-status=${season.active ? 'active' : 'inactive'}">
                         <td><a th:href="@{/admin/seasons/{id}(id=${season.id})}" class="detail-link" th:text="${season.displayLabel}"></a></td>
                         <td>
                             <span th:if="${season.active}" class="badge badge-active">● Active</span>
@@ -35,10 +42,12 @@
                 </tbody>
             </table>
         </div>
-        <div th:if="${seasons.isEmpty()}" class="empty-state">
+        <div th:if="${seasons.isEmpty()}" class="empty-state" data-list-initial-empty>
             <p>No seasons created yet.</p>
         </div>
+        <div data-list-empty hidden class="empty-state"><p>No matching seasons. Try another search or reset the filters.</p></div>
     </div>
+    <script defer th:src="@{/admin/js/management-list.js}"></script>
 </section>
 </body>
 </html>

@@ -2,225 +2,87 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Power Rankings', ~{::section})}">
 <body>
-<section>
-    <div class="toolbar">
-        <h1>Power Rankings</h1>
-    </div>
+<section class="entity-editor power-rankings-editor">
+    <h1>Power Rankings</h1>
+    <p class="text-dim mb-md">Choose a season, arrange the teams and download a ranking graphic. Changing the order here does not update team ratings or standings.</p>
 
-    <!-- Season Selection -->
-    <div class="card">
-        <form id="seasonForm" method="get" th:action="@{/admin/tools/power-rankings}">
-            <div class="form-group form-group--inline">
-                <label for="seasonSelect">Season Number</label>
-                <select id="seasonSelect" onchange="submitSeasonForm(this)" style="max-width:400px;">
+    <details class="card mb-md ranking-season-selection" th:open="${teams == null}">
+        <summary>Season selection <span th:if="${selectedYear != null and selectedNumber != null}" class="text-dim" th:text="|${selectedYear} · Season ${selectedNumber}|"></span></summary>
+        <form id="seasonForm" method="get" th:action="@{/admin/tools/power-rankings}" class="ranking-season-form" hidden>
+            <div class="form-group">
+                <label for="seasonSelect">Season group</label>
+                <select id="seasonSelect" required aria-describedby="ranking-season-hint">
                     <option value="">-- Select season --</option>
-                    <option th:each="sg : ${seasonGroups}"
-                            th:value="${sg.year() + '|' + sg.number()}"
+                    <option th:each="sg : ${seasonGroups}" th:value="${sg.year() + '|' + sg.number()}"
                             th:text="${sg.label()}"
-                            th:selected="${selectedYear != null && sg.year() == selectedYear && sg.number() == selectedNumber}">
-                    </option>
+                            th:selected="${selectedYear != null && sg.year() == selectedYear && sg.number() == selectedNumber}"></option>
                 </select>
                 <input type="hidden" id="yearInput" name="year" th:value="${selectedYear}">
                 <input type="hidden" id="numberInput" name="number" th:value="${selectedNumber}">
-                <small class="text-dim">Groups seasons with same number (e.g. Group A + B)</small>
             </div>
+            <button type="submit" class="btn btn-secondary">Show Teams</button>
         </form>
-    </div>
+        <noscript>
+            <ul class="ranking-season-links">
+                <li th:each="sg : ${seasonGroups}"><a data-season-link th:href="@{/admin/tools/power-rankings(year=${sg.year()},number=${sg.number()})}" th:text="${sg.label()}"></a></li>
+            </ul>
+        </noscript>
+        <p id="ranking-season-hint" class="text-dim form-hint--sm">Seasons with the same year and number are combined, including separate groups. Teams start in descending rating order.</p>
+        <p th:if="${seasonGroups.isEmpty()}" class="text-dim">Create a season before preparing power rankings.</p>
+    </details>
 
-    <!-- Subtitle + Download + Team List -->
-    <div th:if="${teams != null}" class="card mt-md">
-        <form id="downloadForm" method="post" th:action="@{/admin/tools/power-rankings/download}"
-              style="display:flex;flex-direction:column;gap:16px;">
+    <div th:if="${teams != null and !teams.isEmpty()}" class="card">
+        <form id="downloadForm" class="entity-editor-form" method="post" th:action="@{/admin/tools/power-rankings/download}">
             <input type="hidden" name="year" th:value="${selectedYear}">
             <input type="hidden" name="number" th:value="${selectedNumber}">
-
-            <div style="display:flex;gap:16px;align-items:end;flex-wrap:wrap;">
-                <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
-                    <label for="subtitle">Subtitle (free text)</label>
-                    <input type="text" id="subtitle" name="subtitle"
-                           placeholder="e.g. Match Day 2, After Playoffs...">
+            <fieldset>
+                <legend>Graphic details</legend>
+                <div class="form-group">
+                    <label for="subtitle">Subtitle, optional</label>
+                    <input type="text" id="subtitle" name="subtitle" placeholder="e.g. After Matchday 2" aria-describedby="ranking-subtitle-hint">
+                    <p id="ranking-subtitle-hint" class="text-dim form-hint--sm">Shown below the title in the downloaded graphic.</p>
                 </div>
-                <button type="submit" class="btn btn-primary" onclick="prepareDownload()">
-                    &#11015; Download PNG
-                </button>
-            </div>
-
-            <!-- Hidden fields for team order -->
-            <div id="teamIdsContainer"></div>
-
-            <!-- Drag & Drop Team List -->
-            <div>
-                <div class="section-header mb-xs">
-                    <h2 style="margin:0;">Team Ranking</h2>
-                    <span class="text-dim text-sm">Drag to reorder</span>
+            </fieldset>
+            <fieldset>
+                <legend>Team order</legend>
+                <div class="ranking-list-toolbar">
+                    <p id="ranking-order-hint" class="text-dim">The order below is used in the PNG.</p>
+                    <button type="button" class="btn btn-secondary btn-sm" data-reset-ranking hidden>Reset Order</button>
                 </div>
-                <div id="teamList" class="ranking-list">
-                    <div th:each="team, iter : ${teams}"
-                         class="ranking-item"
-                         draggable="true"
-                         th:data-team-id="${team.teamId()}"
-                         th:data-team-name="${team.teamName()}">
-                        <span class="ranking-rank" th:text="${iter.count}"></span>
-                        <span class="ranking-drag-handle">&#9776;</span>
-                        <div class="ranking-color-swatch"
-                             th:style="'background:' + ${team.primaryColor() ?: '#333'}"></div>
-                        <span class="ranking-team-name">
-                            <strong th:text="${team.teamShortName()}"></strong>
-                            <span class="text-dim" th:text="' ' + ${team.teamName()}"></span>
+                <p class="text-dim form-hint--sm" data-ranking-instructions hidden>Use the up and down buttons, or drag a team to another position. Reset restores the initial rating order.</p>
+                <p id="ranking-status" class="text-dim form-hint--sm" role="status" aria-live="polite" aria-atomic="true"></p>
+                <ol id="teamList" class="ranking-list" role="list" aria-describedby="ranking-order-hint">
+                    <li th:each="team, iter : ${teams}" class="ranking-item"
+                        th:data-team-id="${team.teamId()}" th:data-team-name="${team.teamShortName()}">
+                        <input type="hidden" name="teamIds" th:value="${team.teamId()}">
+                        <span class="ranking-rank" aria-hidden="true" th:text="${iter.count}"></span>
+                        <span class="ranking-drag-handle" aria-hidden="true" data-ranking-instructions hidden>&#9776;</span>
+                        <span class="ranking-color-swatch" aria-hidden="true" th:style="|background-color: ${team.primaryColor() ?: '#333'}|"></span>
+                        <span class="ranking-team-name"><strong th:text="${team.teamShortName()}"></strong><span class="text-dim" th:text="${team.teamName()}"></span></span>
+                        <span class="ranking-rating text-dim" th:text="${team.rating() != null ? 'Rating: ' + team.rating() : 'Not rated'}"></span>
+                        <span class="ranking-move-actions" data-ranking-instructions hidden>
+                            <button type="button" class="btn btn-secondary btn-sm" data-rank-up th:attr="aria-label=|Move ${team.teamShortName()} up|">&#8593;</button>
+                            <button type="button" class="btn btn-secondary btn-sm" data-rank-down th:attr="aria-label=|Move ${team.teamShortName()} down|">&#8595;</button>
                         </span>
-                        <span class="ranking-rating text-dim"
-                              th:text="${team.rating() != null ? 'Rating: ' + team.rating() : 'Rating: —'}"></span>
-                    </div>
-                </div>
+                    </li>
+                </ol>
+            </fieldset>
+            <div class="entity-editor-actions">
+                <span class="text-dim">Download the current team order as a PNG.</span>
+                <div class="actions"><button type="submit" class="btn btn-primary">Download PNG</button></div>
             </div>
         </form>
     </div>
 
-    <div th:if="${teams != null && teams.isEmpty()}" class="card empty-state mt-md">
-        <p>No teams found for this season group.</p>
+    <div th:if="${teams == null}" class="card empty-state">
+        <h2>Choose a season to start</h2>
+        <p>Select a season group above to load its teams and prepare the graphic.</p>
     </div>
-
-    <style>
-        .ranking-list {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .ranking-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 12px;
-            background: var(--bg-card);
-            border-radius: 6px;
-            border: 1px solid var(--border);
-            cursor: grab;
-            transition: background 0.15s, border-color 0.15s;
-            user-select: none;
-        }
-        .ranking-item:active {
-            cursor: grabbing;
-        }
-        .ranking-item.drag-over {
-            border-color: var(--primary);
-            background: rgba(59,130,246,0.08);
-        }
-        .ranking-item.dragging {
-            opacity: 0.4;
-        }
-        .ranking-rank {
-            width: 28px;
-            text-align: center;
-            font-weight: 700;
-            color: var(--text-dim);
-            font-size: 14px;
-            flex-shrink: 0;
-        }
-        .ranking-drag-handle {
-            color: var(--text-dim);
-            opacity: 0.5;
-            flex-shrink: 0;
-        }
-        .ranking-color-swatch {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            flex-shrink: 0;
-            border: 2px solid rgba(255,255,255,0.1);
-        }
-        .ranking-team-name {
-            font-size: 14px;
-            flex: 1;
-        }
-        .ranking-rating {
-            font-size: 12px;
-            white-space: nowrap;
-        }
-    </style>
-
-    <script>
-        function submitSeasonForm(select) {
-            var val = select.value;
-            if (!val) return;
-            var parts = val.split('|');
-            document.getElementById('yearInput').value = parts[0];
-            document.getElementById('numberInput').value = parts[1];
-            document.getElementById('seasonForm').submit();
-        }
-
-        function prepareDownload() {
-            var container = document.getElementById('teamIdsContainer');
-            while (container.firstChild) {
-                container.removeChild(container.firstChild);
-            }
-            var items = document.querySelectorAll('#teamList .ranking-item');
-            items.forEach(function(item) {
-                var input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'teamIds';
-                input.value = item.dataset.teamId;
-                container.appendChild(input);
-            });
-        }
-
-        // Drag and Drop
-        (function() {
-            var list = document.getElementById('teamList');
-            if (!list) return;
-
-            var draggedItem = null;
-
-            list.addEventListener('dragstart', function(e) {
-                var item = e.target.closest('.ranking-item');
-                if (!item) return;
-                draggedItem = item;
-                item.classList.add('dragging');
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/plain', '');
-            });
-
-            list.addEventListener('dragend', function(e) {
-                var item = e.target.closest('.ranking-item');
-                if (item) item.classList.remove('dragging');
-                list.querySelectorAll('.ranking-item').forEach(function(el) {
-                    el.classList.remove('drag-over');
-                });
-                draggedItem = null;
-                updateRanks();
-            });
-
-            list.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                var target = e.target.closest('.ranking-item');
-                if (!target || target === draggedItem) return;
-
-                list.querySelectorAll('.ranking-item').forEach(function(el) {
-                    el.classList.remove('drag-over');
-                });
-                target.classList.add('drag-over');
-
-                var rect = target.getBoundingClientRect();
-                var midY = rect.top + rect.height / 2;
-                if (e.clientY < midY) {
-                    list.insertBefore(draggedItem, target);
-                } else {
-                    list.insertBefore(draggedItem, target.nextSibling);
-                }
-            });
-
-            list.addEventListener('drop', function(e) {
-                e.preventDefault();
-            });
-
-            function updateRanks() {
-                var items = list.querySelectorAll('.ranking-item');
-                items.forEach(function(item, index) {
-                    item.querySelector('.ranking-rank').textContent = index + 1;
-                });
-            }
-        })();
-    </script>
+    <div th:if="${teams != null and teams.isEmpty()}" class="card empty-state">
+        <h2>No teams in this season group</h2>
+        <p>Add teams to the season or choose another season group.</p>
+    </div>
+    <script th:src="@{/admin/js/power-rankings.js}"></script>
 </section>
 </body>
 </html>

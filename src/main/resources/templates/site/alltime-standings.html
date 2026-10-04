@@ -3,16 +3,45 @@
       th:replace="~{site/layout :: layout('Alltime Standings', ~{::section})}">
 <body>
 <section>
-    <div class="section">
-        <h2 class="section-title">Alltime Team Standings</h2>
-        <p class="hero-sub">All seasons combined</p>
-        <div class="table-wrap">
-            <table>
+    <div class="section alltime-standings">
+        <header class="standings-heading brand-stage">
+            <p class="season-brand">COMMUNITY TEAM CUP</p>
+            <h1>Alltime team standings</h1>
+            <p class="text-dim">All seasons combined. Team links open the latest available profile.</p>
+        </header>
+        <p th:if="${standings.isEmpty()}" class="text-dim">No team results recorded yet.</p>
+        <div class="mobile-standings" aria-label="Alltime team standings">
+            <div class="standings-mobile-head" aria-hidden="true"><span>#</span><span>Team</span><span>Pts</span><span></span></div>
+            <details th:each="s, i : ${standings}" class="standing">
+                <summary>
+                    <span class="standing-rank" th:text="${i.count}"></span>
+                    <span class="standing-team"><span class="standing-team-name" th:text="${s.team.shortName}"></span><span class="standing-caption" th:text="${s.played + ' matches · ' + s.wins + ' wins'}"></span></span>
+                    <span class="standing-points"><span th:text="${s.points}"></span><span class="sr-only"> points</span></span>
+                    <span class="standing-chevron" aria-hidden="true">⌄</span>
+                </summary>
+                <div class="standing-details">
+                    <dl>
+                        <div><dt>Matches played</dt><dd th:text="${s.played}"></dd></div>
+                        <div><dt>Wins</dt><dd th:text="${s.wins}"></dd></div>
+                        <div><dt>Draws</dt><dd th:text="${s.draws}"></dd></div>
+                        <div><dt>Losses</dt><dd th:text="${s.losses}"></dd></div>
+                        <div><dt>Points ratio</dt><dd th:text="${s.pointsRatio}"></dd></div>
+                    </dl>
+                    <a class="entity-link" th:href="${teamSlugMap.get(s.team.id)}" th:text="${s.team.name + ' →'}"></a>
+                </div>
+            </details>
+        </div>
+        <a href="#full-standings" class="full-standings-link">View full table →</a>
+        <details id="full-standings" class="standings-full" open>
+            <summary>Full alltime standings table</summary>
+            <p class="standings-key">MP = matches played · W = wins · D = draws · L = losses · PR = points ratio.</p>
+            <div class="table-wrap" role="region" aria-label="Full alltime standings table" tabindex="0">
+            <table class="standings-table">
                 <thead>
                     <tr>
-                        <th>#</th><th>Team</th><th class="text-center">MP</th>
-                        <th class="text-center">W</th><th class="text-center">D</th><th class="text-center">L</th>
-                        <th class="text-center">PR</th><th class="text-right">Pts</th>
+                        <th scope="col">#</th><th scope="col">Team</th><th scope="col" class="text-center">MP</th>
+                        <th scope="col" class="text-center">W</th><th scope="col" class="text-center">D</th><th scope="col" class="text-center">L</th>
+                        <th scope="col" class="text-center">PR</th><th scope="col" class="text-right">Pts</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -31,8 +60,10 @@
                     </tr>
                 </tbody>
             </table>
-        </div>
+            </div>
+        </details>
     </div>
+    <script defer th:src="${assetsPath + '/js/standings.js'}"></script>
 </section>
 </body>
 </html>

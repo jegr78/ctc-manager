@@ -18,6 +18,7 @@ import org.ctc.discord.exception.DiscordApiExceptionMapper;
 import org.ctc.discord.service.DiscordPostService;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.PhaseType;
+import org.ctc.domain.model.PhaseLayout;
 import org.ctc.domain.service.MatchdayGeneratorService;
 import org.ctc.domain.service.SeasonManagementService;
 import org.ctc.domain.service.SeasonPhaseService;
@@ -80,12 +81,14 @@ public class SeasonController {
 
 	@GetMapping("/new")
 	public String create(Model model) {
+		model.addAttribute("pageTitle", "New Season");
 		model.addAttribute("seasonForm", new SeasonForm());
 		return "admin/season-form";
 	}
 
 	@GetMapping("/{id}/edit")
 	public String edit(@PathVariable UUID id, Model model) {
+		model.addAttribute("pageTitle", "Edit Season");
 		var data = seasonManagementService.getEditFormData(id);
 		var season = data.season();
 		var form = new SeasonForm();
@@ -188,8 +191,17 @@ public class SeasonController {
 	@PostMapping("/save")
 	public String save(@Valid @ModelAttribute("seasonForm") SeasonForm form,
 	                   BindingResult result,
-	                   RedirectAttributes redirectAttributes) {
+	                   RedirectAttributes redirectAttributes, Model model) {
 		if (result.hasErrors()) {
+            model.addAttribute("pageTitle", form.getId() != null ? "Edit Season" : "New Season");
+            if (form.getId() != null) {
+                var data = seasonManagementService.getEditFormData(form.getId());
+                model.addAttribute("season", data.season());
+                model.addAttribute("allTeams", data.allTeams());
+                model.addAttribute("allCars", data.allCars());
+                model.addAttribute("allTracks", data.allTracks());
+                model.addAllAttributes(discordSeasonViewService.buildDiscordIntegrationModel(form.getId()));
+            }
 			return "admin/season-form";
 		}
 		var season = seasonManagementService.save(form.getId(), form.getName(),
@@ -323,35 +335,53 @@ public class SeasonController {
 	public String generateForm(@PathVariable UUID id, Model model) {
 		var formData = matchdayGeneratorService.getFormData(id);
 		var season = formData.season();
-		var regular = seasonPhaseService.findRegularPhase(id);
+		var regular = formData.phase();
 		var form = new MatchdayGeneratorForm();
 		Integer rounds = regular.getTotalRounds();
 		form.setNumberOfRounds(rounds != null ? rounds : formData.optimalRounds());
+		if (regular.getLayout() == PhaseLayout.GROUPS && !formData.groups().isEmpty()) {
+			var group = formData.groups().getFirst();
+			form.setGroupId(group.id());
+			if (rounds == null) {
+				form.setNumberOfRounds(group.optimalRounds());
+			}
+		}
 		model.addAttribute("season", season);
 		model.addAttribute("phase", regular);
 		model.addAttribute("generatorForm", form);
 		model.addAttribute("teamCount", formData.teamCount());
 		model.addAttribute("optimalRounds", formData.optimalRounds());
+		model.addAttribute("generatorGroups", formData.groups());
 		return "admin/matchday-generator";
 	}
 
 	@PostMapping("/{id}/generate")
 	public String generate(@PathVariable UUID id,
-	                       @Valid @ModelAttribute MatchdayGeneratorForm form,
+	                       @Valid @ModelAttribute("generatorForm") MatchdayGeneratorForm form,
 	                       BindingResult result,
+	                       Model model,
 	                       RedirectAttributes redirectAttributes) {
 		if (result.hasErrors()) {
-			redirectAttributes.addFlashAttribute("errorMessage", "Invalid input: number of rounds must be at least 1");
-			return "redirect:/admin/seasons/" + id + "/generate";
+			return renderGeneratorForm(id, model);
 		}
 		var regular = seasonPhaseService.findRegularPhase(id);
 		try {
 			matchdayGeneratorService.generate(regular.getId(), form.getGroupId(), form.getNumberOfRounds(), form.isHomeAndAway());
 			redirectAttributes.addFlashAttribute("successMessage", "Matchdays generated successfully");
 		} catch (IllegalStateException | IllegalArgumentException e) {
-			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-			return "redirect:/admin/seasons/" + id + "/generate";
+			model.addAttribute("errorMessage", e.getMessage());
+			return renderGeneratorForm(id, model);
 		}
 		return "redirect:/admin/seasons/" + id;
+	}
+
+	private String renderGeneratorForm(UUID id, Model model) {
+		var data = matchdayGeneratorService.getFormData(id);
+		model.addAttribute("season", data.season());
+		model.addAttribute("phase", data.phase());
+		model.addAttribute("teamCount", data.teamCount());
+		model.addAttribute("optimalRounds", data.optimalRounds());
+		model.addAttribute("generatorGroups", data.groups());
+		return "admin/matchday-generator";
 	}
 }

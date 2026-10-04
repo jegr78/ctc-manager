@@ -88,7 +88,7 @@ class LegacyMigratedSeasonE2ETest extends PlaywrightConfig {
 		// (the fixture seeds 0 race-results -- by design, this is a read-only fixture). Both
 		// outcomes prove the legacy ?seasonId= bridge resolved the season + phase server-side
 		// without 500. The selected-season toolbar paragraph references the season name.
-		assertThat(page.locator(".text-dim")).containsText("Test-Legacy-Season-2098");
+		assertThat(page.locator(".toolbar .text-dim")).containsText("Test-Legacy-Season-2098");
 	}
 
 	@Test
@@ -116,7 +116,7 @@ class LegacyMigratedSeasonE2ETest extends PlaywrightConfig {
 		page.navigate(url("/admin/standings?seasonId=" + SEASON_WITH_PLAYOFF_ID));
 		assertThat(page.locator("h1")).containsText("Standings");
 		assertThat(page.locator(".tab-nav .tab-btn.tab-active")).containsText("REGULAR");
-		assertThat(page.locator(".text-dim")).containsText("Test-Legacy-Season-2097");
+		assertThat(page.locator(".toolbar .text-dim")).containsText("Test-Legacy-Season-2097");
 
 		// Switch to PLAYOFF phase tab via canonical ?phase= URL: the legacy season has both
 		// phases, the standings tabs let the user navigate between them. Asserts that the

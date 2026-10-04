@@ -42,6 +42,7 @@ public class GlobalModelAdvice {
 		if (uri.startsWith("/admin/standings")) return "standings";
 		if (uri.startsWith("/admin/import")) return "import";
 		if (uri.startsWith("/admin/gt7-sync")) return "gt7-sync";
+		if (uri.startsWith("/admin/generate")) return "generate";
 		if (uri.startsWith("/admin/backup")) return "backup";
 		if (uri.startsWith("/admin/data-audit")) return "data-audit";
 		return null;

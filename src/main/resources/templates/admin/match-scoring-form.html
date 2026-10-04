@@ -2,43 +2,21 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
-<section>
-    <a th:href="@{/admin/match-scorings}" class="back-link">&larr; Back</a>
-    <h1 th:text="${matchScoringForm.id != null ? 'Edit Match-Scoring' : 'New Match-Scoring'}"></h1>
-
-    <form th:action="@{/admin/match-scorings/save}" method="post">
-        <input type="hidden" name="id" th:value="${matchScoringForm.id}">
-
-        <div class="card">
-            <div class="form-group">
-                <label for="name">Name</label>
-                <input type="text" id="name" name="name" th:value="${matchScoringForm.name}" required>
-            </div>
-
-            <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr;">
-                <div class="form-group">
-                    <label for="pointsWin" style="color:#66bb6a;">Win</label>
-                    <input type="number" id="pointsWin" name="pointsWin" th:value="${matchScoringForm.pointsWin}"
-                           min="0" required class="scoring-input">
-                </div>
-                <div class="form-group">
-                    <label for="pointsDraw">Draw</label>
-                    <input type="number" id="pointsDraw" name="pointsDraw" th:value="${matchScoringForm.pointsDraw}"
-                           min="0" required class="scoring-input">
-                </div>
-                <div class="form-group">
-                    <label for="pointsLoss" style="color:#ef5350;">Loss</label>
-                    <input type="number" id="pointsLoss" name="pointsLoss" th:value="${matchScoringForm.pointsLoss}"
-                           min="0" required class="scoring-input">
-                </div>
-            </div>
-
-            <div class="actions mt-md">
-                <button type="submit" class="btn btn-primary">Save</button>
-                <a th:href="@{/admin/match-scorings}" class="btn btn-secondary">Cancel</a>
-            </div>
-        </div>
+<section class="entity-editor scoring-editor">
+    <div class="toolbar"><div><a th:href="@{/admin/match-scorings}" class="back-link">← Back to Match-Scorings</a><h1 th:text="${matchScoringForm.id != null ? 'Edit Match-Scoring' : 'New Match-Scoring'}"></h1></div></div>
+    <nav class="entity-section-nav" aria-label="Match scoring editing sections"><a href="#scoring-identity">Identity</a><a href="#scoring-points">Points</a></nav>
+    <div class="card">
+    <form class="entity-editor-form" th:action="@{/admin/match-scorings/save}" th:object="${matchScoringForm}" method="post" id="scoringForm">
+        <input type="hidden" th:field="*{id}">
+        <fieldset id="scoring-identity"><legend>Identity</legend><div class="form-group"><label for="name">Name</label><input type="text" id="name" th:field="*{name}" required th:attr="aria-invalid=${#fields.hasErrors('name')},aria-describedby=${#fields.hasErrors('name') ? 'name-error' : null}"><p id="name-error" class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></p></div></fieldset>
+        <fieldset id="scoring-points"><legend>Match points</legend><p class="scoring-hint text-dim">Points awarded for each match result.</p><div class="scoring-match-grid">
+            <div class="form-group"><label for="pointsWin">Win</label><input type="number" id="pointsWin" th:field="*{pointsWin}" th:attr="aria-invalid=${#fields.hasErrors('pointsWin')},aria-describedby=${#fields.hasErrors('pointsWin') ? 'pointsWin-error' : null}" min="0" required class="scoring-input"><p id="pointsWin-error" class="field-error" th:if="${#fields.hasErrors('pointsWin')}" th:errors="*{pointsWin}"></p></div>
+            <div class="form-group"><label for="pointsDraw">Draw</label><input type="number" id="pointsDraw" th:field="*{pointsDraw}" th:attr="aria-invalid=${#fields.hasErrors('pointsDraw')},aria-describedby=${#fields.hasErrors('pointsDraw') ? 'pointsDraw-error' : null}" min="0" required class="scoring-input"><p id="pointsDraw-error" class="field-error" th:if="${#fields.hasErrors('pointsDraw')}" th:errors="*{pointsDraw}"></p></div>
+            <div class="form-group"><label for="pointsLoss">Loss</label><input type="number" id="pointsLoss" th:field="*{pointsLoss}" th:attr="aria-invalid=${#fields.hasErrors('pointsLoss')},aria-describedby=${#fields.hasErrors('pointsLoss') ? 'pointsLoss-error' : null}" min="0" required class="scoring-input"><p id="pointsLoss-error" class="field-error" th:if="${#fields.hasErrors('pointsLoss')}" th:errors="*{pointsLoss}"></p></div>
+        </div></fieldset>
+        <div class="entity-editor-actions"><span class="text-dim">Match scoring</span><div class="actions"><button type="submit" class="btn btn-primary">Save</button><a th:href="@{/admin/match-scorings}" class="btn btn-secondary">Cancel</a></div></div>
     </form>
+    </div>
 </section>
 </body>
 </html>

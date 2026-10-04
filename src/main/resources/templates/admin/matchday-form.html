@@ -1,19 +1,22 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Edit Matchday', ~{::section})}">
+      th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
-<section>
+<section class="entity-editor">
+    <a th:href="@{/admin/matchdays(seasonId=${form.seasonId})}" class="back-link">← Back to Matchdays</a>
     <h1 th:text="${form.id != null ? 'Edit Matchday' : 'New Matchday'}"></h1>
     <div class="card">
-        <form th:action="@{/admin/matchdays/save}" th:object="${form}" method="post">
+        <form class="entity-editor-form" th:action="@{/admin/matchdays/save}" th:object="${form}" method="post">
             <input type="hidden" th:field="*{id}">
             <input type="hidden" th:field="*{seasonId}" th:if="${form.seasonId != null}">
+            <fieldset><legend>Season &amp; identity</legend>
             <div class="form-group" th:if="${form.seasonId == null}">
                 <label for="seasonSelect">Season</label>
-                <select id="seasonSelect" name="seasonId" required>
+                <select id="seasonSelect" name="seasonId" required th:attr="aria-invalid=${#fields.hasErrors('seasonId')}">
                     <option value="">-- Select season --</option>
                     <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"></option>
                 </select>
+                <p class="field-error" th:if="${#fields.hasErrors('seasonId')}" th:errors="*{seasonId}"></p>
             </div>
             <div th:if="${season != null}" class="text-dim mb-md">
                 Season: <strong th:text="${season.displayLabel}"></strong>
@@ -21,17 +24,21 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="label">Label</label>
-                    <input type="text" id="label" th:field="*{label}" placeholder="e.g. Matchday 1, Playoff Semifinal" required>
+                    <input type="text" id="label" th:field="*{label}" placeholder="e.g. Matchday 1, Playoff Semifinal" required th:attr="aria-invalid=${#fields.hasErrors('label')},aria-describedby=${#fields.hasErrors('label') ? 'label-error' : null}">
+                    <p id="label-error" class="field-error" th:if="${#fields.hasErrors('label')}" th:errors="*{label}"></p>
                 </div>
                 <div class="form-group">
-                    <label for="sortIndex">Sort Order</label>
-                    <input type="number" id="sortIndex" th:field="*{sortIndex}" min="0" required>
+                    <label for="sortIndex">Sort order</label>
+                    <input type="number" id="sortIndex" th:field="*{sortIndex}" min="0" required aria-describedby="sort-order-hint" th:attr="aria-invalid=${#fields.hasErrors('sortIndex')}">
+                    <p id="sort-order-hint" class="text-dim form-hint--sm">Lower numbers appear first in the matchday list.</p>
+                    <p class="field-error" th:if="${#fields.hasErrors('sortIndex')}" th:errors="*{sortIndex}"></p>
                 </div>
             </div>
-            <div class="actions mt-md">
+            </fieldset>
+            <div class="entity-editor-actions"><span class="text-dim" th:text="${season != null ? season.displayLabel : 'Matchday setup'}"></span><div class="actions">
                 <button type="submit" class="btn btn-primary">Save Matchday</button>
-                <a th:href="@{/admin/matchdays}" class="btn btn-secondary">Back to Matchdays</a>
-            </div>
+                <a th:href="@{/admin/matchdays(seasonId=${form.seasonId})}" class="btn btn-secondary">Cancel</a>
+            </div></div>
         </form>
     </div>
 </section>

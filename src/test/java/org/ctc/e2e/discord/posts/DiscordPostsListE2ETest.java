@@ -6,7 +6,9 @@ import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.ViewportSize;
+import com.microsoft.playwright.options.AriaRole;
 import java.time.LocalDateTime;
+import java.util.UUID;
 import org.ctc.TestHelper;
 import org.ctc.discord.model.DiscordPost;
 import org.ctc.discord.model.DiscordPostType;
@@ -24,6 +26,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 @Tag("e2e")
 class DiscordPostsListE2ETest extends PlaywrightConfig {
+
+	private UUID seededMatchId;
 
 	@Autowired
 	DiscordPostRepository repo;
@@ -50,6 +54,7 @@ class DiscordPostsListE2ETest extends PlaywrightConfig {
 		Team home = helper.createTeam("E2E Home", "e2e-h");
 		Team away = helper.createTeam("E2E Away", "e2e-a");
 		Match match = helper.createMatch(md, home, away);
+		seededMatchId = match.getId();
 
 		repo.save(buildPost("chan-1", "msg-1", DiscordPostType.TEAM_CARDS, match.getId(), s.getId()));
 		repo.save(buildPost("chan-1", "msg-2", DiscordPostType.SCHEDULE, match.getId(), s.getId()));
@@ -89,18 +94,28 @@ class DiscordPostsListE2ETest extends PlaywrightConfig {
 		page.locator("button[type=submit]").click();
 
 		assertThat(page.locator("#discordPostsTable tbody tr")).hasCount(1);
-		assertThat(page.locator("#discordPostsTable tbody tr td").first()).containsText("SCHEDULE");
+		assertThat(page.getByRole(AriaRole.ROWHEADER)).containsText("SCHEDULE");
 	}
 
 	@Test
-	void givenThreeSeededPosts_whenLoadMobileViewport_thenListStillRendersAll() {
+	void givenThreeSeededPosts_whenFilteringOnMobileWithoutJavaScript_thenSelectionPersistsAndRowsMatch() {
 		try (BrowserContext mobileContext = browser.newContext(
-				new Browser.NewContextOptions().setViewportSize(new ViewportSize(375, 667)))) {
+				new Browser.NewContextOptions().setViewportSize(new ViewportSize(375, 667)).setJavaScriptEnabled(false))) {
 			Page mobile = mobileContext.newPage();
 			mobile.navigate(url("/admin/discord/posts"));
 
 			assertThat(mobile.locator("h1")).containsText("Discord Posts");
 			assertThat(mobile.locator("#discordPostsTable tbody tr")).hasCount(3);
+			mobile.getByLabel("Match", new Page.GetByLabelOptions().setExact(true)).selectOption(seededMatchId.toString());
+			mobile.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Apply").setExact(true)).click();
+			assertThat(mobile.locator("#matchId")).hasValue(seededMatchId.toString());
+			assertThat(mobile.locator("#discordPostsTable tbody tr")).hasCount(3);
+			mobile.getByLabel("Post Type", new Page.GetByLabelOptions().setExact(true)).selectOption("SCHEDULE");
+			mobile.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Apply").setExact(true)).click();
+			assertThat(mobile.locator("#matchId")).hasValue(seededMatchId.toString());
+			assertThat(mobile.locator("#postType")).hasValue("SCHEDULE");
+			assertThat(mobile.locator("#discordPostsTable tbody tr")).hasCount(1);
+			assertThat(mobile.getByRole(AriaRole.ROWHEADER)).containsText("SCHEDULE");
 		}
 	}
 }

@@ -2,23 +2,28 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Swiss Rounds', ~{::section})}">
 <body>
-<section>
+<section class="entity-editor swiss-workspace">
     <div class="toolbar">
         <div>
             <a th:href="@{/admin/seasons/{id}(id=${season.id})}" class="back-link">&larr; Back to Season</a>
             <h1 th:text="'Swiss Rounds — ' + ${season.displayLabel}"></h1>
         </div>
         <div class="actions">
-            <span class="text-dim" th:text="'Round ' + ${currentRound} + ' of ' + ${totalRounds}"></span>
+            <span class="text-dim" th:text="${totalRounds != null ? 'Round ' + currentRound + ' of ' + totalRounds : 'Round ' + currentRound}"></span>
             <form th:if="${canGenerateNext}" th:action="@{/admin/seasons/{id}/swiss/generate(id=${season.id})}" method="post">
                 <button type="submit" class="btn btn-primary">Generate Next Round</button>
             </form>
         </div>
     </div>
 
+    <p class="text-dim mb-md">Review pairings by round. Enter quick scores where available or open the match for its races and results.</p>
+    <nav th:if="${!rounds.isEmpty()}" class="entity-section-nav" aria-label="Swiss rounds">
+        <a th:each="md : ${rounds}" th:href="|#swiss-round-${md.id}|" th:text="${md.label}"></a>
+    </nav>
+    <p th:if="${!canGenerateNext and (totalRounds == null or rounds.size() < totalRounds)}" class="text-dim mb-md">Complete the current round before generating the next pairings.</p>
     <th:block th:each="md, iter : ${rounds}">
-        <div class="card">
-            <h2 th:text="${md.label}"></h2>
+        <div class="card" th:id="|swiss-round-${md.id}|">
+            <div class="toolbar"><h2 th:text="${md.label}"></h2><a th:href="@{/admin/matchdays/{id}(id=${md.id})}" class="btn btn-secondary btn-sm">Open Matchday</a></div>
             <div th:if="${!md.matches.isEmpty()}" class="swiss-grid">
                 <th:block th:each="pairing : ${pairings[md.id]}" th:with="match=${pairing.match}">
                     <div th:if="${!match.bye}" class="swiss-matchup">
@@ -46,20 +51,25 @@
                             <form th:action="@{/admin/races/{id}/quick-score(id=${pairing.quickScoreRaceId})}" method="post" class="quick-score-form">
                                 <input type="hidden" name="returnUrl" th:value="@{/admin/seasons/{id}/swiss(id=${season.id})}">
                                 <div class="swiss-team">
-                                    <span th:text="${match.homeTeam.shortName}"></span>
-                                    <input type="number" name="homeScore" min="0" class="quick-score-input" placeholder="0">
+                                    <label th:for="|swiss-home-${match.id}|" th:text="|${match.homeTeam.shortName} score|"></label>
+                                    <input th:id="|swiss-home-${match.id}|" type="number" name="homeScore" min="0" class="quick-score-input" placeholder="0">
                                 </div>
                                 <div class="swiss-team">
-                                    <span th:text="${match.awayTeam.shortName}"></span>
-                                    <input type="number" name="awayScore" min="0" class="quick-score-input" placeholder="0">
+                                    <label th:for="|swiss-away-${match.id}|" th:text="|${match.awayTeam.shortName} score|"></label>
+                                    <input th:id="|swiss-away-${match.id}|" type="number" name="awayScore" min="0" class="quick-score-input" placeholder="0">
                                 </div>
-                                <button type="submit" class="quick-score-btn">Save</button>
+                                <button type="submit" class="quick-score-btn" th:attr="aria-label=|Save scores for ${match.homeTeam.shortName} vs ${match.awayTeam.shortName}|">Save</button>
                             </form>
                         </th:block>
-                        <div th:if="${pairing.dateTime != null}" class="text-dim" style="text-align:center;font-size:12px;padding:4px;">
+                        <th:block th:if="${match.walkoverTeam == null and match.homeScore == null and pairing.quickScoreRaceId == null}">
+                            <div class="swiss-team" th:text="${match.homeTeam.shortName}"></div>
+                            <div class="swiss-team" th:text="${match.awayTeam.shortName}"></div>
+                        </th:block>
+                        <div th:if="${pairing.dateTime != null}" class="text-dim swiss-pairing-date">
                             <span th:data-london-time="${pairing.dateTime.toString().substring(0, 16)}"
                                   th:text="${#temporals.format(pairing.dateTime, 'dd.MM.yyyy HH:mm')}"></span>
                         </div>
+                        <div class="swiss-pairing-actions"><a th:href="@{/admin/matches/{id}(id=${match.id})}" class="detail-link" th:attr="aria-label=|Open match ${match.homeTeam.shortName} vs ${match.awayTeam.shortName}|">Open Match</a></div>
                     </div>
                     <div th:if="${match.bye}" class="swiss-matchup bye">
                         <div class="swiss-team winner">
@@ -69,15 +79,14 @@
                     </div>
                 </th:block>
             </div>
-            <div th:if="${md.matches.isEmpty()}" class="empty-state empty-state--compact"><p>matches pending</p></div>
+            <div th:if="${md.matches.isEmpty()}" class="empty-state empty-state--compact"><p>No pairings in this round.</p></div>
         </div>
     </th:block>
 
-    <!-- Show pending rounds -->
-    <th:block th:if="${totalRounds != null}">
+    <th:block th:if="${totalRounds != null and rounds.size() < totalRounds}">
         <div th:each="i : ${#numbers.sequence(rounds.size() + 1, totalRounds)}" class="card">
             <h2 th:text="'Round ' + ${i}"></h2>
-            <div class="empty-state" style="padding:16px;color:var(--accent);"><p>matches pending</p></div>
+            <div class="empty-state empty-state--compact"><p>Pairings have not been generated yet.</p></div>
         </div>
     </th:block>
 </section>
