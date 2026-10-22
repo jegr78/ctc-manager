@@ -6,11 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.Mouse;
+import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Route;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.ctc.TestHelper;
 import org.ctc.domain.model.Season;
@@ -83,7 +85,7 @@ class PowerRankingsEditorE2ETest extends PlaywrightConfig {
         assertThat(first.locator(".ranking-rank")).hasText("3");
         page.setViewportSize(390, 768);
         assertEquals(false, page.evaluate("() => document.documentElement.scrollWidth > innerWidth"));
-        page.route("**/admin/tools/power-rankings/download", route -> route.fulfill(new Route.FulfillOptions().setStatus(204)));
+        stubRankingDownload(page);
         page.locator("#subtitle").fill("Test ranking & final");
         var request = page.waitForRequest("**/admin/tools/power-rankings/download", () -> page.locator("#subtitle").press("Enter"));
         var body = URLDecoder.decode(request.postData(), StandardCharsets.UTF_8);
@@ -103,11 +105,19 @@ class PowerRankingsEditorE2ETest extends PlaywrightConfig {
             nativePage.locator("[data-season-link][href$='year=2088&number=91']").click();
             assertThat(nativePage.locator(".ranking-item")).hasCount(3);
             assertThat(nativePage.locator("[data-rank-up]").first()).not().isVisible();
-            nativePage.route("**/admin/tools/power-rankings/download", route -> route.fulfill(new Route.FulfillOptions().setStatus(204)));
+            stubRankingDownload(nativePage);
             var request = nativePage.waitForRequest("**/admin/tools/power-rankings/download", () -> nativePage.locator("#downloadForm button[type=submit]").click());
             var body = URLDecoder.decode(request.postData(), StandardCharsets.UTF_8);
             assertEquals(teams.stream().map(team -> "teamIds=" + team.getId()).toList(),
                     List.of(body.split("&")).stream().filter(part -> part.startsWith("teamIds=")).toList());
         }
+    }
+
+    private static void stubRankingDownload(Page targetPage) {
+        targetPage.route("**/admin/tools/power-rankings/download", route -> route.fulfill(new Route.FulfillOptions()
+                .setStatus(200)
+                .setContentType("image/png")
+                .setHeaders(Map.of("Content-Disposition", "attachment; filename=power-rankings.png"))
+                .setBody("ranking download fixture")));
     }
 }
