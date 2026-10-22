@@ -5,6 +5,8 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.ctc.backup.dto.BackupImportPreview;
 import org.ctc.backup.dto.BackupImportResult;
 import org.ctc.backup.exception.BackupArchiveException;
@@ -70,10 +72,7 @@ class BackupControllerTest {
 
 	@Test
 	void givenAuthenticatedUser_whenPostExport_thenResponseHasContentDispositionMatchingIsoFilename() throws Exception {
-		// Finish the streaming response before inspecting its non-thread-safe headers.
-		MvcResult result = mockMvc.perform(post("/admin/backup/export"))
-				.andExpect(request().asyncStarted())
-				.andReturn();
+		MvcResult result = requestExport();
 		mockMvc.perform(MockMvcRequestBuilders.asyncDispatch(result))
 				.andExpect(status().isOk())
 				.andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
@@ -83,18 +82,30 @@ class BackupControllerTest {
 
 	@Test
 	void givenArchiveServiceWired_whenPostExport_thenWriteZipIsInvoked() throws Exception {
-		// when — POST /admin/backup/export returns ResponseEntity<StreamingResponseBody>;
-		// the streaming body lambda (which calls writeZip) is only invoked AFTER MockMvc
-		// asyncDispatches the response. Without asyncDispatch the body is never executed
-		// and the Mockito verify below sees zero interactions.
-		MvcResult result = mockMvc.perform(post("/admin/backup/export"))
-				.andExpect(status().isOk())
-				.andReturn();
+		MvcResult result = requestExport();
 		mockMvc.perform(MockMvcRequestBuilders.asyncDispatch(result))
 				.andExpect(status().isOk());
 
 		// then
 		verify(backupArchiveService).writeZip(any(OutputStream.class), any(Instant.class));
+	}
+
+	private MvcResult requestExport() throws Exception {
+		CountDownLatch initialDispatchCompleted = new CountDownLatch(1);
+		// MockMvc headers must not be committed by the streaming thread during the initial dispatch.
+		doAnswer(invocation -> {
+			if (!initialDispatchCompleted.await(5, TimeUnit.SECONDS)) {
+				throw new IllegalStateException("Initial export dispatch did not complete");
+			}
+			return null;
+		}).when(backupArchiveService).writeZip(any(OutputStream.class), any(Instant.class));
+		try {
+			return mockMvc.perform(post("/admin/backup/export"))
+					.andExpect(request().asyncStarted())
+					.andReturn();
+		} finally {
+			initialDispatchCompleted.countDown();
+		}
 	}
 
 	@Test
