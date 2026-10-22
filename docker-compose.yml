@@ -6,6 +6,7 @@ services:
       MARIADB_USER: ctc
       MARIADB_PASSWORD: ctc
       MARIADB_ROOT_PASSWORD: root
+      MARIADB_AUTO_UPGRADE: "1"
     volumes:
       - ctc-db-data:/var/lib/mysql
     ports:
