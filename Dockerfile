@@ -1,6 +1,6 @@
 # Stage 1: Build
 # Pinned to -noble: Playwright does not support Ubuntu 26.04 yet.
-FROM eclipse-temurin:25.0.4_7-jdk-noble AS build
+FROM eclipse-temurin:25.0.5_8-jdk-noble AS build
 
 WORKDIR /build
 
@@ -18,7 +18,7 @@ RUN ./mvnw package -DskipTests -B
 
 # Stage 2: Runtime
 # Pinned to -noble: Playwright does not support Ubuntu 26.04 yet.
-FROM eclipse-temurin:25.0.4_7-jre-noble
+FROM eclipse-temurin:25.0.5_8-jre-noble
 
 # curl for the healthcheck, the rest for Playwright's Chromium.
 RUN apt-get update && apt-get install -y --no-install-recommends \
