@@ -40,3 +40,17 @@ Parent: https://github.com/jegr78/ctc-manager/issues/294
 - The runtime is still a qualification instance with an empty synthetic DB and blank external integration settings. No source Mac data has been migrated or changed.
 
 - Issue295 completed through merged PR303, squashed as e8308ca8. Full committed-head verification passed 2983 tests with zero failures/errors,91.59 percent coverage and zero SpotBugs findings. GitHub CI/CodeQL/Docker image checks all passed. Wiki production recipe updated in5ddb699. Parent294 remains open for its seven remaining children; no new issues created.
+## Host provisioning and private ingress, issue 296
+
+| Requirement | Production path | Positive evidence | Failure evidence | Runtime evidence |
+| --- | --- | --- | --- | --- |
+| Dedicated isolated account | setup-host.sh, lib/host.py | own user/ranges/directories accepted | privileged groups, duplicate UID and foreign directories reject | actual uid1002, private owned paths |
+| Rootless startup | systemd/docker-rootless.service | own daemon/linger/user unit | missing tools, wrong socket, no memory enforcement reject | real daemon, cgroup2, boot configuration |
+| Preserve shared services | structured setup commands | idempotent own changes only | foreign9443/9092 mapping refuses before changes | before/after courtside and Serve inventory |
+| Tailnet-only HTTPS | explicit Serve9443 | correct existing private route accepted | Funnel9443 and unrelated mapping reject | TLS/auth via Tailnet and public-path denial |
+| Local backup identity | expected UUID and private root | known mounted device accepted | absent/wrong mount refuses | mounted Btrfs UUID receipt |
+
+Ruling: keep the Bash setup entrypoint small and use a Python helper to validate structured host
+metadata and execute fixed native argv. Privileged operations stay explicit and testable. No
+configuration is sourced as shell code, and no CTC-owned helper executes with host-root privileges.
+Run host setup from the owner's verified source copy, outside the CTC user's writable deployment.
