@@ -106,6 +106,26 @@ class HostSetupTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'memory capacity'):
             self.validate()
 
+    def test_missing_cgroup_memory_delegation_is_rejected(self):
+        self.data['cgroupMemory'] = False
+        with self.assertRaisesRegex(ValueError, 'delegation'):
+            self.validate()
+
+    def test_insufficient_installation_storage_is_rejected(self):
+        self.data['diskFree'] = 1024
+        with self.assertRaisesRegex(ValueError, 'storage'):
+            self.validate()
+
+    def test_offline_tailnet_is_rejected(self):
+        self.data['tailscaleRunning'] = False
+        with self.assertRaisesRegex(ValueError, 'Tailscale'):
+            self.validate()
+
+    def test_public_rootless_runtime_directory_is_rejected(self):
+        self.data['runtimeDirectory']['mode'] = 0o755
+        with self.assertRaisesRegex(ValueError, 'runtime directory'):
+            self.validate()
+
     def test_numeric_subordinate_owner_is_checked(self):
         self.data['subuid'] += '1002:1:65536\n'
         with self.assertRaisesRegex(ValueError, 'host identity'):
@@ -131,7 +151,7 @@ class HostSetupTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'mount'):
             self.validate()
         self.data['backupMount']['target'] = '/mnt/backup'
-        self.data['backupMount']['uuid'] = 'other-device'
+        self.data['backupMount']['uuid'] = '11111111-2222-3333-4444-555555555555'
         with self.assertRaisesRegex(ValueError, 'UUID'):
             self.validate()
 
