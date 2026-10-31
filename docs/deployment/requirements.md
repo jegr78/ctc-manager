@@ -44,7 +44,7 @@ Parent: https://github.com/jegr78/ctc-manager/issues/294
 
 | Requirement | Production path | Positive evidence | Failure evidence | Runtime evidence |
 | --- | --- | --- | --- | --- |
-| Dedicated isolated account | setup-host.sh, lib/host.py | own user/ranges/directories accepted | privileged groups, duplicate UID and foreign directories reject | actual uid1002, private owned paths |
+| Dedicated isolated account | setup-host.sh, lib/host.py | own user/ranges/directories accepted | privileged groups, duplicate UID/GID and foreign directories reject | actual uid1002, private owned paths |
 | Rootless startup | systemd/docker-rootless.service | own daemon/linger/user unit | missing tools, wrong socket, no memory enforcement reject | real daemon, cgroup2, boot configuration |
 | Preserve shared services | structured setup commands | idempotent own changes only | foreign 9443/9092 mapping refuses before changes | before/after courtside and Serve inventory |
 | Tailnet-only HTTPS | explicit Serve 9443 | correct existing private route accepted | Funnel 9443 and unrelated mapping reject | TLS/auth via Tailnet and public-path denial |
@@ -67,3 +67,6 @@ Run host setup from the owner's verified source copy, outside the CTC user's wri
 - Expanded host checks to 35 cases and archive checks to 11, plus 3 publication cases. 34 individual falsifications triggered their intended assertions, including both host identity classes, numeric owner entries, shared-route preservation, lock ownership, legacy inventory and executable setup packaging. Every temporary mutation was restored from an exact stash snapshot.
 - The Maven DeploymentScriptsTest bridge passed its complete script contracts. A deliberately isolated verify run then failed the repository-wide coverage gate because it ran only that one test; no gate was disabled. Final full verification remains required after upstream security changes land and are integrated.
 - Final read-only host inventory passed with 15.52 GiB total and 6.86 GiB available RAM, the expected backup UUID, owned rootless daemon and private Serve 9443 ready.
+
+- Primary GIDs must also be unique and non-root so numeric group aliases cannot bypass the group-name check. The negative case failed before implementation, passed after it and was individually falsified. The independent security recheck found no material findings. Final totals are 36 host cases and 35 individual falsifications; archive/publication cases remain 11/3.
+- The exact published v1.21.0 image generated a Chromium screenshot as the app user inside its 2 GiB container. The SQL qualification row also survived the dedicated daemon restart. These remain synthetic target fixtures, separate from all Mac source data.
