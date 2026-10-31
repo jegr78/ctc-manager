@@ -83,3 +83,19 @@ class BundleTest(unittest.TestCase):
             second = bundle.extractfile('ctc-manager-deployment-1.21.0/manifest.json').read()
         self.assertEqual(first, second)
         self.assertEqual(first_bytes, path.read_bytes())
+
+    def test_changed_file_with_valid_tar_refuses_checksum(self):
+        self.assertEqual(0, self.create().returncode)
+        source = self.output / 'ctc-manager-deployment-1.21.0.tar.gz'
+        changed = self.output / 'changed.tar.gz'
+        import io
+        with tarfile.open(source) as original, tarfile.open(changed, 'w:gz') as target:
+            for member in original:
+                content = original.extractfile(member).read()
+                if member.name.endswith('/config.example'):
+                    content += b'\n'
+                    member.size = len(content)
+                target.addfile(member,io.BytesIO(content))
+        result = self.run_bundle('verify',changed)
+        self.assertNotEqual(0,result.returncode)
+        self.assertIn('checksum',result.stderr)
