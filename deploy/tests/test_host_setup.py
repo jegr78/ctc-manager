@@ -15,6 +15,7 @@ def facts():
         'system': 'Linux', 'architecture': 'x86_64', 'missingTools': [], 'sudoAvailable': True,
         'operatorUid': 1000, 'user': {'uid': 1002, 'gid': 1002, 'home': '/home/ctc-manager'},
         'duplicateUid': False, 'groups': ['ctc-manager'],
+        'hostUids': [0,1000,1001,1002], 'hostGids': [0,1000,1001,1002],
         'subuid': 'jegr:100000:65536\ncourtside-dev:165536:65536\nctc-manager:231072:65536\n',
         'subgid': 'jegr:100000:65536\ncourtside-dev:165536:65536\nctc-manager:231072:65536\n',
         'directories': {
@@ -37,7 +38,7 @@ def facts():
         'socket': {'uid': 1002, 'type': 'socket', 'mode': 0o660},
         'runtimeDirectory': {'uid': 1002, 'type': 'directory', 'mode': 0o700},
         'docker': {'rootless': True, 'memory': True},
-        'cgroupMemory': True,
+        'cgroupMemory': True, 'memoryTotal': 16*1024**3, 'memoryAvailable': 7*1024**3,
     }
 
 
@@ -82,6 +83,32 @@ class HostSetupTest(unittest.TestCase):
         self.data['duplicateUid'] = False
         self.data['user']['uid'] = 0
         with self.assertRaisesRegex(ValueError, 'UID'):
+            self.validate()
+
+    def test_subordinate_uid_must_not_map_a_host_identity(self):
+        self.data['subuid'] = 'ctc-manager:1:65536\n'
+        with self.assertRaisesRegex(ValueError, 'host identity'):
+            self.validate()
+
+    def test_subordinate_gid_must_not_map_a_host_identity(self):
+        self.data['subgid'] = 'ctc-manager:1:65536\n'
+        with self.assertRaisesRegex(ValueError, 'host identity'):
+            self.validate()
+
+    def test_tailscale_interface_scoped_listener_is_accepted(self):
+        self.data['serve']['TCP']['9443'] = {'HTTPS': True}
+        self.data['serve']['Web'][DNS+':9443'] = {'Handlers': {'/': {'Proxy': 'http://127.0.0.1:9092'}}}
+        self.data['listeners'] += ['100.125.21.47%tailscale0:9443', '[fd7a:115c:a1e0::1]%tailscale0:9443']
+        self.assertTrue(self.validate()['serveReady'])
+
+    def test_insufficient_host_memory_is_rejected(self):
+        self.data['memoryTotal'] = 2*1024**3
+        with self.assertRaisesRegex(ValueError, 'memory capacity'):
+            self.validate()
+
+    def test_numeric_subordinate_owner_is_checked(self):
+        self.data['subuid'] += '1002:1:65536\n'
+        with self.assertRaisesRegex(ValueError, 'host identity'):
             self.validate()
 
     def test_unexpected_home_is_rejected(self):

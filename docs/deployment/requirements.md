@@ -54,3 +54,12 @@ Ruling: keep the Bash setup entrypoint small and use a Python helper to validate
 metadata and execute fixed native argv. Privileged operations stay explicit and testable. No
 configuration is sourced as shell code, and no CTC-owned helper executes with host-root privileges.
 Run host setup from the owner's verified source copy, outside the CTC user's writable deployment.
+
+
+- Host tests established failure before implementation. Dedicated IDs, private directories, mount UUID, resource support and foreign listeners reject without changing shared services.
+- Independent security review found subordinate ranges could include real host identities. The helper now checks named/numeric CTC ranges against all host UIDs/GIDs. Three negative cases failed before the correction and pass after it.
+- Real setup exposed interface-scoped ss addresses. A production-shaped positive fixture failed before parsing the interface suffix and now passes. Public-address fixtures still reject.
+- The host inventory includes total/available RAM and rejects less than4GiB total. Its new failure case was observed before implementation.
+- Candidate code and independent security reviews found no remaining material findings.29 host tests and10 archive plus3 release-publication tests pass. Legacy v1.21.0 release verification remains successful after inventory growth.
+- Actual private Serve9443 setup and repeated applications passed. Existing courtside443 Funnel and Mailpit8443 settings remain unchanged. Mac Tailnet DNS and certificate-verified HTTPS return health200; unauthenticated admin401 and authenticated admin200. LAN9092/9443 connection attempts time out.
+- Restarting only the CTC rootless user daemon preserved the synthetic persistent file and recovered app health. courtside and Mailpit remained200. Reboot/denied-policy/external-device drills remain final acceptance work; no real Mac data was changed or migrated.

@@ -120,3 +120,29 @@ class BundleTest(unittest.TestCase):
                 bundle.addfile(entry,io.BytesIO(content))
         result = self.run_bundle('verify',legacy)
         self.assertEqual(0,result.returncode,result.stderr)
+
+    def test_host_setup_and_guide_are_packaged(self):
+        self.assertEqual(0,self.create().returncode)
+        with tarfile.open(self.output/'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
+            prefix='ctc-manager-deployment-1.21.0/'
+            for name in ['setup-host.sh','lib/host.py','systemd/docker-rootless.service','guides/host.md']:
+                self.assertIn(prefix+name,bundle.getnames())
+            self.assertTrue(bundle.getmember(prefix+'setup-host.sh').mode & 0o100)
+
+    def test_legacy_bundle_inventory_remains_verifiable(self):
+        self.assertEqual(0,self.create().returncode)
+        prefix='ctc-manager-deployment-1.21.0/'
+        with tarfile.open(self.output/'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
+            contents={member.name:bundle.extractfile(member).read() for member in bundle}
+        manifest=json.loads(contents[prefix+'manifest.json'])
+        for name in ['setup-host.sh','lib/host.py','systemd/docker-rootless.service','guides/host.md']:
+            contents.pop(prefix+name,None)
+            manifest['files'].pop(name,None)
+        contents[prefix+'manifest.json']=json.dumps(manifest).encode()
+        archive=self.output/'legacy-inventory.tar.gz'
+        with tarfile.open(archive,'w:gz') as bundle:
+            for name,content in contents.items():
+                entry=tarfile.TarInfo(name);entry.size=len(content)
+                bundle.addfile(entry,io.BytesIO(content))
+        result=self.run_bundle('verify',archive)
+        self.assertEqual(0,result.returncode,result.stderr)

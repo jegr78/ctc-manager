@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import copy
+import grp
 import json
 import os
 from pathlib import Path
@@ -91,9 +92,14 @@ def collect():
                                   '--filter', 'label=com.docker.compose.service=app', '--format', '{{json .}}'], uid)
             own_app = any('127.0.0.1:9092->8080/tcp' in json.loads(row).get('Ports', '')
                           for row in containers.stdout.splitlines() if row.strip())
+    memory = {line.split(':')[0]: int(line.split()[1]) * 1024
+              for line in Path('/proc/meminfo').read_text().splitlines() if line.startswith(('MemTotal:', 'MemAvailable:'))}
     return {
+        'memoryTotal': memory['MemTotal'], 'memoryAvailable': memory['MemAvailable'],
         'system': platform.system(), 'architecture': platform.machine(), 'missingTools': missing,
         'sudoAvailable': sudo, 'operatorUid': os.getuid(), 'user': user,
+        'hostUids': [entry.pw_uid for entry in pwd.getpwall()],
+        'hostGids': [entry.gr_gid for entry in grp.getgrall()],
         'duplicateUid': bool(user and sum(account.pw_uid == uid for account in pwd.getpwall()) != 1),
         'groups': command(['id', '-nG', USER]).stdout.split() if user else [],
         'subuid': Path('/etc/subuid').read_text(), 'subgid': Path('/etc/subgid').read_text(),
@@ -109,7 +115,7 @@ def collect():
     }
 
 
-def check_ranges(text):
+def check_ranges(text, uid, host_ids):
     ranges = []
     for line in text.splitlines():
         if not line.strip():
@@ -121,10 +127,12 @@ def check_ranges(text):
         ranges.append((owner, start, start + size))
     if len(set(ranges)) != len(ranges):
         raise ValueError('subordinate ID range overlap')
-    own = [entry for entry in ranges if entry[0] == USER]
+    own = [entry for entry in ranges if entry[0] in {USER, str(uid)}]
     if not any(end - start >= 65536 for _, start, end in own):
         raise ValueError('ctc-manager requires at least 65536 subordinate IDs')
     for owner, start, end in own:
+        if any(start <= identity < end for identity in host_ids):
+            raise ValueError('subordinate IDs must not map an existing host identity')
         for other, other_start, other_end in ranges:
             if (owner, start, end) == (other, other_start, other_end):
                 continue
@@ -157,6 +165,8 @@ def validate(facts, expected_uuid):
         raise ValueError('rootless memory control requires cgroupv2 memory delegation')
     if facts.get('diskFree', 4 * 1024**3) < 3 * 1024**3:
         raise ValueError('insufficient installation storage')
+    if facts['memoryTotal'] < 4 * 1024**3:
+        raise ValueError('insufficient host memory capacity for CTC and shared services')
     mount = facts['backupMount']
     if not mount or mount['target'] != BACKUP_PARENT:
         raise ValueError('backup device is not mounted at /mnt/backup')
@@ -173,8 +183,8 @@ def validate(facts, expected_uuid):
             raise ValueError('dedicated user home must be /home/ctc-manager')
         if set(facts['groups']) != {USER}:
             raise ValueError('dedicated user has privileged or unexpected supplementary groups')
-        check_ranges(facts['subuid'])
-        check_ranges(facts['subgid'])
+        check_ranges(facts['subuid'], uid, facts['hostUids'])
+        check_ranges(facts['subgid'], uid, facts['hostGids'])
     for parent in ['/srv', BACKUP_PARENT]:
         value = facts['directories'][parent]
         if not value or value['type'] != 'directory' or value['uid'] not in {0, facts['operatorUid']} or value['mode'] & 0o022:
@@ -201,7 +211,7 @@ def validate(facts, expected_uuid):
     if app_ports and (not facts['ownAppListening'] or any(item != '127.0.0.1:9092' for item in app_ports)):
         raise ValueError('host port9092 is occupied by an unrelated listener')
     https_ports = [item for item in facts['listeners'] if item.endswith(':9443')]
-    if https_ports and (not ready or any(item.rsplit(':', 1)[0].strip('[]') not in facts.get('tailscaleIPs', []) for item in https_ports)):
+    if https_ports and (not ready or any(item.rsplit(':', 1)[0].split('%', 1)[0].strip('[]') not in facts.get('tailscaleIPs', []) for item in https_ports)):
         raise ValueError('host port9443 is occupied by an unrelated listener')
     return {'uid': uid, 'dnsName': facts['dnsName'], 'serveReady': ready,
             'backupUuid': str(uuid.UUID(expected_uuid)), 'dockerReady': facts['docker'] is not None}

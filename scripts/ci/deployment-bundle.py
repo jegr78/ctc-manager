@@ -12,8 +12,10 @@ import tarfile
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-FILES = ['ctc-manager', 'compose.yaml', 'config.example', 'lib/common.sh', 'lib/config.py',
+CORE_FILES = ['ctc-manager', 'compose.yaml', 'config.example', 'lib/common.sh', 'lib/config.py',
          'README.md', 'database-image', 'release-manifest.schema.json']
+FILES = CORE_FILES + ['setup-host.sh', 'lib/host.py', 'systemd/docker-rootless.service', 'guides/host.md']
+SUPPORTED_INVENTORIES = [set(CORE_FILES), set(FILES)]
 MAX_MEMBER = 4 * 1024 * 1024
 MAX_ARCHIVE = 32 * 1024 * 1024
 
@@ -63,7 +65,7 @@ def create(args):
             for name, value in sorted(content.items()):
                 info = tarfile.TarInfo(prefix + '/' + name)
                 info.size = len(value)
-                info.mode = 0o755 if name == 'ctc-manager' else 0o644
+                info.mode = 0o755 if name in ['ctc-manager', 'setup-host.sh'] else 0o644
                 archive.addfile(info, io.BytesIO(value))
         verify(staging)
         os.replace(staging, target)
@@ -96,7 +98,7 @@ def verify(path):
             if total > MAX_ARCHIVE:
                 raise ValueError('archive too large')
             values[relative] = archive.extractfile(member).read(MAX_MEMBER + 1)
-    if set(values) != set(FILES + ['manifest.json']):
+    if 'manifest.json' not in values or set(values) - {'manifest.json'} not in SUPPORTED_INVENTORIES:
         raise ValueError('incomplete archive inventory')
     manifest = json.loads(values.pop('manifest.json'))
     if set(manifest) != {'format', 'version', 'appImage', 'databaseImage', 'files'}:

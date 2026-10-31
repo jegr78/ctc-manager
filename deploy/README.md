@@ -8,7 +8,8 @@ The dedicated `ctc-manager` Linux user owns the installation with mode 0700. Its
 Docker socket must be below its private `XDG_RUNTIME_DIR`, normally `/run/user/<uid>/`.
 The launcher rejects links, non-socket endpoints and a foreign socket owner. Do not use the system Docker daemon or join
 the host docker group. CTC publishes only loopback 9092; MariaDB has no published port.
-The host setup deliverable adds Tailnet-only HTTPS 9443 without changing courtside.
+Follow [guides/host.md](guides/host.md) for read-only host checks and explicit setup of
+Tailnet-only HTTPS9443 without changing courtside. Run host setup from an operator-owned verified source copy.
 
 Copy `config.example` to `/srv/ctc-manager/config/installation.json`, replace all placeholders,
 and set its mode to 0600. All referenced secrets must be regular mode-0600 files under the
