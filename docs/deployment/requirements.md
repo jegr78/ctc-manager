@@ -26,3 +26,7 @@ Parent: https://github.com/jegr78/ctc-manager/issues/294
 - Credentials-init uses the selected app image and its actual ctc UID, so private host credentials remain readable inside the rootless app without making host files public.
 
 - Independent security review: resolved P2 mutable MariaDB identity on release retry by pinning deploy/database-image and refusing changed existing assets. Resolved P2 socket ownership by lstat/type/UID checks inside a private runtime directory. Added behavioral retry and endpoint fixtures.
+
+- Guard falsification passed independently for rootless daemon, memory enforcement, private secrets, socket type, socket owner, operation lock, port collision, archive checksum and immutable release assets. Each mutation failed at its expected assertion and was restored from a stash snapshot or verified clean HEAD.
+- Fresh code review at 66c43fea: no material findings. Independent security recheck at 66c43fea: both P2 findings resolved, no remaining material findings.
+- Runtime qualification on a real isolated rootless daemon, credential readability, persistent storage and Chromium remains pending before accepting issue 295.
