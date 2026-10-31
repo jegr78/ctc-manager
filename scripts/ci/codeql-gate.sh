@@ -3,7 +3,7 @@
 #   codeql-gate.sh snapshot FILE  records the open alerts of HEAD_REF before a push is analysed
 #   codeql-gate.sh                pull requests: alert numbers of the PR not open on BASE_REF;
 #                                 pushes: alert numbers not in BASELINE_FILE
-# Any API failure fails the gate.
+# Scheduled and manual scans check all open HIGH/CRITICAL alerts. Any API failure fails the gate.
 set -euo pipefail
 shopt -s inherit_errexit
 
@@ -45,6 +45,10 @@ if [ "${EVENT_NAME}" = "pull_request" ]; then
   : "${PR_NUMBER:?}" "${BASE_REF:?}"
   head_alerts=$(fetch_alerts -f "pr=${PR_NUMBER}")
   base_alerts=$(fetch_alerts -f "ref=refs/heads/${BASE_REF}")
+elif [ "${EVENT_NAME}" = "schedule" ] || [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+  : "${HEAD_REF:?}"
+  base_alerts=""
+  head_alerts=$(fetch_alerts -f "ref=refs/heads/${HEAD_REF}")
 else
   : "${HEAD_REF:?}" "${BASELINE_FILE:?}"
   base_alerts=$(cat "${BASELINE_FILE}")
@@ -53,8 +57,16 @@ fi
 new_alerts=$(new_numbers "${base_alerts}" "${head_alerts}")
 
 if [ -n "${new_alerts}" ]; then
-  echo "::error::New HIGH/CRITICAL CodeQL alerts introduced (number|rule|path):"
+  if [ "${EVENT_NAME}" = "schedule" ] || [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+    echo "::error::Open HIGH/CRITICAL CodeQL alerts require attention (number|rule|path):"
+  else
+    echo "::error::New HIGH/CRITICAL CodeQL alerts introduced (number|rule|path):"
+  fi
   printf '%s\n' "${new_alerts}"
   exit 1
 fi
-echo "No new HIGH/CRITICAL CodeQL alerts."
+if [ "${EVENT_NAME}" = "schedule" ] || [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+  echo "No open HIGH/CRITICAL CodeQL alerts."
+else
+  echo "No new HIGH/CRITICAL CodeQL alerts."
+fi

@@ -340,7 +340,7 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 
 ### CodeQL SAST (Code Scanning)
 
-* **Gate:** `github/codeql-action@v4` runs on push to `master`, on pull_request against `master`, and on Sunday 02:00 UTC cron via `.github/workflows/codeql.yml` (language `java-kotlin`, query suite `security-extended`). The gate step runs `scripts/ci/codeql-gate.sh` (tested by `CodeqlGateScriptTest`) and fails the workflow when a new open HIGH or CRITICAL alert appears: on a pull request, an alert number the base branch does not have; on a push, an alert number that was not open before the analysis. Any alert-API failure fails the gate. The weekly cron run skips the gate step (drift detection only; alerts surface in the Security tab, no red runs).
+* **Gate:** `github/codeql-action@v4` runs on push to `master`, on pull_request against `master`, and on daily 02:00 UTC cron via `.github/workflows/codeql.yml` (language `java-kotlin`, query suite `security-extended`). The gate step runs `scripts/ci/codeql-gate.sh` (tested by `CodeqlGateScriptTest`) and fails the workflow when a new open HIGH or CRITICAL alert appears: on a pull request, an alert number the base branch does not have; on a push, an alert number that was not open before the analysis. Any alert-API failure fails the gate. Scheduled and manual scans run the gate against all open HIGH/CRITICAL alerts and fail until those alerts are resolved or explicitly dismissed. Push/PR checks retain the existing new-alert baseline semantics.
 * **Suppressions** live in `.github/codeql/codeql-config.yml` `query-filters`. Every suppressed finding requires a `// CodeQL FP: <rule-id> — <reason>; see docs/security/sast-acceptance.md` source marker on the line directly above the protected method or block, AND a matching table row in `docs/security/sast-acceptance.md`. UI dismissals are equally valid but MUST also be reflected in `sast-acceptance.md` (Update-on-Triage discipline — partial-writes are forbidden).
 * **Acceptance doc** at `docs/security/sast-acceptance.md` is the single source of truth for SAST triage decisions: per-pattern sections (SSRF | ZIP-Slip | BCrypt-N/A | Others), per-finding rows with Alert-ID + Rule + Location + Bucket + Rationale + Source-Marker. Every suppression PR MUST include a parallel `sast-acceptance.md` edit. The acceptance doc is the human-readable counterpart to the machine-readable `codeql-config.yml`.
 
@@ -357,3 +357,11 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 * `deploy/compose.yaml` uses authenticated prod, pinned image digests, loopback 9092, no SQL host port and persistent data/log/database volumes. A networkless helper copies private Google credentials into an app-readable read-only volume.
 * Deployment mutations share `.ctc-manager.lock` and journal state. Never remove an ambiguous stale lock or target unrelated projects/ports/volumes.
 * `scripts/ci/deployment-bundle.py` creates and validates release material. Extend its exact inventory when adding deployment runtime files. `DeploymentScriptsTest` runs the behavioral recipe/archive tests through Maven. Include deploy changes in CI path detection.
+
+### Dependency update policy
+
+* Renovate permits daily updates without a time window or PR throttling and explicitly enables major proposals, including Docker. Major PRs have no dashboard approval gate and are not automerged; existing patch automerge still requires repository checks.
+* GitHub vulnerability alerts stay enabled. Renovate OSV alerts and dashboard summaries supplement them for direct Maven dependencies. Hosted Renovate scheduling is controlled by the service; repository schedules cannot force its run frequency.
+* Production database references must remain version-and-digest discoverable by Renovate while deployment archives use immutable canonical image identities.
+
+* `.github/workflows/dependency-security.yml` submits the resolved transitive Maven graph daily at 01:30 UTC and on relevant trusted master pushes. Keep its write-scoped submission job off pull-request triggers and retain the action commit pin with an updatable version comment.

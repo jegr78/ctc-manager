@@ -24,6 +24,13 @@ def digest(value):
     return value
 
 
+def canonical_database_image(value):
+    match = re.fullmatch(r'mariadb(?::[0-9]+(?:\.[0-9]+){0,2})?@(sha256:[a-f0-9]{64})', value)
+    if not match:
+        raise ValueError('invalid database release reference')
+    return 'mariadb@' + match.group(1)
+
+
 def version(value):
     if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+(?:-rc\.[0-9]+)?', value):
         raise ValueError('invalid released version')
@@ -40,7 +47,7 @@ def create(args):
         if not path.is_file() or path.is_symlink():
             raise ValueError('missing deployment file: ' + name)
         content[name] = path.read_bytes()
-    if database != content['database-image'].decode().strip():
+    if database != canonical_database_image(content['database-image'].decode().strip()):
         raise ValueError('database digest does not match version-controlled release input')
     manifest = {'format': 1, 'version': release, 'appImage': app, 'databaseImage': database,
                 'files': {name: hashlib.sha256(value).hexdigest() for name, value in content.items()}}
@@ -101,7 +108,7 @@ def verify(path):
         if not value.startswith(repository + '@'):
             raise ValueError('unexpected image repository')
         digest(value.removeprefix(repository + '@'))
-    if values['database-image'].decode().strip() != manifest['databaseImage']:
+    if canonical_database_image(values['database-image'].decode().strip()) != manifest['databaseImage']:
         raise ValueError('database release identity mismatch')
     expected = {name: hashlib.sha256(value).hexdigest() for name, value in values.items()}
     if manifest.get('files') != expected:

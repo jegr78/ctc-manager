@@ -1,25 +1,53 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": [
+    "config:recommended",
+    "docker:enableMajor"
+  ],
   "timezone": "Europe/Berlin",
-  "prConcurrentLimit": 5,
-  "prHourlyLimit": 2,
-  "branchConcurrentLimit": 10,
-  "labels": ["dependencies", "renovate"],
-  "assignees": ["jegr78"],
+  "prConcurrentLimit": 0,
+  "prHourlyLimit": 0,
+  "branchConcurrentLimit": 0,
+  "labels": [
+    "dependencies",
+    "renovate"
+  ],
+  "assignees": [
+    "jegr78"
+  ],
   "rebaseWhen": "behind-base-branch",
   "dependencyDashboard": true,
   "vulnerabilityAlerts": {
     "enabled": true,
-    "labels": ["security", "dependencies"]
+    "labels": [
+      "security",
+      "dependencies"
+    ],
+    "schedule": [],
+    "dependencyDashboardApproval": false,
+    "prCreation": "immediate",
+    "minimumReleaseAge": null
   },
   "packageRules": [
     {
-      "matchPackageNames": ["/^org\\.springframework\\.boot:/"],
+      "description": "Offer major updates without a dashboard approval gate.",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": true,
+      "dependencyDashboardApproval": false,
+      "automerge": false
+    },
+    {
+      "matchPackageNames": [
+        "/^org\\.springframework\\.boot:/"
+      ],
       "groupName": "Spring Boot"
     },
     {
-      "matchPackageNames": ["/^org\\.springframework\\.security:/"],
+      "matchPackageNames": [
+        "/^org\\.springframework\\.security:/"
+      ],
       "groupName": "Spring Security"
     },
     {
@@ -31,25 +59,37 @@
       "groupName": "Google API clients"
     },
     {
-      "matchPackageNames": ["/^org\\.testcontainers:/"],
+      "matchPackageNames": [
+        "/^org\\.testcontainers:/"
+      ],
       "groupName": "Testcontainers"
     },
     {
-      "matchPackageNames": ["/^org\\.openrewrite\\.maven:/", "/^org\\.openrewrite\\.recipe:/"],
+      "matchPackageNames": [
+        "/^org\\.openrewrite\\.maven:/",
+        "/^org\\.openrewrite\\.recipe:/"
+      ],
       "groupName": "OpenRewrite"
     },
     {
-      "matchPackageNames": ["/^com\\.github\\.spotbugs:/", "/^com\\.h3xstream\\.findsecbugs:/"],
+      "matchPackageNames": [
+        "/^com\\.github\\.spotbugs:/",
+        "/^com\\.h3xstream\\.findsecbugs:/"
+      ],
       "groupName": "SpotBugs + find-sec-bugs"
     },
     {
       "description": "Keep Java major-version declarations at major precision.",
-      "matchDatasources": ["java-version"],
+      "matchDatasources": [
+        "java-version"
+      ],
       "matchCurrentValue": "/^\\d+$/",
       "versioning": "semver-partial"
     },
     {
-      "matchUpdateTypes": ["patch"],
+      "matchUpdateTypes": [
+        "patch"
+      ],
       "automerge": true,
       "automergeType": "pr"
     }
@@ -57,11 +97,33 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["/^pom\\.xml$/"],
-      "matchStrings": ["<java\\.version>\\s*(?<currentValue>\\d+)\\s*</java\\.version>"],
+      "managerFilePatterns": [
+        "/^pom\\.xml$/"
+      ],
+      "matchStrings": [
+        "<java\\.version>\\s*(?<currentValue>\\d+)\\s*</java\\.version>"
+      ],
       "depNameTemplate": "java-jdk",
       "datasourceTemplate": "java-version",
       "versioningTemplate": "semver-partial"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^deploy\\/database-image$/"
+      ],
+      "matchStrings": [
+        "mariadb:(?<currentValue>\\d+(?:\\.\\d+){0,2})@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "depNameTemplate": "mariadb",
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
     }
-  ]
+  ],
+  "schedule": [
+    "* * * * *"
+  ],
+  "dependencyDashboardApproval": false,
+  "osvVulnerabilityAlerts": true,
+  "dependencyDashboardOSVVulnerabilitySummary": "all"
 }

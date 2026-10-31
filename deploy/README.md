@@ -57,6 +57,7 @@ expected GitHub release and compare its exact version/image identity. Do not exe
 copied from an untrusted backup. Full backup/update/recovery and Mac migration are separate
 parent-issue deliverables. Publishing scripts is not evidence of a completed migration.
 
-`database-image` pins the tested MariaDB identity for release material. Change it deliberately
+`database-image` records the tested MariaDB version tag and digest for Renovate. Release
+archives retain the immutable canonical image identity. Change it deliberately
 with compatibility evidence. Release retries validate existing assets and upload only missing
 ones; they refuse to overwrite completed assets with different bytes.

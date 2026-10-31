@@ -1,4 +1,6 @@
 import json
+import hashlib
+import io
 from pathlib import Path
 import subprocess
 import tarfile
@@ -99,3 +101,22 @@ class BundleTest(unittest.TestCase):
         result = self.run_bundle('verify',changed)
         self.assertNotEqual(0,result.returncode)
         self.assertIn('checksum',result.stderr)
+
+    def test_previously_untagged_database_reference_remains_verifiable(self):
+        self.assertEqual(0, self.create().returncode)
+        archive = self.output / 'ctc-manager-deployment-1.21.0.tar.gz'
+        with tarfile.open(archive) as bundle:
+            contents = {member.name: bundle.extractfile(member).read() for member in bundle}
+        prefix = 'ctc-manager-deployment-1.21.0/'
+        contents[prefix+'database-image'] = ('mariadb@'+DATABASE_DIGEST+'\n').encode()
+        manifest = json.loads(contents[prefix+'manifest.json'])
+        manifest['files']['database-image'] = hashlib.sha256(contents[prefix+'database-image']).hexdigest()
+        contents[prefix+'manifest.json'] = json.dumps(manifest).encode()
+        legacy = self.output / 'legacy.tar.gz'
+        with tarfile.open(legacy, 'w:gz') as bundle:
+            for name, content in contents.items():
+                entry = tarfile.TarInfo(name)
+                entry.size = len(content)
+                bundle.addfile(entry,io.BytesIO(content))
+        result = self.run_bundle('verify',legacy)
+        self.assertEqual(0,result.returncode,result.stderr)
