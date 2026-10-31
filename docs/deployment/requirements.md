@@ -107,3 +107,9 @@ Pre-flight interfaces: config.load/private_path/atomic_json and common.sh lock/C
 - The disabled-callback case first observed all three handlers starting publication work. Their early policy checks now pause before repository/publication work. Both policy unit cases and 17 selected integration cases pass, including the existing real transaction/proxy callback tests. The transport guard remains independent of this early pause.
 
 - The capability HTTP case first failed with 404. Recovery-only authenticated actuator info now reports version 1 and the actual outbound-policy state. Fourteen recovery cases and three selected unit/script cases pass. Anonymous capability access remains 401. Historical image admission will additionally verify its immutable image capability before startup.
+
+Recovery storage selection now uses the same structured Compose environment for the existing
+launcher and recovery tooling. An optional validated storage generation selects independent
+volumes; absent generation preserves existing volume names. `outboundPaused` accepts only a
+JSON boolean. Three new behavioral recipe tests failed before implementation and all 21 recipe
+tests pass afterward. Recovery configuration writes also flush the containing directory.

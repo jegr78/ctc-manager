@@ -52,6 +52,8 @@ import json, os, sys
 if os.environ.get('EXPECTED_CWD') and os.getcwd() != os.environ['EXPECTED_CWD']:
  sys.exit('inaccessible inherited working directory')
 with open(os.environ['CALLS'], 'a') as f: f.write(json.dumps(sys.argv[1:])+'\\n')
+if 'compose' in sys.argv:
+ with open(os.environ['CALLS']+'.env', 'w') as f: json.dump({k:v for k,v in os.environ.items() if k.startswith('CTC_')}, f)
 if 'info' in sys.argv:
  print(json.dumps({'SecurityOptions': ['name='+os.environ.get('DAEMON','rootless')], 'MemoryLimit': os.environ.get('MEMORY','true') == 'true'}))
 elif 'ps' in sys.argv: print('[]')
@@ -67,6 +69,32 @@ elif 'ps' in sys.argv: print('[]')
 
     def run_cli(self, command='doctor'):
         return subprocess.run(['bash', str(LAUNCHER), '--directory', str(self.install), command], env=self.env, capture_output=True, text=True)
+
+    def test_recovery_generation_selects_separate_storage_and_pauses_outbound(self):
+        self.config.update(storageGeneration='recovery-20261101', outboundPaused=True)
+        self.write_config()
+        result = self.run_cli('up')
+        self.assertEqual(0, result.returncode, result.stderr)
+        actual = json.loads(Path(str(self.calls) + '.env').read_text())
+        self.assertEqual('ctc-manager_recovery-20261101_database', actual.get('CTC_DATABASE_VOLUME'))
+        self.assertEqual('ctc-manager_recovery-20261101_data', actual.get('CTC_DATA_VOLUME'))
+        self.assertEqual('false', actual.get('CTC_OUTBOUND_ENABLED'))
+
+    def test_invalid_storage_generation_refuses_before_docker(self):
+        self.config['storageGeneration'] = '../courtside'
+        self.write_config()
+        result = self.run_cli('up')
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn('storageGeneration', result.stderr)
+        self.assertFalse(self.calls.exists())
+
+    def test_outbound_pause_requires_boolean(self):
+        self.config['outboundPaused'] = 'false'
+        self.write_config()
+        result = self.run_cli('up')
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn('outboundPaused', result.stderr)
+        self.assertFalse(self.calls.exists())
 
     def test_valid_rootless_configuration_passes_doctor(self):
         result = self.run_cli()
