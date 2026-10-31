@@ -134,9 +134,19 @@ sudo apt-get install -y libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 \
 
 macOS and Windows include these dependencies natively — no extra setup needed.
 
+### Permanent private deployment
+
+The versioned production recipe in [deploy/README.md](deploy/README.md) runs an authenticated
+CTC app and MariaDB under a dedicated rootless Docker user. It pins images by digest, binds
+only loopback port 9092 and validates private configuration before operating the stack.
+Release assets include a deployment archive and checksum inventory. This recipe is separate
+from the existing local and external-database Compose files. Host provisioning, backup,
+updates and migration follow the deployment issue sequence before production activation.
+
 ### Docker
 
-The Dockerfile handles Chromium installation automatically during the build.
+The Dockerfile installs Chromium with its matching system dependencies and runs a non-root
+screenshot check during the image build.
 
 Both Compose files keep all application state in two named volumes, so recreating the `app`
 container loses nothing:

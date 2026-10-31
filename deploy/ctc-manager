@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+DEPLOY_ROOT=$(cd "$(dirname "$0")" && pwd -P)
+export DEPLOY_ROOT
+# shellcheck source=lib/common.sh
+source "$DEPLOY_ROOT/lib/common.sh"
+[ "$#" -eq 3 ] && [ "$1" = '--directory' ] || fail 'usage: ctc-manager --directory PATH doctor|status|up|stop'
+installation=$2
+operation=$3
+case "$operation" in doctor|status|up|stop) ;; *) fail 'unknown operation' ;; esac
+python3 "$DEPLOY_ROOT/lib/config.py" validate "$installation"
+installation=$(cd "$installation" && pwd -P)
+cd "$installation"
+docker_host=$(config_value dockerHost)
+verify_daemon
+case "$operation" in
+  doctor) printf '%s\n' 'CTC configuration valid; rootless daemon and memory limits available' ;;
+  status) compose ps --format json ;;
+  up|stop)
+    acquire_lock
+    trap release_lock EXIT
+    write_journal started
+    if [ "$operation" = up ]; then
+      check_port
+      compose up -d --wait --wait-timeout 180
+    else
+      compose stop app
+    fi
+    write_journal completed
+    ;;
+esac

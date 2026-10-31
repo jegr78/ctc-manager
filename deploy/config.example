@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "project": "ctc-manager",
+  "dockerHost": "unix:///run/user/REPLACE_UID/docker.sock",
+  "appImage": "ghcr.io/jegr78/ctc-manager@sha256:REPLACE_FROM_RELEASE",
+  "databaseImage": "mariadb@sha256:REPLACE_FROM_TESTED_RELEASE",
+  "appEnvFile": "/srv/ctc-manager/secrets/app.env",
+  "databasePasswordFile": "/srv/ctc-manager/secrets/db-password",
+  "databaseRootPasswordFile": "/srv/ctc-manager/secrets/db-root-password",
+  "googleCredentialsFile": "/srv/ctc-manager/secrets/google.json"
+}

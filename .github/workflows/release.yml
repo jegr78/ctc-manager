@@ -168,6 +168,20 @@ jobs:
           docker push ${IMAGE}:${VERSION}
           docker push ${IMAGE}:latest
 
+      - name: Package and publish deployment material
+        if: steps.plan.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.new_version }}
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/ctc-manager
+          app_digest=$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" --format '{{.Manifest.Digest}}')
+          database_image=$(cat deploy/database-image)
+          database_digest=${database_image#*@}
+          python3 scripts/ci/deployment-bundle.py create --version "${VERSION}" \
+            --app-digest "${app_digest}" --database-digest "${database_digest}" --output target/deployment
+          bash scripts/ci/publish-deployment.sh "${VERSION}" target/deployment
+
       - name: Bump to next SNAPSHOT
         id: bump
         if: steps.plan.outputs.publish == 'true'

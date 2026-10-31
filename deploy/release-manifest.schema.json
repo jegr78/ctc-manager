@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "version", "appImage", "databaseImage", "files"],
+  "properties": {
+    "format": {"const": 1},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-rc\\.[0-9]+)?$"},
+    "appImage": {"type": "string", "pattern": "^ghcr\\.io/jegr78/ctc-manager@sha256:[a-f0-9]{64}$"},
+    "databaseImage": {"type": "string", "pattern": "^mariadb@sha256:[a-f0-9]{64}$"},
+    "files": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}
+  }
+}

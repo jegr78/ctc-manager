@@ -86,6 +86,6 @@ done <<< "${latest}"
 
 not_ready=$(printf '%s' "${states}" | grep -vE '^$|=success$' || true)
 if [ -n "${not_ready}" ]; then
-  decide skip "required checks not successful: $(printf '%s' "${not_ready}" | paste -sd ' ')"
+  decide skip "required checks not successful: $(printf '%s' "${not_ready}" | paste -sd ' ' -)"
 fi
 decide release "all required checks succeeded"
