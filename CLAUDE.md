@@ -365,3 +365,9 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 * Production database references must remain version-and-digest discoverable by Renovate while deployment archives use immutable canonical image identities.
 
 * `.github/workflows/dependency-security.yml` submits the resolved transitive Maven graph daily at 01:30 UTC and on relevant trusted master pushes. Keep its write-scoped submission job off pull-request triggers and retain the action commit pin with an updatable version comment.
+
+### Host provisioning
+
+* Host setup defaults to read-only checks. Run `deploy/setup-host.sh --apply --backup-uuid UUID` from verified operator-owned source, never a CTC-writable helper as host root. Keep privileged native operations limited to the dedicated user/path roots, linger/user service and Serve 9443. Preserve every unrelated Serve/Funnel route.
+* Reject subordinate mappings that overlap other allocated ranges or actual host UIDs/GIDs, including numeric CTC owner entries. Keep host memory and expected backup UUID checks fail-closed.
+* Release inventories may grow, but verification must still accept complete supported earlier inventories and reject partial additions. Package host setup, its unit/helper and guide together.

@@ -1,0 +1,14 @@
+[Unit]
+Description=CTC rootless Docker daemon
+After=network.target
+[Service]
+Environment=PATH=/usr/bin:/usr/sbin
+ExecStart=/usr/bin/dockerd-rootless.sh
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=180
+Delegate=yes
+TasksMax=infinity
+LimitNOFILE=1048576
+[Install]
+WantedBy=default.target

@@ -136,6 +136,11 @@ macOS and Windows include these dependencies natively — no extra setup needed.
 
 ### Permanent private deployment
 
+Use [the host setup guide](deploy/guides/host.md) to provision the dedicated CachyOS account,
+rootless startup and private Tailnet HTTPS on 9443. Setup checks existing ownership, subordinate
+IDs, memory support, backup-device identity and port conflicts before changing CTC resources.
+It preserves courtside 443 and Mailpit 8443.
+
 The versioned production recipe in [deploy/README.md](deploy/README.md) runs an authenticated
 CTC app and MariaDB under a dedicated rootless Docker user. It pins images by digest, binds
 only loopback port 9092 and validates private configuration before operating the stack.
