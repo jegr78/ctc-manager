@@ -79,8 +79,9 @@ def validate_manifest(value):
         require(isinstance(item['sha256'], str) and re.fullmatch(r'[a-f0-9]{64}', item['sha256']))
 
 
-def validate_data_archive(path):
-    seen = set()
+def validate_data_archive(path, inventory=False):
+    seen = {}
+    result = {}
     total = 0
     try:
         with tarfile.open(path, 'r:') as archive:
@@ -96,7 +97,20 @@ def validate_data_archive(path):
                         or not (member.isfile() or member.isdir()) or member.sparse
                         or member.mode & 0o7000 or member.size < 0):
                     raise ValueError('unsafe data archive entry')
-                seen.add(name)
+                if any(seen.get(str(parent)) == 'file' for parent in PurePosixPath(name).parents):
+                    raise ValueError('data archive parent is a file')
+                if member.isfile() and any(previous.startswith(name + '/') for previous in seen):
+                    raise ValueError('data archive file replaces a parent directory')
+                seen[name] = 'file' if member.isfile() else 'directory'
+                if inventory:
+                    if member.isdir():
+                        result[name] = {'type': 'directory'}
+                    else:
+                        digest = hashlib.sha256()
+                        source = archive.extractfile(member)
+                        while block := source.read(1024 * 1024):
+                            digest.update(block)
+                        result[name] = {'type': 'file', 'bytes': member.size, 'sha256': digest.hexdigest()}
                 total += member.size
                 if len(seen) > MAX_ENTRIES or total > MAX_DATA:
                     raise ValueError('data archive exceeds limits')
@@ -104,6 +118,11 @@ def validate_data_archive(path):
                 raise ValueError('truncated data archive')
     except (tarfile.TarError, EOFError) as error:
         raise ValueError('invalid data archive') from error
+    return result
+
+
+def data_inventory(path):
+    return validate_data_archive(path, inventory=True)
 
 
 def validate_unit(path):
@@ -112,6 +131,8 @@ def validate_unit(path):
         raise ValueError('recovery unit inventory mismatch')
     for name in ARTIFACTS | {'manifest.json'}:
         private_path(root / name)
+        if (root / name).stat().st_nlink != 1:
+            raise ValueError('hardlinked recovery artifact')
     manifest = read_json(root / 'manifest.json')
     validate_manifest(manifest)
     for name, expected in manifest['files'].items():
@@ -120,6 +141,15 @@ def validate_unit(path):
             raise ValueError('recovery artifact size mismatch: ' + name)
         if sha256(artifact) != expected['sha256']:
             raise ValueError('recovery artifact checksum mismatch: ' + name)
+    source = read_json(root / 'installation.json')
+    release = read_json(root / 'release.json')
+    if (type(source) is not dict or source.get('format') != 1 or source.get('project') != 'ctc-manager'
+            or source.get('installationId') != manifest['installationId']
+            or any(source.get(key) != manifest[key] for key in ['appImage', 'databaseImage'])
+            or type(release) is not dict or set(release) != {'format', 'version', 'appImage', 'databaseImage', 'files'}
+            or release.get('format') != 1 or release.get('version') != manifest['releaseVersion']
+            or any(release.get(key) != manifest[key] for key in ['appImage', 'databaseImage'])):
+        raise ValueError('recovery source provenance mismatch')
     validate_data_archive(root / 'data.tar')
     return manifest
 
@@ -198,12 +228,12 @@ def capture(runtime, destination, hold_stopped=False):
 
 
 class NativeRuntime:
-    def __init__(self, installation, deploy_root):
+    def __init__(self, installation, deploy_root, require_selected=True):
         from config import load
         self.root, self.config = load(installation)
         self.deploy_root = Path(deploy_root).resolve()
         self.release = installed_release(self.deploy_root)
-        if any(self.release[key] != self.config[key] for key in ['appImage', 'databaseImage']):
+        if require_selected and any(self.release[key] != self.config[key] for key in ['appImage', 'databaseImage']):
             raise ValueError('selected release does not match installation images')
         self.diagnostic = None
 
@@ -385,3 +415,80 @@ def probe_environment(path, database_password):
                   JAVA_TOOL_OPTIONS='-XX:MaxRAMPercentage=50.0 -XX:+ExitOnOutOfMemoryError -Duser.timezone=Europe/Berlin',
                   TZ='Europe/Berlin')
     return values
+
+
+from probe import Probe
+
+
+def restore_check(runtime, unit):
+    manifest = validate_unit(unit)
+    app = json.loads(runtime.docker(['image', 'inspect', manifest['appImage']]))[0]
+    admit_recovery_image(app)
+    if runtime.release != read_json(Path(unit) / 'release.json'):
+        raise ValueError('use the trusted matching installed release launcher for restore-check')
+    database = json.loads(runtime.docker(['image', 'inspect', manifest['databaseImage']]))[0]
+    return Probe(runtime, unit, manifest, app['Id'], database['Id']).run()
+
+
+from live import recovery_target, restore
+
+
+def resume_integrations(runtime, confirmation):
+    from config import atomic_json
+    if confirmation != runtime.config.get('installationId') or runtime.config.get('outboundPaused') is not True:
+        raise ValueError('confirm the paused installation identity after reviewing pending external work')
+    runtime.preflight()
+    image = json.loads(runtime.docker(['image', 'inspect', runtime.config['appImage']]))[0]
+    admit_recovery_image(image)
+    runtime.config['outboundPaused'] = False
+    atomic_json(runtime.root / 'config/installation.json', runtime.config)
+    runtime.compose(['up', '-d', '--wait', '--wait-timeout', '180', 'app'])
+    return {'status': 'integrations-resumed', 'installationId': confirmation}
+
+
+def main():
+    import argparse
+    import sys
+    parser = argparse.ArgumentParser(allow_abbrev=False)
+    parser.add_argument('--directory', required=True)
+    parser.add_argument('--deploy-root', required=True)
+    commands = parser.add_subparsers(dest='operation', required=True)
+    backup = commands.add_parser('backup', allow_abbrev=False)
+    backup.add_argument('--destination', required=True)
+    check = commands.add_parser('restore-check', allow_abbrev=False)
+    check.add_argument('--recovery', required=True)
+    recover = commands.add_parser('restore', allow_abbrev=False)
+    recover.add_argument('--recovery', required=True)
+    recover.add_argument('--confirm', required=True)
+    resume = commands.add_parser('resume-integrations', allow_abbrev=False)
+    resume.add_argument('--confirm', required=True)
+    arguments = parser.parse_args()
+    if arguments.operation in ['restore-check', 'restore']:
+        validate_unit(arguments.recovery)
+    runtime = NativeRuntime(arguments.directory, arguments.deploy_root,
+                            require_selected=arguments.operation in ['backup', 'resume-integrations'])
+    state = runtime.root / 'state'
+    state.mkdir(mode=0o700, exist_ok=True)
+    private_path(state, directory=True)
+    diagnostics = state / ('recovery-operation-' + uuid.uuid4().hex + '.log')
+    diagnostics.touch(mode=0o600)
+    runtime.diagnostic = diagnostics
+    if arguments.operation == 'backup':
+        completed = capture(runtime, arguments.destination)
+        result = {'status': 'completed', 'unit': str(completed), 'manifestSha256': sha256(completed / 'manifest.json')}
+    elif arguments.operation == 'restore-check':
+        result = restore_check(runtime, arguments.recovery)
+    elif arguments.operation == 'restore':
+        result = restore(runtime, arguments.recovery, arguments.confirm)
+    else:
+        result = resume_integrations(runtime, arguments.confirm)
+    print(json.dumps(result))
+
+
+if __name__ == '__main__':
+    import sys
+    import tarfile
+    try:
+        main()
+    except (ValueError, OSError, KeyError, TypeError, json.JSONDecodeError, tarfile.TarError) as error:
+        sys.exit('CTC recovery: ' + str(error))

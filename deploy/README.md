@@ -62,3 +62,16 @@ parent-issue deliverables. Publishing scripts is not evidence of a completed mig
 archives retain the immutable canonical image identity. Change it deliberately
 with compatibility evidence. Release retries validate existing assets and upload only missing
 ones; they refuse to overwrite completed assets with different bytes.
+
+## complete recovery
+
+[guides/recovery.md](guides/recovery.md) documents complete recovery units, isolated restore
+checks, independent live-recovery storage and explicit integration resumption. Capture preserves
+the app's prior state and seals database/files/configuration/secret artifacts together. Probe runs
+have no host port or external network. The `recovery-check` profile forces outbound integration
+suspension and retains production Basic authentication. Optional `storageGeneration` selects
+separate named volumes; `outboundPaused` must be a JSON boolean.
+
+Recovery receipts and diagnostics live under private installation state, outside sealed units.
+Automatic full checks reject historical images without the supported recovery policy. These
+commands do not establish that the separate Mac cutover has completed.

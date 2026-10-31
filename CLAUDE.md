@@ -217,6 +217,19 @@ Before ANY subagent dispatch in a GSD workflow (`gsd-planner`, `gsd-executor`, `
 
 The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always read) and explicit prompt content reach them. Memory entries that have not yet been promoted to CLAUDE.md must be hand-carried by the orchestrator on every dispatch.
 
+## recovery integration contract
+
+* `OutboundPolicy` guards Discord transport, Google SDK access, GT7/YouTube reads and remote file
+  downloads. Existing auto-post callbacks also stop before publication work. New external callers
+  must obey that policy. `recovery-check` always forces it off and activates authenticated prod
+  behavior. Keep production-shaped credential/startup tests and the transport guard independent.
+* Recovery tooling lives under `deploy/lib/`. `runtime.py` assembles the shared Compose context;
+  sealed units contain no executable recovery tools. Read `deploy/guides/recovery.md` before changing
+  capture, probe ownership, storage-generation or integration-resumption semantics. Run
+  `bash deploy/tests/recovery.sh` plus native MariaDB qualification for affected runtime paths.
+* Graphics use preinstalled Playwright browsers. `SandboxedHtmlRenderer` disables automatic browser
+  downloads before creating the driver, in addition to its existing page-level network restrictions.
+
 ## References
 
 * Design Spec: `docs/superpowers/specs/2026-03-26-ctc-manager-design.md`

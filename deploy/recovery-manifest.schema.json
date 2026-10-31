@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CTC complete recovery unit",
+  "type": "object",
+  "required": [
+    "format",
+    "id",
+    "installationId",
+    "createdAt",
+    "releaseVersion",
+    "appImage",
+    "databaseImage",
+    "databaseVersion",
+    "schemaHistory",
+    "records",
+    "files"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "installationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "releaseVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-rc\\.[0-9]+)?$"
+    },
+    "appImage": {
+      "type": "string",
+      "pattern": "^ghcr\\.io/jegr78/ctc-manager@sha256:[a-f0-9]{64}$"
+    },
+    "databaseImage": {
+      "type": "string",
+      "pattern": "^mariadb@sha256:[a-f0-9]{64}$"
+    },
+    "databaseVersion": {
+      "type": "string",
+      "maxLength": 128
+    },
+    "schemaHistory": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 9999,
+      "items": {
+        "type": "object",
+        "required": [
+          "rank",
+          "version",
+          "checksum"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "checksum": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "records": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-zA-Z_][a-zA-Z0-9_]{0,63}$"
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "files": {
+      "type": "object",
+      "required": [
+        "database.sql",
+        "data.tar",
+        "installation.json",
+        "app.env",
+        "db-password",
+        "db-root-password",
+        "google.json",
+        "release.json"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "database.sql": {
+          "type": "object",
+          "required": [
+            "bytes",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 107374182400
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "data.tar": {
+          "type": "object",
+          "required": [
+            "bytes",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 107374182400
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "installation.json": {
+          "type": "object",
+          "required": [
+            "bytes",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 107374182400
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "app.env": {
+          "type": "object",
+          "required": [
+            "bytes",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 107374182400
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "db-password": {
+          "type": "object",
+          "required": [
+            "bytes",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 107374182400
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "db-root-password": {
+          "type": "object",
+          "required": [
+            "bytes",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 107374182400
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "google.json": {
+          "type": "object",
+          "required": [
+            "bytes",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 107374182400
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "release.json": {
+          "type": "object",
+          "required": [
+            "bytes",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 107374182400
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        }
+      }
+    }
+  }
+}

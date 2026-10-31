@@ -9,6 +9,7 @@ import com.microsoft.playwright.Route;
 import com.microsoft.playwright.options.ServiceWorkerPolicy;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Screenshots graphics HTML in a Chromium context without JavaScript and without network access.
@@ -26,7 +27,8 @@ public final class SandboxedHtmlRenderer {
 	}
 
 	public static void screenshot(String html, int width, int height, boolean omitBackground, Path outputFile) {
-		try (Playwright pw = Playwright.create();
+		try (Playwright pw = Playwright.create(new Playwright.CreateOptions()
+				.setEnv(Map.of("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD", "1")));
 		     Browser browser = pw.chromium().launch(new BrowserType.LaunchOptions()
 				     .setHeadless(true)
 				     .setArgs(NO_NETWORK_ARGS));

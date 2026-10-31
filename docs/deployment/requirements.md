@@ -124,3 +124,16 @@ capability version 1 are refused. All 21 recovery tests, 21 recipe tests and 14 
 real native capture and restore qualification remain pending. The first tests for newly added
 Python interfaces failed on absent symbols, so their guard falsifications remain required before
 final verification rather than being counted as semantic red evidence.
+
+The candidate native recovery run passed on CachyOS rootless Docker with immutable local image
+`sha256:10fd5b1755107ffcad40eb40022714a3b5dfd0b575b190de87a4cc7e4df14d38`.
+It restored 32 application/fixture tables and files into a second fresh network/volume set,
+verified authenticated reads and generated a new team card from restored SeasonTeam data.
+MariaDB sandbox mode rejected a client shell escape and invalid SQL. This qualifies unreleased
+code, not a fabricated published image/release. Public release admission stays strict.
+The graphics test exposed Playwright's separate API driver installer path; the renderer now
+prohibits automatic browser downloads before driver initialization. Its new unit assertion first
+failed semantically and passes after the fix. Fourteen recovery ITs and the deployment script
+contract pass; the targeted Maven run still fails only the expected global coverage threshold.
+Live activation tests cover failed isolated proof, preserved predecessor configuration, paused
+integrations, activation failure and a secret-flush failure before any active changes.

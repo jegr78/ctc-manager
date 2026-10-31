@@ -7,8 +7,10 @@ import tarfile
 
 CORE_FILES = ['ctc-manager', 'compose.yaml', 'config.example', 'lib/common.sh', 'lib/config.py',
          'README.md', 'database-image', 'release-manifest.schema.json']
-FILES = CORE_FILES + ['setup-host.sh', 'lib/host.py', 'systemd/docker-rootless.service', 'guides/host.md']
-SUPPORTED_INVENTORIES = [set(CORE_FILES), set(FILES)]
+HOST_FILES = CORE_FILES + ['setup-host.sh', 'lib/host.py', 'systemd/docker-rootless.service', 'guides/host.md']
+FILES = HOST_FILES + ['lib/runtime.py', 'lib/release.py', 'lib/recovery.py', 'lib/recovery.sh',
+                      'lib/probe.py', 'lib/live.py', 'recovery-manifest.schema.json', 'guides/recovery.md']
+SUPPORTED_INVENTORIES = [set(CORE_FILES), set(HOST_FILES), set(FILES)]
 MAX_MEMBER = 4 * 1024 * 1024
 MAX_ARCHIVE = 32 * 1024 * 1024
 

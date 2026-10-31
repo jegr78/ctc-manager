@@ -23,7 +23,7 @@ class RecoveryUnitTest(unittest.TestCase):
         self.write_tar([('uploads/logo.png', b'fixture graphic', tarfile.REGTYPE)])
         for name, value in {
             'database.sql': b'CREATE TABLE fixture(id INT); INSERT INTO fixture VALUES(7);',
-            'installation.json': b'{}', 'app.env': b'PRIVATE_FIXTURE=do-not-print\n',
+            'installation.json': b'{}', 'app.env': b'PRIVATE_FIXTURE=do-not-print\nSPRING_SECURITY_USER_NAME=owner\nSPRING_SECURITY_USER_PASSWORD=private-fixture\n',
             'db-password': b'private-fixture', 'db-root-password': b'private-root',
             'google.json': b'{"private_key":"fixture"}', 'release.json': b'{}',
         }.items():
@@ -38,6 +38,12 @@ class RecoveryUnitTest(unittest.TestCase):
             'schemaHistory': [{'rank': 1, 'version': '1', 'checksum': 123}],
             'records': {'fixture': 1}, 'files': {},
         }
+        self.private_write('installation.json', json.dumps({'format': 1, 'project': 'ctc-manager',
+            'installationId': self.manifest['installationId'], 'appImage': self.manifest['appImage'],
+            'databaseImage': self.manifest['databaseImage']}).encode())
+        self.private_write('release.json', json.dumps({'format': 1, 'version': self.manifest['releaseVersion'],
+            'appImage': self.manifest['appImage'], 'databaseImage': self.manifest['databaseImage'],
+            'files': {'ctc-manager': hashlib.sha256(b'trusted').hexdigest()}}).encode())
         self.seal()
 
     def private_write(self, name, value):
@@ -68,6 +74,23 @@ class RecoveryUnitTest(unittest.TestCase):
     def test_complete_unit_preserves_provenance_and_inventory(self):
         result = recovery.validate_unit(self.unit)
         self.assertEqual(self.manifest, result)
+
+    def test_restored_file_inventory_compares_content_and_empty_directories(self):
+        self.write_tar([('empty', b'', tarfile.DIRTYPE), ('uploads/logo.png', b'graphic', tarfile.REGTYPE)])
+        actual = recovery.data_inventory(self.unit / 'data.tar')
+        self.assertEqual({'type': 'directory'}, actual['empty'])
+        self.assertEqual({'type': 'file', 'bytes': 7, 'sha256': hashlib.sha256(b'graphic').hexdigest()}, actual['uploads/logo.png'])
+
+    def test_parent_file_collision_refuses_before_extraction(self):
+        self.write_tar([('uploads', b'file', tarfile.REGTYPE), ('uploads/a', b'a', tarfile.REGTYPE)])
+        self.seal()
+        with self.assertRaisesRegex(ValueError, 'archive'):
+            recovery.validate_unit(self.unit)
+
+    def test_filesystem_hardlinked_artifact_refuses(self):
+        os.link(self.unit / 'app.env', self.unit.parent / 'linked-secret')
+        with self.assertRaisesRegex(ValueError, 'link'):
+            recovery.validate_unit(self.unit)
 
     def test_modified_database_refuses_before_import(self):
         self.private_write('database.sql', b'corrupt')
@@ -122,6 +145,14 @@ class RecoveryUnitTest(unittest.TestCase):
             recovery.validate_unit(self.unit)
         self.private_write('manifest.json', b'{"format":1,"format":2}')
         with self.assertRaisesRegex(ValueError, 'duplicate'):
+            recovery.validate_unit(self.unit)
+
+    def test_resealed_source_provenance_mismatch_refuses(self):
+        source = json.loads((self.unit / 'release.json').read_text())
+        source['appImage'] = 'ghcr.io/jegr78/ctc-manager@sha256:' + 'c' * 64
+        self.private_write('release.json', json.dumps(source).encode())
+        self.seal()
+        with self.assertRaisesRegex(ValueError, 'provenance'):
             recovery.validate_unit(self.unit)
 
     def test_source_identity_and_schema_must_be_explicit(self):
@@ -304,3 +335,184 @@ class ProbeAdmissionTest(unittest.TestCase):
             self.assertEqual('jdbc:mariadb://db:3306/ctcdb?rewriteBatchedStatements=true', actual['DATABASE_URL'])
             self.assertNotIn('javaagent', actual['JAVA_TOOL_OPTIONS'])
             self.assertNotIn('SPRING_CONFIG_LOCATION', actual)
+
+class ProbeIsolationTest(unittest.TestCase):
+    def test_probe_specs_have_no_host_ports_or_external_network(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            probe = recovery.Probe(SimpleNamespace(root=root), root, {}, 'sha256:' + 'a' * 64,
+                                   'sha256:' + 'b' * 64)
+            spec = probe.app_arguments({'SPRING_PROFILES_ACTIVE': 'recovery-check'})
+            self.assertNotIn('--publish', spec)
+            self.assertNotIn('-p', spec)
+            self.assertIn('--read-only', spec)
+            self.assertIn('/tmp:rw,exec,nosuid,nodev,size=512m', spec)
+            self.assertIn('--cap-drop', spec)
+            self.assertIn('ALL', spec)
+            self.assertIn(probe.network, spec)
+            self.assertIn('org.ctc.recovery.run=' + probe.id, spec)
+            self.assertNotIn('/var/run/docker.sock', ' '.join(spec))
+            self.assertNotIn('ctc-manager_data', ' '.join(spec))
+
+    def test_cleanup_refuses_resource_without_exact_run_label(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            calls = []
+            def docker(arguments, **kwargs):
+                calls.append(arguments)
+                return json.dumps([{'Labels': {'org.ctc.recovery.run': 'another-run'}}]).encode()
+            probe = recovery.Probe(SimpleNamespace(root=root, docker=docker), root, {}, 'sha256:' + 'a' * 64,
+                                   'sha256:' + 'b' * 64)
+            probe.resources = [('volume', probe.prefix + '-data')]
+            with self.assertRaisesRegex(ValueError, 'ownership'):
+                probe.cleanup()
+            self.assertFalse(any('rm' in call for call in calls))
+
+class RestoreCheckTest(unittest.TestCase):
+    def setUp(self):
+        from types import SimpleNamespace
+        fixture = RecoveryUnitTest()
+        fixture.setUp()
+        self.addCleanup(fixture.temp.cleanup)
+        self.fixture = fixture
+        self.calls = []
+        def docker(arguments, **kwargs):
+            self.calls.append(arguments)
+            return json.dumps([{'Id': 'sha256:' + 'a' * 64, 'Config': {'Labels': {}}}]).encode()
+        self.runtime = SimpleNamespace(root=fixture.unit.parent, docker=docker,
+                                       release=json.loads((fixture.unit / 'release.json').read_text()))
+
+    def test_old_image_refuses_before_any_probe_resources(self):
+        with self.assertRaisesRegex(ValueError, 'recovery capability'):
+            recovery.restore_check(self.runtime, self.fixture.unit)
+        self.assertFalse(any('create' in call or 'run' in call for call in self.calls))
+
+    def test_corrupt_unit_refuses_before_any_docker_operation(self):
+        self.fixture.private_write('database.sql', b'corrupt')
+        with self.assertRaisesRegex(ValueError, 'size|checksum'):
+            recovery.restore_check(self.runtime, self.fixture.unit)
+        self.assertEqual([], self.calls)
+
+class LiveRecoveryTargetTest(unittest.TestCase):
+    def test_confirmation_binds_installation_and_independent_generation(self):
+        config = {'installationId': '8975b8e1-c388-4893-8832-039eb8d439cd', 'storageGeneration': 'active'}
+        target = 'ctc-manager:' + config['installationId'] + ':recovery-20261101'
+        self.assertEqual('recovery-20261101', recovery.recovery_target(config, target))
+        for invalid in ['ctc-manager:another:recovery-new',
+                        'ctc-manager:' + config['installationId'] + ':active',
+                        'ctc-manager:' + config['installationId'] + ':../courtside']:
+            with self.subTest(target=invalid), self.assertRaisesRegex(ValueError, 'target'):
+                recovery.recovery_target(config, invalid)
+
+    def test_restore_rejects_bad_confirmation_before_probe_or_active_changes(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        runtime = SimpleNamespace(config={'installationId': '8975b8e1-c388-4893-8832-039eb8d439cd'}, docker=Mock(), compose=Mock())
+        with self.assertRaisesRegex(ValueError, 'target'):
+            recovery.restore(runtime, Path('/does-not-exist'), 'wrong-target')
+        runtime.docker.assert_not_called()
+        runtime.compose.assert_not_called()
+
+class LiveRecoveryActivationTest(unittest.TestCase):
+    def setUp(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        fixture = RecoveryUnitTest()
+        fixture.setUp()
+        self.addCleanup(fixture.temp.cleanup)
+        self.fixture = fixture
+        root = fixture.unit.parent
+        for name in ['config', 'secrets', 'state']:
+            (root / name).mkdir(mode=0o700)
+        config = json.loads((fixture.unit / 'installation.json').read_text())
+        config.update(storageGeneration='active', dockerHost='unix:///fixture/docker.sock', outboundPaused=False)
+        self.original = dict(config)
+        self.runtime = SimpleNamespace(root=root, config=config, stop_app=Mock(), compose=Mock(return_value=b'active-app'))
+        self.runtime.docker = Mock(side_effect=lambda args: b'' if args[:2] == ['volume', 'ls'] else
+                                   json.dumps([{'Id': 'sha256:' + 'a' * 64, 'Config': {'Labels': {'org.ctc.recovery.version': '1'}}}]).encode())
+        self.confirmation = 'ctc-manager:' + config['installationId'] + ':recovery-qualified'
+
+    def test_failed_isolated_check_never_stops_or_reconfigures_active_app(self):
+        from unittest.mock import patch
+        with patch('recovery.restore_check', side_effect=ValueError('probe failed')):
+            with self.assertRaisesRegex(ValueError, 'probe failed'):
+                recovery.restore(self.runtime, self.fixture.unit, self.confirmation)
+        self.runtime.stop_app.assert_not_called()
+        self.runtime.compose.assert_not_called()
+        self.assertEqual(self.original, self.runtime.config)
+        self.assertFalse((self.runtime.root / 'secrets/recovery-qualified').exists())
+
+    def test_verified_fresh_storage_activates_paused_and_preserves_previous_configuration(self):
+        from unittest.mock import patch
+        with patch('recovery.restore_check', return_value={'run': 'proven'}), patch('live.RecoveryStorage', return_value=PreparedStorage()):
+            result = recovery.restore(self.runtime, self.fixture.unit, self.confirmation)
+        self.assertEqual('active-integrations-paused', result['stage'])
+        self.assertTrue(self.runtime.config['outboundPaused'])
+        self.assertEqual('recovery-qualified', self.runtime.config['storageGeneration'])
+        previous = json.loads((self.runtime.root / 'state/before-recovery-qualified.json').read_text())
+        self.assertEqual(self.original, previous)
+        self.assertEqual((self.fixture.unit / 'google.json').read_bytes(), Path(self.runtime.config['googleCredentialsFile']).read_bytes())
+        self.assertNotIn('--volumes', str(self.runtime.compose.call_args_list))
+        self.assertEqual(1, self.runtime.stop_app.call_count)
+
+    def test_unflushed_restored_secrets_never_replace_active_configuration(self):
+        from unittest.mock import patch
+        original_flush = recovery.flush_directory
+        def fail_secret_flush(path):
+            if path.parent.name == 'secrets':
+                raise OSError('secret flush failed')
+            return original_flush(path)
+        with patch('recovery.restore_check', return_value={'run': 'proven'}), patch('live.RecoveryStorage', return_value=PreparedStorage()), patch('recovery.flush_directory', side_effect=fail_secret_flush):
+            with self.assertRaisesRegex(OSError, 'secret flush failed'):
+                recovery.restore(self.runtime, self.fixture.unit, self.confirmation)
+        self.runtime.stop_app.assert_not_called()
+        self.runtime.compose.assert_not_called()
+        self.assertEqual(self.original, self.runtime.config)
+
+    def test_failed_activation_preserves_both_configurations_and_requires_review(self):
+        from unittest.mock import patch
+        self.runtime.compose.side_effect = lambda args: (_ for _ in ()).throw(ValueError('readiness failed')) if args[0] == 'up' else b''
+        with patch('recovery.restore_check', return_value={'run': 'proven'}), patch('live.RecoveryStorage', return_value=PreparedStorage()):
+            with self.assertRaisesRegex(ValueError, 'readiness failed'):
+                recovery.restore(self.runtime, self.fixture.unit, self.confirmation)
+        self.assertTrue(self.runtime.config['outboundPaused'])
+        receipt = json.loads((self.runtime.root / 'state/live-recovery.json').read_text())
+        self.assertEqual('failed-review-required', receipt['stage'])
+        self.assertTrue(Path(receipt['previousConfiguration']).exists())
+        self.assertNotIn('--volumes', str(self.runtime.compose.call_args_list))
+
+
+class PreparedStorage:
+    prefix = 'isolated-fixture'
+    resources = []
+    def create_resources(self): pass
+    def record(self, *args): pass
+    def docker(self, args): return b''
+    def database_arguments(self): return []
+    def wait_database(self): pass
+    def import_database(self): pass
+    def verify_database(self): pass
+    def restore_files(self): pass
+    def verify_files(self): pass
+    def cleanup(self, **kwargs): pass
+
+class ProbeCreationOwnershipTest(unittest.TestCase):
+    def test_existing_volume_cannot_be_adopted_or_used_by_probe(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            calls = []
+            def docker(arguments, **kwargs):
+                calls.append(arguments)
+                if arguments[:2] == ['network', 'inspect']:
+                    return json.dumps([{'Labels': {'org.ctc.recovery.run': probe.id}, 'Internal': True}]).encode()
+                if arguments[:2] == ['volume', 'inspect']:
+                    return json.dumps([{'Labels': {'org.ctc.recovery.run': 'other-run'}}]).encode()
+                return b'created'
+            probe = recovery.Probe(SimpleNamespace(root=root, docker=docker), root, {}, 'sha256:' + 'a' * 64,
+                                   'sha256:' + 'b' * 64)
+            with self.assertRaisesRegex(ValueError, 'ownership'):
+                probe.create_resources()
+            self.assertFalse(any(call[0] == 'run' for call in calls))

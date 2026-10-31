@@ -68,7 +68,7 @@ elif 'ps' in sys.argv: print('[]')
         path.chmod(0o600)
 
     def run_cli(self, command='doctor'):
-        return subprocess.run(['bash', str(LAUNCHER), '--directory', str(self.install), command], env=self.env, capture_output=True, text=True)
+        return subprocess.run(['bash', str(LAUNCHER), '--directory', str(self.install)] + ([command] if isinstance(command, str) else command), env=self.env, capture_output=True, text=True)
 
     def test_recovery_generation_selects_separate_storage_and_pauses_outbound(self):
         self.config.update(storageGeneration='recovery-20261101', outboundPaused=True)
@@ -95,6 +95,16 @@ elif 'ps' in sys.argv: print('[]')
         self.assertNotEqual(0, result.returncode)
         self.assertIn('outboundPaused', result.stderr)
         self.assertFalse(self.calls.exists())
+
+    def test_invalid_recovery_unit_fails_without_compose_mutation(self):
+        result = self.run_cli(['restore-check', '--recovery', str(self.base / 'missing-unit')])
+        self.assertNotEqual(0, result.returncode)
+        self.assertNotIn('unknown operation', result.stderr)
+        self.assertNotIn('usage: ctc-manager', result.stderr)
+        self.assertFalse((self.install / '.ctc-manager.lock').exists())
+        self.assertNotIn('compose', self.calls.read_text())
+        journal = json.loads((self.install / 'state/operation.json').read_text())
+        self.assertEqual('failed', journal['stage'])
 
     def test_valid_rootless_configuration_passes_doctor(self):
         result = self.run_cli()

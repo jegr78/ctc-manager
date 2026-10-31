@@ -147,6 +147,10 @@ only loopback port 9092 and validates private configuration before operating the
 Release assets include a deployment archive and checksum inventory. This recipe is separate
 from the existing local and external-database Compose files. Host provisioning, backup,
 updates and migration follow the deployment issue sequence before production activation.
+Complete recovery units and isolated restore checks are documented in
+[the recovery guide](deploy/guides/recovery.md). Restore probes retain production authentication,
+force integrations off and use independent storage without a host port. Historical images need
+explicit supported recovery capability before automatic full checks.
 
 ### Docker
 
