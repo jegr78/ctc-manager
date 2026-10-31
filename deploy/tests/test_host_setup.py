@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 UUID = '31d7af2e-b6de-4680-9dfb-692ffb692fc4'
@@ -125,6 +126,23 @@ class HostSetupTest(unittest.TestCase):
         self.data['runtimeDirectory']['mode'] = 0o755
         with self.assertRaisesRegex(ValueError, 'runtime directory'):
             self.validate()
+
+    def test_operator_setup_source_must_be_private_and_not_linked(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ['lib/host.py', 'setup-host.sh', 'systemd/docker-rootless.service']:
+                path = root/name
+                path.parent.mkdir(parents=True,exist_ok=True)
+                path.write_text('unit')
+            with patch.object(self.module, 'ROOT', root):
+                self.assertEqual('unit',self.module.trusted_unit())
+                (root/'lib/host.py').chmod(0o666)
+                with self.assertRaisesRegex(ValueError,'operator-owned'):
+                    self.module.trusted_unit()
+                (root/'lib/host.py').unlink()
+                (root/'lib/host.py').symlink_to(root/'setup-host.sh')
+                with self.assertRaisesRegex(ValueError,'operator-owned'):
+                    self.module.trusted_unit()
 
     def test_numeric_subordinate_owner_is_checked(self):
         self.data['subuid'] += '1002:1:65536\n'
@@ -381,3 +399,14 @@ class HostApplyTest(unittest.TestCase):
         self.assertTrue(result['dockerReady'])
         self.assertIn('courtside-dev:165536:65536',fake.data['subuid'])
         self.assertFalse(fake.locked)
+
+    def test_different_existing_daemon_unit_is_preserved_and_fails(self):
+        fake = FakeHost(self.data)
+        path = '/home/ctc-manager/.config/systemd/user/docker.service'
+        fake.files[path] = 'foreign unit'
+        with self.assertRaisesRegex(ValueError,'differs'):
+            self.module.apply(self.data,UUID,execute=fake.execute,refresh=fake.collect,unit_text=fake.unit)
+        self.assertEqual('foreign unit',fake.files[path])
+        self.assertEqual('failed',json.loads(fake.files['/srv/ctc-manager/state/host-setup.json'])['status'])
+        self.assertFalse(fake.locked)
+        self.assertFalse(any('tailscale' in args for args,_ in fake.calls))
