@@ -39,3 +39,16 @@ Initial audit: GitHub vulnerability alerts and security updates were already ena
 open Dependabot alerts. The existing SBOM listed 50 Maven packages. Record the effective graph
 and first successful submission after rollout rather than claiming complete coverage from
 that initial static inventory.
+
+## Verification
+
+The strict validator in the official Renovate 44.198.3 image accepted the configuration with
+native regex support. CodeQL daily/manual behavior passed twelve unit cases. Both new daily
+finding and API-failure guards were individually falsified, failed at the intended assertions,
+and restored from exact Git snapshots. The deployment bundle suite covers tagged MariaDB
+pins and compatibility with earlier untagged archive references. Run the complete repository
+verification on the final committed branch after review and upstream integration.
+
+A network-isolated local-platform extraction with the official Renovate image detected the
+production file as mariadb version13 with its exact SHA-256 digest. This proves the new
+reference is discoverable without granting the validator repository or host credentials.

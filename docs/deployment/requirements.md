@@ -38,3 +38,5 @@ Parent: https://github.com/jegr78/ctc-manager/issues/294
 - Real CachyOS qualification: dedicated uid1002 rootless Docker reports cgroup2 and enforced memory limits. Health200, unauthenticated admin401 and authenticated admin200. Read-only Google fixture access and DB/file persistence after app recreation passed. courtside stayed healthy and CTC binds only127.0.0.1:9092.
 - Dependency-corrected derivative of the exact released app image built on the box and completed its non-root Chromium screenshot in 2.9 seconds. The original image failed the same operation with missing shared libraries.
 - The runtime is still a qualification instance with an empty synthetic DB and blank external integration settings. No source Mac data has been migrated or changed.
+
+- Issue295 completed through merged PR303, squashed as e8308ca8. Full committed-head verification passed 2983 tests with zero failures/errors,91.59 percent coverage and zero SpotBugs findings. GitHub CI/CodeQL/Docker image checks all passed. Wiki production recipe updated in5ddb699. Parent294 remains open for its seven remaining children; no new issues created.
