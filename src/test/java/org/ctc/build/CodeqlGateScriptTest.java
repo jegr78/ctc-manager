@@ -159,6 +159,37 @@ class CodeqlGateScriptTest {
 		assertThat(run.exit()).as("snapshot exit code when the API fails").isNotZero();
 	}
 
+
+    @Test
+    void givenScheduledScanWithoutSevereAlerts_whenGated_thenPassesWithoutBaseline() throws Exception {
+        alerts("ref", alert(18, "java/example", "medium", "src/A.java", false));
+        var run = gate(Map.of("EVENT_NAME", "schedule"));
+        assertThat(run.exit()).as("clean daily scan: %s", run.output()).isZero();
+    }
+
+    @Test
+    void givenExistingHighAlert_whenScheduledScanRuns_thenFailsUntilResolved() throws Exception {
+        alerts("ref", ALERT_12);
+        var run = gate(Map.of("EVENT_NAME", "schedule"));
+        assertThat(run.exit()).as("daily scan with unresolved high finding").isEqualTo(1);
+        assertThat(run.output()).as("daily finding").contains("12|java/ssrf");
+    }
+
+    @Test
+    void givenManualScanWithoutSevereAlerts_whenGated_thenPassesWithoutBaseline() throws Exception {
+        alerts("ref");
+        var run = gate(Map.of("EVENT_NAME", "workflow_dispatch"));
+        assertThat(run.exit()).as("manual scan: %s", run.output()).isZero();
+    }
+
+    @Test
+    void givenScheduledApiFailure_whenGated_thenFailsClosed() throws Exception {
+        Files.writeString(bin.resolve("ref.fail"), "");
+        var run = gate(Map.of("EVENT_NAME", "schedule"));
+        assertThat(run.exit()).as("daily scan API failure").isNotZero();
+        assertThat(run.output()).as("API failure").contains("HTTP 403");
+    }
+
 	private void alerts(String source, String... alerts) throws IOException {
 		Files.writeString(bin.resolve(source + ".json"), "[" + String.join(",", alerts) + "]");
 	}
