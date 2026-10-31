@@ -1,0 +1,79 @@
+services:
+  db:
+    image: ${CTC_DATABASE_IMAGE:?Select a tested MariaDB digest}
+    restart: unless-stopped
+    mem_limit: 1g
+    environment:
+      MARIADB_DATABASE: ctcdb
+      MARIADB_USER: ctc
+      MARIADB_PASSWORD_FILE: /run/secrets/db-password
+      MARIADB_ROOT_PASSWORD_FILE: /run/secrets/db-root-password
+    volumes:
+      - database:/var/lib/mysql
+      - ${CTC_DB_PASSWORD_FILE:?Missing DB secret}:/run/secrets/db-password:ro
+      - ${CTC_DB_ROOT_PASSWORD_FILE:?Missing DB root secret}:/run/secrets/db-root-password:ro
+    networks: [database]
+    healthcheck:
+      test: [CMD, healthcheck.sh, --connect, --innodb_initialized]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  credentials-init:
+    image: ${CTC_APP_IMAGE:?Select a released CTC digest}
+    user: '0:0'
+    network_mode: none
+    mem_limit: 64m
+    read_only: true
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - install -m 0400 -o "$$(id -u ctc)" -g "$$(id -g ctc)" /run/source/google.json /run/ctc/google-credentials.json
+    volumes:
+      - ${CTC_GOOGLE_FILE:?Missing Google credential file}:/run/source/google.json:ro
+      - credentials:/run/ctc
+    logging: *logging
+  app:
+    image: ${CTC_APP_IMAGE:?Select a released CTC digest}
+    restart: unless-stopped
+    mem_limit: 2g
+    env_file: ["${CTC_APP_ENV_FILE:?Missing private app environment}"]
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DATABASE_URL: jdbc:mariadb://db:3306/ctcdb?rewriteBatchedStatements=true
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=50.0 -XX:+ExitOnOutOfMemoryError
+      GOOGLE_SHEETS_CREDENTIALS_PATH: /run/ctc/google-credentials.json
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: never
+    ports:
+      - 127.0.0.1:9092:8080
+    volumes:
+      - data:/app/data
+      - logs:/app/logs
+      - credentials:/run/ctc:ro
+    networks: [database, outbound]
+    depends_on:
+      db:
+        condition: service_healthy
+      credentials-init:
+        condition: service_completed_successfully
+    stop_grace_period: 60s
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://localhost:8080/actuator/health]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 90s
+    logging: *logging
+networks:
+  database:
+    internal: true
+  outbound: {}
+volumes:
+  database: {}
+  data: {}
+  logs: {}
+  credentials: {}

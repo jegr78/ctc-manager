@@ -61,3 +61,6 @@ service-account*.json
 ### OS ###
 .DS_Store
 data/
+
+### Python build helpers ###
+__pycache__/

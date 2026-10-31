@@ -38,6 +38,7 @@ jobs:
               - '.gitattributes'
               - 'config/**'
               - 'scripts/**'
+              - 'deploy/**'
               - 'rewrite.yml'
               - '.dockerignore'
               - 'Dockerfile'
