@@ -105,3 +105,5 @@ Pre-flight interfaces: config.load/private_path/atomic_json and common.sh lock/C
 - Catalog, remote-image and YouTube cases first failed at four intended assertions. All three network-reading services now enforce the same policy; YouTube preserves its configured local fallback. Twelve recovery cases and 56 selected unit/script cases pass. Local file upload behavior remains covered by the existing storage tests.
 
 - The disabled-callback case first observed all three handlers starting publication work. Their early policy checks now pause before repository/publication work. Both policy unit cases and 17 selected integration cases pass, including the existing real transaction/proxy callback tests. The transport guard remains independent of this early pause.
+
+- The capability HTTP case first failed with 404. Recovery-only authenticated actuator info now reports version 1 and the actual outbound-policy state. Fourteen recovery cases and three selected unit/script cases pass. Anonymous capability access remains 401. Historical image admission will additionally verify its immutable image capability before startup.

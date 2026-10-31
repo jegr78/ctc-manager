@@ -11,6 +11,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.LowLevelHttpRequest;
@@ -246,6 +247,21 @@ class RecoveryPolicyIT {
 				"https://127.0.0.1/recovery.png", "recovery.png"))
 				.isInstanceOf(ExternalIntegrationDisabledException.class);
 		assertThat(Files.exists(Path.of("target/recovery-policy/uploads/recovery-policy/" + id))).isFalse();
+	}
+
+	@Test
+	void givenRecoveryProfile_whenAuthenticatedCapabilityIsRead_thenSuppressedOutboundIsReported() throws Exception {
+		// when / then
+		mockMvc.perform(get("/actuator/info").with(httpBasic("recovery-admin", "recovery-test-password")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.ctcRecovery.version").value(1))
+				.andExpect(jsonPath("$.ctcRecovery.outboundEnabled").value(false));
+	}
+
+	@Test
+	void givenRecoveryProfile_whenAnonymousReadsCapability_thenUnauthorized() throws Exception {
+		// when / then
+		mockMvc.perform(get("/actuator/info").with(anonymous())).andExpect(status().isUnauthorized());
 	}
 
 	static class RecordingGoogleTransport extends HttpTransport {
