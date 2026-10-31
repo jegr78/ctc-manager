@@ -19,7 +19,7 @@ The shared installation lock excludes deployment operations. Setup records priva
 
 ## Private ingress
 
-Setup adds exactly HTTPS port9443 to Tailscale Serve, proxying http://127.0.0.1:9092. It retains every unrelated Serve/Funnel setting, including courtside on443 and Mailpit on8443. It rejects an existing unrelated mapping or public listener. Repeating setup validates the existing CTC route.
+Setup adds exactly HTTPS port 9443 to Tailscale Serve, proxying http://127.0.0.1:9092. It retains every unrelated Serve/Funnel setting, including courtside on443 and Mailpit on8443. It rejects an existing unrelated mapping or public listener. Repeating setup validates the existing CTC route.
 
 Use https://jegr-linux-box.taile09c97.ts.net:9443 from an authorized Tailnet device. The application still requires the existing single-admin Basic authentication for management. Docker publishes only loopback9092. MariaDB has no host port. Never enable Funnel for9443 or attach CTC to courtside's public443 route.
 
