@@ -52,3 +52,8 @@ verification on the final committed branch after review and upstream integration
 A network-isolated local-platform extraction with the official Renovate image detected the
 production file as mariadb version13 with its exact SHA-256 digest. This proves the new
 reference is discoverable without granting the validator repository or host credentials.
+
+A read-only local-platform lookup using a real MariaDB12 fixture proposed the major upgrade
+to13 with the expected digest and no pending dashboard gate. It created no Git branch or PR.
+Independent code and security reviews of the final production changes found no material
+findings. Targeted Maven gate/deployment/release tests passed after upstream integration.
