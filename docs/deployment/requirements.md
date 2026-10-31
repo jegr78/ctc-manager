@@ -30,3 +30,5 @@ Parent: https://github.com/jegr78/ctc-manager/issues/294
 - Guard falsification passed independently for rootless daemon, memory enforcement, private secrets, socket type, socket owner, operation lock, port collision, archive checksum and immutable release assets. Each mutation failed at its expected assertion and was restored from a stash snapshot or verified clean HEAD.
 - Fresh code review at 66c43fea: no material findings. Independent security recheck at 66c43fea: both P2 findings resolved, no remaining material findings.
 - Runtime qualification on a real isolated rootless daemon, credential readability, persistent storage and Chromium remains pending before accepting issue 295.
+
+- Real rootless qualification found an inherited unreadable working directory after sudo user switch. Added a failing behavioral test and changed the launcher to enter its private installation before Docker access. Existing graphics use the JVM default timezone, so production explicitly sets Europe/Berlin. Full Maven verification was stopped and will restart on the corrected committed head.

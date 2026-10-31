@@ -38,6 +38,7 @@ been reused. A failure after starting services is visible and does not reset dat
 Initial limits are 2 GiB for the app and 1 GiB for MariaDB. The Java heap uses at most 50 percent
 of the app allowance. Measure Chromium's peak before changing these values. Console logs rotate
 at 10 MB with three files per container; application file logging retains its existing policy.
+The JVM explicitly uses Europe/Berlin so graphics retain the source installation time zone.
 Healthchecks indicate readiness and do not restart every unhealthy container automatically.
 
 The installation and backup paths must not contain symlinks. The credentials-init helper copies the private Google file into a dedicated named volume

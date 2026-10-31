@@ -11,6 +11,7 @@ operation=$3
 case "$operation" in doctor|status|up|stop) ;; *) fail 'unknown operation' ;; esac
 python3 "$DEPLOY_ROOT/lib/config.py" validate "$installation"
 installation=$(cd "$installation" && pwd -P)
+cd "$installation"
 docker_host=$(config_value dockerHost)
 verify_daemon
 case "$operation" in

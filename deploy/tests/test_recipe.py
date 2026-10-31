@@ -49,6 +49,8 @@ class RecipeTest(unittest.TestCase):
         docker = self.bin / 'docker'
         docker.write_text('''#!/usr/bin/env python3
 import json, os, sys
+if os.environ.get('EXPECTED_CWD') and os.getcwd() != os.environ['EXPECTED_CWD']:
+ sys.exit('inaccessible inherited working directory')
 with open(os.environ['CALLS'], 'a') as f: f.write(json.dumps(sys.argv[1:])+'\\n')
 if 'info' in sys.argv:
  print(json.dumps({'SecurityOptions': ['name='+os.environ.get('DAEMON','rootless')], 'MemoryLimit': os.environ.get('MEMORY','true') == 'true'}))
@@ -183,6 +185,7 @@ elif 'ps' in sys.argv: print('[]')
         self.assertNotIn('ports', services['db'])
         self.assertEqual('127.0.0.1', services['app']['ports'][0]['host_ip'])
         self.assertEqual('prod', services['app']['environment']['SPRING_PROFILES_ACTIVE'])
+        self.assertIn('-Duser.timezone=Europe/Berlin', services['app']['environment']['JAVA_TOOL_OPTIONS'])
         self.assertEqual(2147483648, int(services['app']['mem_limit']))
         self.assertTrue(any(v['target'] == '/app/data' for v in services['app']['volumes']))
         self.assertEqual('unless-stopped', services['db']['restart'])
@@ -223,3 +226,8 @@ elif 'ps' in sys.argv: print('[]')
         with patch.dict(os.environ, {'XDG_RUNTIME_DIR': str(self.runtime)}), patch.object(Path, 'lstat', foreign):
             with self.assertRaisesRegex(ValueError, 'socket.*owned'):
                 module.load(self.install)
+
+    def test_launcher_does_not_inherit_operator_working_directory(self):
+        self.env['EXPECTED_CWD'] = str(self.install)
+        result = self.run_cli('stop')
+        self.assertEqual(0,result.returncode,result.stderr)

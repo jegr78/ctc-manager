@@ -45,7 +45,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DATABASE_URL: jdbc:mariadb://db:3306/ctcdb?rewriteBatchedStatements=true
-      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=50.0 -XX:+ExitOnOutOfMemoryError
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=50.0 -XX:+ExitOnOutOfMemoryError -Duser.timezone=Europe/Berlin
+      TZ: Europe/Berlin
       GOOGLE_SHEETS_CREDENTIALS_PATH: /run/ctc/google-credentials.json
       MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: never
     ports:
