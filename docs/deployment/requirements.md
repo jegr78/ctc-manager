@@ -113,3 +113,14 @@ launcher and recovery tooling. An optional validated storage generation selects 
 volumes; absent generation preserves existing volume names. `outboundPaused` accepts only a
 JSON boolean. Three new behavioral recipe tests failed before implementation and all 21 recipe
 tests pass afterward. Recovery configuration writes also flush the containing directory.
+
+Recovery unit validation has exact inventories, streamed SHA-256 checks, private owner/type
+checks, bounded strict JSON and a restricted data tar format. Capture orchestration restores
+prior application state on handled errors and only publishes validated, flushed units by rename.
+The backup destination checks the host receipt's UUID against the mounted backup device and
+requires free space. A recovery environment preserves Basic/Discord/Google credentials but
+replaces runtime, database and policy settings with trusted values. Historical images without
+capability version 1 are refused. All 21 recovery tests, 21 recipe tests and 14 release tests pass;
+real native capture and restore qualification remain pending. The first tests for newly added
+Python interfaces failed on absent symbols, so their guard falsifications remain required before
+final verification rather than being counted as semantic red evidence.
