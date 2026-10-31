@@ -14,6 +14,8 @@ import org.ctc.discord.dto.Thread;
 import org.ctc.discord.dto.Webhook;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
+import org.ctc.discord.exception.DiscordDisabledException;
+import org.ctc.integration.ExternalIntegrationDisabledException;
 import org.ctc.discord.exception.DiscordTransientException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
@@ -160,6 +162,9 @@ public class DiscordRestClient {
 
 	private static DiscordApiException unwrapInterceptorException(ResourceAccessException e) {
 		Throwable cause = e.getCause();
+		if (cause instanceof ExternalIntegrationDisabledException) {
+			return new DiscordDisabledException(cause);
+		}
 		if (cause instanceof DiscordApiException dae) {
 			return dae;
 		}

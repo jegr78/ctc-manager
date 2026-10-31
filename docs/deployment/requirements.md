@@ -70,3 +70,32 @@ Run host setup from the owner's verified source copy, outside the CTC user's wri
 
 - Primary GIDs must also be unique and non-root so numeric group aliases cannot bypass the group-name check. The negative case failed before implementation, passed after it and was individually falsified. The independent security recheck found no material findings. Final totals are 36 host cases and 35 individual falsifications; archive/publication cases remain 11/3.
 - The exact published v1.21.0 image generated a Chromium screenshot as the app user inside its 2 GiB container. The SQL qualification row also survived the dedicated daemon restart. These remain synthetic target fixtures, separate from all Mac source data.
+
+- Issue 296 completed through PR306, merge 4870f9dc. Local committed-head full verification passed 2,987 tests in 7m37s, no failures/errors, 91.60 percent line coverage and no SpotBugs findings. GitHub CI/CodeQL/Docker checks passed. Wiki host setup documentation pushed as 827cd94. Native parent 294 remains open with six remaining children. No new issue was created. The topic branch was removed after exact merged-head comparison.
+
+## Complete recovery units and isolated checks, issue 297
+
+| Requirement | Production path | Positive verification | Failure verification | Runtime evidence |
+| --- | --- | --- | --- | --- |
+| Authenticated recovery mode | profile group, policy and existing security | recovery activates prod authentication | source flag cannot re-enable outbound | authenticated restored admin reads |
+| No integration side effects | Discord/Google/GT7/download/YouTube boundaries | production-shaped real clients stop before transport | cached clients and startup/after-commit calls | isolated app with populated credentials |
+| Supported-image admission | image capability and trusted release | supported immutable release accepted | historical/foreign image refused before start | actual pinned image and policy state |
+| One shared installation context | launcher/common/config and recovery helper | same owned daemon and lock | foreign daemon, concurrent operation and stale lock reject | rootless native command fixtures |
+| Consistent full capture | backup and private staging | exited app, dump, full data/config/secrets | failed stop/dump/full mount never publishes | actual MariaDB and file hashes |
+| Preserve previous running state | standalone and update capture modes | standalone restores previous state | interruption and hold-stopped update path | bounded app lifecycle checks |
+| Exact private inventory | recovery manifest and validation | complete hashes and provenance | corruption, traversal, links and wrong owner reject | immutable completed unit |
+| Isolated import | fresh probe volumes and internal network | DB rows/files/schema reconcile | import failure, shell escape, egress and unsafe env reject | native MariaDB client sandbox |
+| Read/graphics proof | authenticated internal HTTP probes | representative records and local graphic | wrong data/auth/health fails | isolated app with no host port |
+| Safe live recovery | independent target generation | validated separate storage switch | no confirmation, changed source or failed probe refuses | old storage retained, integrations paused |
+| Owned cleanup and evidence | run identity and private journal | only run-owned resources removed | failure leaves diagnostic evidence | no live/courtside resources touched |
+| Release compatibility | exact runtime inventory and schema | supported earlier bundles still verify | partial/changed inventories fail | released deployment material |
+
+Execution order: outbound policy and recovery profile; shared runtime/storage identity; manifest and capture; isolated restore-check; independent live recovery; packaging/runbooks and whole-branch review. Preserve existing app ZIP backup behavior and all earlier recipe guards. No Flyway migration or new app user/role model is required.
+
+Ruling: use the existing Bash launcher and shared lock as the operator interface. Keep structured configuration, archive validation, recovery state and fixed native argv in Python helpers, following the established host setup pattern. Docker/systemd remain process supervisors. Centralize daemon/Compose construction so later update and maintenance commands cannot diverge.
+
+Ruling: expose authenticated recovery capability information only in recovery-check mode and bind admission to the actual immutable image. An old image that ignores the profile must fail admission before it receives restored credentials. Preserve source Mac export provenance and migrate copies only into a supported target.
+
+Pre-flight interfaces: config.load/private_path/atomic_json and common.sh lock/Compose are existing shared primitives. Recovery capture produces immutable unit identities and hold-stopped mode for 298. Private state stores later replication/restore evidence for 299. Storage generations must permit fresh 300 targets without deleting the current qualification volumes.
+
+- RecoveryPolicyIT first failed at three intended assertions: startup/manual Discord calls reached the recording transport and the recovery profile used an unintended generated database. After the policy/profile implementation all five cases pass, including existing Basic authentication and configured-database selection. The recording transport prevents real network traffic even when guards are missing. Targeted verify still fails the global coverage threshold because it runs only selected tests; no threshold or check was disabled. Full verification remains the phase-end gate.
