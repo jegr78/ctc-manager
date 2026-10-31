@@ -145,7 +145,8 @@ updates and migration follow the deployment issue sequence before production act
 
 ### Docker
 
-The Dockerfile handles Chromium installation automatically during the build.
+The Dockerfile installs Chromium with its matching system dependencies and runs a non-root
+screenshot check during the image build.
 
 Both Compose files keep all application state in two named volumes, so recreating the `app`
 container loses nothing:

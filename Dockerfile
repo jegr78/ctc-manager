@@ -20,10 +20,7 @@ RUN ./mvnw package -DskipTests -B
 # Pinned to -noble: Playwright does not support Ubuntu 26.04 yet.
 FROM eclipse-temurin:25.0.5_8-jre-noble
 
-# curl for the healthcheck, the rest for Playwright's Chromium.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 \
-    libpango-1.0-0 libcairo2 libasound2t64 libxshmfence1 \
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -r ctc && useradd -r -g ctc ctc
@@ -37,10 +34,16 @@ COPY --from=build --chown=ctc:ctc /build/target/ctc-manager-*.jar /app/ctc-manag
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright
 RUN java -cp /app/ctc-manager.jar -Dloader.main=com.microsoft.playwright.CLI \
-    org.springframework.boot.loader.launch.PropertiesLauncher install chromium \
+    org.springframework.boot.loader.launch.PropertiesLauncher install --with-deps chromium \
+    && rm -rf /var/lib/apt/lists/* \
     && chown -R ctc:ctc /app/.playwright
 
 USER ctc
+
+RUN java -cp /app/ctc-manager.jar -Dloader.main=com.microsoft.playwright.CLI \
+    org.springframework.boot.loader.launch.PropertiesLauncher screenshot \
+    --browser chromium --timeout 30000 about:blank /tmp/ctc-chromium-smoke.png \
+    && test -s /tmp/ctc-chromium-smoke.png && rm /tmp/ctc-chromium-smoke.png
 
 EXPOSE 8080
 

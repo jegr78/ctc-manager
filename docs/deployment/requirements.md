@@ -32,3 +32,9 @@ Parent: https://github.com/jegr78/ctc-manager/issues/294
 - Runtime qualification on a real isolated rootless daemon, credential readability, persistent storage and Chromium remains pending before accepting issue 295.
 
 - Real rootless qualification found an inherited unreadable working directory after sudo user switch. Added a failing behavioral test and changed the launcher to enter its private installation before Docker access. Existing graphics use the JVM default timezone, so production explicitly sets Europe/Berlin. Full Maven verification was stopped and will restart on the corrected committed head.
+
+- Real image Chromium screenshot failed with exit 127. ldd confirmed missing libcups/libXcomposite/libXdamage/libXfixes/libXrandr in the previously released image. Dockerfile now installs version-matched Playwright system dependencies and performs a non-root screenshot during every image build. This runtime defect belongs to issue 295, not a deferred follow-up.
+
+- Real CachyOS qualification: dedicated uid1002 rootless Docker reports cgroup2 and enforced memory limits. Health200, unauthenticated admin401 and authenticated admin200. Read-only Google fixture access and DB/file persistence after app recreation passed. courtside stayed healthy and CTC binds only127.0.0.1:9092.
+- Dependency-corrected derivative of the exact released app image built on the box and completed its non-root Chromium screenshot in 2.9 seconds. The original image failed the same operation with missing shared libraries.
+- The runtime is still a qualification instance with an empty synthetic DB and blank external integration settings. No source Mac data has been migrated or changed.
