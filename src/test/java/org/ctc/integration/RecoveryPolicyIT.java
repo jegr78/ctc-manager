@@ -7,16 +7,28 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.google.api.client.http.HttpTransport;
+import com.google.api.client.http.LowLevelHttpRequest;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.services.calendar.Calendar;
+import com.google.api.services.sheets.v4.Sheets;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.time.Clock;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.sql.DataSource;
+import org.ctc.dataimport.GoogleCalendarService;
+import org.ctc.dataimport.GoogleSheetsService;
+import org.ctc.dataimport.exception.GoogleApiException;
 import org.ctc.discord.DiscordRateLimitInterceptor;
 import org.ctc.discord.DiscordRestClient;
 import org.ctc.discord.DiscordWebhookClient;
 import org.ctc.discord.dto.WebhookPayload;
 import org.ctc.discord.exception.DiscordApiException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +45,9 @@ import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest(properties = {
@@ -68,6 +83,32 @@ class RecoveryPolicyIT {
 	private DiscordWebhookClient webhookClient;
 	@Autowired
 	private MockMvc mockMvc;
+	@Autowired
+	private GoogleSheetsService sheetsService;
+	@Autowired
+	private GoogleCalendarService calendarService;
+	private RecordingGoogleTransport googleTransport;
+
+	@DynamicPropertySource
+	static void restoredGoogleSettings(DynamicPropertyRegistry registry) throws IOException {
+		Path credentials = Path.of("target/recovery-policy/google.json").toAbsolutePath();
+		Files.createDirectories(credentials.getParent());
+		Files.writeString(credentials, "{\"type\":\"service_account\",\"client_email\":\"recovery@example.invalid\"}");
+		registry.add("google.sheets.credentials-path", credentials::toString);
+		registry.add("google.calendar.id", () -> "restored-calendar");
+	}
+
+	@BeforeEach
+	void prepareConfiguredGoogleClients() {
+		googleTransport = new RecordingGoogleTransport();
+		ReflectionTestUtils.setField(sheetsService, "sheetsClient",
+				new Sheets.Builder(googleTransport, GsonFactory.getDefaultInstance(), null)
+						.setApplicationName("T-Recovery").build());
+		ReflectionTestUtils.setField(calendarService, "calendarClient",
+				new Calendar.Builder(googleTransport, GsonFactory.getDefaultInstance(), null)
+						.setApplicationName("T-Recovery").build());
+	}
+
 
 	@Test
 	void givenRecoveryProfile_whenConnecting_thenConfiguredDatabaseIsUsed() throws Exception {
@@ -110,6 +151,41 @@ class RecoveryPolicyIT {
 		// when / then
 		mockMvc.perform(get("/admin/seasons").with(httpBasic("recovery-admin", "recovery-test-password")))
 				.andExpect(status().isOk());
+	}
+
+	@Test
+	void givenRestoredGoogleSettings_whenCheckingAvailability_thenIntegrationsAreUnavailable() {
+		// when / then
+		assertThat(sheetsService.isAvailable()).isFalse();
+		assertThat(calendarService.isAvailable()).isFalse();
+	}
+
+	@Test
+	void givenConfiguredSheetsClient_whenReading_thenOutboundIsDisabled() {
+		// when / then
+		assertThatThrownBy(() -> sheetsService.readRange("restored-sheet", "A1:B2"))
+				.isInstanceOfSatisfying(GoogleApiException.class,
+						failure -> assertThat(failure.category().name()).isEqualTo("DISABLED"));
+		assertThat(googleTransport.attempts.get()).isZero();
+	}
+
+	@Test
+	void givenConfiguredCalendarClient_whenWriting_thenOutboundIsDisabled() {
+		// when / then
+		assertThatThrownBy(() -> calendarService.createEvent("T-Recovery", LocalDateTime.of(2026, 10, 31, 18, 0), 60))
+				.isInstanceOfSatisfying(GoogleApiException.class,
+						failure -> assertThat(failure.category().name()).isEqualTo("DISABLED"));
+		assertThat(googleTransport.attempts.get()).isZero();
+	}
+
+	static class RecordingGoogleTransport extends HttpTransport {
+		final AtomicInteger attempts = new AtomicInteger();
+
+		@Override
+		protected LowLevelHttpRequest buildRequest(String method, String url) throws IOException {
+			attempts.incrementAndGet();
+			throw new IOException("Network transport blocked by recovery test");
+		}
 	}
 
 	@TestConfiguration(proxyBeanMethods = false)

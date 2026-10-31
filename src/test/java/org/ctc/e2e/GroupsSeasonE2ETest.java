@@ -1,5 +1,7 @@
 package org.ctc.e2e;
 
+import static org.ctc.TestHelper.enabledOutboundPolicy;
+
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.AriaRole;
 import java.util.ArrayList;
@@ -23,31 +25,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
-/**
- * QUAL-02 E2E gate — exercises the full GROUPS-season workflow end-to-end.
- *
- * <p>Per a single {@code @Test} covers the entire ROADMAP-SC3 path:
- * create season → switch the REGULAR phase to GROUPS → create 2 groups → 4 teams +
- * roster assignment → driver import (mocked Sheet service) → matchday/race setup →
- * enter race results via UI → verify per-group + combined-view standings.
- *
- * <p><b>Scope deviation (Rule 3, blocking issue):</b> The plan template assumed UI
- * affordances for group-bound matchday/race generation under
- * {@code /admin/season-phases/{phaseId}/groups/{groupId}/matchdays/generate}.
- * No such UI exists — the canonical {@link MatchdayController} only
- * binds matchdays to the REGULAR phase via {@code findRegularPhase}, and group-bound
- * matchday creation has no controller endpoint. The test therefore performs the
- * matchday/match/race/lineup setup via repositories (structural prerequisites without
- * a UI). The D-15 mandate ("enter race results via UI clicks") is honoured by
- * driving the {@code /admin/races/{id}/results} form via Playwright clicks for all
- * four races. UI-driven steps remain: season-create, layout-flip to GROUPS, group
- * creation, team creation, season-team add, roster assign, driver-import preview +
- * execute, race-result form, per-group + combined-view standings navigation.
- *
- * <p>Test data isolation + CLAUDE.md "Isolate Test Data Completely":
- * year=2099, season "Test-GROUPS Season 2099", teams T-GA-1/T-GA-2/T-GB-1/T-GB-2,
- * driver PSN IDs T_groups_drv01..T_groups_drv12.
- */
 @Import(GroupsSeasonE2ETest.TestGoogleSheetsConfig.class)
 @Tag("e2e")
 class GroupsSeasonE2ETest extends PlaywrightConfig {
@@ -430,7 +407,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 			// Stub returns one synthetic year-tab "2099" with a header row + 12 driver rows
 			// keyed to the 4 GROUPS-layout test teams. Group resolution occurs server-side
 			// via PhaseTeam so we do not emit a Group column.
-			return new GoogleSheetsService("") {
+			return new GoogleSheetsService(enabledOutboundPolicy(), "") {
 				@Override
 				public boolean isAvailable() {
 					return true;

@@ -24,6 +24,7 @@ import java.time.format.DateTimeFormatter;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.dataimport.exception.GoogleApiException;
 import org.ctc.dataimport.exception.GoogleApiExceptionMapper;
+import org.ctc.integration.OutboundPolicy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -34,20 +35,25 @@ public class GoogleCalendarService {
 	private static final String APPLICATION_NAME = "CTC Manager";
 	private static final String TIME_ZONE = "Europe/London";
 
+	private final OutboundPolicy outboundPolicy;
 	private final String credentialsPath;
 	private final String calendarId;
 	private Calendar calendarClient;
 
 	public GoogleCalendarService(
+			OutboundPolicy outboundPolicy,
 			@Value("${google.sheets.credentials-path:}") String credentialsPath,
 			@Value("${google.calendar.id:}") String calendarId) {
+		this.outboundPolicy = outboundPolicy;
 		this.credentialsPath = credentialsPath;
 		this.calendarId = calendarId;
 	}
 
 	@PostConstruct
 	void logAvailability() {
-		if (isAvailable()) {
+		if (!outboundPolicy.isEnabled()) {
+			log.info("Google Calendar integration is disabled for this instance");
+		} else if (isAvailable()) {
 			log.info("Google Calendar integration available (calendar: {})", calendarId);
 		} else {
 			log.info("Google Calendar integration not available (no credentials or calendar ID configured)");
@@ -55,7 +61,8 @@ public class GoogleCalendarService {
 	}
 
 	public boolean isAvailable() {
-		return hasText(credentialsPath)
+		return outboundPolicy.isEnabled()
+				&& hasText(credentialsPath)
 				&& Files.exists(Path.of(credentialsPath))
 				&& hasText(calendarId);
 	}
@@ -103,6 +110,11 @@ public class GoogleCalendarService {
 	}
 
 	private synchronized Calendar getCalendarClient() throws GoogleApiException {
+		try {
+			outboundPolicy.requireEnabled();
+		} catch (IOException exception) {
+			throw GoogleApiExceptionMapper.from(exception);
+		}
 		if (calendarClient == null) {
 			if (!isAvailable()) {
 				throw new IllegalStateException(
