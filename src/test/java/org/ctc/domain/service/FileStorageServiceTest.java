@@ -21,7 +21,7 @@ class FileStorageServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		fileStorageService = new FileStorageService(tempDir.toString());
+		fileStorageService = new FileStorageService(org.ctc.TestHelper.enabledOutboundPolicy(), tempDir.toString());
 	}
 
 	@Test

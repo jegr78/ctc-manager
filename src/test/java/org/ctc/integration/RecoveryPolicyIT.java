@@ -1,6 +1,11 @@
 package org.ctc.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.RETURNS_SELF;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
@@ -18,11 +23,17 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.Clock;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.sql.DataSource;
 import org.ctc.dataimport.GoogleCalendarService;
 import org.ctc.dataimport.GoogleSheetsService;
 import org.ctc.dataimport.exception.GoogleApiException;
+import org.ctc.domain.service.FileStorageService;
+import org.ctc.gt7sync.Gt7ScraperService;
+import org.ctc.sitegen.YouTubeScraperService;
+import org.jsoup.Connection;
+import org.jsoup.Jsoup;
 import org.ctc.discord.DiscordRateLimitInterceptor;
 import org.ctc.discord.DiscordRestClient;
 import org.ctc.discord.DiscordWebhookClient;
@@ -88,6 +99,13 @@ class RecoveryPolicyIT {
 	@Autowired
 	private GoogleCalendarService calendarService;
 	private RecordingGoogleTransport googleTransport;
+	@Autowired
+	private Gt7ScraperService gt7Scraper;
+	@Autowired
+	private YouTubeScraperService youtubeScraper;
+	@Autowired
+	private FileStorageService fileStorage;
+
 
 	@DynamicPropertySource
 	static void restoredGoogleSettings(DynamicPropertyRegistry registry) throws IOException {
@@ -176,6 +194,58 @@ class RecoveryPolicyIT {
 				.isInstanceOfSatisfying(GoogleApiException.class,
 						failure -> assertThat(failure.category().name()).isEqualTo("DISABLED"));
 		assertThat(googleTransport.attempts.get()).isZero();
+	}
+
+	@Test
+	void givenRecoveryProfile_whenScrapingCars_thenNoRemoteConnection() throws Exception {
+		// given
+		Connection connection = mock(Connection.class, RETURNS_SELF);
+		when(connection.get()).thenThrow(new IOException("Recovery test blocked remote reads"));
+		try (var connections = mockStatic(Jsoup.class)) {
+			connections.when(() -> Jsoup.connect(anyString())).thenReturn(connection);
+			// when / then
+			assertThatThrownBy(gt7Scraper::scrapeCars).isInstanceOf(ExternalIntegrationDisabledException.class);
+			connections.verifyNoInteractions();
+		}
+	}
+
+	@Test
+	void givenRecoveryProfile_whenScrapingTracks_thenNoRemoteConnection() throws Exception {
+		// given
+		Connection connection = mock(Connection.class, RETURNS_SELF);
+		when(connection.get()).thenThrow(new IOException("Recovery test blocked remote reads"));
+		try (var connections = mockStatic(Jsoup.class)) {
+			connections.when(() -> Jsoup.connect(anyString())).thenReturn(connection);
+			// when / then
+			assertThatThrownBy(gt7Scraper::scrapeTracks).isInstanceOf(ExternalIntegrationDisabledException.class);
+			connections.verifyNoInteractions();
+		}
+	}
+
+	@Test
+	void givenRecoveryProfile_whenReadingVideoMetadata_thenStoredFallbackNeedsNoConnection() throws Exception {
+		// given
+		Connection connection = mock(Connection.class, RETURNS_SELF);
+		when(connection.get()).thenThrow(new IOException("Recovery test blocked remote reads"));
+		try (var connections = mockStatic(Jsoup.class)) {
+			connections.when(() -> Jsoup.connect(anyString())).thenReturn(connection);
+			// when
+			String videoId = youtubeScraper.scrapeVideoId("https://www.youtube.com/@CommunityTeamCup", "fallback-id");
+			// then
+			assertThat(videoId).isEqualTo("fallback-id");
+			connections.verifyNoInteractions();
+		}
+	}
+
+	@Test
+	void givenRecoveryProfile_whenRequestingRemoteStorage_thenPolicyRejectsBeforeUrlOrFilesystemWork() {
+		// given
+		UUID id = UUID.fromString("d70f10a1-76a0-4d94-80a1-bf09a9b946c9");
+		// when / then
+		assertThatThrownBy(() -> fileStorage.storeFromUrl("recovery-policy", id,
+				"https://127.0.0.1/recovery.png", "recovery.png"))
+				.isInstanceOf(ExternalIntegrationDisabledException.class);
+		assertThat(Files.exists(Path.of("target/recovery-policy/uploads/recovery-policy/" + id))).isFalse();
 	}
 
 	static class RecordingGoogleTransport extends HttpTransport {

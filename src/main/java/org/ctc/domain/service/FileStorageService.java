@@ -10,6 +10,7 @@ import java.nio.file.Paths;
 import java.util.Set;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.integration.OutboundPolicy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,9 +27,11 @@ public class FileStorageService {
 
 	private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
+	private final OutboundPolicy outboundPolicy;
 	private final Path uploadDir;
 
-	public FileStorageService(@Value("${app.upload-dir:uploads}") String uploadDir) {
+	public FileStorageService(OutboundPolicy outboundPolicy, @Value("${app.upload-dir:uploads}") String uploadDir) {
+		this.outboundPolicy = outboundPolicy;
 		this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
 	}
 
@@ -88,6 +91,7 @@ public class FileStorageService {
 
 	// CodeQL FP: java/ssrf — startsWith-chain hostname blocklist (validateHostname, lines 128-159) not recognized as sanitizer; see docs/security/sast-acceptance.md
 	public String storeFromUrl(String subDir, UUID entityId, String sourceUrl, String filename) throws IOException {
+		outboundPolicy.requireEnabled();
 		if (sourceUrl == null || !sourceUrl.toLowerCase().startsWith("https://")) {
 			log.warn("Rejected non-HTTPS URL: {}", sourceUrl);
 			throw new IllegalArgumentException("Only HTTPS URLs allowed: " + sourceUrl);

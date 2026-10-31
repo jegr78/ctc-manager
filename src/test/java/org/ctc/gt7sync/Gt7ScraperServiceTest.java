@@ -18,7 +18,7 @@ class Gt7ScraperServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		scraperService = new Gt7ScraperService();
+		scraperService = new Gt7ScraperService(org.ctc.TestHelper.enabledOutboundPolicy());
 	}
 
 	@Test
