@@ -100,6 +100,7 @@ def collect():
         'sudoAvailable': sudo, 'operatorUid': os.getuid(), 'user': user,
         'hostUids': [entry.pw_uid for entry in pwd.getpwall()],
         'hostGids': [entry.gr_gid for entry in grp.getgrall()],
+        'duplicateGid': bool(user and sum(group.gr_gid == user['gid'] for group in grp.getgrall()) != 1),
         'duplicateUid': bool(user and sum(account.pw_uid == uid for account in pwd.getpwall()) != 1),
         'groups': command(['id', '-nG', USER]).stdout.split() if user else [],
         'subuid': Path('/etc/subuid').read_text(), 'subgid': Path('/etc/subgid').read_text(),
@@ -179,6 +180,8 @@ def validate(facts, expected_uuid):
     if user:
         if type(uid) is not int or uid <= 0 or facts['duplicateUid']:
             raise ValueError('dedicated user must have a unique non-root UID')
+        if type(user['gid']) is not int or user['gid'] <= 0 or facts['duplicateGid']:
+            raise ValueError('dedicated primary group must have a unique non-root GID')
         if user['home'] != CTC_HOME:
             raise ValueError('dedicated user home must be /home/ctc-manager')
         if set(facts['groups']) != {USER}:

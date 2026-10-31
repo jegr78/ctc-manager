@@ -15,7 +15,7 @@ def facts():
     return {
         'system': 'Linux', 'architecture': 'x86_64', 'missingTools': [], 'sudoAvailable': True,
         'operatorUid': 1000, 'user': {'uid': 1002, 'gid': 1002, 'home': '/home/ctc-manager'},
-        'duplicateUid': False, 'groups': ['ctc-manager'],
+        'duplicateUid': False, 'duplicateGid': False, 'groups': ['ctc-manager'],
         'hostUids': [0,1000,1001,1002], 'hostGids': [0,1000,1001,1002],
         'subuid': 'jegr:100000:65536\ncourtside-dev:165536:65536\nctc-manager:231072:65536\n',
         'subgid': 'jegr:100000:65536\ncourtside-dev:165536:65536\nctc-manager:231072:65536\n',
@@ -143,6 +143,15 @@ class HostSetupTest(unittest.TestCase):
                 (root/'lib/host.py').symlink_to(root/'setup-host.sh')
                 with self.assertRaisesRegex(ValueError,'operator-owned'):
                     self.module.trusted_unit()
+
+    def test_primary_group_must_have_a_unique_non_root_gid(self):
+        self.data['user']['gid'] = 0
+        with self.assertRaisesRegex(ValueError, 'GID'):
+            self.validate()
+        self.data['user']['gid'] = 1002
+        self.data['duplicateGid'] = True
+        with self.assertRaisesRegex(ValueError, 'GID'):
+            self.validate()
 
     def test_numeric_subordinate_owner_is_checked(self):
         self.data['subuid'] += '1002:1:65536\n'
