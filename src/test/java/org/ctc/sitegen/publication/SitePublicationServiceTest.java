@@ -165,4 +165,30 @@ class SitePublicationServiceTest {
         }
     }
 
+    @Test
+    void givenCallerOwnedManifestMap_whenChanged_thenStoredManifestRemainsImmutable() {
+        var files = new java.util.HashMap<String, SitePublicationService.Artifact>();
+        files.put("index.html", new SitePublicationService.Artifact(1, "0".repeat(64)));
+        var manifest = new SitePublicationService.Manifest(1, "fixture", "fixture", "fixture", files);
+        files.put("extra.html", new SitePublicationService.Artifact(2, "1".repeat(64)));
+        assertThat(manifest.files()).containsOnlyKeys("index.html");
+        assertThatThrownBy(() -> manifest.files().clear()).isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    void givenCompletedPublication_whenRestarted_thenApprovalIsRevokedButCompletionDoesNotBlockNextSnapshot() throws Exception {
+        var snapshot = service.capture(source);
+        var request = service.submit(snapshot.id(), snapshot.manifestSha256());
+        var status = new SitePublicationService.Status(1, request.id(), snapshot.id(), snapshot.manifestSha256(),
+                request.attempt(), "published", "Completed", "site/test", "a".repeat(40), 12L, "b".repeat(40), 34L, "2026-11-01T10:00:00Z");
+        new ObjectMapper().writeValue(directory.resolve("status.json").toFile(), status);
+        service.suspendPending();
+        assertThat(new ObjectMapper().readTree(directory.resolve("request.json").toFile()).get("approved").asBoolean()).isFalse();
+        assertThat(service.publication().stage()).isEqualTo("published");
+        assertThat(service.publication().pr()).isEqualTo(12L);
+        Files.writeString(source.resolve("index.html"), "next site");
+        var next = service.capture(source);
+        assertThat(service.submit(next.id(), next.manifestSha256()).id()).isNotEqualTo(request.id());
+    }
+
 }

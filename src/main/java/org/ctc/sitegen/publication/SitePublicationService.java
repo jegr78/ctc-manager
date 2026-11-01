@@ -18,6 +18,8 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.Map;
+import java.util.Objects;
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -51,7 +53,7 @@ public class SitePublicationService {
         this.enabled = enabled;
         this.environment = environment;
         this.policy = policy;
-        this.mapper = mapper;
+        this.mapper = mapper.copy();
     }
 
     public synchronized Snapshot capture(Path source) throws IOException {
@@ -85,12 +87,12 @@ public class SitePublicationService {
                         throw new IOException("Snapshot exceeds its file or byte limit");
                     }
                     Path destination = site.resolve(name);
-                    ensureDirectory(destination.getParent());
+                    ensureDirectory(Objects.requireNonNull(destination.getParent()));
                     Files.copy(path, destination, LinkOption.NOFOLLOW_LINKS);
                     regular(destination);
                     privateFile(destination);
                     String digest = hash(destination);
-                    if (Files.size(path) != attributes.size() || !hash(path).equals(digest)) {
+                    if (Files.size(path) != attributes.size() || !sameHash(hash(path), digest)) {
                         throw new IOException("Site changed during snapshot capture");
                     }
                     files.put(name, new Artifact(Files.size(destination), digest));
@@ -118,7 +120,7 @@ public class SitePublicationService {
         var candidates = new java.util.ArrayList<Snapshot>();
         try (var paths = Files.list(root.resolve("snapshots"))) {
             for (Path path : paths.toList()) {
-                String id = path.getFileName().toString();
+                String id = Objects.requireNonNull(path.getFileName()).toString();
                 if (!id.startsWith(".")) candidates.add(snapshot(id));
             }
         }
@@ -143,20 +145,20 @@ public class SitePublicationService {
         Path file = snapshotPath(id).resolve("site").resolve(name).normalize();
         plain(file);
         regular(file);
-        if (Files.size(file) != expected.bytes() || !hash(file).equals(expected.sha256())) {
+        if (Files.size(file) != expected.bytes() || !sameHash(hash(file), expected.sha256())) {
             throw new IOException("Snapshot file changed");
         }
         return file;
     }
 
-    public boolean isPublicationEnabled() {
+    public synchronized boolean isPublicationEnabled() {
         return storageReady && enabled && environment.matchesProfiles("prod", "docker") && policy.isEnabled();
     }
 
     public synchronized Request submit(String id, String expectedHash) throws IOException {
         if (!isPublicationEnabled()) throw new IllegalStateException("Publication is disabled for this installation");
         Snapshot snapshot = snapshot(id);
-        if (!snapshot.manifestSha256().equals(expectedHash)) throw new IllegalArgumentException("Snapshot approval does not match its manifest");
+        if (!sameHash(snapshot.manifestSha256(), expectedHash)) throw new IllegalArgumentException("Snapshot approval does not match its manifest");
         Manifest manifest = manifest(id);
         for (String name : manifest.files().keySet()) asset(id, name);
         try (var paths = Files.walk(snapshotPath(id).resolve("site"))) {
@@ -169,7 +171,7 @@ public class SitePublicationService {
         String createdAt = Instant.now().toString();
         if (current != null) {
             Publication state = publication();
-            boolean same = current.snapshotId().equals(id) && current.manifestSha256().equals(expectedHash);
+            boolean same = current.snapshotId().equals(id) && sameHash(current.manifestSha256(), expectedHash);
             if (!FINISHED.contains(state.stage())) {
                 if (!same) throw new IllegalStateException("The previous publication needs to finish or be reconciled first");
                 if (current.approved() && !state.stage().equals("failed")) return current;
@@ -202,13 +204,28 @@ public class SitePublicationService {
     public synchronized Publication publication() throws IOException {
         Request request = request();
         if (request == null) return new Publication("none", null, null, 0, "", null, null);
-        if (!request.approved()) return new Publication("suspended", request.id(), request.snapshotId(), request.attempt(), "Review this snapshot and approve again before continuing.", null, null);
+        if (request.approved()) return acknowledged(request);
+        try {
+            Publication previous = acknowledged(request);
+            if (FINISHED.contains(previous.stage())) return previous;
+            return suspended(request, previous.pr(), previous.runId());
+        } catch (IOException | RuntimeException error) {
+            return suspended(request, null, null);
+        }
+    }
+
+    private static Publication suspended(Request request, Long pr, Long runId) {
+        return new Publication("suspended", request.id(), request.snapshotId(), request.attempt(),
+                "Review this snapshot and approve again before continuing.", pr, runId);
+    }
+
+    private Publication acknowledged(Request request) throws IOException {
         Path file = root.resolve("status.json");
         if (!Files.exists(file, LinkOption.NOFOLLOW_LINKS)) return queued(request);
         Status status = read(file, Status.class);
-        if (status.format() != 1 || !STAGES.contains(status.stage())) throw new IOException("Invalid publication status");
+        if (status.format() != 1 || status.stage() == null || !STAGES.contains(status.stage())) throw new IOException("Invalid publication status");
         if (!request.id().equals(status.requestId()) || !request.snapshotId().equals(status.snapshotId())
-                || !request.manifestSha256().equals(status.manifestSha256()) || request.attempt() != status.attempt()) return queued(request);
+                || !sameHash(request.manifestSha256(), status.manifestSha256()) || request.attempt() != status.attempt()) return queued(request);
         if ((status.pr() != null && status.pr() < 1) || (status.runId() != null && status.runId() < 1)) throw new IOException("Invalid publication reference");
         String detail = status.detail() == null ? "" : status.detail();
         if (detail.length() > 1000) throw new IOException("Publication detail exceeds limit");
@@ -266,7 +283,7 @@ public class SitePublicationService {
         for (Path part : path) {
             if (part.toString().startsWith(".") && !value.equals(".nojekyll")) throw new IOException("Private files cannot enter a snapshot");
         }
-        String filename = path.getFileName().toString();
+        String filename = Objects.requireNonNull(path.getFileName()).toString();
         int dot = filename.lastIndexOf('.');
         if (!value.equals(".nojekyll") && (dot < 0 || !EXTENSIONS.contains(filename.substring(dot + 1).toLowerCase(java.util.Locale.ENGLISH)))) {
             throw new IOException("File type is not part of the public website");
@@ -295,13 +312,16 @@ public class SitePublicationService {
         plain(file);
         regular(file);
         if (Files.size(file) > 4 * 1024 * 1024) throw new IOException("Publication metadata exceeds limit");
-        return mapper.readValue(file.toFile(), type);
+        T value = mapper.readValue(file.toFile(), type);
+        if (value == null) throw new IOException("Publication metadata is empty");
+        return value;
     }
 
     private void write(Path file, Object value) throws IOException {
-        ensureDirectory(file.getParent());
+        Path parent = Objects.requireNonNull(file.getParent());
+        ensureDirectory(parent);
         plain(file);
-        Path temporary = Files.createTempFile(file.getParent(), ".writing-", ".json");
+        Path temporary = Files.createTempFile(parent, ".writing-", ".json");
         try {
             privateFile(temporary);
             mapper.writeValue(temporary.toFile(), value);
@@ -314,7 +334,12 @@ public class SitePublicationService {
 
     private static void move(Path source, Path target) throws IOException {
         Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-        try (var channel = FileChannel.open(target.getParent(), StandardOpenOption.READ)) { channel.force(true); }
+        try (var channel = FileChannel.open(Objects.requireNonNull(target.getParent()), StandardOpenOption.READ)) { channel.force(true); }
+    }
+
+    private static boolean sameHash(String first, String second) {
+        return first != null && second != null && MessageDigest.isEqual(
+                first.getBytes(StandardCharsets.UTF_8), second.getBytes(StandardCharsets.UTF_8));
     }
 
     private static String hash(Path path) throws IOException {
@@ -342,7 +367,9 @@ public class SitePublicationService {
 
     public record RuntimeState(int format, String bootId, String startedAt, boolean enabled) { }
     public record Artifact(long bytes, String sha256) { }
-    public record Manifest(int format, String id, String createdAt, String appVersion, Map<String, Artifact> files) { }
+    public record Manifest(int format, String id, String createdAt, String appVersion, Map<String, Artifact> files) {
+        public Manifest { files = Map.copyOf(files); }
+    }
     public record Snapshot(String id, String manifestSha256, String createdAt, String appVersion, int fileCount, long bytes) { }
     public record Request(int format, String id, String snapshotId, String manifestSha256, int attempt, boolean approved, String createdAt, String approvedAt) { }
     public record Status(int format, String requestId, String snapshotId, String manifestSha256, int attempt, String stage, String detail, String branch, String headSha, Long pr, String mergeSha, Long runId, String updatedAt) { }

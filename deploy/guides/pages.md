@@ -20,7 +20,7 @@ A changed master, failed check, unexpected remote result or mismatch stops publi
 
 ## Maintenance and recovery
 
-The worker shares the installation lock with backup, update and recovery and refuses paused outbound state or an unhealthy app. A boot marker must belong to the current container start. App startup revokes pending approvals, including after restoration, before writing the new marker. Corrupt publisher metadata disables publication without preventing the Manager from starting. Reapprove the exact snapshot only after reconciling any already created remote PR/run.
+The worker shares the installation lock with backup, update and recovery and refuses paused outbound state or an unhealthy app. A boot marker must belong to the current container start. App startup revokes pending approvals, including after restoration, before writing the new marker. Completed publication status remains visible with its approval revoked. Pending requests remain suspended. Corrupt publisher metadata disables publication without preventing the Manager from starting. Reapprove the exact snapshot only after reconciling any already created remote PR/run.
 
 Snapshots, request and status are part of the regular application data backup. The disposable checkout need not be restored. The host PAT must be provisioned or rotated separately after host recovery. It is never included in public exports. Revoke an expired or suspect token on GitHub and replace the private file atomically, then retry the same reviewed request. No token value appears in the UI or service errors.
 
