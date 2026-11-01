@@ -1,4 +1,5 @@
 import copy
+import configparser
 import importlib.util
 import json
 from pathlib import Path
@@ -44,6 +45,15 @@ def facts():
 
 
 class HostSetupTest(unittest.TestCase):
+    def test_rootless_stop_keeps_helpers_alive_until_daemon_finishes(self):
+        unit = configparser.ConfigParser(interpolation=None)
+        unit.read(ROOT / 'deploy/systemd/docker-rootless.service')
+        service = unit['Service']
+        self.assertEqual('mixed', service.get('KillMode'), 'Stop must signal the daemon before killing helpers')
+        self.assertEqual('0', service.get('TimeoutStopSec'), 'Host defaults must not interrupt database shutdown')
+        self.assertEqual('notify', service.get('Type'), 'Systemd must wait for daemon readiness')
+        self.assertEqual('all', service.get('NotifyAccess'), 'The child daemon must be able to report readiness')
+
     @classmethod
     def setUpClass(cls):
         spec = importlib.util.spec_from_file_location('ctc_host', ROOT/'deploy/lib/host.py')

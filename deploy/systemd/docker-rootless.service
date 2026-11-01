@@ -2,6 +2,10 @@
 Description=CTC rootless Docker daemon
 After=network.target
 [Service]
+Type=notify
+NotifyAccess=all
+KillMode=mixed
+TimeoutStopSec=0
 Environment=PATH=/usr/bin:/usr/sbin
 ExecStart=/usr/bin/dockerd-rootless.sh
 Restart=on-failure

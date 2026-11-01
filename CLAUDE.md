@@ -377,6 +377,10 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 
 ### Permanent production deployment
 
+* `deploy/tests/acceptance.sh` runs all existing deployment fixture suites, including native migration, through `DeploymentScriptsTest`. Keep the aggregate fixture-only. Runtime acceptance and operator procedures live in `docs/deployment/acceptance.md` and `deploy/guides/operations.md`.
+* The dedicated rootless Docker unit uses notify readiness, child notifications, mixed termination and no inherited stop timeout. Do not signal Docker and its helpers together or force an early database shutdown.
+* The shared Box supplies home LAN DNS through Pi-hole. Routine CTC deployment and testing must not reboot it. Record CTC-only restarts separately from actual host boot evidence.
+
 * `deploy/ctc-manager --directory PATH doctor|status|up|stop` operates the dedicated rootless stack.
 * Keep installation configuration as private JSON, never source it as shell code. The configured socket must belong to the current user inside its private runtime directory, normally `/run/user/<uid>/`; reject links, non-sockets, rootful Docker and missing memory enforcement.
 * `deploy/compose.yaml` uses authenticated prod, pinned image digests, loopback 9092, no SQL host port and persistent data/log/database volumes. A networkless helper copies private Google credentials into an app-readable read-only volume.
