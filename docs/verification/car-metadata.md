@@ -76,3 +76,11 @@ The final authoritative run uses `./mvnw clean verify -Pe2e` on the restored,
 committed head. Surefire runs untagged tests; Failsafe runs integration tests and
 the profile's separate Playwright execution. Both Failsafe summaries, coverage,
 SpotBugs and FindSecBugs must pass before the PR is published.
+
+The first authoritative full run ran 2,139 unit tests, 766 integration tests
+and 200 Playwright tests without failures or errors, with five existing skips
+and 91.94% line coverage. SpotBugs then reported
+`CT_CONSTRUCTOR_THROW` on the preview store's two constructors. Making that
+component final prevents subclass finalizers from observing partial construction;
+no analysis rule was suppressed. The authoritative build is repeated on this
+corrected committed head before publication.

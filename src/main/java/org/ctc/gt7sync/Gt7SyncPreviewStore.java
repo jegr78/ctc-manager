@@ -10,7 +10,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 @Component
-public class Gt7SyncPreviewStore {
+public final class Gt7SyncPreviewStore {
     private final Clock clock;
     private final Duration lifetime;
     private final int maximum;
