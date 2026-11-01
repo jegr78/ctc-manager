@@ -1,6 +1,5 @@
 [Unit]
 Description=CTC Manager backup
-OnFailure=ctc-manager-backup-alert@%n.service
 
 [Service]
 Type=oneshot

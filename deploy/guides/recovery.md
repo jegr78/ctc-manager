@@ -109,8 +109,8 @@ launcher leaves its lock for inspection. Check the journal, owner metadata, chil
 container state before reconciling it. Do not remove a lock based only on a potentially reused PID.
 A handled capture failure leaves no completed unit and restores the prior app state. Private
 partial directories and diagnostics remain available for inspection. Do not prune any unit because
-a capture or remote copy failed. Scheduled retention and off-host copies are separate maintenance
-work, and the Mac cutover is a separate verified migration.
+a capture or restore proof failed. Scheduled local retention is described in [backups.md](backups.md);
+the Mac cutover is a separate verified migration.
 
 Checksums establish integrity and matching release provenance. They do not authenticate a backup
 received from an untrusted party. Accept units only from owner-controlled backup storage.

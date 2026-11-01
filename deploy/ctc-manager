@@ -12,7 +12,7 @@ operation=$3
 shift 3
 case "$operation" in
   doctor|status|up|stop) [ "$#" -eq 0 ] || fail 'unexpected operation arguments' ;;
-  backup|restore-check|restore|resume-integrations|update-check|update|maintenance|prune|backup-check|retrieve-check) ;;
+  backup|restore-check|restore|resume-integrations|update-check|update|maintenance|prune|backup-check) ;;
   *) fail 'unknown operation' ;;
 esac
 python3 "$DEPLOY_ROOT/lib/config.py" validate "$installation"
@@ -38,8 +38,8 @@ case "$operation" in
     fi
     write_journal completed
     ;;
-  backup|restore-check|restore|resume-integrations|update-check|update|maintenance|prune|backup-check|retrieve-check)
-    if [[ "$operation" == maintenance || "$operation" == prune || "$operation" == backup-check || "$operation" == retrieve-check ]]; then
+  backup|restore-check|restore|resume-integrations|update-check|update|maintenance|prune|backup-check)
+    if [[ "$operation" == maintenance || "$operation" == prune || "$operation" == backup-check ]]; then
       # shellcheck source=lib/maintenance.sh
       source "$DEPLOY_ROOT/lib/maintenance.sh"
       runner=run_maintenance

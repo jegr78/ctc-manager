@@ -170,7 +170,7 @@ elif 'ps' in sys.argv: print('[]')
     def test_valid_rootless_configuration_reports_missing_backup_protection(self):
         result = self.run_cli()
         self.assertNotEqual(0, result.returncode)
-        self.assertIn('backup-configuration-incomplete', result.stdout)
+        self.assertIn('local-missing', result.stdout)
         self.assertIn('rootless', result.stdout)
         self.assertNotIn('private-fixture', result.stdout + result.stderr)
 

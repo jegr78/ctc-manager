@@ -87,6 +87,6 @@ record the recovery path and retain the pre-update unit.
 
 ## scheduled backups
 
-The [backup runbook](guides/backups.md) covers `maintenance`, `backup-check`, `prune --dry-run`
-and exact remote `retrieve-check`. Missing off-host configuration remains incomplete readiness.
-The packaged private user timers are examples until cutover; no timer updates the application.
+The [backup runbook](guides/backups.md) covers local `maintenance`, manual `doctor` and
+`prune --dry-run`. Keep two daily stands and one monthly stand. One user timer starts the backup;
+errors remain in its local journal. No replication, alert hook or external service is required.
