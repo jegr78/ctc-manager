@@ -62,13 +62,13 @@ in the ignored `.screenshots/` directory.
 
 ## Individual guard falsification
 
-35 independent mutations were applied to committed checkpoints, observed red at
+37 independent mutations were applied to committed checkpoints, observed red at
 behavioral assertions, and restored byte for byte. They cover field overrides,
 explicit unknown years, accepted-year preservation, century handling, source ID
 joins/types/ranges, candidate integer/range validation, payload/frame bounds,
 preview revalidation and store hash/expiry/capacity, restore value/provenance/flag
 validation, all four database constraints, local/name identity ambiguity, and the
-car lock order. Compilation errors and unprepared mock exceptions did not count
+car lock order, fresh locked reads and timestamp precision. Compilation errors and unprepared mock exceptions did not count
 as evidence. The lock-order mutation reproduced the lost-update assertion with
 two real transactions after the correction had been committed.
 
@@ -100,3 +100,7 @@ technical auditing timestamps, whose database precision can change on refresh
 without a business change. A deterministic rounding test also confirms that
 changing an override still invalidates the snapshot. The second full run was
 green before this additional correction; the final full run includes it.
+
+Disabling the locked refresh reproduced both real-transaction failures. Reintroducing
+audit timestamps into the hash failed the deterministic rounding assertion. Both
+additional mutations were restored before the final build.
