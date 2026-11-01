@@ -99,6 +99,29 @@ class MaintenanceTest(unittest.TestCase):
         self.assertNotIn(monthly, plan)
         self.assertEqual({monthly, yesterday, newest}, set(self.units.iterdir()) - set(plan))
 
+    def test_later_manual_backup_cannot_delete_last_proven_stand(self):
+        monthly = self.unit('2026-11-01T03:00:00Z')
+        yesterday = self.unit('2026-11-29T03:00:00Z')
+        proven = self.unit()
+        state = self.state(proven)
+        manual = self.unit('2026-11-30T04:00:00Z')
+        plan = maintenance.retention_plan(self.runtime, self.units, state, self.now)
+        self.assertNotIn(proven, plan)
+        self.assertTrue({monthly, yesterday, manual}.isdisjoint(plan))
+
+    def test_failed_capture_preserves_last_success_without_leaking_error_payload(self):
+        unit = self.unit()
+        previous = self.state(unit)
+        def failed(*args):
+            raise ValueError('fixture-private-secret')
+        with self.assertRaises(ValueError) as caught:
+            maintenance.run_backup(self.runtime, self.units, capture_unit=failed, now=self.now)
+        state = maintenance.evidence(self.root)
+        self.assertEqual(previous['local'], state['local'])
+        self.assertEqual(previous['proof'], state['proof'])
+        self.assertEqual('capture-failed', state['lastAttempt']['stage'])
+        self.assertNotIn('fixture-private-secret', json.dumps(state) + str(caught.exception))
+
     def test_pending_update_recovery_survives_retention(self):
         protected = self.unit('2026-09-01T03:00:00Z')
         older = self.unit('2026-09-02T03:00:00Z')

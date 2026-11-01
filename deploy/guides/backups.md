@@ -21,7 +21,8 @@ Run as `ctc-manager` with its rootless Docker environment:
 
 Keep the latest backup on each of two distinct days and the first successful backup of the
 newest Berlin calendar month. A monthly stand can also be one of the daily stands. There are
-no weekly stands. Pending update recovery stays protected until a verified backup of the active
+no weekly stands. A newer manual backup cannot remove the last proven stand before the next
+successful maintenance run. Pending update recovery stays protected until a verified backup of the active
 image exists. Unresolved update units remain protected. Never delete release material here.
 
 Failed capture/proof, unknown/corrupt/foreign units or changed recovery references stop pruning.

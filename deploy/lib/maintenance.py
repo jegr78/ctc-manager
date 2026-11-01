@@ -55,7 +55,7 @@ def retention_plan(runtime, destination, state, now):
         if stamp.timestamp() > now + 60:
             raise ValueError('future backup timestamp')
         dates[path] = stamp.astimezone(ZoneInfo('Europe/Berlin'))
-    keep, daily = set(), set()
+    keep, daily = {latest}, set()
     for path in ordered:
         day = dates[path].date()
         if day not in daily and len(daily) < 2:
@@ -116,7 +116,9 @@ def run_backup(runtime, destination, *, capture_unit=capture, prove_unit=restore
         raise ValueError('canonical installation identity required; create the initial backup first') from None
     def stamp():
         return time.time() if now is None else now
-    state = {'format': 1, 'installationId': identity, 'lastAttempt': {'stage': 'running', 'time': stamp()}}
+    previous = evidence(runtime.root)
+    state = {key: previous[key] for key in ['local', 'proof'] if key in previous}
+    state.update(format=1, installationId=identity, lastAttempt={'stage': 'running', 'time': stamp()})
     save(runtime.root, state)
     stage = 'mount-failed'
     try:
