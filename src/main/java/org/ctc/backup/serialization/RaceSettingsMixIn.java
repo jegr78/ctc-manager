@@ -5,15 +5,9 @@ import com.fasterxml.jackson.annotation.JsonIdentityReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import org.ctc.domain.model.Race;
-import org.ctc.domain.model.RaceSettings;
 
-/**
- * Externalised Jackson annotations for {@link RaceSettings}.
- *
- * <p>Suppresses the {@code isComplete()} convenience getter (property {@code complete}).
- */
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "complete"})
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "complete", "timeProgressionComplete", "timeProgressionDisplay"})
 public abstract class RaceSettingsMixIn {
 
     @JsonIdentityReference(alwaysAsId = true)

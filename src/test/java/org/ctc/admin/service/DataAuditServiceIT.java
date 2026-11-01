@@ -104,6 +104,24 @@ class DataAuditServiceIT {
 		matchday = testHelper.createMatchdayInRegularPhase(season, "Test_Audit MD " + id, 1);
 	}
 
+    @Test
+    void givenContradictoryTimeMode_whenAuditing_thenReportsWithoutRepairing() {
+        // given
+        var fixture = testHelper.createFullSeasonFixture("Test_TimeAudit_" + id);
+        fixture.race().setSettings(testHelper.completeRaceSettings(fixture.race()));
+        fixture.race().getSettings().setTimeProgressionMode(org.ctc.domain.model.TimeProgressionMode.EQUAL_CONDITIONS);
+        fixture.race().getSettings().setTimeProgressionMultiplier(0);
+        entityManager.flush();
+        // when
+        var findings = dataAuditService.audit().findings(Category.RACE_SETTINGS);
+        // then
+        assertThat(findings).anySatisfy(finding -> {
+            assertThat(finding.subject()).contains(fixture.race().getId().toString());
+            assertThat(finding.evidence()).contains("EQUAL_CONDITIONS", "0");
+        });
+        assertThat(fixture.race().getSettings().getTimeProgressionMultiplier()).isZero();
+    }
+
 	@Test
 	void givenMatchWhoseStoredTotalsDifferFromItsScoredLeg_whenAudited_thenReconstructibleWithBothValues() {
 		// given

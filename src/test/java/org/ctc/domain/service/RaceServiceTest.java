@@ -39,6 +39,53 @@ class RaceServiceTest {
 
 
     @Test
+    void givenNegativeLegacyMultiplier_whenSaving_thenRejectsBeforeReadingRepositories() {
+        org.assertj.core.api.Assertions.assertThatCode(() -> {
+            // given / when
+            var result = service.saveRace(null, null, null, null, null, null, null,
+                    null, null, null, null, null, null, -1, null, null, null, null);
+            // then
+            assertThat(result.success()).isFalse();
+            assertThat(result.message()).isEqualTo("Time multiplier must be a nonnegative integer.");
+            verifyNoInteractions(raceRepository, matchdayRepository, teamRepository);
+        }).doesNotThrowAnyException();
+    }
+
+    @Test
+    void givenMissingModeOrInvalidNumericValue_whenSaving_thenRejectsBeforeReadingRepositories() {
+        org.assertj.core.api.Assertions.assertThatCode(() -> {
+            // given / when / then
+            for (Integer value : new Integer[]{-1}) {
+                var result = service.saveRace(null, null, null, null, null, null, null,
+                        null, null, null, null, null, null, TimeProgressionMode.MULTIPLIER, value,
+                        null, null, null, null);
+                assertThat(result.success()).isFalse();
+                assertThat(result.message()).isEqualTo("Time multiplier must be a nonnegative integer.");
+            }
+            var result = service.saveRace(null, null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, 0, null, null, null, null);
+            assertThat(result.success()).isFalse();
+            assertThat(result.message()).isEqualTo("Choose a time progression mode.");
+            verifyNoInteractions(raceRepository, matchdayRepository, teamRepository);
+        }).doesNotThrowAnyException();
+    }
+
+    @Test
+    void givenInvalidTimeProgression_whenSaving_thenRejectsBeforeAnyMutation() {
+        org.assertj.core.api.Assertions.assertThatCode(() -> {
+            // given / when
+            var result = service.saveRace(null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    org.ctc.domain.model.TimeProgressionMode.EQUAL_CONDITIONS, 0,
+                    null, null, null, null);
+            // then
+            assertThat(result.success()).isFalse();
+            assertThat(result.message()).isEqualTo("Equal Conditions requires an empty time multiplier.");
+            verifyNoInteractions(raceRepository, matchdayRepository, teamRepository);
+        }).doesNotThrowAnyException();
+    }
+
+    @Test
     void givenMatchdayId_whenGetRaceListData_thenReturnsFilteredRaces() {
         // given
         var matchdayId = UUID.randomUUID();
@@ -476,8 +523,10 @@ class RaceServiceTest {
     }
 
 
-    @Test
-    void givenRaceDataWithSettings_whenSaveRace_thenRaceSettingsCreated() {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.NullSource
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 6, 60})
+    void givenNumericSettings_whenSaveRace_thenModeAndDraftCompletenessPersist(Integer multiplier) {
         // given
         var matchdayId = UUID.randomUUID();
         var homeTeamId = UUID.randomUUID();
@@ -496,12 +545,15 @@ class RaceServiceTest {
             assertThat(saved.getSettings()).isNotNull();
             assertThat(saved.getSettings().getNumberOfLaps()).isEqualTo(20);
             assertThat(saved.getSettings().getWeather()).isEqualTo("Preset S02");
+            assertThat(saved.getSettings().getTimeProgressionMode()).isEqualTo(TimeProgressionMode.MULTIPLIER);
+            assertThat(saved.getSettings().getTimeProgressionMultiplier()).isEqualTo(multiplier);
+            assertThat(saved.getSettings().isComplete()).isEqualTo(multiplier != null);
             return saved;
         });
 
         // when
         var result = service.saveRace(null, matchdayId, homeTeamId, awayTeamId,
-                null, null, null, 20, 3, 4, 10, "90", 0, 5, "Preset S02", "Afternoon", "RS, RM", "RS");
+                null, null, null, 20, 3, 4, 10, "90", 0, TimeProgressionMode.MULTIPLIER, multiplier, "Preset S02", "Afternoon", "RS, RM", "RS");
 
         // then
         assertThat(result.success()).isTrue();

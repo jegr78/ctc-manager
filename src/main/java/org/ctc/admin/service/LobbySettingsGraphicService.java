@@ -51,7 +51,8 @@ public class LobbySettingsGraphicService extends AbstractGraphicService implemen
 		v.put("weather", weather.presetWeather());
 		v.put("customWeather", weather.customWeather());
 		v.put("timeOfDay", settings.getTimeOfDay());
-		v.put("timeSpeed", settings.getTimeProgressionMultiplier() + "×");
+		v.put("timeSpeed", settings.getTimeProgressionDisplay());
+        v.put("equalConditionsMode", settings.getTimeProgressionMode() == org.ctc.domain.model.TimeProgressionMode.EQUAL_CONDITIONS ? "On" : "Off");
 		v.put("tyreWear", settings.getTyreWearMultiplier() + "×");
 		v.put("fuelRate", settings.getFuelConsumptionMultiplier() + "×");
 		v.put("refuelSpeed", settings.getRefuelingSpeed() + " Litre/sec");

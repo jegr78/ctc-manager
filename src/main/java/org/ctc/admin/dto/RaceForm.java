@@ -1,5 +1,7 @@
 package org.ctc.admin.dto;
 
+import org.ctc.domain.model.TimeProgressionMode;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +31,8 @@ public class RaceForm {
 	private Integer refuelingSpeed;
 	private String initialFuel;
 	private Integer numberOfRequiredPitStops;
-	private Integer timeProgressionMultiplier;
+	private TimeProgressionMode timeProgressionMode = TimeProgressionMode.MULTIPLIER;
+    private Integer timeProgressionMultiplier;
 	private String weather;
 	private String timeOfDay;
 	private String availableTyres;

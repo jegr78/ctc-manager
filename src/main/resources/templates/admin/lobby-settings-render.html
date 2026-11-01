@@ -110,7 +110,7 @@
         <div class="sec-rows">
           <div class="row"><span class="set-label">Weather Selection Method</span><span class="set-value" th:text="${v.weatherMethod} ?: 'Preset Weather'">Preset Weather</span></div>
           <div class="row"><span class="set-label">Preset Weather</span><span class="set-value" th:text="${v.weather} ?: '—'">—</span></div>
-          <div class="row"><span class="set-label">Equal Conditions Mode</span><span class="set-value">—</span></div>
+          <div class="row"><span class="set-label">Equal Conditions Mode</span><span class="set-value" th:text="${v.equalConditionsMode}">Off</span></div>
           <div class="row"><span class="set-label">Time of the Day</span><span class="set-value" th:text="${v.timeOfDay} ?: 'Afternoon'">Afternoon</span></div>
           <div class="row"><span class="set-label">Variable Time Speed Rate</span><span class="set-value" th:text="${v.timeSpeed} ?: '3×'">3×</span></div>
           <div class="row"><span class="set-label">Custom Weather</span><span class="set-value" th:text="${v.customWeather} ?: '—'">—</span></div>

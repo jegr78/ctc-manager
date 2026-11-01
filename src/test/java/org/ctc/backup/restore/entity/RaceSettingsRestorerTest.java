@@ -14,23 +14,21 @@ import org.springframework.jdbc.core.ParameterizedPreparedStatementSetter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-/**
- * Phase 75 / Plan 04 — Unit test for {@link RaceSettingsRestorer}.
- *
- * <p>Schema (V1): {@code id UUID PK, race_id UUID NOT NULL UNIQUE, number_of_laps INT NULL,
- * tyre_wear_multiplier INT NULL, fuel_consumption_multiplier INT NULL, refueling_speed INT NULL,
- * initial_fuel VARCHAR NULL, number_of_required_pit_stops INT NULL,
- * time_progression_multiplier INT NULL, weather VARCHAR NULL, time_of_day VARCHAR NULL,
- * available_tyres VARCHAR NULL, mandatory_tyres VARCHAR NULL, created_at TIMESTAMP,
- * updated_at TIMESTAMP}.
- *
- * <p>All non-FK columns are nullable per V1 schema and {@code RaceSettings.isComplete()}
- * semantics. The setter MUST bind {@code null} for missing nullable columns.
- */
 class RaceSettingsRestorerTest {
 
     private final RaceSettingsRestorer restorer = new RaceSettingsRestorer();
     private final ObjectMapper mapper = new ObjectMapper();
+
+    @Test
+    void givenContradictoryMode_whenRestoring_thenRejectsBeforeWriting() throws Exception {
+        // given
+        var jdbc = mock(JdbcTemplate.class);
+        var row = mapper.readTree("{\"timeProgressionMode\":\"EQUAL_CONDITIONS\",\"timeProgressionMultiplier\":0}");
+        // when / then
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> restorer.restore(List.of(row), jdbc))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("time progression");
+        verifyNoInteractions(jdbc);
+    }
 
     @Test
     void whenTableNameCalled_thenReturnsRaceSettings() {
@@ -97,6 +95,7 @@ class RaceSettingsRestorerTest {
         verify(ps).setString(7, "100%");
         verify(ps).setInt(8, 1);
         verify(ps).setInt(9, 30);
+        verify(ps).setString(16, "MULTIPLIER");
         verify(ps).setString(10, "Clear");
         verify(ps).setString(11, "Day");
         verify(ps).setString(12, "Hard,Medium,Soft");
@@ -147,6 +146,7 @@ class RaceSettingsRestorerTest {
         verify(ps).setNull(7, java.sql.Types.VARCHAR);
         verify(ps).setNull(8, java.sql.Types.INTEGER);
         verify(ps).setNull(9, java.sql.Types.INTEGER);
+        verify(ps).setString(16, "MULTIPLIER");
         verify(ps).setNull(10, java.sql.Types.VARCHAR);
         verify(ps).setNull(11, java.sql.Types.VARCHAR);
         verify(ps).setNull(12, java.sql.Types.VARCHAR);

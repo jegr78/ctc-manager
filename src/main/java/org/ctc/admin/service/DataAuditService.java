@@ -1,9 +1,12 @@
 package org.ctc.admin.service;
 
+import org.ctc.domain.model.TimeProgressionMode;
+
 import static org.ctc.admin.dto.DataAuditFinding.Category.PAIRING;
 import static org.ctc.admin.dto.DataAuditFinding.Category.PHASE_GROUP;
 import static org.ctc.admin.dto.DataAuditFinding.Category.PLAYOFF;
 import static org.ctc.admin.dto.DataAuditFinding.Category.PUBLIC_URL;
+import static org.ctc.admin.dto.DataAuditFinding.Category.RACE_SETTINGS;
 import static org.ctc.admin.dto.DataAuditFinding.Category.STALE_AGGREGATE;
 import static org.ctc.admin.dto.DataAuditFinding.Category.SUCCESSION;
 import static org.ctc.admin.dto.DataAuditFinding.Resolution.AMBIGUOUS;
@@ -201,6 +204,16 @@ public class DataAuditService {
 
 	private static void auditLegs(List<Race> races, Map<Category, List<DataAuditFinding>> out) {
 		for (Race race : races) {
+            var settings = race.getSettings();
+            if (settings != null && (settings.getTimeProgressionMode() == null
+                    || settings.getTimeProgressionMode() == TimeProgressionMode.EQUAL_CONDITIONS
+                        && settings.getTimeProgressionMultiplier() != null
+                    || settings.getTimeProgressionMultiplier() != null && settings.getTimeProgressionMultiplier() < 0)) {
+                out.get(RACE_SETTINGS).add(new DataAuditFinding(RACE_SETTINGS, AMBIGUOUS, describe(race),
+                        "Time progression mode %s with multiplier %s".formatted(
+                                settings.getTimeProgressionMode(), settings.getTimeProgressionMultiplier()),
+                        "Choose Equal Conditions with no multiplier, or a nonnegative numeric multiplier"));
+            }
 			Match match = race.getMatch();
 			if (match != null && race.getPlayoffMatchup() != null && !sameContest(match, race.getPlayoffMatchup())) {
 				out.get(PHASE_GROUP).add(new DataAuditFinding(PHASE_GROUP, AMBIGUOUS, describe(race),

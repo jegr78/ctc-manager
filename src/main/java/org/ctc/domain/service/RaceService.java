@@ -168,7 +168,44 @@ public class RaceService {
 	                           Integer numberOfLaps, Integer tyreWearMultiplier,
 	                           Integer fuelConsumptionMultiplier, Integer refuelingSpeed,
 	                           String initialFuel, Integer numberOfRequiredPitStops,
+	                           TimeProgressionMode timeProgressionMode, Integer timeProgressionMultiplier, String weather,
+	                           String timeOfDay, String availableTyres, String mandatoryTyres) {
+        String error = timeProgressionMode == null ? "Choose a time progression mode."
+                : timeProgressionMode == TimeProgressionMode.EQUAL_CONDITIONS
+                    ? (timeProgressionMultiplier != null ? "Equal Conditions requires an empty time multiplier." : null)
+                    : (timeProgressionMultiplier != null && timeProgressionMultiplier < 0
+                        ? "Time multiplier must be a nonnegative integer." : null);
+        if (error != null) return new SaveResult(false, error, id, matchdayId);
+        return saveRaceInternal(id, matchdayId, homeTeamId, awayTeamId, trackId, carId, dateTime,
+                numberOfLaps, tyreWearMultiplier, fuelConsumptionMultiplier, refuelingSpeed,
+                initialFuel, numberOfRequiredPitStops, timeProgressionMode,
+                timeProgressionMultiplier, weather, timeOfDay, availableTyres, mandatoryTyres);
+    }
+
+	@Transactional
+	public SaveResult saveRace(UUID id, UUID matchdayId, UUID homeTeamId, UUID awayTeamId,
+	                           UUID trackId, UUID carId, LocalDateTime dateTime,
+	                           Integer numberOfLaps, Integer tyreWearMultiplier,
+	                           Integer fuelConsumptionMultiplier, Integer refuelingSpeed,
+	                           String initialFuel, Integer numberOfRequiredPitStops,
 	                           Integer timeProgressionMultiplier, String weather,
+	                           String timeOfDay, String availableTyres, String mandatoryTyres) {
+        if (timeProgressionMultiplier != null && timeProgressionMultiplier < 0) {
+            return new SaveResult(false, "Time multiplier must be a nonnegative integer.", id, matchdayId);
+        }
+        // Legacy callers explicitly retain numeric draft semantics, including an incomplete null.
+        return saveRaceInternal(id, matchdayId, homeTeamId, awayTeamId, trackId, carId, dateTime,
+                numberOfLaps, tyreWearMultiplier, fuelConsumptionMultiplier, refuelingSpeed,
+                initialFuel, numberOfRequiredPitStops, TimeProgressionMode.MULTIPLIER,
+                timeProgressionMultiplier, weather, timeOfDay, availableTyres, mandatoryTyres);
+    }
+
+	private SaveResult saveRaceInternal(UUID id, UUID matchdayId, UUID homeTeamId, UUID awayTeamId,
+	                           UUID trackId, UUID carId, LocalDateTime dateTime,
+	                           Integer numberOfLaps, Integer tyreWearMultiplier,
+	                           Integer fuelConsumptionMultiplier, Integer refuelingSpeed,
+	                           String initialFuel, Integer numberOfRequiredPitStops,
+	                           TimeProgressionMode timeProgressionMode, Integer timeProgressionMultiplier, String weather,
 	                           String timeOfDay, String availableTyres, String mandatoryTyres) {
 		var matchday = matchdayRepository.findById(matchdayId).orElseThrow();
 		var homeTeam = teamRepository.findById(homeTeamId).orElseThrow();
@@ -210,6 +247,7 @@ public class RaceService {
 		settings.setRefuelingSpeed(refuelingSpeed);
 		settings.setInitialFuel(initialFuel);
 		settings.setNumberOfRequiredPitStops(numberOfRequiredPitStops);
+		settings.setTimeProgressionMode(timeProgressionMode);
 		settings.setTimeProgressionMultiplier(timeProgressionMultiplier);
 		settings.setWeather(weather);
 		settings.setTimeOfDay(timeOfDay);
@@ -442,7 +480,8 @@ public class RaceService {
 	                       Integer fuelConsumptionMultiplier, Integer refuelingSpeed,
 	                       String initialFuel, Integer numberOfRequiredPitStops,
 	                       Integer timeProgressionMultiplier, String weather,
-	                       String timeOfDay, String availableTyres, String mandatoryTyres) {
+	                       String timeOfDay, String availableTyres, String mandatoryTyres,
+                           TimeProgressionMode timeProgressionMode) {
 	}
 
 	public record RaceResultData(UUID driverId, String driverPsnId, String teamShortName,

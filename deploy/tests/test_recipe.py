@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import socket
+import sys
 import tempfile
 import unittest
 
@@ -59,7 +60,23 @@ if 'info' in sys.argv:
 elif 'ps' in sys.argv: print('[]')
 ''')
         docker.chmod(0o700)
-        self.env = {**os.environ, 'PATH': str(self.bin) + os.pathsep + os.environ['PATH'], 'CALLS': str(self.calls), 'XDG_RUNTIME_DIR': str(self.runtime)}
+        python = self.bin / 'python3'
+        python.write_text('#!' + sys.executable + '\n' + """
+import os, sys
+if len(sys.argv) > 2 and sys.argv[1] == '-c' and 's.bind' in sys.argv[2]:
+    import socket
+    from unittest.mock import patch
+    failure = OSError('fixture port occupied') if os.environ.get('CTC_FIXTURE_PORT_OCCUPIED') == '1' else None
+    with patch.object(socket.socket, 'bind', side_effect=failure) as bind:
+        try:
+            exec(sys.argv[2])
+        finally:
+            bind.assert_called_once_with(('127.0.0.1', 9092))
+else:
+    os.execv(""" + repr(sys.executable) + """, [""" + repr(sys.executable) + """] + sys.argv[1:])
+""")
+        python.chmod(0o700)
+        self.env = {**os.environ, 'PATH': str(self.bin) + os.pathsep + os.environ['PATH'], 'CALLS': str(self.calls), 'XDG_RUNTIME_DIR': str(self.runtime), 'CTC_FIXTURE_PORT_OCCUPIED': '0'}
         self.write_config()
 
     def write_config(self):
@@ -260,10 +277,8 @@ elif 'ps' in sys.argv: print('[]')
         self.assertFalse(self.calls.exists())
 
     def test_occupied_port_refuses_before_start(self):
-        with socket.socket() as listener:
-            listener.bind(('127.0.0.1', 9092))
-            listener.listen()
-            result = self.run_cli('up')
+        self.env['CTC_FIXTURE_PORT_OCCUPIED'] = '1'
+        result = self.run_cli('up')
         self.assertNotEqual(0, result.returncode)
         self.assertIn('9092', result.stderr)
         calls = [json.loads(line) for line in self.calls.read_text().splitlines()]

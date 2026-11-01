@@ -99,6 +99,38 @@ class RaceSettingsTest {
 		assertThat(s3.isComplete()).isFalse();
 	}
 
+    @Test
+    void givenEqualConditions_whenCheckingCompleteness_thenNoMultiplierIsRequired() {
+        // given
+        var settings = createCompleteSettings();
+        settings.setTimeProgressionMode(TimeProgressionMode.EQUAL_CONDITIONS);
+        settings.setTimeProgressionMultiplier(null);
+        // when / then
+        assertThat(settings.isComplete()).isTrue();
+        assertThat(settings.getTimeProgressionDisplay()).isEqualTo("Equal Conditions");
+        settings.setTimeProgressionMultiplier(0);
+        assertThat(settings.isComplete()).isFalse();
+    }
+
+    @Test
+    void givenNumericModes_whenDisplaying_thenZeroAndLegacyValuesStayDistinct() {
+        // given
+        var settings = createCompleteSettings();
+        // when / then
+        for (int value : new int[]{0, 6, 60}) {
+            settings.setTimeProgressionMultiplier(value);
+            assertThat(settings.isComplete()).isTrue();
+            assertThat(settings.getTimeProgressionDisplay()).isEqualTo(value + "x");
+        }
+        settings.setTimeProgressionMultiplier(null);
+        assertThat(settings.isComplete()).isFalse();
+        assertThat(settings.getTimeProgressionDisplay()).isEqualTo("Not set");
+        settings.setTimeProgressionMultiplier(-1);
+        assertThat(settings.isComplete()).isFalse();
+        settings.setTimeProgressionMode(null);
+        assertThat(settings.isComplete()).isFalse();
+    }
+
 	private RaceSettings createCompleteSettings() {
 		var settings = new RaceSettings(new Race());
 		settings.setNumberOfLaps(20);
