@@ -84,3 +84,9 @@ installation lock. An update preserves the selected volumes and keeps the app st
 capture through restore proof and activation. A candidate that may have changed the schema never
 triggers an old-image-only rollback. Private `state/update.json` and `state/protected-recovery.json`
 record the recovery path and retain the pre-update unit.
+
+## scheduled backups
+
+The [backup runbook](guides/backups.md) covers `maintenance`, `backup-check`, `prune --dry-run`
+and exact remote `retrieve-check`. Missing off-host configuration remains incomplete readiness.
+The packaged private user timers are examples until cutover; no timer updates the application.

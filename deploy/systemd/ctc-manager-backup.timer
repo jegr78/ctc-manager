@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily CTC Manager recovery unit
+
+[Timer]
+OnCalendar=*-*-* 03:45:00 Europe/Berlin
+RandomizedDelaySec=15m
+Persistent=true
+Unit=ctc-manager-backup.service
+
+[Install]
+WantedBy=timers.target

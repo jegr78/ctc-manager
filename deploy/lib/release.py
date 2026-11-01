@@ -10,8 +10,12 @@ CORE_FILES = ['ctc-manager', 'compose.yaml', 'config.example', 'lib/common.sh', 
 HOST_FILES = CORE_FILES + ['setup-host.sh', 'lib/host.py', 'systemd/docker-rootless.service', 'guides/host.md']
 RECOVERY_FILES = HOST_FILES + ['lib/runtime.py', 'lib/release.py', 'lib/recovery.py', 'lib/recovery.sh',
                       'lib/probe.py', 'lib/live.py', 'recovery-manifest.schema.json', 'guides/recovery.md']
-FILES = RECOVERY_FILES + ['lib/update.py', 'lib/update.sh', 'upgrade.json', 'guides/updates.md']
-SUPPORTED_INVENTORIES = [set(CORE_FILES), set(HOST_FILES), set(RECOVERY_FILES), set(FILES)]
+UPDATE_FILES = RECOVERY_FILES + ['lib/update.py', 'lib/update.sh', 'upgrade.json', 'guides/updates.md']
+FILES = UPDATE_FILES + ['lib/maintenance.py', 'lib/maintenance.sh', 'guides/backups.md',
+                        'systemd/ctc-manager-backup.service', 'systemd/ctc-manager-backup.timer',
+                        'systemd/ctc-manager-backup-check.service', 'systemd/ctc-manager-backup-check.timer',
+                        'systemd/ctc-manager-backup-alert@.service']
+SUPPORTED_INVENTORIES = [set(CORE_FILES), set(HOST_FILES), set(RECOVERY_FILES), set(UPDATE_FILES), set(FILES)]
 MAX_MEMBER = 4 * 1024 * 1024
 MAX_ARCHIVE = 32 * 1024 * 1024
 

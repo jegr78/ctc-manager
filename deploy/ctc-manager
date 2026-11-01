@@ -12,7 +12,7 @@ operation=$3
 shift 3
 case "$operation" in
   doctor|status|up|stop) [ "$#" -eq 0 ] || fail 'unexpected operation arguments' ;;
-  backup|restore-check|restore|resume-integrations|update-check|update) ;;
+  backup|restore-check|restore|resume-integrations|update-check|update|maintenance|prune|backup-check|retrieve-check) ;;
   *) fail 'unknown operation' ;;
 esac
 python3 "$DEPLOY_ROOT/lib/config.py" validate "$installation"
@@ -21,7 +21,10 @@ cd "$installation"
 docker_host=$(config_value dockerHost)
 verify_daemon
 case "$operation" in
-  doctor) printf '%s\n' 'CTC configuration valid; rootless daemon and memory limits available' ;;
+  doctor)
+    printf '%s\n' 'CTC configuration valid; rootless daemon and memory limits available'
+    python3 "$DEPLOY_ROOT/lib/maintenance.py" --directory "$installation" doctor
+    ;;
   status) compose ps --format json ;;
   up|stop)
     acquire_lock
@@ -35,8 +38,12 @@ case "$operation" in
     fi
     write_journal completed
     ;;
-  backup|restore-check|restore|resume-integrations|update-check|update)
-    if [[ "$operation" == update* ]]; then
+  backup|restore-check|restore|resume-integrations|update-check|update|maintenance|prune|backup-check|retrieve-check)
+    if [[ "$operation" == maintenance || "$operation" == prune || "$operation" == backup-check || "$operation" == retrieve-check ]]; then
+      # shellcheck source=lib/maintenance.sh
+      source "$DEPLOY_ROOT/lib/maintenance.sh"
+      runner=run_maintenance
+    elif [[ "$operation" == update* ]]; then
       # shellcheck source=lib/update.sh
       source "$DEPLOY_ROOT/lib/update.sh"
       runner=run_update

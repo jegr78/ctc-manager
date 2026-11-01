@@ -167,9 +167,10 @@ elif 'ps' in sys.argv: print('[]')
         journal = json.loads((self.install / 'state/operation.json').read_text())
         self.assertEqual('interrupted', journal['stage'])
 
-    def test_valid_rootless_configuration_passes_doctor(self):
+    def test_valid_rootless_configuration_reports_missing_backup_protection(self):
         result = self.run_cli()
-        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn('backup-configuration-incomplete', result.stdout)
         self.assertIn('rootless', result.stdout)
         self.assertNotIn('private-fixture', result.stdout + result.stderr)
 

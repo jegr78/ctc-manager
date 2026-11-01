@@ -238,3 +238,7 @@ and reports unresolved HIGH/CRITICAL findings as failures on scheduled/manual sc
 [dependency update policy](docs/security/dependency-updates.md) for alert coverage and operations.
 The MariaDB JDBC connector has an explicit version so Renovate can update it independently
 of the Spring Boot BOM. A runtime dependency check rejects its known vulnerable versions.
+
+Scheduled recovery maintenance, encrypted off-host copies and failure evidence are described in
+[the backup runbook](deploy/guides/backups.md). Enable timers only after destination, external key custody,
+retrieval and alerting are provisioned and verified.

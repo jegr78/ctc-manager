@@ -121,6 +121,16 @@ class BundleTest(unittest.TestCase):
         result = self.run_bundle('verify',legacy)
         self.assertEqual(0,result.returncode,result.stderr)
 
+    def test_private_maintenance_tools_and_all_user_units_are_packaged(self):
+        self.assertEqual(0, self.create().returncode)
+        with tarfile.open(self.output/'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
+            names=set(bundle.getnames())
+            for name in ['lib/maintenance.py','lib/maintenance.sh','guides/backups.md',
+                         'systemd/ctc-manager-backup.service','systemd/ctc-manager-backup.timer',
+                         'systemd/ctc-manager-backup-check.service','systemd/ctc-manager-backup-check.timer',
+                         'systemd/ctc-manager-backup-alert@.service']:
+                self.assertIn('ctc-manager-deployment-1.21.0/'+name,names)
+
     def test_host_setup_and_guide_are_packaged(self):
         self.assertEqual(0,self.create().returncode)
         with tarfile.open(self.output/'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
