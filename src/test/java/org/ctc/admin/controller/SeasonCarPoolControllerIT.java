@@ -92,6 +92,19 @@ class SeasonCarPoolControllerIT {
     }
 
     @Test
+    void givenOutOfRangeNumericYear_whenSubmitted_thenFieldErrorAndSubmittedValueRemain() throws Exception {
+        // given
+        var season = helper.createSeason("Test Pool Year " + UUID.randomUUID());
+        pools.changeMode(season.getId(), CarPoolMode.CATEGORY_POOL);
+        // when / then
+        mvc.perform(post(base(season) + "/entries/save").param("label", "Keep year")
+                .param("clauses[0].category", "GR_2").param("clauses[0].modelYear", "99"))
+                .andExpect(status().isOk()).andExpect(model().attributeHasFieldErrors("poolEntryForm", "clauses[0].modelYear"))
+                .andExpect(content().string(containsString("value=\"99\"")));
+        assertThat(season.getCarPoolEntries()).isEmpty();
+    }
+
+    @Test
     void givenUnknownOrOutOfRangeClauseAction_whenSubmitted_thenRetainFormAndRejectWithoutSaving() throws Exception {
         // given
         var season = helper.createSeason("Test Pool Actions " + UUID.randomUUID());

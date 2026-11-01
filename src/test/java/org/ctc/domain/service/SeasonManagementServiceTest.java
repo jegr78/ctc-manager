@@ -172,6 +172,7 @@ class SeasonManagementServiceTest {
         assertThatThrownBy(() -> service.removeCarsFromSeason(season.getId(), List.of(car.getId())))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("fixed");
         assertThat(season.getCars()).containsExactly(car);
+        verify(seasonRepository, times(2)).findByIdForUpdate(season.getId());
         verify(seasonRepository, never()).save(any());
     }
 

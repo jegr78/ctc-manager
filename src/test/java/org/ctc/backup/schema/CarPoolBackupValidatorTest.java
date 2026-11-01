@@ -10,6 +10,42 @@ class CarPoolBackupValidatorTest {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Test
+    void givenMissingVersionFourPoolFields_whenValidated_thenRejectInsteadOfDefaulting() {
+        // given
+        for (String field : java.util.List.of("carPoolMode", "carPoolState")) {
+            var validator = new CarPoolBackupValidator(4);
+            var season = row().put("carPoolMode", "FIXED_CARS").put("carPoolState", "DRAFT");
+            season.remove(field);
+            validator.accept("seasons", season);
+            // when / then
+            assertThatThrownBy(validator::validate).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Missing season");
+        }
+    }
+
+    @Test
+    void givenFixedFrozenSeasonOrLegacyCategoryMode_whenValidated_thenRejectTheModeState() {
+        // given
+        var validator = new CarPoolBackupValidator(4);
+        validator.accept("seasons", row().put("carPoolMode", "FIXED_CARS").put("carPoolState", "FROZEN"));
+        // when / then
+        assertThatThrownBy(validator::validate).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Fixed season");
+        var legacy = new CarPoolBackupValidator(3);
+        assertThatThrownBy(() -> legacy.accept("seasons", row().put("carPoolMode", "CATEGORY_POOL")))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("version");
+        assertThatThrownBy(() -> legacy.accept("seasons", row().put("carPoolState", "FROZEN")))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("version");
+    }
+
+    @Test
+    void givenMissingOrNonTextualId_whenAccepted_thenRejectWithValidationError() {
+        // given
+        var validator = new CarPoolBackupValidator(4);
+        // when / then
+        assertThatThrownBy(() -> validator.accept("cars", MAPPER.createObjectNode())).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> validator.accept("cars", row().put("id", 1))).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void givenInvalidScalarTypes_whenAccepting_thenRejectBeforeRetention() {
         // given
         for (Object index : new Object[]{0.5, 4294967296L, "0"}) {
