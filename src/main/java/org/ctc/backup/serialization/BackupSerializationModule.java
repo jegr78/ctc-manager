@@ -24,6 +24,9 @@ public class BackupSerializationModule extends SimpleModule {
         setMixInAnnotation(PsnAlias.class, PsnAliasMixIn.class);
         setMixInAnnotation(Team.class, TeamMixIn.class);
         setMixInAnnotation(Season.class, SeasonMixIn.class);
+        setMixInAnnotation(SeasonCarPoolEntry.class, SeasonCarPoolEntryMixIn.class);
+        setMixInAnnotation(SeasonCarPoolClause.class, SeasonCarPoolClauseMixIn.class);
+        setMixInAnnotation(SeasonCarPoolMember.class, SeasonCarPoolMemberMixIn.class);
         setMixInAnnotation(SeasonPhase.class, SeasonPhaseMixIn.class);
         setMixInAnnotation(SeasonPhaseGroup.class, SeasonPhaseGroupMixIn.class);
         setMixInAnnotation(PhaseTeam.class, PhaseTeamMixIn.class);

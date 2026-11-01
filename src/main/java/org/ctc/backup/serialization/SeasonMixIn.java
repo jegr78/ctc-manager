@@ -25,7 +25,7 @@ import org.ctc.domain.model.Track;
  */
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler",
-		"phases", "seasonDrivers", "seasonTeams",
+		"phases", "seasonDrivers", "seasonTeams", "carPoolEntries",
 		"displayLabel", "teams", "matchdays", "activeTeams", "eligibleTeams"})
 public abstract class SeasonMixIn {
 

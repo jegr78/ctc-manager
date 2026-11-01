@@ -315,6 +315,32 @@ class CsvImportServiceTest {
 	}
 
 	@Test
+    void givenSavedPoolEntry_whenOverwriteWouldDeleteSelection_thenRejectBeforeDeletingRace() {
+        season.setCarPoolMode(CarPoolMode.CATEGORY_POOL);
+        season.setCarPoolState(CarPoolState.FROZEN);
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
+        var match = new Match(matchday, standaloneTeam1, standaloneTeam2);
+        match.setId(UUID.randomUUID());
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setCarPoolEntry(new SeasonCarPoolEntry());
+        when(matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any())).thenReturn(Optional.of(match));
+        when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
+        lenient().when(raceRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        var metadata = new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId());
+        var preview = new CsvImportService.ImportPreview(metadata);
+        preview.addRow(new CsvImportService.ImportRow("BRV", "driver1_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("driver1_psn", driver1)));
+        preview.addRow(new CsvImportService.ImportRow("CRL", "driver2_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver2_psn", driver2)));
+        assertThatThrownBy(() -> csvImportService.executeImport(preview, Map.of(), Set.of(), true))
+                .isInstanceOf(ImportRejectedException.class).hasMessageContaining("category pool selection");
+        verify(raceRepository, never()).delete(any());
+        verify(raceLineupRepository, never()).deleteAll(any());
+    }
+
+    @Test
 	void givenDuplicateMatchAndOverwriteEnabled_whenExecuteImport_thenDeletesExistingMatch() {
 		// given
 		setupCommonMocks();

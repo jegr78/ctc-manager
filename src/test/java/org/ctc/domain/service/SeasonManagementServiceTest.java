@@ -157,6 +157,23 @@ class SeasonManagementServiceTest {
     }
 
     @Test
+    void givenCategoryMode_whenFixedAssignmentEndpointsAreForged_thenRejectWithoutChangingFixedCars() {
+        var season = createSeason("Category season");
+        season.setCarPoolMode(CarPoolMode.CATEGORY_POOL);
+        var car = new Car("Fixture", "Retained");
+        car.setId(UUID.randomUUID());
+        season.getCars().add(car);
+        lenient().when(seasonRepository.findByIdForUpdate(season.getId())).thenReturn(Optional.of(season));
+        lenient().when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        assertThatThrownBy(() -> service.addCarsToSeason(season.getId(), List.of(car.getId())))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("fixed");
+        assertThatThrownBy(() -> service.removeCarsFromSeason(season.getId(), List.of(car.getId())))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("fixed");
+        assertThat(season.getCars()).containsExactly(car);
+        verify(seasonRepository, never()).save(any());
+    }
+
+    @Test
     void givenCarIds_whenAddCarsToSeason_thenCarsAddedToPool() {
         // given
         var season = createSeason("Test Season");
@@ -165,7 +182,7 @@ class SeasonManagementServiceTest {
         var car2 = new Car();
         car2.setId(UUID.randomUUID());
 
-        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(seasonRepository.findByIdForUpdate(season.getId())).thenReturn(Optional.of(season));
         when(carRepository.findById(car1.getId())).thenReturn(Optional.of(car1));
         when(carRepository.findById(car2.getId())).thenReturn(Optional.of(car2));
 
@@ -186,7 +203,7 @@ class SeasonManagementServiceTest {
         car.setId(UUID.randomUUID());
         season.getCars().add(car);
 
-        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(seasonRepository.findByIdForUpdate(season.getId())).thenReturn(Optional.of(season));
 
         // when
         int removed = service.removeCarsFromSeason(season.getId(), List.of(car.getId()));
@@ -560,7 +577,7 @@ class SeasonManagementServiceTest {
         // explicitly set format=SWISS to verify the auto-sync block stays removed.
         regular.setFormat(SeasonFormat.SWISS);
 
-        when(seasonRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
+        when(seasonRepository.findByIdForUpdate(existing.getId())).thenReturn(Optional.of(existing));
         when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // when: re-save the season with slim 6-param signature
@@ -955,7 +972,7 @@ class SeasonManagementServiceTest {
         var regular = PhaseTestFixtures.regularPhase(existing, rs, ms);
         regular.setTotalRounds(7); // pre-existing value should NOT be overwritten
 
-        when(seasonRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
+        when(seasonRepository.findByIdForUpdate(existing.getId())).thenReturn(Optional.of(existing));
         when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // when: slim 6-param save

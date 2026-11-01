@@ -33,6 +33,10 @@ public interface RaceRepository extends JpaRepository<Race, UUID> {
 
 	boolean existsByCarId(UUID carId);
 
+    boolean existsByCarPoolEntrySeasonId(UUID seasonId);
+
+    boolean existsByMatchdayPhaseSeasonIdAndCarIsNotNull(UUID seasonId);
+
 	boolean existsByTrackId(UUID trackId);
 
 	/**
@@ -44,7 +48,7 @@ public interface RaceRepository extends JpaRepository<Race, UUID> {
 	 * aggregate root in the export graph.
 	 */
 	@EntityGraph(attributePaths = {"matchday", "match", "track", "car", "playoffMatchup",
-			"homeTeamOverride", "awayTeamOverride"})
+			"homeTeamOverride", "awayTeamOverride", "carPoolEntry"})
 	@Query("SELECT e FROM Race e")
 	List<Race> findAllForBackup();
 }

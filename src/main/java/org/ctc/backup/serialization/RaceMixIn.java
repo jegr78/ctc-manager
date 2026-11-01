@@ -46,6 +46,9 @@ public abstract class RaceMixIn {
     abstract Car getCar();
 
     @JsonIdentityReference(alwaysAsId = true)
+    abstract SeasonCarPoolEntry getCarPoolEntry();
+
+    @JsonIdentityReference(alwaysAsId = true)
     abstract PlayoffMatchup getPlayoffMatchup();
 
     @JsonProperty("homeTeamOverride")

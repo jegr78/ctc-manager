@@ -38,8 +38,8 @@ public class RaceRestorer implements EntityRestorer {
     private static final String INSERT_SQL =
             "INSERT INTO races (id, matchday_id, match_id, playoff_matchup_id, "
           + "track_id, car_id, home_team_id, away_team_id, "
-          + "date_time, calendar_event_id, created_at, updated_at) "
-          + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+          + "date_time, calendar_event_id, created_at, updated_at, car_pool_entry_id) "
+          + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     @Override
     public String tableName() {
@@ -61,6 +61,7 @@ public class RaceRestorer implements EntityRestorer {
             setNullableString(ps, 10, row, "calendarEventId");
             ps.setTimestamp(11, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
             ps.setTimestamp(12, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
+            setNullableUuid(ps, 13, row, "carPoolEntry");
         });
         log.debug("RaceRestorer: restored {} rows", rows.size());
     }

@@ -21,6 +21,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
@@ -84,6 +85,8 @@ class BackupExportServiceTest {
 				matchdayRepository, matchRepository, raceRepository, raceLineupRepository,
 				raceResultRepository, raceSettingsRepository, raceAttachmentRepository,
 				discordGlobalConfigRepository, discordPostRepository, siteSlugRepository,
+                mock(SeasonCarPoolEntryRepository.class), mock(SeasonCarPoolClauseRepository.class),
+                mock(SeasonCarPoolMemberRepository.class),
 				tempDir.toString()
 		);
 		ReflectionTestUtils.invokeMethod(service, "initialize");

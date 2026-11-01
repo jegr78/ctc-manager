@@ -39,6 +39,27 @@ class RaceServiceTest {
 
 
     @Test
+    void givenCategorySeason_whenLegacyCarSelectionIsSubmitted_thenRejectBeforeAnyMutation() {
+        var matchday = createMatchday();
+        matchday.getSeason().setCarPoolMode(CarPoolMode.CATEGORY_POOL);
+        var home = createTeam("HOME", "Home");
+        var away = createTeam("AWAY", "Away");
+        var car = new Car("Fixture", "Car");
+        car.setId(UUID.randomUUID());
+        matchday.getSeason().getCars().add(car);
+        when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
+        lenient().when(teamRepository.findById(home.getId())).thenReturn(Optional.of(home));
+        lenient().when(teamRepository.findById(away.getId())).thenReturn(Optional.of(away));
+        lenient().when(carRepository.findById(car.getId())).thenReturn(Optional.of(car));
+        var result = service.saveRace(null, matchday.getId(), home.getId(), away.getId(), null, car.getId(), null,
+                null, null, null, null, null, null, 1, null, null, null, null);
+        assertThat(result.success()).isFalse();
+        assertThat(result.message()).contains("category pool entry");
+        verify(raceRepository, never()).save(any());
+        verify(matchRepository, never()).save(any());
+    }
+
+    @Test
     void givenNegativeLegacyMultiplier_whenSaving_thenRejectsBeforeReadingRepositories() {
         org.assertj.core.api.Assertions.assertThatCode(() -> {
             // given / when
@@ -661,6 +682,7 @@ class RaceServiceTest {
     private Matchday createMatchday() {
         var season = new Season();
         season.setId(UUID.randomUUID());
+        lenient().when(seasonRepository.findByIdForUpdate(season.getId())).thenReturn(Optional.of(season));
         season.setCars(new ArrayList<>());
         season.setTracks(new ArrayList<>());
         var scoring = new RaceScoring("Default", "10,8,6", "3,2,1", 1);

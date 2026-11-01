@@ -2443,6 +2443,22 @@ input:not([type='checkbox']):not([type='radio']):not([type='color']), select { b
 .season-configuration .transfer-filter { min-height: 44px; }
 .season-configuration .transfer-header button { min-height: 44px; }
 .season-configuration .form-group select { min-height: 44px; }
+.season-car-pool-editor fieldset { min-width: 0; border: 0; padding: 16px 0; margin: 0 0 16px; border-bottom: 1px solid var(--border); }
+.season-car-pool-editor legend { font-size: 18px; font-weight: 600; padding: 0 0 12px; }
+.season-car-pool-editor .pool-clause { border: 1px solid var(--border); padding: 16px; margin-top: 16px; }
+.season-car-pool-editor .pool-clause legend { font-size: 16px; padding: 0 8px; }
+.season-car-pool-editor .pool-clause .form-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.season-car-pool-editor .form-group { min-width: 0; }
+.season-car-pool-editor p { line-height: 1.6; }
+.season-car-pool-editor h3 { margin: 20px 0 12px; }
+.season-car-pool-editor h4 { margin-bottom: 12px; }
+.season-car-pool-editor details { margin: 8px 0; padding: 12px; border: 1px solid var(--border); }
+.season-car-pool-editor summary { cursor: pointer; line-height: 1.6; }
+.season-car-pool-editor ul { padding-left: 24px; line-height: 1.6; overflow-wrap: anywhere; }
+.season-configuration #carPool, .season-car-pool-editor #pool-entry-editor { scroll-margin-top: 72px; }
+@media (max-width: 700px) {
+    .season-car-pool-editor .pool-clause .form-row { grid-template-columns: minmax(0, 1fr); }
+}
 @media (max-width: 900px) { .season-configuration .configuration-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .season-configuration .configuration-grid { grid-template-columns: minmax(0, 1fr); } }
 

@@ -112,8 +112,9 @@ th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 </div>
 <!-- Car Pool (only when editing) -->
 <div th:if="${seasonForm.id != null}" class="card mt-md" id="carPool">
-    <h2 th:text="'Car Pool (' + ${season.cars.size()} + ')'">Car Pool</h2>
-    <div class="transfer-picker">
+    <h2>Car Pool</h2>
+    <div th:replace="~{admin/fragments/season-car-pool :: editor}"></div>
+    <div class="transfer-picker" th:if="${season.carPoolMode.name() == 'FIXED_CARS'}">
         <div class="transfer-list">
             <form th:action="@{/admin/seasons/{id}/cars/add(id=${season.id})}" method="post" id="addCarsForm">
                 <div class="transfer-header">

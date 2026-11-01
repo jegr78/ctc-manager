@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
-public interface SeasonRepository extends JpaRepository<Season, UUID> {
+public interface SeasonRepository extends JpaRepository<Season, UUID>, SeasonLockingRepository {
 
 	/**
 	 * Returns the unique active season, if any.

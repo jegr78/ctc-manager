@@ -167,7 +167,7 @@ public class SeasonManagementService {
         if (isNew) {
             season = new Season();
         } else {
-            season = seasonRepository.findById(id)
+            season = seasonRepository.findByIdForUpdate(id)
                     .orElseThrow(() -> new EntityNotFoundException("Season", id));
         }
         season.setName(name);
@@ -496,8 +496,9 @@ public class SeasonManagementService {
      */
     @Transactional
     public int addCarsToSeason(UUID seasonId, List<UUID> carIds) {
-        var season = seasonRepository.findById(seasonId)
+        var season = seasonRepository.findByIdForUpdate(seasonId)
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        requireFixedCarPool(season);
         int added = 0;
         for (UUID carId : carIds) {
             var car = carRepository.findById(carId).orElse(null);
@@ -517,11 +518,18 @@ public class SeasonManagementService {
      */
     @Transactional
     public int removeCarsFromSeason(UUID seasonId, List<UUID> carIds) {
-        var season = seasonRepository.findById(seasonId)
+        var season = seasonRepository.findByIdForUpdate(seasonId)
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        requireFixedCarPool(season);
         season.getCars().removeIf(c -> carIds.contains(c.getId()));
         seasonRepository.save(season);
         return carIds.size();
+    }
+
+    private static void requireFixedCarPool(Season season) {
+        if (season.getCarPoolMode() != CarPoolMode.FIXED_CARS) {
+            throw new BusinessRuleException("Car assignment requires fixed car pool mode.");
+        }
     }
 
     /**

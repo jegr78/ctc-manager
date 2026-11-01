@@ -12,7 +12,8 @@ public record DataAuditFinding(Category category, Resolution resolution, String 
 		PLAYOFF("Playoff winners and advancement", "#195, #201"),
 		PUBLIC_URL("Ambiguous public URLs", "#210"),
         RACE_SETTINGS("Inconsistent race settings", "#280"),
-        CAR_METADATA("Car metadata without valid review evidence", "#274");
+        CAR_METADATA("Car metadata without valid review evidence", "#274"),
+        CAR_POOL("Inconsistent seasonal car pools", "#275, #276, #278");
 
 		private final String label;
 		private final String relatedIssues;

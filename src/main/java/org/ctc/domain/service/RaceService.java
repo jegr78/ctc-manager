@@ -208,10 +208,14 @@ public class RaceService {
 	                           TimeProgressionMode timeProgressionMode, Integer timeProgressionMultiplier, String weather,
 	                           String timeOfDay, String availableTyres, String mandatoryTyres) {
 		var matchday = matchdayRepository.findById(matchdayId).orElseThrow();
+        var lockedSeason = seasonRepository.findByIdForUpdate(matchday.getSeason().getId()).orElseThrow();
 		var homeTeam = teamRepository.findById(homeTeamId).orElseThrow();
 		var awayTeam = teamRepository.findById(awayTeamId).orElseThrow();
 
 		Race race = id != null ? raceRepository.findById(id).orElseThrow() : new Race();
+        if (race.getCarPoolEntry() != null || lockedSeason.getCarPoolMode() == CarPoolMode.CATEGORY_POOL && carId != null) {
+            return new SaveResult(false, "Choose a category pool entry together with its frozen member car.", id, matchdayId);
+        }
 		var track = trackId != null ? trackRepository.findById(trackId).orElse(null) : null;
 		var car = carId != null ? carRepository.findById(carId).orElse(null) : null;
 
