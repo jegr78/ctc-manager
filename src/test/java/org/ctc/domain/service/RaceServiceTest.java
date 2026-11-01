@@ -39,6 +39,37 @@ class RaceServiceTest {
 
 
     @Test
+    void givenSavedPoolEntry_whenLegacySaveClearsCar_thenRejectWithoutChangingTheSelection() {
+        // given
+        var matchday = createMatchday();
+        matchday.getSeason().setCarPoolMode(CarPoolMode.CATEGORY_POOL);
+        var home = createTeam("HOME", "Home");
+        var away = createTeam("AWAY", "Away");
+        var car = new Car("Fixture", "Selected member");
+        car.setId(UUID.randomUUID());
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(new Match(matchday, home, away));
+        race.setCar(car);
+        var entry = new SeasonCarPoolEntry();
+        race.setCarPoolEntry(entry);
+        when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
+        when(teamRepository.findById(home.getId())).thenReturn(Optional.of(home));
+        when(teamRepository.findById(away.getId())).thenReturn(Optional.of(away));
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        // when
+        var result = service.saveRace(race.getId(), matchday.getId(), home.getId(), away.getId(), null, null, null,
+                null, null, null, null, null, null, 1, null, null, null, null);
+        // then
+        assertThat(result.success()).isFalse();
+        assertThat(result.message()).contains("category pool entry");
+        assertThat(race.getCar()).isSameAs(car);
+        assertThat(race.getCarPoolEntry()).isSameAs(entry);
+        verify(raceRepository, never()).save(any());
+    }
+
+    @Test
     void givenCategorySeason_whenLegacyCarSelectionIsSubmitted_thenRejectBeforeAnyMutation() {
         // given
         var matchday = createMatchday();
