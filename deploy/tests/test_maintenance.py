@@ -174,11 +174,13 @@ class MaintenanceTest(unittest.TestCase):
 
     def test_attempt_is_incomplete_before_capture_so_interruptions_cannot_look_green(self):
         self.evidence([])
+        stages=[]
         def interrupted(*args):
-            self.assertNotEqual('completed',maintenance.evidence(self.root)['lastAttempt']['stage'])
+            stages.append(maintenance.evidence(self.root)['lastAttempt']['stage'])
             raise KeyboardInterrupt()
         with self.assertRaises(KeyboardInterrupt):
             maintenance.run_backup(self.runtime,self.units,self.remote,capture_unit=interrupted,alert=self.alerts.append,now=self.now)
+        self.assertNotEqual(['completed'],stages)
         self.assertIn('last-attempt-failed',maintenance.freshness(maintenance.evidence(self.root),self.now))
 
     def test_missing_source_identity_refuses_before_capture(self):
