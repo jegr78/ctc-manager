@@ -291,3 +291,38 @@ class DispatchTest(WorkflowTest):
         with self.assertRaisesRegex(ValueError, 'differs from the approved snapshot'):
             self.publisher.deployment(self.state)
         self.publisher.github.api.assert_not_called()
+
+
+class BoundaryGuardTest(SnapshotTest):
+    def test_manifest_hash_is_checked_even_when_all_files_are_valid(self):
+        archive = self.archive()
+        self.request['manifestSha256'] = '0' * 64
+        with self.assertRaises(ValueError):
+            publication.validate_snapshot(archive, self.request)
+
+    def test_approved_private_or_traversing_paths_are_refused(self):
+        for name in ['../outside.html', '/outside.html', 'nested/../outside.html', '.private.html', 'assets/.private.html', 'nested\\outside.html']:
+            fixture = SnapshotTest()
+            fixture.setUp()
+            fixture.files[name] = b'private'
+            fixture.manifest['files'][name] = dict(bytes=7, sha256=hashlib.sha256(b'private').hexdigest())
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                publication.validate_snapshot(fixture.archive(), fixture.request)
+
+    def test_aggregate_byte_limit_is_enforced(self):
+        from unittest.mock import patch
+        archive = self.archive()
+        with patch.object(publication, 'MAX_SITE', 4), self.assertRaises(ValueError):
+            publication.validate_snapshot(archive, self.request)
+
+    def test_pull_request_binding_rejects_head_base_and_repository_changes(self):
+        state = dict(headSha='a' * 40, branch='site/test')
+        for field, value in [('sha', 'b' * 40), ('ref', 'other'), ('repository', 'other/repo')]:
+            pr = dict(head=dict(sha='a' * 40, ref='site/test', repo=dict(full_name=publication.REPOSITORY)),
+                      base=dict(ref='master', repo=dict(full_name=publication.REPOSITORY)))
+            if field == 'repository':
+                pr['base']['repo']['full_name'] = value
+            else:
+                pr['head'][field] = value
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                publication.Publisher.validate_pr(pr, state)
