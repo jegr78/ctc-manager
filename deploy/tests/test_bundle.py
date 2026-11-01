@@ -136,6 +136,9 @@ class BundleTest(unittest.TestCase):
         with tarfile.open(source) as bundle:
             content={m.name:bundle.extractfile(m).read() for m in bundle}
         manifest=json.loads(content[prefix+'manifest.json'])
+        for name in ['migrate-from-mac.sh', 'lib/migration.py', 'guides/migration.md']:
+            content.pop(prefix+name, None)
+            manifest['files'].pop(name, None)
         for name in ['systemd/ctc-manager-backup-check.service','systemd/ctc-manager-backup-check.timer',
                      'systemd/ctc-manager-backup-alert@.service']:
             content[prefix+name]=b'legacy unit fixture\n'
@@ -148,6 +151,33 @@ class BundleTest(unittest.TestCase):
                 bundle.addfile(entry,io.BytesIO(value))
         result=self.run_bundle('verify',archive)
         self.assertEqual(0,result.returncode,result.stderr)
+
+    def test_migration_launcher_and_guide_are_packaged_with_executable_entrypoint(self):
+        self.assertEqual(0, self.create().returncode)
+        with tarfile.open(self.output/'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
+            prefix = 'ctc-manager-deployment-1.21.0/'
+            for name in ['migrate-from-mac.sh', 'lib/migration.py', 'guides/migration.md']:
+                self.assertIn(prefix+name, bundle.getnames())
+            self.assertTrue(bundle.getmember(prefix+'migrate-from-mac.sh').mode & 0o100)
+
+    def test_previous_29_file_local_backup_inventory_still_verifies(self):
+        self.assertEqual(0, self.create().returncode)
+        prefix = 'ctc-manager-deployment-1.21.0/'
+        with tarfile.open(self.output/'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
+            content = {member.name: bundle.extractfile(member).read() for member in bundle}
+        manifest = json.loads(content[prefix+'manifest.json'])
+        for name in ['migrate-from-mac.sh', 'lib/migration.py', 'guides/migration.md']:
+            content.pop(prefix+name, None)
+            manifest['files'].pop(name, None)
+        content[prefix+'manifest.json'] = json.dumps(manifest).encode()
+        archive = self.output/'legacy-local-backups.tar.gz'
+        with tarfile.open(archive, 'w:gz') as bundle:
+            for name, value in content.items():
+                entry = tarfile.TarInfo(name)
+                entry.size = len(value)
+                bundle.addfile(entry, io.BytesIO(value))
+        result = self.run_bundle('verify', archive)
+        self.assertEqual(0, result.returncode, result.stderr)
 
     def test_host_setup_and_guide_are_packaged(self):
         self.assertEqual(0,self.create().returncode)

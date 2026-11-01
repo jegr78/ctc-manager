@@ -12,7 +12,7 @@ import uuid
 from config import atomic_json, private_path
 from recovery import (NativeRuntime, admit_recovery_image, capture, flush_directory,
                       installed_release, read_json, restore_check, sha256)
-from release import MAX_ARCHIVE, verify, version
+from release import EXECUTABLES, MAX_ARCHIVE, verify, version
 
 REPOSITORY = 'jegr78/ctc-manager'
 MIN_FREE = 3 * 1024 ** 3
@@ -142,7 +142,7 @@ def stage_release(runtime, selected, provider=None):
                     output.write(archive.extractfile(member).read())
                     output.flush()
                     os.fsync(output.fileno())
-                path.chmod(0o700 if path.name in ['ctc-manager', 'setup-host.sh'] else 0o600)
+                path.chmod(0o700 if path.name in EXECUTABLES else 0o600)
         if installed_release(extracted) != manifest:
             raise ValueError('extracted release identity differs')
         compatibility(runtime, extracted, manifest)

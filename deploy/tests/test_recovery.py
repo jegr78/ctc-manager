@@ -603,6 +603,26 @@ class LiveRecoveryActivationTest(unittest.TestCase):
         self.assertNotIn('--volumes', str(self.runtime.compose.call_args_list))
         self.assertEqual(1, self.runtime.stop_app.call_count)
 
+    def test_activation_boundary_is_recorded_before_host_ports_can_open(self):
+        from unittest.mock import Mock, patch
+        boundary = Mock()
+        def compose(arguments):
+            if arguments[0] == 'up':
+                boundary.assert_called_once_with()
+            return b'active-app'
+        self.runtime.compose.side_effect = compose
+        with patch('recovery.restore_check', return_value={'run': 'proven'}), patch('live.RecoveryStorage', return_value=PreparedStorage()):
+            recovery.restore(self.runtime, self.fixture.unit, self.confirmation, before_activation=boundary)
+        boundary.assert_called_once_with()
+
+    def test_failed_boundary_receipt_never_opens_target_host_ports(self):
+        from unittest.mock import Mock, patch
+        boundary = Mock(side_effect=OSError('authority receipt not durable'))
+        with patch('recovery.restore_check', return_value={'run': 'proven'}), patch('live.RecoveryStorage', return_value=PreparedStorage()):
+            with self.assertRaisesRegex(OSError, 'authority receipt not durable'):
+                recovery.restore(self.runtime, self.fixture.unit, self.confirmation, before_activation=boundary)
+        self.assertFalse(any(call.args[0][0] == 'up' for call in self.runtime.compose.call_args_list))
+
     def test_restore_of_older_unit_selects_matching_trusted_deployment_pointer(self):
         from unittest.mock import patch
         with patch('recovery.restore_check', return_value={'run': 'proven'}), patch('live.RecoveryStorage', return_value=PreparedStorage()):

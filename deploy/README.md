@@ -90,3 +90,9 @@ record the recovery path and retain the pre-update unit.
 The [backup runbook](guides/backups.md) covers local `maintenance`, manual `doctor` and
 `prune --dry-run`. Keep two daily stands and one monthly stand. One user timer starts the backup;
 errors remain in its local journal. No replication, alert hook or external service is required.
+
+## Native Mac cutover
+
+Use [migration.md](guides/migration.md) for source export, isolated rehearsal and the initial real-data cutover.
+`migrate-from-mac.sh` reuses the installation lock and complete recovery tools. It records the point
+before target HTTP exposure after which recovery must preserve new target writes. It adds no service.

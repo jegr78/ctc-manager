@@ -268,3 +268,17 @@ backup of the active image exists. Continue the real Mac migration after local a
 | Two daily and one monthly state | retention plan | exact counts and Berlin month boundary | unknown/corrupt/foreign units and failed operation refuse deletion | dry run and protected update unit |
 | Manual status and one timer | doctor/systemd backup pair | fresh local proof and persistent daily schedule | stale proof, missing mount and competing lock | actual timer invocation and failed service log |
 | Published bundle compatibility | release inventory | current29 and previous32 inventory | unknown or mixed archive rejected | genuine previous source/new controller update |
+
+## native Mac migration
+
+The initial cutover reuses the complete recovery tools and requires the empty paused qualification installation. Source export preserves native provenance separately from the supported migrated unit. No migration daemon or account system is added.
+
+| Requirement | Production path | Positive test | Refusal and runtime evidence |
+|---|---|---|---|
+| Supported frozen source | Native exporter and existing global observer | Native 13.0 / schema 6, literal environment overlay | Unsupported schema, wrong paths, missing secrets, hidden or active writers and enabled events fail closed; actual existing observer verified without grants |
+| Complete sealed transfer | SQL, normalized file archive and original private configuration | Exact source manifest and artifact hashes | Changed payload, unknown entries and links refused before target containers start |
+| Target migration | Existing isolated Probe with a genuine release | Original-column projections and exact files, actual Flyway 6 to 21 | Internal network, no host ports, outbound disabled; source and live target unchanged |
+| Supported full recovery | Migrated unit and existing restore-check | Real authentication, credentials and team-card rendering | Exact source/unit proof required; source app version remains unknown when unrecorded |
+| Single writer | Authority receipt and activation boundary in full restore | Paused target with original data, then separate backup and acceptance | Conflicting authority and existing real target refused; before-write failure permits unchanged source, after-write failure requires complete reverse migration |
+
+Actual preparation restored the native data into 31 target tables and independently restored a later synthetic team write back onto the Mac. These isolated checks do not mark the production cutover complete.
