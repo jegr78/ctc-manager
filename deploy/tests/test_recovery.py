@@ -544,12 +544,17 @@ class LiveRecoveryActivationTest(unittest.TestCase):
         self.addCleanup(fixture.temp.cleanup)
         self.fixture = fixture
         root = fixture.unit.parent
-        for name in ['config', 'secrets', 'state']:
+        for name in ['config', 'secrets', 'state', 'releases']:
             (root / name).mkdir(mode=0o700)
         config = json.loads((fixture.unit / 'installation.json').read_text())
         config.update(storageGeneration='active', dockerHost='unix:///fixture/docker.sock', outboundPaused=False)
         self.original = dict(config)
         self.runtime = SimpleNamespace(root=root, config=config, stop_app=Mock(), preflight=Mock(), compose=Mock(return_value=b'active-app'))
+        self.runtime.deploy_root = root / 'releases' / fixture.manifest['releaseVersion']
+        self.runtime.deploy_root.mkdir(mode=0o700)
+        newer = root / 'releases/9.0.0'
+        newer.mkdir(mode=0o700)
+        (root / 'current').symlink_to(newer)
         self.runtime.docker = Mock(side_effect=lambda args: b'' if args[:2] == ['volume', 'ls'] else
                                    json.dumps([{'Id': 'sha256:' + 'a' * 64, 'Config': {'Labels': {'org.ctc.recovery.version': '1'}}}]).encode())
         self.confirmation = 'ctc-manager:' + config['installationId'] + ':recovery-qualified'
@@ -597,6 +602,14 @@ class LiveRecoveryActivationTest(unittest.TestCase):
         self.assertEqual((self.fixture.unit / 'google.json').read_bytes(), Path(self.runtime.config['googleCredentialsFile']).read_bytes())
         self.assertNotIn('--volumes', str(self.runtime.compose.call_args_list))
         self.assertEqual(1, self.runtime.stop_app.call_count)
+
+    def test_restore_of_older_unit_selects_matching_trusted_deployment_pointer(self):
+        from unittest.mock import patch
+        with patch('recovery.restore_check', return_value={'run': 'proven'}), patch('live.RecoveryStorage', return_value=PreparedStorage()):
+            result = recovery.restore(self.runtime, self.fixture.unit, self.confirmation)
+        self.assertEqual(self.runtime.deploy_root, (self.runtime.root / 'current').resolve())
+        self.assertEqual(str(self.runtime.deploy_root), result['releaseDirectory'])
+        self.assertEqual(str(self.runtime.root / 'releases/9.0.0'), result['previousReleaseDirectory'])
 
     def test_linked_secret_parent_cannot_create_a_directory_outside_target(self):
         from unittest.mock import patch

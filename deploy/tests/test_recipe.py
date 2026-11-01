@@ -70,6 +70,39 @@ elif 'ps' in sys.argv: print('[]')
     def run_cli(self, command='doctor'):
         return subprocess.run(['bash', str(LAUNCHER), '--directory', str(self.install)] + ([command] if isinstance(command, str) else command), env=self.env, capture_output=True, text=True)
 
+    def test_invalid_update_version_uses_update_validation_without_mutating_compose(self):
+        for operation in ['update-check', 'update']:
+            result = self.run_cli([operation, '--release', 'latest'])
+            self.assertNotEqual(0, result.returncode)
+            self.assertNotIn('unknown operation', result.stderr)
+            self.assertIn('released version', result.stderr)
+            self.assertNotIn('compose', self.calls.read_text())
+            self.assertFalse((self.install / '.ctc-manager.lock').exists())
+
+    def test_concurrent_update_refuses_before_candidate_work(self):
+        lock = self.install / '.ctc-manager.lock'
+        lock.mkdir(mode=0o700)
+        (lock / 'owner').write_text('existing-owner')
+        result = self.run_cli(['update', '--release', '1.24.0'])
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn('lock exists', result.stderr)
+        self.assertEqual('existing-owner', (lock / 'owner').read_text())
+        self.assertNotIn('compose', self.calls.read_text())
+
+    def test_terminated_update_child_retains_lock_and_interrupted_journal(self):
+        import sys
+        wrapper = self.bin / 'python3'
+        wrapper.write_text('#!' + sys.executable + '\nimport os,sys\n'
+                           'if sys.argv[1].endswith("/lib/update.py"): sys.exit(143)\n'
+                           'os.execv(' + repr(sys.executable) + ', [' + repr(sys.executable) + '] + sys.argv[1:])\n')
+        wrapper.chmod(0o700)
+        result = self.run_cli(['update', '--release', '1.24.0'])
+        self.assertEqual(143, result.returncode, result.stderr)
+        self.assertTrue((self.install / '.ctc-manager.lock/owner').exists())
+        journal = json.loads((self.install / 'state/operation.json').read_text())
+        self.assertEqual({'operation': 'update', 'stage': 'interrupted'},
+                         {key: journal[key] for key in ['operation', 'stage']})
+
     def test_recovery_generation_selects_separate_storage_and_pauses_outbound(self):
         self.config.update(storageGeneration='recovery-20261101', outboundPaused=True)
         self.write_config()

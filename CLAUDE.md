@@ -236,6 +236,11 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
   application owner; the extraction helper retains only `CHOWN` capability.
 * Graphics use preinstalled Playwright browsers. `SandboxedHtmlRenderer` disables automatic browser
   downloads before creating the driver, in addition to its existing page-level network restrictions.
+* `deploy/lib/update.py` validates exact released candidates and their upgrade contract. Keep the
+  source app continuously stopped from capture through restore-check and activation. Preserve the
+  selected volume generation and private secret paths. Once activation might migrate the schema,
+  fail paused/stopped with a complete recovery path. Never auto-start the old image. Run
+  `bash deploy/tests/update.sh` and qualify migration/failure paths with real isolated MariaDB.
 
 ## References
 

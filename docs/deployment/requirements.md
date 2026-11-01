@@ -237,3 +237,17 @@ The patched controller passed the genuine v1.23.0 unit in isolation with credent
 outbound integration disabled, no host ports and a local Chromium graphic. This was explicitly an
 unreleased host-controller qualification. Public CLI and live-recovery acceptance remain pending
 the corrected released bundle; the original Mac installation remains untouched.
+
+
+## exact release updates, issue 298
+
+| Requirement | Production path | Positive test | Failure test | Runtime evidence |
+| --- | --- | --- | --- | --- |
+| Select one released, unchanged candidate | update release staging and upgrade contract | exact release/version/hash/notes | absent assets, changed inventory, downgrade, DB major, disk/pull failure | published bundle and image selection |
+| Freeze all accepted writes through activation | update coordinator with hold-stopped capture | ordered stop/capture/probe/activate trace | capture/probe error resumes unchanged source only | real MariaDB fixture writes and schema migration |
+| Preserve recovery after possible migration | private update journal and protected unit receipt | exact recovery path and identities | unhealthy candidate remains paused/stopped, repeated invocation refuses | failed migrated fixture plus independent-storage restore |
+| Share installation ownership and locking | launcher update routing | correct daemon/config, atomic selection | concurrent command, interrupted child/parent | public CLI and private receipt inspection |
+| Keep source storage and credentials | immutable installation fields | same volume generation and secret paths | UID change, source identity drift | records/files/credentials after update |
+
+Implementation follows the canonical specification and task sequence in #294/#298.
+The first capable recovery release must pass #297 runtime acceptance before update finalization.

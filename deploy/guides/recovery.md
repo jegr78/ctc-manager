@@ -30,12 +30,13 @@ restart. Only the update coordinator may use it and must reconcile its abort/act
 
 ## isolated restore check
 
-Use the trusted installed release whose manifest matches `release.json` inside the unit. Do not
-execute any file from the unit. Make the exact recorded image digests available in this user's
-rootless Docker daemon before checking.
+Use trusted management tools with the installed source release whose manifest matches `release.json`
+inside the unit. The current launcher selects and verifies that installed release independently of
+the currently running version. Do not execute any file from the unit. Make the exact recorded image
+digests available in this user's rootless Docker daemon before checking.
 
 ```sh
-/srv/ctc-manager/releases/<version>/ctc-manager --directory /srv/ctc-manager \
+/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager \
   restore-check --recovery /mnt/backup/ctc-manager/units/<unit>
 ```
 
@@ -71,7 +72,7 @@ Read the installation ID from `config/installation.json`. Choose an unused gener
 with `recovery-`. The confirmation binds that installation and the independent target storage.
 
 ```sh
-/srv/ctc-manager/releases/<version>/ctc-manager --directory /srv/ctc-manager \
+/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager \
   restore --recovery /mnt/backup/ctc-manager/units/<unit> \
   --confirm ctc-manager:<installation-id>:recovery-<chosen-name>
 ```
@@ -80,6 +81,8 @@ The command requires a successful isolated check, restores into fresh volumes an
 before stopping the active app. It preserves the previous volumes and private configuration under
 `state/before-<generation>.json`. It activates the selected source images with fresh private secret
 paths and integrations paused. It does not put an old application onto a migrated active database.
+It also points `current` at the matching installed source release, preserving the former release
+path in the private recovery receipt.
 Inspect `state/live-recovery.json` if activation fails. Preserve both storage generations until the
 operator has selected and verified the authoritative one.
 

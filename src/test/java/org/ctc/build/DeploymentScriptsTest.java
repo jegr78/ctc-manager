@@ -11,7 +11,7 @@ class DeploymentScriptsTest {
 
     @Test
     void whenDeploymentScriptsRun_thenRecipeAndReleaseContractsPass() throws Exception {
-        for (String script : new String[]{"recipe.sh", "release-bundle.sh", "host-setup.sh", "recovery.sh"}) {
+        for (String script : new String[]{"recipe.sh", "release-bundle.sh", "host-setup.sh", "recovery.sh", "update.sh"}) {
             Path output = Files.createTempFile("ctc-deployment-test-", ".log");
             try {
                 Process process = new ProcessBuilder("bash", "deploy/tests/" + script)
