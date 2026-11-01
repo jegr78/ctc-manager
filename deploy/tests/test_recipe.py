@@ -112,7 +112,20 @@ elif 'ps' in sys.argv: print('[]')
         wrapper.write_text('#!' + sys.executable + '\nimport os,signal,sys\n'
                            'if sys.argv[1].endswith("/lib/recovery.py"):\n'
                            ' os.kill(os.getppid(),signal.SIGTERM)\n'
-                           ' sys.exit(143)\n'
+                           ' sys.exit(0)\n'
+                           'os.execv(' + repr(sys.executable) + ', [' + repr(sys.executable) + '] + sys.argv[1:])\n')
+        wrapper.chmod(0o700)
+        result = self.run_cli(['backup', '--destination', str(self.base)])
+        self.assertEqual(143, result.returncode, result.stderr)
+        self.assertTrue((self.install / '.ctc-manager.lock/owner').exists())
+        journal = json.loads((self.install / 'state/operation.json').read_text())
+        self.assertEqual('interrupted', journal['stage'])
+
+    def test_signalled_recovery_child_leaves_lock_and_interrupted_journal(self):
+        import sys
+        wrapper = self.bin / 'python3'
+        wrapper.write_text('#!' + sys.executable + '\nimport os,sys\n'
+                           'if sys.argv[1].endswith("/lib/recovery.py"): sys.exit(143)\n'
                            'os.execv(' + repr(sys.executable) + ', [' + repr(sys.executable) + '] + sys.argv[1:])\n')
         wrapper.chmod(0o700)
         result = self.run_cli(['backup', '--destination', str(self.base)])
