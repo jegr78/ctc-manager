@@ -46,7 +46,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  *   <li>v2 manifest without the Discord JSON entries — refused with {@code DATA_MISMATCH}.</li>
  *   <li>v2 manifest with the Discord tables but without {@code site_slugs} — accepted, and
  *       the slug table stays empty.</li>
- *   <li>v4 (and higher) manifests — refused with {@code SCHEMA_MISMATCH}.</li>
+ *   <li>v5 (and higher) manifests — refused with {@code SCHEMA_MISMATCH}.</li>
  *   <li>v0 (and lower) manifests — refused with {@code SCHEMA_MISMATCH}.</li>
  * </ul>
  */
@@ -158,13 +158,15 @@ class BackupLenientV1AcceptanceIT {
     }
 
     @Test
-    void givenV4ManifestZip_whenStage_thenRefusedWithSchemaMismatch() throws Exception {
+    void givenV5ManifestZip_whenStage_thenRefusedWithSchemaMismatch() throws Exception {
         // given
-        MockMultipartFile file = wrapAsMultipart(buildSyntheticZip(4, V1_TABLES_24));
+        MockMultipartFile file = wrapAsMultipart(buildSyntheticZip(5, V1_TABLES_24));
 
         // when / then
         assertThatThrownBy(() -> backupImportService.stage(file))
                 .isInstanceOf(BackupArchiveException.class)
+                .isInstanceOfSatisfying(BackupArchiveException.class, ex -> assertThat(ex.reason())
+                        .isEqualTo(BackupArchiveException.Reason.SCHEMA_MISMATCH))
                 .hasMessageContaining("not supported");
     }
 

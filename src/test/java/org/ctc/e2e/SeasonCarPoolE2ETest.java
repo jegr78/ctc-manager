@@ -7,6 +7,7 @@ import org.ctc.TestHelper;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.CarRepository;
 import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.TeamRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -21,6 +22,7 @@ class SeasonCarPoolE2ETest extends PlaywrightConfig {
     @Autowired TestHelper helper;
     @Autowired CarRepository cars;
     @Autowired SeasonRepository seasons;
+    @Autowired TeamRepository teams;
     @Autowired TransactionTemplate tx;
 
     @AfterEach
@@ -33,6 +35,7 @@ class SeasonCarPoolE2ETest extends PlaywrightConfig {
         context = browser.newContext(new Browser.NewContextOptions().setJavaScriptEnabled(false).setViewportSize(width, 1000));
         page = context.newPage();
         var season = tx.execute(status -> helper.createSeason("NativePool " + UUID.randomUUID().toString().substring(0, 8)));
+        var longTeam = tx.execute(status -> teams.saveAndFlush(new Team("Test pool " + "W".repeat(110), "T-" + UUID.randomUUID().toString().substring(0, 8))));
         var ids = tx.execute(status -> {
             var mr = new Car("Test Pool Browser", "MR " + UUID.randomUUID());
             mr.setCategory(CarCategory.GR_3);
@@ -68,7 +71,8 @@ class SeasonCarPoolE2ETest extends PlaywrightConfig {
             });
             page.reload();
             assertThat(page.locator("#pool-preview summary").first()).containsText("2 eligible car(s)");
-            assertTrue((Boolean) page.evaluate("document.documentElement.scrollWidth <= window.innerWidth"));
+            assertTrue((Boolean) page.evaluate("document.documentElement.scrollWidth <= window.innerWidth"),
+                    () -> page.evaluate("JSON.stringify([...document.querySelectorAll('body *')].filter(e => e.getBoundingClientRect().right > innerWidth && e.getBoundingClientRect().width > 0).map(e => ({tag:e.tagName,id:e.id,cls:e.className,right:e.getBoundingClientRect().right})))").toString());
             page.locator("#reopen-pool").click();
             assertThat(page.locator("#pool-entry-editor")).isVisible();
             assertThat(page.locator("#carPool")).containsText("Draft category pool");
@@ -86,6 +90,7 @@ class SeasonCarPoolE2ETest extends PlaywrightConfig {
             tx.executeWithoutResult(status -> {
                 helper.deleteSeasonCascade(seasons.findById(season.getId()).orElseThrow());
                 cars.deleteAllById(ids);
+                teams.deleteById(longTeam.getId());
             });
         }
     }

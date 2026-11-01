@@ -14,6 +14,7 @@ can preserve its race identity. It does not infer entries for historical races.
 | Frozen definitions remain stable | saveEntry/freeze/reopen | Unused explicit reopen | Frozen edit/remove, used reopen and mode switch | Unit tests, persistence IT and browser |
 | Preserve fixed mode | Season defaults and fixed assignment endpoints | Existing fixed pool URLs and draft races | Fixed assignment into category mode, switch with configured race | Existing regression tests and focused tests |
 | Serialize writes | SeasonRepository database lock | Fresh locked season state | Concurrent/stale-context configuration cannot bypass freeze | Transactional persistence IT |
+| Connection-independent SQL checks | V24 constraints | Valid writes after migration connection closes | Invalid modes, states, categories and drivetrains | JDBC migration test and repository slices |
 | Protect catalog references | CarService delete | Unreferenced car deletion | Snapshot member deletion | Service test and FK IT |
 | Native accessible editor | SeasonController and pool DTOs/template | Add/remove clauses and preview, desktop/mobile/no JS | Binding/domain errors retain submitted values/options | Controller tests, Playwright and visual inspection |
 | Exact backup and legacy defaults | Backup schema, MixIns, restorers and preflight | Exact frozen membership, supported older fixed-only archive | Missing declared files, foreign/duplicate/invalid references | Backup unit and real archive IT |
@@ -102,6 +103,19 @@ configuration.
 - season-pools-runtime-falsification.json: 30 proved guards.
   lock-pending-flush, lock-refresh, lock-database-write, freeze-transaction, unrelated-dynamic-update, season-details-lock, form-index-limit, form-add-limit, form-remove-range, form-unknown-action, form-reindex-errors, form-numeric-year-field, restore-execute-version, sql-fk_car_pool_entry_season, sql-fk_car_pool_member_entry, sql-fk_car_pool_member_car, sql-fk_car_pool_clause_entry, sql-fk_race_car_pool_entry, sql-chk_season_car_pool_mode, sql-chk_season_car_pool_state, sql-chk_car_pool_clause_category, sql-chk_car_pool_clause_drivetrain, sql-member-uniqueness, sql-clause-year-lower, sql-clause-year-upper, fixed-add-lock-call, fixed-remove-lock-call, saved-race-entry-guard, category-race-car-guard, empty-category-draft.
 
-The independent security pass reported all three findings fixed on `22f97e8f`. Business and
-persistence code remained unchanged afterward. The later native form-anchor correction was
-checked separately. The final clean build and CI validate the rebased, committed delivery head.
+The independent security pass reported all three findings fixed on `22f97e8f`. The later native
+form-anchor correction was checked separately. A subsequent bounded review also confirmed that
+the equivalent CASE constraints and scoped select-width rule introduced no security findings.
+
+## Full-build regression corrections
+
+The first complete build exposed obsolete schema expectations in two backup test suites, an H2
+constraint failure after the migration connection closed, and mobile overflow from long team
+options. A standalone JDBC probe and a new migration regression reproduced the closed-connection
+failure. V24 now uses equivalent CASE checks. The repository slices then passed all nine tests.
+
+A long-option fixture reproduced overflow at both viewport widths and identified the season team
+select. Scoped width constraints retain the native select within the season workspace. Desktop
+1440×1050 and mobile 390×844 screenshots were inspected again; scroll width equals viewport width.
+The focused correction checks passed one migration test, 16 integration tests and six browser
+tests, including the schema-4 import through confirmation and execution.

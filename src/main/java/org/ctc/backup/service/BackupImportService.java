@@ -127,7 +127,8 @@ public class BackupImportService {
      * {@code DiscordPost} entries are absent and stay empty after import — the
      * {@code DiscordGlobalConfigService.getOrInitialize()} fallback self-heals on first
      * page-load). v1 and v2 backups carry no {@code site_slugs}; the site generation stores
-     * fresh slugs after import. v4+ backups are refused with {@link Reason#SCHEMA_MISMATCH}.
+     * fresh slugs after import. Versions 1 through 3 may omit pool tables. Versions outside
+     * the supported set are refused with {@link Reason#SCHEMA_MISMATCH}.
      *
      * <p>Declared as a {@link java.util.LinkedHashSet} so the iteration order is stable
      * (ascending integer order) — used directly inside the error message via
