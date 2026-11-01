@@ -234,3 +234,5 @@ Renovate proposes current stable dependency updates, including majors, without a
 approval gate or PR throttling. Patch automerge retains required CI checks. CodeQL runs daily
 and reports unresolved HIGH/CRITICAL findings as failures on scheduled/manual scans. See
 [dependency update policy](docs/security/dependency-updates.md) for alert coverage and operations.
+The MariaDB JDBC connector has an explicit version so Renovate can update it independently
+of the Spring Boot BOM. A runtime dependency check rejects its known vulnerable versions.

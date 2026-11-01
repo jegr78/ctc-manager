@@ -217,6 +217,10 @@ Before ANY subagent dispatch in a GSD workflow (`gsd-planner`, `gsd-executor`, `
 
 The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always read) and explicit prompt content reach them. Memory entries that have not yet been promoted to CLAUDE.md must be hand-carried by the orchestrator on every dispatch.
 
+* Keep `mariadb.version` and the direct connector version reference in `pom.xml` so Renovate can
+  update runtime driver security fixes independently of Spring Boot. The runtime artifact regression
+  check accepts later majors and rejects the known vulnerable connector versions.
+
 ## recovery integration contract
 
 * `OutboundPolicy` guards Discord transport, Google SDK access, GT7/YouTube reads and remote file

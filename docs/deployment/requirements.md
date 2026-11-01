@@ -207,3 +207,12 @@ Targeted security/script/renderer units and all 14 recovery ITs pass with the pa
 the subset lifecycle still stops only at the unchanged global coverage threshold. The packaged
 JAR contains mariadb-java-client-3.5.11.jar. Native qualification and canonical verification are
 repeated for the changed runtime dependency before rollout.
+
+The patched-driver native run09 passed the same complete recovery, credential, graphic and
+failed-creation cleanup checks against MariaDB 13 using candidate image
+sha256:ac6f67e6c1110cd1dfec4aeb63db53e3fccc393aed4b7b3d5f2bb6083145f2f3.
+The vulnerable 3.5.10 dependency was independently reintroduced after the correct commit; its
+runtime-version test failed at the intended assertion and the exact snapshot was restored.
+Native Renovate44.198.3 under verified official Node24.22.2 resolves the new property to3.5.11 and
+offers stable4.0.0 as a major update. No upper version constraint or major approval gate was added.
+The updated runtime dependency requires fresh full verification and CI before the PR becomes ready.

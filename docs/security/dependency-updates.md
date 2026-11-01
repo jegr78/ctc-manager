@@ -57,3 +57,15 @@ A read-only local-platform lookup using a real MariaDB12 fixture proposed the ma
 to13 with the expected digest and no pending dashboard gate. It created no Git branch or PR.
 Independent code and security reviews of the final production changes found no material
 findings. Targeted Maven gate/deployment/release tests passed after upstream integration.
+
+## independently tracked JDBC driver
+
+Spring Boot 4.1.2 manages Connector/J 3.5.10. The enriched runtime graph exposed four advisories
+fixed by [Connector/J 3.5.11](https://github.com/mariadb-corporation/mariadb-connector-j/releases/tag/3.5.11).
+The explicit `mariadb.version` property and direct dependency reference let Renovate maintain the
+connector independently of the parent BOM. The regression check reads the resolved artifact's own
+Maven metadata and accepts patched later minors and majors.
+
+A read-only native Renovate 44.198.3 lookup resolves the property to 3.5.11 and proposes the stable
+4.0.0 major update. The global major rule still requires ordinary CI/review and no dashboard gate.
+GitHub alert closure is verified after the updated master dependency snapshot is submitted.
