@@ -41,7 +41,11 @@ class CarMetadataConcurrencyIT {
         var writer = new TransactionTemplate(transactionManager);
         writer.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         String manufacturer = "Test_ConcurrentMetadata_" + UUID.randomUUID();
-        UUID id = tx.execute(status -> cars.saveAndFlush(new Car(manufacturer, "Test Car '20")).getId());
+        UUID id = tx.execute(status -> {
+            var car = new Car(manufacturer, "Test Car '20");
+            car.setGt7Id("car999998");
+            return cars.saveAndFlush(car).getId();
+        });
         var syncCompleted = new AtomicBoolean();
         Runnable sync = () -> writer.executeWithoutResult(status -> {
             jdbc.execute("SET LOCK_TIMEOUT 250");
@@ -78,6 +82,7 @@ class CarMetadataConcurrencyIT {
                 var saved = cars.findById(id).orElseThrow();
                 assertThat(saved.getModelYear() != null || saved.isModelYearOverride())
                         .as("a source year survives, or a deliberate clear is protected by an explicit override").isTrue();
+                assertThat(saved.getGt7Id()).isEqualTo("car999998");
                 assertThat(saved.getCategory()).isEqualTo(CarCategory.GR_4);
                 assertThat(saved.isCategoryOverride()).isTrue();
             });

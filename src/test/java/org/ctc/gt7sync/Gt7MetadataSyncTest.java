@@ -78,19 +78,26 @@ class Gt7MetadataSyncTest {
         assertThat(preview.warnings()).anyMatch(message -> message.contains("year"));
     }
 
-    @Test
-    void givenOnlyLegacyNameMatch_whenPreviewing_thenIdentityRequiresManualReview() throws Exception {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"", "car999"})
+    void givenOnlyNameMatch_whenPreviewingAndExecuting_thenIdentityRequiresManualReview(String previousId) throws Exception {
         // given
         when(cars.findAllByGt7Id("car3531")).thenReturn(List.of());
         when(cars.findAllByManufacturerAndName("Test", "Test Car '20")).thenReturn(List.of(car));
-        car.setGt7Id(null);
+        when(cars.findAllByGt7IdForUpdate("car3531")).thenReturn(List.of());
+        car.setGt7Id(previousId.isEmpty() ? null : previousId);
         // when
         var preview = service.fetchAndPreview();
+        var result = service.executeSync(List.of("car3531"), List.of(), List.of(), preview.previewId());
         // then
         assertThat(preview.cars().getFirst().status()).isEqualTo(Gt7SyncPreview.SyncStatus.AMBIGUOUS);
         assertThat(preview.getNewCarCount()).isZero();
         assertThat(preview.getMetadataUpdateCount()).isZero();
-        assertThat(car.getGt7Id()).isNull();
+        assertThat(car.getGt7Id()).isEqualTo(previousId.isEmpty() ? null : previousId);
+        assertThat(result.carsImported()).isZero();
+        assertThat(result.errors()).anyMatch(message -> message.contains("Identity"));
+        verify(cars, never()).save(any());
+        verifyNoInteractions(storage);
     }
     @Test
     void givenLocalManualChangeAfterPreview_whenExecuting_thenRequiresFreshReview() throws Exception {
@@ -134,6 +141,30 @@ class Gt7MetadataSyncTest {
         assertThat(result.carsUpdated()).isZero();
         assertThat(result.errors()).anyMatch(message -> message.contains("Identity"));
         verify(cars, never()).save(any());
+    }
+
+    @Test
+    void givenDuplicateLocalIdsWithoutNameMatch_whenPreviewingAndExecuting_thenRequiresIdentityReview() throws Exception {
+        // given
+        car.setName("First renamed car");
+        var duplicate = new Car("Test", "Second renamed car");
+        duplicate.setId(UUID.randomUUID());
+        duplicate.setGt7Id("car3531");
+        when(cars.findAllByGt7Id("car3531")).thenReturn(List.of(car, duplicate));
+        when(cars.findAllByGt7IdForUpdate("car3531")).thenReturn(List.of(car, duplicate));
+        // when
+        var preview = service.fetchAndPreview();
+        var result = service.executeSync(List.of("car3531"), List.of(), List.of(), preview.previewId());
+        // then
+        assertThat(preview.cars().getFirst().status()).isEqualTo(Gt7SyncPreview.SyncStatus.AMBIGUOUS);
+        assertThat(preview.getNewCarCount()).isZero();
+        assertThat(result.carsImported()).isZero();
+        assertThat(result.carsUpdated()).isZero();
+        assertThat(result.errors()).anyMatch(message -> message.contains("Identity"));
+        assertThat(car.getCategory()).isNull();
+        assertThat(duplicate.getCategory()).isNull();
+        verify(cars, never()).save(any());
+        verifyNoInteractions(storage);
     }
 
 }
