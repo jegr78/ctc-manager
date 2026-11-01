@@ -7,6 +7,28 @@ import static org.assertj.core.api.Assertions.*;
 
 class GtPlusCarYearSourceTest {
     @Test
+    void givenInvalidIdsAndOutOfRangeYears_whenParsing_thenOnlyCanonicalIdsAndFourDigitCandidatesRemain() throws Exception {
+        // given
+        String payload = "1:" + """
+                {"cars":[{"entity":"car","code":1,"year":2020},
+                  {"entity":"car","code":"2","year":2020},
+                  {"entity":"car","code":-3,"year":2020},
+                  {"entity":"car","code":2147483648,"year":2020},
+                  {"entity":"car","code":4,"year":99},
+                  {"entity":"car","code":5,"year":10000}]}
+                """.replace("\n", "");
+        // when
+        var candidates = GtPlusCarYearSource.parseFlight(payload);
+        // then
+        assertThat(candidates).containsOnlyKeys("car1", "car4", "car5");
+        assertThat(candidates.get("car1").year()).isEqualTo(2020);
+        for (String id : java.util.List.of("car4", "car5")) {
+            assertThat(candidates.get(id).year()).isNull();
+            assertThat(candidates.get(id).problem()).contains("four-digit");
+        }
+    }
+
+    @Test
     void givenOversizedSource_whenParsing_thenRejectsAtTheSizeBoundary() {
         // given
         String payload = "x".repeat(4 * 1024 * 1024);

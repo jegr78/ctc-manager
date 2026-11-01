@@ -25,13 +25,15 @@ Those are historical observations, not fixed expectations for a changing catalog
 
 Sources: https://www.gran-turismo.com/gb/gt7/carlist/ and https://gtplus.app/gt7/cars.
 
-## Workflow checklist
+## Pre-merge checklist checkpoint
+
+Delivery and tracker completion are recorded on [issue #274](https://github.com/jegr78/ctc-manager/issues/274) after merge.
 
 - [x] Audit scraper records, preview constructors, sync/save calls and backup fields.
 - [x] Observe failing parser, merge, preview and manual-form tests before implementation.
 - [x] Implement bounded source parsing, validation and field-level provenance.
-- [ ] Verify identities, manual overrides, selection state and preview consistency end to end.
-- [ ] Verify migration/restore and desktop/mobile/native form behavior.
+- [x] Verify identities, manual overrides, selection state and preview consistency end to end.
+- [x] Verify migration/restore and desktop/mobile/native form behavior.
 - [ ] Review code and security, fix findings and falsify new guards individually.
 - [ ] Run committed-head `clean verify -Pe2e`, wait for CI and merge.
 - [ ] Reconcile #274 and parent #273, update Wiki and remove the landed branch.
@@ -42,3 +44,18 @@ The parser was run against the saved real HTML and official bundle before UI
 integration: 583 stock candidates, all 580 official IDs matched, 454 candidate
 years. Engine-swap variants were excluded. Automated tests use reduced offline
 fixtures rather than this changing live response or hard-coded catalog totals.
+
+## Review and runtime evidence
+
+The independent security pass found an entity load before the car row lock in the
+manual save path. A two-transaction H2 regression reproduced a lost source year
+without an override. Loading and locking the car before the duplicate-name query
+fixes that interleaving; the regression and subsequent security review pass.
+
+Focused checks include a complete backup round trip, unchanged persisted
+season/race references, source and local-state preview invalidation, explicit
+unknown years, and selection retention over multiple pages. The native browser
+flow saved a manual 2020 year, cleared it with its override retained, then applied
+two existing-car metadata updates with zero new imports. Desktop 1440×1050 and
+mobile 390×844 views were inspected through playwright-cli. Screenshots remain
+in the ignored `.screenshots/` directory.
