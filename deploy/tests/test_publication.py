@@ -289,6 +289,7 @@ class DispatchTest(WorkflowTest):
     def test_changed_merged_tree_cannot_reach_pages_success_or_dispatch(self):
         self.state.update(stage='deploying', mergeSha='d' * 40, needsDispatch=True)
         self.publisher.github.git.return_value = 'e' * 40
+        self.publisher.github.api.side_effect = [dict(workflow_runs=[]), dict(workflow_run_id=42)]
         with self.assertRaisesRegex(ValueError, 'differs from the approved snapshot'):
             self.publisher.deployment(self.state)
         self.publisher.github.api.assert_not_called()
