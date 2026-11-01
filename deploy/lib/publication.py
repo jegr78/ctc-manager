@@ -11,6 +11,8 @@ import subprocess
 import tarfile
 import uuid
 
+from config import atomic_json
+
 REPOSITORY = 'jegr78/ctc-manager'
 REMOTE = 'https://github.com/' + REPOSITORY + '.git'
 PUBLIC_URL = 'https://jegr78.github.io/ctc-manager/'
@@ -104,16 +106,6 @@ def validate_snapshot(raw, request):
         raise ValueError('snapshot exceeds byte limit')
     return result
 
-
-def atomic_json(path, value):
-    from recovery import flush_directory
-    temporary = path.with_suffix('.writing')
-    with temporary.open('w', opener=lambda name, flags: os.open(name, flags, 0o600)) as output:
-        json.dump(value, output, sort_keys=True)
-        output.flush()
-        os.fsync(output.fileno())
-    os.replace(temporary, path)
-    flush_directory(path.parent)
 
 
 class GitHub:

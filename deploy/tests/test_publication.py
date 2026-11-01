@@ -328,3 +328,16 @@ class BoundaryGuardTest(SnapshotTest):
                 pr['head'][field] = value
             with self.subTest(field=field), self.assertRaises(ValueError):
                 publication.Publisher.validate_pr(pr, state)
+
+
+class DurableStateTest(unittest.TestCase):
+    def test_state_replacement_is_private_complete_and_leaves_no_partial_file(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            path = root / 'worker.json'
+            publication.atomic_json(path, dict(stage='preparing', id='first'))
+            publication.atomic_json(path, dict(stage='checking', id='second'))
+            self.assertEqual(json.loads(path.read_text()), dict(stage='checking', id='second'))
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            self.assertEqual([file.name for file in root.iterdir()], ['worker.json'])
