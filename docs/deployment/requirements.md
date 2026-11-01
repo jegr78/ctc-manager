@@ -251,3 +251,19 @@ the corrected released bundle; the original Mac installation remains untouched.
 
 Implementation follows the canonical specification and task sequence in #294/#298.
 The first capable recovery release must pass #297 runtime acceptance before update finalization.
+
+### scheduled recovery maintenance, #299
+
+| Requirement | Production path | Positive proof | Failure proof | Host acceptance |
+| --- | --- | --- | --- | --- |
+| Consistent scheduled local backup and isolated proof | maintenance coordinator and existing shared launcher lock | capture/proof/replication order and separate completion timestamps | capture/proof/replication failures persist safe stages and never prune | scheduled complete unit and restored graphic |
+| Encrypted copy outside this host | private restic configuration and exact repository/snapshot identity | JSON summary and exact path/tag validation | absent configuration, local backend, wrong repository or snapshot refuse | actual off-host retrieval and isolated restore |
+| Bounded retention without losing recovery states | verified unit scan and calendar bucket plan | daily14/weekly8/monthly12 union | corrupt/unknown/foreign/unreplicated/protected units and latest failed run prevent unsafe deletion | measured capacity and retained required units |
+| Visible failure and freshness | doctor evidence, private alert hook and user timers | separate local/remote/proof ages and successful hook | stale/missing/failed evidence, missed timer and hook failure return nonzero | selected alert route receives safe injected failure |
+| Private scheduling and cutover | user systemd units, current launcher and private umask | Berlin03:45 plus15minute jitter and Persistent | competing mutation preserves lock and surfaces failure | enable only after destination, key custody and alert route are provisioned |
+
+Reference courtside commit `6cc8c35f28fa7ff393828d5665d5b31c541f2465` supplies the private
+oneshot and persistent timer pattern. CTC keeps its separate rootless socket, lock and sealed-unit
+contract. The off-host destination and alert route are operator inputs and remain unprovisioned;
+local-only or a temporary test repository cannot satisfy deployment acceptance. No timer is enabled
+while the host still contains only qualification fixtures.

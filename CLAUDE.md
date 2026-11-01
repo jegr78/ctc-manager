@@ -396,3 +396,8 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 * Host setup defaults to read-only checks. Run `deploy/setup-host.sh --apply --backup-uuid UUID` from verified operator-owned source, never a CTC-writable helper as host root. Keep privileged native operations limited to the dedicated user/path roots, linger/user service and Serve 9443. Preserve every unrelated Serve/Funnel route.
 * Reject subordinate mappings that overlap other allocated ranges or actual host UIDs/GIDs, including numeric CTC owner entries. Keep host memory and expected backup UUID checks fail-closed.
 * Release inventories may grow, but verification must still accept complete supported earlier inventories and reject partial additions. Package host setup, its unit/helper and guide together.
+
+* Scheduled deployment maintenance uses the shared installation lock and complete recovery units.
+  Record local/proof/remote completion separately. Retention must keep unreplicated and protected
+  units and verify remote identity before deletion. Never enable timers or claim operational readiness
+  without the operator-selected off-host destination, external key custody and working failure alerts.

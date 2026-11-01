@@ -1,0 +1,11 @@
+[Unit]
+Description=Check CTC Manager backup freshness
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5m
+Persistent=true
+Unit=ctc-manager-backup-check.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=CTC Manager backup
+OnFailure=ctc-manager-backup-alert@%n.service
+
+[Service]
+Type=oneshot
+Environment=XDG_RUNTIME_DIR=%t
+ExecStart=/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager maintenance
+UMask=0077
+NoNewPrivileges=true
+TimeoutStartSec=2h
