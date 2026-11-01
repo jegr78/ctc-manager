@@ -89,7 +89,7 @@ section positioned below the mobile menu.
 
 ## Individual guard falsification
 
-All 107 individual experiments caused the intended assertion failure with no unexpected JUnit
+All 108 individual experiments caused the intended assertion failure with no unexpected JUnit
 errors. Each changed file was restored byte-for-byte from its recorded committed checkpoint.
 Source SHA-256 values from all manifests match the final production source after rebasing onto
 the current release base. The timestamp-based compiler mode was used only for statement-level
@@ -105,6 +105,9 @@ configuration.
 
 - season-pools-connection-layout-falsification.json: 9 proved guards.
   sql-cross-connection-car_pool_mode, sql-cross-connection-car_pool_state, sql-cross-connection-category, sql-cross-connection-drivetrain, native-select-width, metadata-cross-connection-category, metadata-valid-values-category, metadata-cross-connection-drivetrain, metadata-valid-values-drivetrain.
+
+- season-pools-label-wrap-falsification.json: 1 proved guard.
+  native-entry-label-wrap.
 
 The independent security pass reported all three findings fixed on `22f97e8f`. The later native
 form-anchor correction was checked separately. A subsequent bounded review also confirmed that
@@ -131,7 +134,7 @@ for accepted, unknown and invalid metadata while preserving the legacy car's ide
 The V25 follow-up passed 44 unit tests and 15 persistence/topology integration tests. Both new
 upgrade cases first failed at the accepted-metadata assertion. An independent delta review of
 `68dd8037` reported no findings. All 13 affected runtime guard experiments were repeated after
-the SQL and backup-comment corrections, and nine additional connection/layout guards were
+the SQL and backup-comment corrections, and ten additional connection/layout guards were
 falsified from the committed checkpoint.
 
 A boundary layout check then reproduced overflow for a valid 120-character label without spaces.
@@ -139,3 +142,8 @@ Both native browser cases failed at the card-width assertion before the fix. The
 wraps long labels in cards and preview summaries. Both cases passed afterward, including snapshot
 stability, native error anchors and long team options. The interrupted full build is superseded by
 the final committed-head clean verification.
+
+The long-label delta received an independent No findings review on `1e7e59bf`. Both CSS guards
+were individually revalidated on that checkpoint, and all 108 manifest source hashes match the
+restored production files. Final CLI screenshots also cover an assigned team and maximum-length
+entry labels at desktop and mobile widths without horizontal overflow.
