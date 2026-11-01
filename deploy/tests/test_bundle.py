@@ -136,7 +136,8 @@ class BundleTest(unittest.TestCase):
         with tarfile.open(source) as bundle:
             content={m.name:bundle.extractfile(m).read() for m in bundle}
         manifest=json.loads(content[prefix+'manifest.json'])
-        for name in ['migrate-from-mac.sh', 'lib/migration.py', 'guides/migration.md']:
+        for name in ['migrate-from-mac.sh', 'lib/migration.py', 'guides/migration.md', 'lib/publication.py',
+                     'guides/pages.md', 'systemd/ctc-manager-site-publisher.service', 'systemd/ctc-manager-site-publisher.timer']:
             content.pop(prefix+name, None)
             manifest['files'].pop(name, None)
         for name in ['systemd/ctc-manager-backup-check.service','systemd/ctc-manager-backup-check.timer',
@@ -156,7 +157,8 @@ class BundleTest(unittest.TestCase):
         self.assertEqual(0, self.create().returncode)
         with tarfile.open(self.output/'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
             prefix = 'ctc-manager-deployment-1.21.0/'
-            for name in ['migrate-from-mac.sh', 'lib/migration.py', 'guides/migration.md']:
+            for name in ['migrate-from-mac.sh', 'lib/migration.py', 'guides/migration.md', 'lib/publication.py',
+                     'guides/pages.md', 'systemd/ctc-manager-site-publisher.service', 'systemd/ctc-manager-site-publisher.timer']:
                 self.assertIn(prefix+name, bundle.getnames())
             self.assertTrue(bundle.getmember(prefix+'migrate-from-mac.sh').mode & 0o100)
 
@@ -166,7 +168,8 @@ class BundleTest(unittest.TestCase):
         with tarfile.open(self.output/'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
             content = {member.name: bundle.extractfile(member).read() for member in bundle}
         manifest = json.loads(content[prefix+'manifest.json'])
-        for name in ['migrate-from-mac.sh', 'lib/migration.py', 'guides/migration.md']:
+        for name in ['migrate-from-mac.sh', 'lib/migration.py', 'guides/migration.md', 'lib/publication.py',
+                     'guides/pages.md', 'systemd/ctc-manager-site-publisher.service', 'systemd/ctc-manager-site-publisher.timer']:
             content.pop(prefix+name, None)
             manifest['files'].pop(name, None)
         content[prefix+'manifest.json'] = json.dumps(manifest).encode()

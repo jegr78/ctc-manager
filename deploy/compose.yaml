@@ -44,6 +44,7 @@ services:
     env_file: ["${CTC_APP_ENV_FILE:?Missing private app environment}"]
     environment:
       SPRING_PROFILES_ACTIVE: prod
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
       CTC_OUTBOUND_ENABLED: ${CTC_OUTBOUND_ENABLED:-true}
       DATABASE_URL: jdbc:mariadb://db:3306/ctcdb?rewriteBatchedStatements=true
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=50.0 -XX:+ExitOnOutOfMemoryError -Duser.timezone=Europe/Berlin

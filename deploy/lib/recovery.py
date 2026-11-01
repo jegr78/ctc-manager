@@ -466,6 +466,7 @@ def probe_environment(path, database_password):
     if not values.get('SPRING_SECURITY_USER_NAME') or not values.get('SPRING_SECURITY_USER_PASSWORD'):
         raise ValueError('explicit Basic authentication credentials required for recovery')
     values.update(SPRING_PROFILES_ACTIVE='recovery-check', CTC_OUTBOUND_ENABLED='false',
+                  SERVER_FORWARD_HEADERS_STRATEGY='framework',
                   DATABASE_URL='jdbc:mariadb://db:3306/ctcdb?rewriteBatchedStatements=true',
                   DATABASE_USERNAME='ctc', DATABASE_PASSWORD=database_password,
                   GOOGLE_SHEETS_CREDENTIALS_PATH='/run/ctc/google-credentials.json',

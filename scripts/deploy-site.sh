@@ -3,9 +3,9 @@ set -euo pipefail
 
 SITE_DIR="docs/site"
 NOW=$(date +"%Y-%m-%d %H:%M:%S")
-TIMESTAMP_SLUG=$(date -j -f "%Y-%m-%d %H:%M:%S" "$NOW" +"%Y%m%d-%H%M%S")
+TIMESTAMP_SLUG=$(date +"%Y%m%d-%H%M%S")
 BRANCH="site/update-${TIMESTAMP_SLUG}"
-COMMIT_MSG="Site Update ${NOW}"
+COMMIT_MSG="docs(site): update generated website ${NOW}"
 
 # Ensure we're in the repo root
 cd "$(git rev-parse --show-toplevel)"
@@ -52,7 +52,8 @@ if ! gh pr checks "$BRANCH" --watch --fail-fast; then
     exit 1
 fi
 
-gh pr merge "$BRANCH" --squash --delete-branch
+SITE_TREE=$(git rev-parse HEAD:docs/site)
+gh pr merge "$BRANCH" --squash --body "CTC-Site-Tree: $SITE_TREE"
 echo "PR merged."
 
 # Cleanup

@@ -12,6 +12,7 @@
             <p>Generate all public HTML pages and website assets in the configured output directory.</p>
             <p class="text-dim">The generated site replaces the previous output after a successful build. Generation may take a moment.</p>
             <form th:action="@{/admin/generate}" method="post">
+                <input th:if="${snapshot != null}" type="hidden" name="snapshot" th:value="${snapshot.id}">
                 <button type="submit" class="btn btn-primary">Generate Site</button>
             </form>
             <p class="text-dim form-hint--sm">The result lists the number of generated pages and any warnings or errors.</p>
@@ -21,9 +22,37 @@
             <ol>
                 <li><strong>Review the data</strong><p>Check seasons, results and standings. Use Data Audit to review consistency findings and their proposed corrections.</p><a th:href="@{/admin/data-audit}" class="btn btn-secondary btn-sm">Open Data Audit</a></li>
                 <li><strong>Generate and preview</strong><p>Generate the site, review the result and check the output before publishing.</p></li>
-                <li><strong>Publish the output</strong><p>Deploy the generated files to GitHub Pages through your publishing workflow.</p></li>
+                <li><strong>Publish the reviewed snapshot</strong><p>Confirm the selected snapshot below. The host publisher opens a pull request, waits for checks and reports the Pages deployment.</p></li>
             </ol>
         </div>
+    </div>
+    <div class="card mt-lg" th:if="${snapshot != null}">
+        <h2>Review this snapshot</h2>
+        <p>Generating another site does not change this snapshot. Preview stays private.</p>
+        <dl>
+            <dt>Snapshot</dt><dd th:text="${snapshot.id}"></dd>
+            <dt>Generated</dt><dd th:text="${snapshot.createdAt}"></dd>
+            <dt>App version</dt><dd th:text="${snapshot.appVersion}"></dd>
+            <dt>Manifest SHA-256</dt><dd class="publication-hash" th:text="${snapshot.manifestSha256}"></dd>
+        </dl>
+        <p><a th:href="@{/admin/site-preview/{id}/index.html(id=${snapshot.id})}" target="_blank" rel="noopener" class="btn btn-secondary">Open private preview</a></p>
+        <iframe class="site-publication-preview" title="Private website snapshot preview" sandbox="allow-scripts" referrerpolicy="no-referrer"
+                th:src="@{/admin/site-preview/{id}/index.html(id=${snapshot.id})}"></iframe>
+        <form th:if="${publicationEnabled}" th:action="@{/admin/site-publication}" method="post">
+            <input type="hidden" name="snapshotId" th:value="${snapshot.id}">
+            <input type="hidden" name="manifestSha256" th:value="${snapshot.manifestSha256}">
+            <label class="checkbox-label"><input type="checkbox" name="confirmed" value="true" required> I reviewed this snapshot and approve its public publication.</label>
+            <button type="submit" class="btn btn-primary">Publish this snapshot</button>
+        </form>
+        <p class="text-dim" th:unless="${publicationEnabled}">Publication is disabled for this installation. You can still review the private preview.</p>
+    </div>
+    <div class="card mt-lg" th:if="${publication != null and publication.stage != 'none'}" role="status" aria-live="polite">
+        <h2>Publication status</h2>
+        <p th:text="${publication.stage}"></p><p th:text="${publication.detail}"></p>
+        <a th:if="${publication.snapshotId != null}" th:href="@{/admin/generate(snapshot=${publication.snapshotId})}">Review requested snapshot</a>
+        <p th:if="${publication.prUrl != null}"><a th:href="${publication.prUrl}" target="_blank" rel="noopener">Open publication pull request</a></p>
+        <p th:if="${publication.runUrl != null}"><a th:href="${publication.runUrl}" target="_blank" rel="noopener">Open Pages deployment</a></p>
+        <p><a th:href="@{/admin/generate(snapshot=${param.snapshot})}" class="btn btn-secondary">Refresh status</a></p>
     </div>
 </section>
 </body>

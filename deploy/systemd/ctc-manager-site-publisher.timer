@@ -1,0 +1,10 @@
+[Unit]
+Description=Process CTC website publication requests
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=60s
+Unit=ctc-manager-site-publisher.service
+
+[Install]
+WantedBy=timers.target

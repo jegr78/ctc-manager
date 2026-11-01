@@ -21,6 +21,10 @@ public class SecurityConfig {
 						.anyRequest().authenticated()
 				)
 				.httpBasic(Customizer.withDefaults())
+                .headers(headers -> headers
+                        .frameOptions(org.springframework.security.config.annotation.web.configurers.HeadersConfigurer.FrameOptionsConfig::disable)
+                        .addHeaderWriter((request, response) -> response.setHeader("X-Frame-Options",
+                                request.getRequestURI().startsWith(request.getContextPath() + "/admin/site-preview/") ? "SAMEORIGIN" : "DENY")))
 				.exceptionHandling(exceptions -> exceptions
 						.accessDeniedPage("/admin/access-denied")
 				);

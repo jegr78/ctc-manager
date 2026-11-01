@@ -407,3 +407,10 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 
 * Keep native source provenance separate from the normalized supported recovery unit. An unrecorded source app version is null. Verify an existing observer's global PROCESS visibility and matching database before accepting a source freeze; do not add privileges to make it pass.
 * Initial cutover accepts only the empty paused qualification target and an exact rehearsed source/unit proof. Persist the authority boundary before target HTTP activation. After possible target writes, stop a failed candidate and require complete state-preserving reverse migration, never stale Mac restart.
+
+### Private Pages publication
+
+* Generate Site captures immutable snapshots under its existing generation lock. Preserve exact snapshot IDs and manifest hashes through preview, confirmation and retries. Keep three recent snapshots plus the requested snapshot.
+* Preview responses require existing production authentication and a CSP sandbox without same-origin permission. Preserve the iframe sandbox, local asset support and no-store caching. Dev/open profiles cannot queue publication.
+* The host publisher alone reads the owner PAT. Use Contents/Pull requests read-write and Actions read-write, no Checks permission. Read trusted CI jobs through Actions APIs. Never mount credentials or the Docker socket into the app.
+* Publication uses the shared installation lock, fixed repository and docs/site-only commits. The Pages workflow must verify the complete approved Git tree before upload. A PR merge alone is not publication success. Startup/recovery suspends pending approvals; uncertain remote outcomes require reconciliation.

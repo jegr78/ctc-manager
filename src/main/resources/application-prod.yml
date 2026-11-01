@@ -23,3 +23,5 @@ app:
 ctc:
   site:
     output-dir: /app/data/site
+    publication:
+      directory: /app/data/site-publication

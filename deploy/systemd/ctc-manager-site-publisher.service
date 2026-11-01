@@ -1,0 +1,10 @@
+[Unit]
+Description=Publish owner-approved CTC website snapshot
+
+[Service]
+Type=oneshot
+Environment=XDG_RUNTIME_DIR=%t
+ExecStart=/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager publish-site
+UMask=0077
+NoNewPrivileges=true
+TimeoutStartSec=10min

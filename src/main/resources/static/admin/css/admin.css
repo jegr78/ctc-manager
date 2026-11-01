@@ -2840,3 +2840,6 @@ input:not([type='checkbox']):not([type='radio']):not([type='color']), select { b
 }
 
 body:has(.archive-dialog[open]) { overflow: hidden; }
+
+.site-publication-preview { width: 100%; height: 65vh; border: 1px solid var(--border-color, #555); margin-block: 1rem; }
+.publication-hash { overflow-wrap: anywhere; }

@@ -11,7 +11,7 @@ installation=$2
 operation=$3
 shift 3
 case "$operation" in
-  doctor|status|up|stop) [ "$#" -eq 0 ] || fail 'unexpected operation arguments' ;;
+  doctor|status|up|stop|publish-site) [ "$#" -eq 0 ] || fail 'unexpected operation arguments' ;;
   backup|restore-check|restore|resume-integrations|update-check|update|maintenance|prune|backup-check) ;;
   *) fail 'unknown operation' ;;
 esac
@@ -26,6 +26,11 @@ case "$operation" in
     python3 "$DEPLOY_ROOT/lib/maintenance.py" --directory "$installation" doctor
     ;;
   status) compose ps --format json ;;
+  publish-site)
+    acquire_lock
+    trap release_lock EXIT
+    python3 "$DEPLOY_ROOT/lib/publication.py" --directory "$installation" --deploy-root "$DEPLOY_ROOT"
+    ;;
   up|stop)
     acquire_lock
     trap release_lock EXIT
