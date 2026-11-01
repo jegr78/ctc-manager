@@ -89,7 +89,7 @@ section positioned below the mobile menu.
 
 ## Individual guard falsification
 
-All 98 individual experiments caused the intended assertion failure with no unexpected JUnit
+All 107 individual experiments caused the intended assertion failure with no unexpected JUnit
 errors. Each changed file was restored byte-for-byte from its recorded committed checkpoint.
 Source SHA-256 values from all manifests match the final production source after rebasing onto
 the current release base. The timestamp-based compiler mode was used only for statement-level
@@ -102,6 +102,9 @@ configuration.
   backup-scalar-text-type, backup-scalar-integral, backup-scalar-int-range, backup-scalar-boolean, backup-label-length, backup-reference-length, backup-scalar-copy, backup-duplicate-id, backup-row-budget, backup-legacy-tables, backup-legacy-race-entry, backup-blank-label, backup-negative-sort, backup-year-lower-bound, backup-year-upper-bound, backup-duplicate-clause, backup-clause-limit, backup-draft-members, backup-duplicate-members, backup-overlap-members, backup-missing-clauses, backup-empty-entry, backup-empty-pool, backup-fixed-race-entry, backup-partial-race-pair, backup-race-season-owner, backup-race-member, backup-bye-selection, backup-effective-home, backup-playoff-home, backup-missing-home, backup-duplicate-consumption, backup-foreign-reference, backup-required-fields, backup-fixed-frozen-state, backup-legacy-mode-state, backup-required-id-text, clause-year-validation.
 - season-pools-runtime-falsification.json: 30 proved guards.
   lock-pending-flush, lock-refresh, lock-database-write, freeze-transaction, unrelated-dynamic-update, season-details-lock, form-index-limit, form-add-limit, form-remove-range, form-unknown-action, form-reindex-errors, form-numeric-year-field, restore-execute-version, sql-fk_car_pool_entry_season, sql-fk_car_pool_member_entry, sql-fk_car_pool_member_car, sql-fk_car_pool_clause_entry, sql-fk_race_car_pool_entry, sql-chk_season_car_pool_mode, sql-chk_season_car_pool_state, sql-chk_car_pool_clause_category, sql-chk_car_pool_clause_drivetrain, sql-member-uniqueness, sql-clause-year-lower, sql-clause-year-upper, fixed-add-lock-call, fixed-remove-lock-call, saved-race-entry-guard, category-race-car-guard, empty-category-draft.
+
+- season-pools-connection-layout-falsification.json: 9 proved guards.
+  sql-cross-connection-car_pool_mode, sql-cross-connection-car_pool_state, sql-cross-connection-category, sql-cross-connection-drivetrain, native-select-width, metadata-cross-connection-category, metadata-valid-values-category, metadata-cross-connection-drivetrain, metadata-valid-values-drivetrain.
 
 The independent security pass reported all three findings fixed on `22f97e8f`. The later native
 form-anchor correction was checked separately. A subsequent bounded review also confirmed that
@@ -124,3 +127,9 @@ The same JDBC probe confirmed that the published V23 metadata checks also retain
 connection. Two real Flyway upgrade tests first failed when updating accepted category/drivetrain
 values from a new connection. V25 replaces those checks without editing V23. The tests then passed
 for accepted, unknown and invalid metadata while preserving the legacy car's identity and image.
+
+The V25 follow-up passed 44 unit tests and 15 persistence/topology integration tests. Both new
+upgrade cases first failed at the accepted-metadata assertion. An independent delta review of
+`68dd8037` reported no findings. All 13 affected runtime guard experiments were repeated after
+the SQL and backup-comment corrections, and nine additional connection/layout guards were
+falsified from the committed checkpoint.
