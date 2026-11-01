@@ -152,6 +152,7 @@ class Gt7MetadataSyncTest {
         duplicate.setGt7Id("car3531");
         when(cars.findAllByGt7Id("car3531")).thenReturn(List.of(car, duplicate));
         when(cars.findAllByGt7IdForUpdate("car3531")).thenReturn(List.of(car, duplicate));
+        when(cars.save(any(Car.class))).thenAnswer(invocation -> invocation.getArgument(0));
         // when
         var preview = service.fetchAndPreview();
         var result = service.executeSync(List.of("car3531"), List.of(), List.of(), preview.previewId());
