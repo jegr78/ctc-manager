@@ -78,6 +78,16 @@ def main():
         bootstrap.record('container', bootstrap.prefix + '-app')
         bootstrap.docker(bootstrap.app_arguments(environment))
         bootstrap.verify_application(environment)
+        original_root_password = (unit / 'db-root-password').read_bytes()
+        try:
+            (unit / 'db-root-password').write_bytes(b'wrong-root-password-native-fixture')
+            try:
+                bootstrap.verify_credentials()
+                raise AssertionError('wrong restored root password unexpectedly authenticated')
+            except ValueError as error:
+                assert 'root credential login failed' in str(error), 'reject the wrong root password over TCP'
+        finally:
+            (unit / 'db-root-password').write_bytes(original_root_password)
         runtime.db = {'Id': bootstrap.prefix + '-db'}
         runtime.query((Path(__file__).parent / 'fixtures/recovery-domain.sql').read_text())
         bootstrap.docker(['stop', '--time', '60', bootstrap.prefix + '-app'])
@@ -117,7 +127,7 @@ def main():
         assert not leftover, 'failed creation must clean all owned ' + kind + ' resources'
     print(json.dumps({'status': 'passed', 'candidateImageId': app['Id'], 'restoredTables': len(manifest['records']),
                       'graphic': result['graphic'], 'credentialsVerified': result['credentialsVerified'], 'sandboxEscape': 'rejected', 'invalidSql': 'rejected',
-                      'failedContainerCreate': 'all-owned-resources-cleaned', 'productionTouched': False}))
+                      'failedContainerCreate': 'all-owned-resources-cleaned', 'wrongRootPassword': 'rejected', 'productionTouched': False}))
 
 
 if __name__ == '__main__':

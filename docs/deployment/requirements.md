@@ -182,3 +182,9 @@ MariaDB root login. The probe now checks Google SHA-256 through the actual app u
 and validates the restored root password with fixed SELECT 1 only. Imported SQL still uses the
 unprivileged app database account. All 68 recovery cases pass; native credential qualification,
 three added guard falsifications and a fresh complete canonical run remain pending.
+Native run07 passed the restored-credential proof, full domain/file/graphic recovery and failed
+container-creation cleanup. Its output reports credentialsVerified=true without credential values.
+The root proof now explicitly uses TCP to avoid Unix-socket authentication substituting for a
+password check. A dedicated bypass-model assertion first failed and passes after forcing TCP.
+Native run08 additionally changes only the synthetic root secret after initialization, requires
+login rejection, restores it and repeats complete recovery. Its result is still pending here.

@@ -903,6 +903,10 @@ class ProbeCredentialProofTest(unittest.TestCase):
                 checksum = '0' * 64 if self.failure == 'google-mismatch' else recovery.sha256(fixture.unit / 'google.json')
                 return (checksum + '  /run/ctc/google-credentials.json\n').encode()
             if arguments[:2] == ['exec', self.probe.prefix + '-db']:
+                if self.failure == 'root-socket-bypass':
+                    if '--protocol=TCP' in arguments[-1]:
+                        raise ValueError('private Docker diagnostic')
+                    return b'1\n'
                 if self.failure == 'root-login':
                     raise ValueError('private Docker diagnostic')
                 return b'0\n' if self.failure == 'root-result' else b'1\n'
@@ -917,7 +921,7 @@ class ProbeCredentialProofTest(unittest.TestCase):
         self.probe.curl = curl
 
     def test_healthy_authenticated_app_still_requires_restored_credentials(self):
-        for failure in ['google-unreadable', 'google-mismatch', 'root-login', 'root-result']:
+        for failure in ['google-unreadable', 'google-mismatch', 'root-login', 'root-result', 'root-socket-bypass']:
             self.failure = failure
             with self.subTest(failure=failure), self.assertRaisesRegex(ValueError, 'credential'):
                 self.probe.verify_application({})

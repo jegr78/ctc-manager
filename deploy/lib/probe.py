@@ -211,7 +211,7 @@ class Probe:
         try:
             result = self.docker(['exec', self.prefix + '-db', '/bin/sh', '-ec',
                                   'MYSQL_PWD="$(cat /run/secrets/db-root-password)" exec mariadb --sandbox '
-                                  '--user=root --batch --skip-column-names --execute "SELECT 1;"']).decode().strip()
+                                  '--user=root --protocol=TCP --host=127.0.0.1 --batch --skip-column-names --execute "SELECT 1;"']).decode().strip()
         except ValueError:
             raise ValueError('restored database root credential login failed') from None
         if result != '1':
