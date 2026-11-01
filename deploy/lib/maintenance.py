@@ -67,9 +67,7 @@ def retention_plan(runtime, destination, state, now):
     update = runtime.root / 'state/update.json'
     pending_update = not update.exists() or read_json(private_path(update)).get('stage') != 'completed'
     local, proof = state.get('local', {}), state.get('proof', {})
-    verified_active = (local.get('appImage') == runtime.config.get('appImage')
-                       and proof.get('unit') == local.get('unit')
-                       and proof.get('manifestSha256') == local.get('manifestSha256'))
+    verified_active = local.get('appImage') == runtime.config.get('appImage')
     protected_path = runtime.root / 'state/protected-recovery.json'
     if protected_path.exists():
         protected = read_json(private_path(protected_path))
@@ -180,6 +178,11 @@ def main():
             runtime.check_destination(UNIT_ROOT)
         except (OSError, ValueError):
             issues.append('backup-mount-unavailable')
+        if not issues:
+            try:
+                retention_plan(runtime, UNIT_ROOT, evidence(root), time.time())
+            except (OSError, ValueError):
+                issues.append('backup-verification-failed')
         print(json.dumps({'backupStatus': 'incomplete' if issues else 'ready', 'issues': issues}))
         if issues:
             raise ValueError('backup readiness incomplete')

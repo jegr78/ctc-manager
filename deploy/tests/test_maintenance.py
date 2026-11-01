@@ -261,7 +261,8 @@ class MaintenanceTest(unittest.TestCase):
         self.state(self.unit())
         with patch.object(sys, 'argv', ['maintenance.py', '--directory', str(self.root), 'doctor']), \
                 patch.object(maintenance.time, 'time', return_value=self.now), \
-                patch.object(maintenance, 'NativeRuntime', return_value=self.runtime):
+                patch.object(maintenance, 'NativeRuntime', return_value=self.runtime), \
+                patch.object(maintenance, 'UNIT_ROOT', self.units):
             maintenance.main()
             self.runtime.check_destination = lambda path: (_ for _ in ()).throw(ValueError('missing'))
             with self.assertRaisesRegex(ValueError, 'readiness'):
@@ -300,6 +301,41 @@ class MaintenanceTest(unittest.TestCase):
             run.return_value = {'lastAttempt': {'stage': 'completed'}, 'local': {'unit': '/fixture'}}
             maintenance.main()
             run.assert_called_once_with(self.runtime, self.units)
+
+    def test_future_unit_or_mismatched_capture_identity_refuses(self):
+        future = self.unit('2026-12-01T03:00:00Z')
+        with self.assertRaisesRegex(ValueError, 'future'):
+            maintenance.retention_plan(self.runtime, self.units, self.state(future), self.now)
+        shutil.rmtree(future)
+        unit = self.unit()
+        outside = self.root / 'outside-unit'
+        shutil.move(unit, outside)
+        with self.assertRaisesRegex(ValueError, 'capture-failed'):
+            maintenance.run_backup(self.runtime, self.units, capture_unit=lambda *a: outside, now=self.now)
+
+    def test_cli_rejects_ignored_flags_and_missing_mount_before_creating_units(self):
+        with patch.object(sys, 'argv', ['maintenance.py', '--directory', str(self.root), 'maintenance', '--dry-run']):
+            with self.assertRaises(SystemExit) as caught:
+                maintenance.main()
+            self.assertEqual(2, caught.exception.code)
+        lock = self.root / '.ctc-manager.lock'
+        lock.mkdir(mode=0o700)
+        (lock / 'owner').write_text(str(os.getppid()))
+        (lock / 'owner').chmod(0o600)
+        destination = self.root / 'absent/units'
+        self.runtime.check_destination = lambda path: (_ for _ in ()).throw(ValueError('missing device'))
+        with patch.object(sys, 'argv', ['maintenance.py', '--directory', str(self.root), 'maintenance']),                 patch.object(maintenance, 'NativeRuntime', return_value=self.runtime),                 patch.object(maintenance, 'UNIT_ROOT', destination):
+            with self.assertRaisesRegex(ValueError, 'missing device'):
+                maintenance.main()
+        self.assertFalse(destination.exists())
+
+    def test_doctor_rejects_missing_verified_unit_even_with_fresh_timestamps(self):
+        unit = self.unit()
+        self.state(unit)
+        shutil.rmtree(unit)
+        with patch.object(sys, 'argv', ['maintenance.py', '--directory', str(self.root), 'doctor']),                 patch.object(maintenance.time, 'time', return_value=self.now),                 patch.object(maintenance, 'NativeRuntime', return_value=self.runtime),                 patch.object(maintenance, 'UNIT_ROOT', self.units):
+            with self.assertRaisesRegex(ValueError, 'readiness'):
+                maintenance.main()
 
     def test_only_daily_backup_service_is_packaged(self):
         service = (ROOT / 'deploy/systemd/ctc-manager-backup.service').read_text()
