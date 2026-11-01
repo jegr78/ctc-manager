@@ -269,6 +269,25 @@ class UpdateTest(unittest.TestCase):
             self.stage()
         self.assert_source_unchanged()
 
+    def test_noncanonical_archive_member_is_rejected_before_external_write(self):
+        name = 'ctc-manager-deployment-1.24.0.tar.gz'
+        result = io.BytesIO()
+        with tarfile.open(fileobj=io.BytesIO(self.provider.files[name])) as source, tarfile.open(fileobj=result, mode='w:gz') as target:
+            for member in source:
+                value = source.extractfile(member).read()
+                if member.name.endswith('/compose.yaml'):
+                    member.name = member.name.replace('/compose.yaml', '//compose.yaml')
+                target.addfile(member, io.BytesIO(value))
+        self.provider.files[name] = result.getvalue()
+        self.provider.files[name + '.sha256'] = (hashlib.sha256(result.getvalue()).hexdigest() + '  ' + name + '\n').encode()
+        original = Path.open
+        def prevent_external_write(path, *arguments, **options):
+            self.assertNotEqual(Path('/compose.yaml'), path, 'archive extraction must never attempt an external write')
+            return original(path, *arguments, **options)
+        with patch.object(Path, 'open', prevent_external_write), self.assertRaisesRegex(ValueError, 'canonical|unsafe'):
+            self.stage()
+        self.assert_source_unchanged()
+
     def test_downgrade_and_mutable_versions_are_rejected(self):
         for selected in ['latest', 'master', '1.24.0-SNAPSHOT', '1.23.0', '1.22.0', '../1.24.0']:
             with self.subTest(selected=selected), self.assertRaises(ValueError):

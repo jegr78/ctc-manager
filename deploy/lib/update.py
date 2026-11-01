@@ -2,7 +2,7 @@
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import shutil
 import tempfile
@@ -123,7 +123,10 @@ def stage_release(runtime, selected, provider=None):
         import tarfile
         with tarfile.open(staging / name, 'r:gz') as archive:
             for member in archive:
-                path = extracted / member.name.split('/', 1)[1]
+                relative = PurePosixPath(*PurePosixPath(member.name).parts[1:])
+                path = extracted / relative
+                if not path.is_relative_to(extracted):
+                    raise ValueError('unsafe release extraction path')
                 path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
                 with path.open('xb') as output:
                     output.write(archive.extractfile(member).read())

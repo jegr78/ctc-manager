@@ -42,7 +42,8 @@ def verify(path):
     with tarfile.open(path, 'r:gz') as archive:
         for member in archive:
             name = PurePosixPath(member.name)
-            if not member.isfile() or member.size > MAX_MEMBER or name.is_absolute() or '..' in name.parts:
+            if (not member.isfile() or member.size > MAX_MEMBER or name.is_absolute() or '..' in name.parts
+                    or str(name) != member.name):
                 raise ValueError('unsafe archive entry')
             if len(name.parts) < 2 or name.parts[0] != 'ctc-manager-deployment-' + version(name.parts[0].removeprefix('ctc-manager-deployment-')):
                 raise ValueError('invalid archive prefix')
