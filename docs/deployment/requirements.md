@@ -196,3 +196,14 @@ the tree was restored after each. Final targeted suites pass 68 recovery, 24 rec
 release/publisher and 36 host cases. Independent security review of 6a9422c5 found no material
 findings. The canonical full-build receipt belongs in the PR for the committed final head.
 Post-release capable-image admission/live activation remains #297 acceptance work before closure.
+The enriched default-branch dependency graph subsequently surfaced four Connector/J advisories
+against Spring Boot 4.1.2's managed driver 3.5.10. GitHub identifies 3.5.11 as patched for
+GHSA-h599-m3w5-9m7x, GHSA-4jq2-8v3c-97w8, GHSA-fhx5-2xqw-2cgm and
+GHSA-grfq-r75j-rw9x. Upstream release: https://github.com/mariadb-corporation/mariadb-connector-j/releases/tag/3.5.11.
+The runtime-version regression test first failed on the actual resolved 3.5.10 artifact. An explicit
+mariadb.version property and dependency version now select 3.5.11 independently of the Boot BOM
+and expose the connector directly to Renovate. The test accepts later minor and major versions.
+Targeted security/script/renderer units and all 14 recovery ITs pass with the patched dependency;
+the subset lifecycle still stops only at the unchanged global coverage threshold. The packaged
+JAR contains mariadb-java-client-3.5.11.jar. Native qualification and canonical verification are
+repeated for the changed runtime dependency before rollout.
