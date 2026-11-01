@@ -379,6 +379,7 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 
 ### Permanent production deployment
 
+* Recipe fixtures must remain independent of live host port 9092. Mock the port probe only inside the fixture interpreter and retain its exact loopback-address and refusal-before-Compose assertions. Never disable the production port guard for tests.
 * `deploy/tests/acceptance.sh` runs all existing deployment fixture suites, including native migration, through `DeploymentScriptsTest`. Keep the aggregate fixture-only. Runtime acceptance and operator procedures live in `docs/deployment/acceptance.md` and `deploy/guides/operations.md`.
 * The dedicated rootless Docker unit uses notify readiness, child notifications, mixed termination and no inherited stop timeout. Do not signal Docker and its helpers together or force an early database shutdown.
 * The shared Box supplies home LAN DNS through Pi-hole. Routine CTC deployment and testing must not reboot it. Record CTC-only restarts separately from actual host boot evidence.

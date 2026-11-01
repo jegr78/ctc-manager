@@ -46,3 +46,11 @@ Validation uses a task-local Temurin 25 installation and a writable Maven cache.
 The test temporary directory is on `/home`, alongside uploads, because `/tmp` is
 a separate tmpfs and cannot satisfy atomic restore moves. These are execution
 environment settings, not application changes or weakened restore checks.
+
+The first full run stopped at the deployment acceptance harness because the
+permanent CTC installation owns host port 9092. The same failure was reproduced
+from the unchanged base commit. Recipe fixtures now execute the production port
+probe with a fixture-local mocked TCP bind and assert its exact loopback address.
+They cover free and occupied results without binding that host port themselves.
+The production port guard is unchanged. Fixture staging also uses the task-local
+temporary directory on `/home`, which has the required free space.
