@@ -51,11 +51,13 @@ class CarServiceTest {
 
     @Test
     void givenFrozenSnapshotMember_whenDeletingCar_thenRejectBeforeDeletingImageOrCar() {
+        // given
         var car = new Car("Fixture", "Member");
         car.setId(UUID.randomUUID());
         car.setImageUrl("/uploads/member.png");
         when(carRepository.findByIdForUpdate(car.getId())).thenReturn(Optional.of(car));
         when(poolMembers.existsByCarId(car.getId())).thenReturn(true);
+        // when / then
         assertThatThrownBy(() -> carService.delete(car.getId())).isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("snapshot");
         verify(carRepository, never()).delete(any());

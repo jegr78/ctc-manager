@@ -70,7 +70,7 @@ v1.10 introduces a full database backup/restore feature accessible via `/admin/b
 3. Check the **I understand** confirmation and click **Execute Import**. The database is replaced atomically.
 
 > **Schema-Version lock:** The import rejects a backup whose schema version is not 1, 2, 3 or 4 before it
-> writes anything.
+> writes anything. Schema 4 also validates pool references and limits preflight to 100,000 retained reference rows.
 
 ### Recovery
 

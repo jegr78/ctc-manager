@@ -100,10 +100,12 @@ class BackupImportManifestContractIT {
 
 	@Test
     void givenUnsupportedVersionPlacedInStaging_whenExecuted_thenRejectedBeforeAnyTableIsWiped() throws Exception {
+        // given
         UUID stagingId = UUID.randomUUID();
         Files.write(stagingDir().resolve("upload-" + stagingId + ".zip"),
                 rewrite(export(), name -> true, manifest -> manifest.put("schema_version", 999)));
         long before = carRepository.count();
+        // when / then
         assertThatThrownBy(() -> backupImportService.execute(stagingId))
                 .isInstanceOf(BackupImportException.class).cause()
                 .isInstanceOfSatisfying(BackupArchiveException.class, error -> assertThat(error.reason()).isEqualTo(Reason.SCHEMA_MISMATCH));
@@ -134,17 +136,20 @@ class BackupImportManifestContractIT {
 
 	@Test
 	void givenVersionFourWithoutPoolFiles_whenStaged_thenRejectedBeforeDatabaseChanges() throws Exception {
+	    // given
         long before = carRepository.count();
         for (var table : java.util.List.of("season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members")) {
             String file = "data/" + table.replace('_', '-') + ".json";
             byte[] zip = rewrite(export(), name -> !name.equals(file), manifest -> counts(manifest).remove(table));
             assertDataMismatch(() -> stage(zip), table + ": data file missing");
+            // when / then
             assertThat(carRepository.count()).isEqualTo(before);
         }
     }
 
     @Test
     void givenVersionThreeWithoutPoolFiles_whenStaged_thenFixedOnlyLegacyArchiveRemainsSupported() throws Exception {
+        // given
         byte[] zip = rewrite(export(), name -> !name.startsWith("data/season-car-pool-"), manifest -> {
             manifest.put("schema_version", 3);
             counts(manifest).remove("season_car_pool_entries");
@@ -152,6 +157,7 @@ class BackupImportManifestContractIT {
             counts(manifest).remove("season_car_pool_members");
         });
         var preview = stage(zip);
+        // when / then
         assertThat(preview.schemaVersion()).isEqualTo(3);
         backupImportService.deleteStagingFile(preview.stagingId());
     }

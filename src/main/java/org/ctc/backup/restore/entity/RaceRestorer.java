@@ -13,24 +13,6 @@ import org.ctc.backup.restore.EntityRestorer;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-/**
- * Restores rows into the {@code races} table from the
- * {@code data/races.json} array in a backup ZIP.
- *
- * <p>Schema (V1): {@code id UUID PK, matchday_id UUID NOT NULL, match_id UUID NULL,
- * playoff_matchup_id UUID NULL, track_id UUID NULL, car_id UUID NULL,
- * home_team_id UUID NULL, away_team_id UUID NULL, date_time TIMESTAMP NULL,
- * calendar_event_id VARCHAR NULL, created_at TIMESTAMP, updated_at TIMESTAMP}.
- *
- * <p>JSON FK property naming (from {@code RaceMixIn}): {@code matchday}, {@code match},
- * {@code playoffMatchup}, {@code track}, {@code car}, {@code homeTeamOverride},
- * {@code awayTeamOverride}. The entity-level overrides bind into the schema's
- * {@code home_team_id}/{@code away_team_id} columns (no DDL rename).
- *
- * <p>Auditing bypass: written via {@link JdbcTemplate#batchUpdate} so
- * {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener}
- * does NOT overwrite {@code createdAt}/{@code updatedAt}.
- */
 @Slf4j
 @Component
 public class RaceRestorer implements EntityRestorer {

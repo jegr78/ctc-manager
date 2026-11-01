@@ -40,6 +40,7 @@ class RaceServiceTest {
 
     @Test
     void givenCategorySeason_whenLegacyCarSelectionIsSubmitted_thenRejectBeforeAnyMutation() {
+        // given
         var matchday = createMatchday();
         matchday.getSeason().setCarPoolMode(CarPoolMode.CATEGORY_POOL);
         var home = createTeam("HOME", "Home");
@@ -51,10 +52,13 @@ class RaceServiceTest {
         lenient().when(teamRepository.findById(home.getId())).thenReturn(Optional.of(home));
         lenient().when(teamRepository.findById(away.getId())).thenReturn(Optional.of(away));
         lenient().when(carRepository.findById(car.getId())).thenReturn(Optional.of(car));
+        // when
         var result = service.saveRace(null, matchday.getId(), home.getId(), away.getId(), null, car.getId(), null,
                 null, null, null, null, null, null, 1, null, null, null, null);
+        // then
         assertThat(result.success()).isFalse();
         assertThat(result.message()).contains("category pool entry");
+        verify(seasonRepository).findByIdForUpdate(matchday.getSeason().getId());
         verify(raceRepository, never()).save(any());
         verify(matchRepository, never()).save(any());
     }

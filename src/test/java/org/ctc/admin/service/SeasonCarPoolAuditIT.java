@@ -27,6 +27,7 @@ class SeasonCarPoolAuditIT {
 
     @Test
     void givenOverlappingFrozenSnapshots_whenAudited_thenEvidenceIsReportedWithoutRepair() {
+        // given
         var season = new Season("Test Inconsistent Pool " + UUID.randomUUID(), 2030, 1);
         season.setCarPoolMode(CarPoolMode.CATEGORY_POOL);
         seasons.saveAndFlush(season);
@@ -43,8 +44,10 @@ class SeasonCarPoolAuditIT {
         seasons.saveAndFlush(season);
         em.clear();
         long count = members.count();
+        // when
         var findings = audit.audit().sections().stream().filter(section -> section.category().name().equals("CAR_POOL"))
                 .flatMap(section -> section.findings().stream()).toList();
+        // then
         assertThat(findings).anySatisfy(finding -> {
             assertThat(finding.subject()).contains(season.getId().toString());
             assertThat(finding.evidence()).contains("overlap", car.getId().toString(), "First entry", "Second entry");

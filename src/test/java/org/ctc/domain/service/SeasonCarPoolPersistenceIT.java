@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.*;
 @CtcDevSpringBootContext
 @Tag("integration")
 class SeasonCarPoolPersistenceIT {
-    @Autowired SeasonRepository seasons;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean SeasonRepository seasons;
     @Autowired CarRepository cars;
     @Autowired RaceRepository races;
     @Autowired SeasonCarPoolEntryRepository entries;
@@ -38,15 +38,18 @@ class SeasonCarPoolPersistenceIT {
     @Test
     @Transactional
     void givenFrozenPool_whenCatalogChanges_thenStoredMembershipAndIdentifiersRemain() {
+        // given
         var season = newSeason();
         var first = car("Original", CarCategory.GR_2, 2016);
         var entryId = pools.saveEntry(season.getId(), null, "2016", List.of(new SeasonCarPoolService.ClauseInput(CarCategory.GR_2, null, 2016)));
+        // when
         pools.freeze(season.getId());
         var originalMemberId = entries.findById(entryId).orElseThrow().getMembers().getFirst().getId();
         first.setCategory(CarCategory.GR_4);
         cars.saveAndFlush(first);
         var later = car("Later", CarCategory.GR_2, 2016);
         em.clear();
+        // then
         assertThat(pools.preview(season.getId()).entries().getFirst().carIds()).containsExactly(first.getId()).doesNotContain(later.getId());
         assertThat(entries.findById(entryId).orElseThrow().getMembers().getFirst().getId()).isEqualTo(originalMemberId);
         assertThatThrownBy(() -> carService.delete(first.getId())).isInstanceOf(BusinessRuleException.class).hasMessageContaining("snapshot");
@@ -55,9 +58,11 @@ class SeasonCarPoolPersistenceIT {
     @Test
     @Transactional
     void givenForeignEntry_whenEditingOrRemoving_thenOtherSeasonRemainsUnchanged() {
+        // given
         var owner = newSeason();
         var other = newSeason();
         var id = pools.saveEntry(owner.getId(), null, "Owner", List.of(new SeasonCarPoolService.ClauseInput(CarCategory.GR_3, null, null)));
+        // when / then
         assertThatThrownBy(() -> pools.saveEntry(other.getId(), id, "Forged", List.of(new SeasonCarPoolService.ClauseInput(CarCategory.GR_4, null, null))))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("belong");
         assertThat(entries.findById(id).orElseThrow().getLabel()).isEqualTo("Owner");
@@ -66,14 +71,17 @@ class SeasonCarPoolPersistenceIT {
     @Test
     @Transactional
     void givenFrozenEntryUsedByRace_whenReopenModeChangeOrEditIsForged_thenReject() {
+        // given
         var fixture = helper.createFullSeasonFixture("UsedPool " + UUID.randomUUID().toString().substring(0, 8));
         pools.changeMode(fixture.season().getId(), CarPoolMode.CATEGORY_POOL);
         var selected = car("Used", CarCategory.GR_2, 2016);
         var id = pools.saveEntry(fixture.season().getId(), null, "Used entry", List.of(new SeasonCarPoolService.ClauseInput(CarCategory.GR_2, null, 2016)));
+        // when
         pools.freeze(fixture.season().getId());
         fixture.race().setCarPoolEntry(entries.findById(id).orElseThrow());
         fixture.race().setCar(selected);
         races.saveAndFlush(fixture.race());
+        // then
         assertThatThrownBy(() -> pools.reopen(fixture.season().getId())).isInstanceOf(BusinessRuleException.class).hasMessageContaining("used");
         assertThatThrownBy(() -> pools.changeMode(fixture.season().getId(), CarPoolMode.FIXED_CARS)).isInstanceOf(BusinessRuleException.class);
         assertThatThrownBy(() -> pools.removeEntry(fixture.season().getId(), id)).isInstanceOf(BusinessRuleException.class);
@@ -82,6 +90,7 @@ class SeasonCarPoolPersistenceIT {
 
     @Test
     void givenInvalidPool_whenFreezeFails_thenEveryEntryAndStateRollsBack() {
+        // given
         var tx = new TransactionTemplate(transactionManager);
         UUID id = tx.execute(status -> {
             var season = newSeason();
@@ -91,6 +100,7 @@ class SeasonCarPoolPersistenceIT {
             return season.getId();
         });
         try {
+            // when / then
             assertThatThrownBy(() -> pools.freeze(id)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("Empty");
             tx.executeWithoutResult(status -> {
                 var season = seasons.findById(id).orElseThrow();
@@ -107,7 +117,78 @@ class SeasonCarPoolPersistenceIT {
     }
 
     @Test
+    void givenSnapshotFlushedBeforeFailure_whenFreezeRollsBack_thenNoPartialMembershipOrStateSurvives() {
+        // given
+        var tx = new TransactionTemplate(transactionManager);
+        UUID id = tx.execute(status -> {
+            var season = newSeason();
+            car("Atomic member", CarCategory.GR_2, 2016);
+            pools.saveEntry(season.getId(), null, "Atomic entry", List.of(new SeasonCarPoolService.ClauseInput(CarCategory.GR_2, null, 2016)));
+            return season.getId();
+        });
+        try {
+            org.mockito.Mockito.doAnswer(invocation -> {
+                em.merge(invocation.getArgument(0, Season.class));
+                em.flush();
+                // when / then
+                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM season_car_pool_members m JOIN season_car_pool_entries e ON m.entry_id=e.id WHERE e.season_id=?", Long.class, id))
+                        .as("the transaction really wrote snapshot rows before failure").isPositive();
+                throw new BusinessRuleException("Injected failure after snapshot flush");
+            }).when(seasons).saveAndFlush(org.mockito.ArgumentMatchers.<Season>argThat(saved -> saved != null && id.equals(saved.getId())));
+            assertThatThrownBy(() -> pools.freeze(id)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("after snapshot flush");
+            tx.executeWithoutResult(status -> {
+                var season = seasons.findById(id).orElseThrow();
+                assertThat(season.getCarPoolState()).isEqualTo(CarPoolState.DRAFT);
+                assertThat(season.getCarPoolEntries()).allSatisfy(entry -> assertThat(entry.getMembers()).isEmpty());
+            });
+        } finally {
+            org.mockito.Mockito.reset(seasons);
+            tx.executeWithoutResult(status -> {
+                seasons.deleteById(id);
+                seasons.flush();
+                createdCars.forEach(cars::deleteById);
+            });
+        }
+    }
+
+    @Test
+    void givenCachedSeasonAndConcurrentFreeze_whenUnrelatedThreadFieldChanges_thenPoolStateIsPreserved() {
+        // given
+        var tx = new TransactionTemplate(transactionManager);
+        var writer = new TransactionTemplate(transactionManager);
+        writer.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        UUID id = tx.execute(status -> {
+            var season = newSeason();
+            car("Thread member", CarCategory.GR_2, 2016);
+            pools.saveEntry(season.getId(), null, "Keep", List.of(new SeasonCarPoolService.ClauseInput(CarCategory.GR_2, null, 2016)));
+            return season.getId();
+        });
+        try {
+            tx.executeWithoutResult(status -> {
+                var cached = seasons.findById(id).orElseThrow();
+                writer.executeWithoutResult(inner -> pools.freeze(id));
+                // when / then
+                assertThat(cached.getCarPoolState()).isEqualTo(CarPoolState.DRAFT);
+                seasonManagement.linkRaceResultsThread(id, "123456789012345678");
+            });
+            tx.executeWithoutResult(status -> {
+                var season = seasons.findById(id).orElseThrow();
+                assertThat(season.getCarPoolState()).isEqualTo(CarPoolState.FROZEN);
+                assertThat(season.getDiscordRaceResultsThreadId()).isEqualTo("123456789012345678");
+                assertThat(season.getCarPoolEntries().getFirst().getMembers()).isNotEmpty();
+            });
+        } finally {
+            tx.executeWithoutResult(status -> {
+                seasons.deleteById(id);
+                seasons.flush();
+                createdCars.forEach(cars::deleteById);
+            });
+        }
+    }
+
+    @Test
     void givenCachedSeasonAndConcurrentFreeze_whenSavingDetails_thenFrozenStateCannotBeOverwritten() {
+        // given
         var tx = new TransactionTemplate(transactionManager);
         var writer = new TransactionTemplate(transactionManager);
         writer.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
@@ -121,6 +202,7 @@ class SeasonCarPoolPersistenceIT {
             tx.executeWithoutResult(status -> {
                 var cached = seasons.findById(id).orElseThrow();
                 writer.executeWithoutResult(inner -> pools.freeze(id));
+                // when / then
                 assertThat(cached.getCarPoolState()).isEqualTo(CarPoolState.DRAFT);
                 var saved = seasonManagement.save(id, "Changed details", 2030, 1, "Keep frozen", false);
                 assertThat(saved.getCarPoolState()).isEqualTo(CarPoolState.FROZEN);
@@ -142,6 +224,7 @@ class SeasonCarPoolPersistenceIT {
 
     @Test
     void givenCachedDraftAndConcurrentFreeze_whenSavingEntry_thenFreshLockedStateRejectsEdit() {
+        // given
         var tx = new TransactionTemplate(transactionManager);
         var writer = new TransactionTemplate(transactionManager);
         writer.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
@@ -156,6 +239,7 @@ class SeasonCarPoolPersistenceIT {
                 var cached = seasons.findById(id).orElseThrow();
                 cached.getCarPoolEntries().size();
                 writer.executeWithoutResult(inner -> pools.freeze(id));
+                // when / then
                 assertThat(cached.getCarPoolState()).isEqualTo(CarPoolState.DRAFT);
                 assertThatThrownBy(() -> pools.saveEntry(id, null, "Stale write", List.of(new SeasonCarPoolService.ClauseInput(CarCategory.GR_3, null, null))))
                         .isInstanceOf(BusinessRuleException.class).hasMessageContaining("frozen");
@@ -178,10 +262,13 @@ class SeasonCarPoolPersistenceIT {
     @Test
     @Transactional
     void givenDuplicateSnapshotMembership_whenPersisted_thenDatabaseRejectsDuplicatePair() {
+        // given
         var season = newSeason();
         var car = car("Unique member", CarCategory.GR_2, 2016);
         var id = pools.saveEntry(season.getId(), null, "Unique", List.of(new SeasonCarPoolService.ClauseInput(CarCategory.GR_2, null, 2016)));
+        // when
         pools.freeze(season.getId());
+        // then
         assertThatThrownBy(() -> jdbc.update("INSERT INTO season_car_pool_members (id, entry_id, car_id) VALUES (?, ?, ?)", UUID.randomUUID(), id, car.getId()))
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
         assertThatThrownBy(() -> jdbc.update("INSERT INTO season_car_pool_clauses (id, entry_id, category, sort_index) VALUES (?, ?, ?, 0)", UUID.randomUUID(), UUID.randomUUID(), "GR_3"))

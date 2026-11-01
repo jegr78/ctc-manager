@@ -31,8 +31,10 @@ class SeasonCarPoolControllerIT {
 
     @Test
     void givenNativeSubmission_whenAddingClauseThenSaving_thenDefinitionAndPreviewRemainInWorkspace() throws Exception {
+        // given
         var season = helper.createSeason("Test Native Pool " + UUID.randomUUID());
         pools.changeMode(season.getId(), CarPoolMode.CATEGORY_POOL);
+        // when
         mvc.perform(post(base(season) + "/entries/save").param("label", "Combined")
                 .param("clauses[0].category", "GR_3").param("clauses[0].drivetrain", "MR").param("action", "add-clause"))
                 .andExpect(status().isOk()).andExpect(view().name("admin/season-form"))
@@ -42,6 +44,7 @@ class SeasonCarPoolControllerIT {
                 .param("clauses[0].category", "GR_3").param("clauses[0].drivetrain", "MR")
                 .param("clauses[1].category", "GR_3").param("clauses[1].drivetrain", "RR").param("action", "save"))
                 .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/admin/seasons/" + season.getId() + "/edit#carPool"));
+        // then
         assertThat(season.getCarPoolEntries()).singleElement().satisfies(entry -> {
             assertThat(entry.getLabel()).isEqualTo("Combined");
             assertThat(entry.getClauses()).extracting(SeasonCarPoolClause::getDrivetrain).containsExactly(Drivetrain.MR, Drivetrain.RR);
@@ -50,8 +53,10 @@ class SeasonCarPoolControllerIT {
 
     @Test
     void givenBindingError_whenSubmitting_thenSubmittedStateAndCatalogOptionsSurvive() throws Exception {
+        // given
         var season = helper.createSeason("Test Invalid Pool " + UUID.randomUUID());
         pools.changeMode(season.getId(), CarPoolMode.CATEGORY_POOL);
+        // when
         mvc.perform(post(base(season) + "/entries/save").param("label", "Keep submitted label")
                 .param("clauses[0].category", "GR_2").param("clauses[0].drivetrain", "FR").param("clauses[0].modelYear", "invalid"))
                 .andExpect(status().isOk()).andExpect(view().name("admin/season-form"))
@@ -59,11 +64,13 @@ class SeasonCarPoolControllerIT {
                 .andExpect(model().attributeExists("allCars", "allTracks", "poolPreview", "poolCategories", "poolDrivetrains"))
                 .andExpect(content().string(containsString("Keep submitted label")))
                 .andExpect(content().string(containsString("value=\"invalid\"")));
+        // then
         assertThat(season.getCarPoolEntries()).isEmpty();
     }
 
     @Test
     void givenFrozenPool_whenForgingSaveOrRemove_thenExistingDefinitionAndSnapshotRemain() throws Exception {
+        // given
         var season = helper.createSeason("Test Forged Pool " + UUID.randomUUID());
         pools.changeMode(season.getId(), CarPoolMode.CATEGORY_POOL);
         var car = new Car("Test Native Pool " + UUID.randomUUID(), "Member");
@@ -71,6 +78,7 @@ class SeasonCarPoolControllerIT {
         car.setModelYear(9876);
         cars.saveAndFlush(car);
         var id = pools.saveEntry(season.getId(), null, "Frozen label", List.of(new SeasonCarPoolService.ClauseInput(CarCategory.GR_X, null, 9876)));
+        // when
         pools.freeze(season.getId());
         mvc.perform(post(base(season) + "/entries/save").param("entryId", id.toString()).param("label", "Forged")
                 .param("clauses[0].category", "GR_4"))
@@ -78,24 +86,62 @@ class SeasonCarPoolControllerIT {
                 .andExpect(content().string(containsString("frozen")));
         mvc.perform(post(base(season) + "/entries/" + id + "/remove"))
                 .andExpect(status().isOk()).andExpect(model().attribute("errorMessage", containsString("frozen")));
+        // then
         assertThat(entries.findById(id).orElseThrow().getLabel()).isEqualTo("Frozen label");
         assertThat(pools.preview(season.getId()).entries().getFirst().carIds()).containsExactly(car.getId());
     }
 
     @Test
+    void givenUnknownOrOutOfRangeClauseAction_whenSubmitted_thenRetainFormAndRejectWithoutSaving() throws Exception {
+        // given
+        var season = helper.createSeason("Test Pool Actions " + UUID.randomUUID());
+        pools.changeMode(season.getId(), CarPoolMode.CATEGORY_POOL);
+        for (String action : new String[]{"remove-clause:-1", "remove-clause:9", "remove-clause:bad", "unknown"}) {
+            // when
+            mvc.perform(post(base(season) + "/entries/save").param("label", "Keep action state")
+                    .param("clauses[0].category", "GR_3").param("action", action))
+                    .andExpect(status().isOk()).andExpect(view().name("admin/season-form"))
+                    .andExpect(model().attributeHasErrors("poolEntryForm"))
+                    .andExpect(content().string(containsString("Keep action state")));
+        }
+        // then
+        assertThat(season.getCarPoolEntries()).isEmpty();
+    }
+
+    @Test
+    void givenFullClauseForm_whenAddingAnotherClause_thenExplainLimitAndPreserveRows() throws Exception {
+        // given
+        var season = helper.createSeason("Test Full Pool " + UUID.randomUUID());
+        pools.changeMode(season.getId(), CarPoolMode.CATEGORY_POOL);
+        var request = post(base(season) + "/entries/save").param("label", "Keep 32 rows").param("action", "add-clause");
+        for (int i = 0; i < 32; i++) request.param("clauses[" + i + "].category", "GR_3");
+        // when
+        mvc.perform(request).andExpect(status().isOk()).andExpect(model().attributeHasErrors("poolEntryForm"))
+                .andExpect(content().string(containsString("at most 32 clauses")))
+                .andExpect(model().attribute("poolEntryForm", org.hamcrest.Matchers.hasProperty("clauses", org.hamcrest.Matchers.hasSize(32))));
+        // then
+        assertThat(season.getCarPoolEntries()).isEmpty();
+    }
+
+    @Test
     void givenOversizedClauseIndex_whenSubmitted_thenReturnValidationErrorBeforeBinding() throws Exception {
+        // given
         var season = helper.createSeason("Test Pool Limit " + UUID.randomUUID());
+        // when
         mvc.perform(post(base(season) + "/entries/save").param("label", "Attack")
                 .param("clauses[9999].category", "GR_3"))
                 .andExpect(status().isBadRequest()).andExpect(view().name("admin/error"))
                 .andExpect(model().attribute("message", containsString("32 clauses")));
+        // then
         assertThat(season.getCarPoolEntries()).isEmpty();
     }
 
     @Test
     void givenInvalidYearOnSecondClause_whenFirstClauseRemoved_thenRejectedValueIsReindexedAndRetained() throws Exception {
+        // given
         var season = helper.createSeason("Test Pool Reindex " + UUID.randomUUID());
         pools.changeMode(season.getId(), CarPoolMode.CATEGORY_POOL);
+        // when
         mvc.perform(post(base(season) + "/entries/save").param("label", "Keep")
                 .param("clauses[0].category", "GR_2").param("clauses[1].category", "GR_3")
                 .param("clauses[1].modelYear", "invalid").param("action", "remove-clause:0"))
@@ -106,14 +152,17 @@ class SeasonCarPoolControllerIT {
 
     @Test
     void givenModeOrFreezeError_whenSubmitting_thenWorkspaceExplainsTheRejectedAction() throws Exception {
+        // given
         var fixture = helper.createFullSeasonFixture("ModeGuard " + UUID.randomUUID().toString().substring(0, 8));
         var car = cars.saveAndFlush(new Car("Test Fixed", "Selected " + UUID.randomUUID()));
         fixture.race().setCar(car);
+        // when
         mvc.perform(post(base(fixture.season()) + "/mode").param("carPoolMode", "CATEGORY_POOL"))
                 .andExpect(status().isOk()).andExpect(model().attributeHasErrors("poolModeForm"))
                 .andExpect(content().string(containsString("saved car selection")));
         mvc.perform(post(base(fixture.season()) + "/freeze"))
                 .andExpect(status().isOk()).andExpect(model().attribute("errorMessage", containsString("category")));
+        // then
         assertThat(fixture.season().getCarPoolMode()).isEqualTo(CarPoolMode.FIXED_CARS);
     }
 

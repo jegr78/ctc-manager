@@ -6,11 +6,6 @@ import org.ctc.discord.model.DiscordPost;
 import org.ctc.domain.model.*;
 import org.springframework.stereotype.Component;
 
-/**
- * Jackson {@link com.fasterxml.jackson.databind.Module} that registers all 26 per-entity MixIns
- * on the {@code backupObjectMapper} bean via Spring DI. Keeping all mappings in one file makes
- * the entity-to-MixIn mapping reviewable at a glance.
- */
 @Component
 public class BackupSerializationModule extends SimpleModule {
 

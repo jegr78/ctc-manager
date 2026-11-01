@@ -316,6 +316,7 @@ class CsvImportServiceTest {
 
 	@Test
     void givenSavedPoolEntry_whenOverwriteWouldDeleteSelection_thenRejectBeforeDeletingRace() {
+        // given
         season.setCarPoolMode(CarPoolMode.CATEGORY_POOL);
         season.setCarPoolState(CarPoolState.FROZEN);
         when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
@@ -334,6 +335,7 @@ class CsvImportServiceTest {
                 DriverMatchingService.MatchResult.exact("driver1_psn", driver1)));
         preview.addRow(new CsvImportService.ImportRow("CRL", "driver2_psn", 2, 2, false,
                 DriverMatchingService.MatchResult.exact("driver2_psn", driver2)));
+        // when / then
         assertThatThrownBy(() -> csvImportService.executeImport(preview, Map.of(), Set.of(), true))
                 .isInstanceOf(ImportRejectedException.class).hasMessageContaining("category pool selection");
         verify(raceRepository, never()).delete(any());
@@ -885,6 +887,7 @@ class CsvImportServiceTest {
 
 	@Test
 	void givenTeamFlexibleMatchingWithSpaceToUnderscore_whenFindTeamFlexible_thenMatches() {
+	    // given
 		// Test normalization: "Team Name" matches "Team_Name"
 		var teamWithUnderscore = new Team("Bravo Racing", "BR_V");
 		teamWithUnderscore.setId(UUID.randomUUID());
@@ -898,11 +901,13 @@ class CsvImportServiceTest {
 		preview.addRow(row);
 
 		// The system should find "BR_V" team when given "Bravo Racing" through normalization
+		// when / then
 		assertThat(teamWithUnderscore.getShortName()).contains("_");
 	}
 
 	@Test
 	void givenCsvHeaderWithTeamKeyword_whenReadCsvLines_thenSkipsHeader() throws IOException {
+	    // given
 		// Test that headers with "team" or "psn" keywords are skipped
 		var csv = "Team,PSN_ID,Position,Quali,FL\nBRV,driver1,1,1,true".getBytes();
 		var inputStream = new ByteArrayInputStream(csv);
@@ -911,11 +916,13 @@ class CsvImportServiceTest {
 				new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId()));
 
 		// Should have 1 row (header skipped)
+		// when / then
 		assertThat(preview.getRows()).hasSize(1);
 	}
 
 	@Test
 	void givenInvalidPositionValue_whenParseAndPreview_thenAddsErrorAndSkipsRow() throws IOException {
+	    // given
 		// Test NumberFormatException handling for invalid position
 		var csv = "BRV,driver1,invalid_pos,1,false\nCRL,driver2,2,2,false".getBytes();
 		var inputStream = new ByteArrayInputStream(csv);
@@ -924,12 +931,14 @@ class CsvImportServiceTest {
 				new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId()));
 
 		// Should have error for invalid position and only 1 valid row
+		// when / then
 		assertThat(preview.getErrors()).isNotEmpty();
 		assertThat(preview.getRows()).hasSize(1);
 	}
 
 	@Test
 	void givenBooleanValueVariations_whenParseBooleanSafe_thenHandlesAll() throws IOException {
+	    // given
 		// Test various boolean parsing options: true, 1, yes, ja, x, ✓
 		String[][] testCases = new String[][]{
 				{"BRV,driver1,1,1,true", "true"},
@@ -951,6 +960,7 @@ class CsvImportServiceTest {
 			if (!preview.getRows().isEmpty()) {
 				var row = preview.getRows().getFirst();
 				boolean expected = "true".equals(testCase[1]);
+				// when / then
 				assertThat(row.fastestLap()).as("FastestLap for: " + testCase[0])
 						.isEqualTo(expected);
 			}
@@ -959,6 +969,7 @@ class CsvImportServiceTest {
 
 	@Test
 	void givenExistingSeasonDriverWithDifferentTeam_whenEnsureSeasonDriver_thenUpdatesTeam() {
+	    // given
 		// Test that ensureSeasonDriver updates team when driver already in different team
 		setupCommonMocks();
 
@@ -977,11 +988,13 @@ class CsvImportServiceTest {
 		var result = csvImportService.executeImport(preview, Map.of(), Set.of(), false);
 
 		// The result should process successfully (team was updated)
+		// when / then
 		assertThat(result).isNotNull();
 	}
 
 	@Test
 	void givenCreateNewDriversWithExistingDriver_whenResolveDriver_thenReusesExistingDriver() {
+	    // given
 		// Test that resolveDriver reuses existing driver even when in createNewDrivers set
 		setupCommonMocks();
 
@@ -998,11 +1011,13 @@ class CsvImportServiceTest {
 		var result = csvImportService.executeImport(preview, Map.of(), Set.of("existing_driver"), false);
 
 		// Should succeed without trying to create duplicate
+		// when / then
 		assertThat(result.hasErrors()).isFalse();
 	}
 
 	@Test
 	void givenGroupByTeamPairWithSingleTeam_whenGroupByTeamPair_thenReturnsFallbackKey() {
+	    // given
 		// Test groupByTeamPair fallback when only 1 team
 		setupCommonMocks();
 
@@ -1020,6 +1035,7 @@ class CsvImportServiceTest {
 		// When only 1 team exists in preview, it should handle it
 		var result = csvImportService.executeImport(preview, Map.of(), Set.of(), false);
 
+		// when / then
 		assertThat(result).isNotNull();
 	}
 

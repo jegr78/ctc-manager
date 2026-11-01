@@ -35,7 +35,9 @@ public class SeasonCarPoolService {
         var entry = entryId == null ? new SeasonCarPoolEntry() : ownedEntry(season, entryId);
         if (entryId == null) {
             entry.setSeason(season);
-            entry.setSortIndex(season.getCarPoolEntries().stream().mapToInt(SeasonCarPoolEntry::getSortIndex).max().orElse(-1) + 1);
+            int nextIndex = 0;
+            for (var existing : season.getCarPoolEntries()) existing.setSortIndex(nextIndex++);
+            entry.setSortIndex(nextIndex);
             season.getCarPoolEntries().add(entry);
         }
         entry.setLabel(label.trim());

@@ -48,3 +48,23 @@ inspection led to scoped fieldset spacing, three desktop columns and a mobile an
 Logs live in the local task cache under `logs/season-pools-*.log`. Screenshots are ignored files
 under `.screenshots/season-pool-*.png`. Final build, review, guard falsification and merge evidence
 will be recorded before delivery.
+
+
+## Review corrections
+
+The independent security review of `81f2a3ff` found incomplete category selections accepted on
+restore, excessive JSON retention before duplicate detection, and overflow when appending after a
+restored maximal sort index. Regression tests failed first for each scenario. Restore now checks
+complete pairs, mode, same-season membership, byes and duplicate consumption by effective home
+team. IDs are checked incrementally; schema 4 retains only compact reference fields with a
+100,000-row budget. Legacy fixed-only rows require no retention. Draft append normalizes existing
+order without changing labels or IDs.
+
+The expanded focused verification passed 159 unit tests, 31 integration tests and two browser
+cases. The persistence suite proves rollback after snapshot rows were actually flushed, and a
+cached unrelated Discord-link write cannot overwrite frozen state. A real archive with a removed
+race entry is rejected at both preview and execution before the original selection changes.
+
+Final visual captures show 1440-pixel desktop and 390-pixel mobile widths without overflow; the
+mobile editor anchor starts 72 pixels below the viewport top. Frozen membership displays the two
+reviewed local cars. Screenshots are kept outside version control.

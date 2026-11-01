@@ -158,6 +158,7 @@ class SeasonManagementServiceTest {
 
     @Test
     void givenCategoryMode_whenFixedAssignmentEndpointsAreForged_thenRejectWithoutChangingFixedCars() {
+        // given
         var season = createSeason("Category season");
         season.setCarPoolMode(CarPoolMode.CATEGORY_POOL);
         var car = new Car("Fixture", "Retained");
@@ -165,6 +166,7 @@ class SeasonManagementServiceTest {
         season.getCars().add(car);
         lenient().when(seasonRepository.findByIdForUpdate(season.getId())).thenReturn(Optional.of(season));
         lenient().when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        // when / then
         assertThatThrownBy(() -> service.addCarsToSeason(season.getId(), List.of(car.getId())))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("fixed");
         assertThatThrownBy(() -> service.removeCarsFromSeason(season.getId(), List.of(car.getId())))

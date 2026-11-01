@@ -13,15 +13,6 @@ import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * BACK-01 guard test: locks the backup wire-contract invariants (schema version + entity count)
- * so future cleanup work cannot silently change them without a deliberate decision.
- *
- * <p>Note: Despite the {@code *Test} filename suffix, this class is {@code @Tag("integration")}
- * because {@link BackupSchema} requires a Spring/JPA context ({@code EntityManagerFactory} +
- * {@code EntityTopoSorter} injection via {@code @PostConstruct}). It is routed to Failsafe, not
- * Surefire. Per-commit run command: {@code ./mvnw verify -Dit.test=BackupSchemaGuardTest}.
- */
 @SpringBootTest
 @ActiveProfiles("dev")
 @Tag("integration")

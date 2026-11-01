@@ -768,15 +768,13 @@ public class BackupImportService {
                     counts.put(ref.tableName(), readRows(zf, entry, inflatedBytes, row -> poolValidator.accept(ref.tableName(), row)));
                 }
             }
+            poolValidator.validate();
         } catch (BackupArchiveException ex) {
             throw ex;
+        } catch (IllegalArgumentException ex) {
+            throw new BackupArchiveException(Reason.DATA_MISMATCH, "Invalid category pool data: " + ex.getMessage(), ex);
         } catch (IOException ex) {
             throw new BackupArchiveException(Reason.MANIFEST_INVALID, "ZIP read failure", ex);
-        }
-        try {
-            poolValidator.validate();
-        } catch (IllegalArgumentException e) {
-            throw new BackupArchiveException(Reason.DATA_MISMATCH, "Invalid category pool data: " + e.getMessage(), e);
         }
         return counts;
     }

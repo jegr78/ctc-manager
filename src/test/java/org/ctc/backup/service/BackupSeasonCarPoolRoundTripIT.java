@@ -72,9 +72,11 @@ class BackupSeasonCarPoolRoundTripIT {
     @Autowired private org.ctc.domain.service.SeasonCarPoolService pools;
     @Autowired private org.ctc.TestHelper helper;
     @Autowired private org.ctc.domain.repository.RaceRepository races;
+    @org.springframework.beans.factory.annotation.Value("${app.backup.staging-dir}") private String stagingDir;
 
     @Test
     void givenFrozenPoolAndSavedReference_whenArchiveRestored_thenExactIdsAndMembershipSurvive() throws Exception {
+        // given
         var ids = transactionTemplate.execute(status -> {
             var fixture = helper.createFullSeasonFixture("PoolBackup " + UUID.randomUUID().toString().substring(0, 8));
             var car = new org.ctc.domain.model.Car("Test Pool Backup", "Snapshot member " + UUID.randomUUID());
@@ -86,6 +88,7 @@ class BackupSeasonCarPoolRoundTripIT {
             pools.changeMode(fixture.season().getId(), org.ctc.domain.model.CarPoolMode.CATEGORY_POOL);
             var entryId = pools.saveEntry(fixture.season().getId(), null, "Historical label", java.util.List.of(
                     new org.ctc.domain.service.SeasonCarPoolService.ClauseInput(org.ctc.domain.model.CarCategory.GR_X, null, 9876)));
+            // when
             pools.freeze(fixture.season().getId());
             var entry = entries.findById(entryId).orElseThrow();
             fixture.race().setCar(car);
@@ -97,7 +100,24 @@ class BackupSeasonCarPoolRoundTripIT {
             carRepository.saveAndFlush(car);
             return new UUID[]{fixture.season().getId(), entryId, car.getId(), fixture.race().getId(), memberId, clauseId};
         });
-        runFullBackupRoundTrip();
+        byte[] validArchive = exportArchive();
+        byte[] brokenArchive = removeEntryReference(validArchive, ids[3]);
+        // then
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> backupImportService.stage(upload(brokenArchive)))
+                .isInstanceOfSatisfying(org.ctc.backup.exception.BackupArchiveException.class, error -> {
+                    assertThat(error.reason()).isEqualTo(org.ctc.backup.exception.BackupArchiveException.Reason.DATA_MISMATCH);
+                    assertThat(error.getMessage()).contains("both entry and car");
+                });
+        var validPreview = backupImportService.stage(upload(validArchive));
+        Files.write(Path.of(stagingDir).toAbsolutePath().resolve("upload-" + validPreview.stagingId() + ".zip"), brokenArchive);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> backupImportService.execute(validPreview.stagingId()))
+                .isInstanceOf(org.ctc.backup.exception.BackupImportException.class).cause()
+                .isInstanceOfSatisfying(org.ctc.backup.exception.BackupArchiveException.class,
+                        error -> assertThat(error.reason()).isEqualTo(org.ctc.backup.exception.BackupArchiveException.Reason.DATA_MISMATCH));
+        backupImportService.deleteStagingFile(validPreview.stagingId());
+        transactionTemplate.executeWithoutResult(status -> assertThat(races.findById(ids[3]).orElseThrow().getCarPoolEntry().getId()).isEqualTo(ids[1]));
+        var preview = backupImportService.stage(upload(validArchive));
+        backupImportService.execute(preview.stagingId());
         transactionTemplate.executeWithoutResult(status -> {
             var season = seasons.findById(ids[0]).orElseThrow();
             assertThat(season.getCarPoolMode()).isEqualTo(org.ctc.domain.model.CarPoolMode.CATEGORY_POOL);
@@ -122,12 +142,36 @@ class BackupSeasonCarPoolRoundTripIT {
         });
     }
 
-    private void runFullBackupRoundTrip() throws Exception {
+    private byte[] exportArchive() throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         backupArchiveService.writeZip(baos, Instant.now());
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "season-pool-roundtrip-export.zip", "application/zip", baos.toByteArray());
-        var preview = backupImportService.stage(file);
-        backupImportService.execute(preview.stagingId());
+        return baos.toByteArray();
+    }
+
+    private static MockMultipartFile upload(byte[] archive) {
+        return new MockMultipartFile("file", "season-pool-roundtrip-export.zip", "application/zip", archive);
+    }
+
+    private static byte[] removeEntryReference(byte[] archive, UUID raceId) throws IOException {
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        var out = new ByteArrayOutputStream();
+        try (var in = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(archive));
+             var zip = new java.util.zip.ZipOutputStream(out)) {
+            java.util.zip.ZipEntry entry;
+            while ((entry = in.getNextEntry()) != null) {
+                byte[] content = in.readAllBytes();
+                if (entry.getName().equals("data/races.json")) {
+                    var rows = mapper.readTree(content);
+                    for (var row : rows) if (row.path("id").asText().equals(raceId.toString())) {
+                        ((com.fasterxml.jackson.databind.node.ObjectNode) row).remove("carPoolEntry");
+                    }
+                    content = mapper.writeValueAsBytes(rows);
+                }
+                zip.putNextEntry(new java.util.zip.ZipEntry(entry.getName()));
+                zip.write(content);
+                zip.closeEntry();
+            }
+        }
+        return out.toByteArray();
     }
 }

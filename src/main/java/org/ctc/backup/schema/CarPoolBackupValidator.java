@@ -12,20 +12,38 @@ public final class CarPoolBackupValidator {
             "season_car_pool_entries", Set.of("id", "season", "label", "sortIndex"),
             "season_car_pool_clauses", Set.of("id", "entry", "category", "drivetrain", "modelYear", "sortIndex"),
             "season_car_pool_members", Set.of("id", "entry", "car"),
-            "races", Set.of("id", "matchday", "carPoolEntry", "car"),
+            "races", Set.of("id", "matchday", "carPoolEntry", "car", "match", "playoffMatchup", "homeTeamOverride"),
             "matchdays", Set.of("id", "phase"),
-            "season_phases", Set.of("id", "season"));
+            "season_phases", Set.of("id", "season"),
+            "matches", Set.of("id", "homeTeam", "bye"),
+            "playoff_matchups", Set.of("id", "team1"));
+    private static final int MAX_RETAINED_ROWS = 100_000;
     private final int version;
-    private final Map<String, List<JsonNode>> rows = new HashMap<>();
+    private final Map<String, Map<String, JsonNode>> rows = new HashMap<>();
+    private int retainedRows;
 
     public CarPoolBackupValidator(int version) { this.version = version; }
 
     public void accept(String table, JsonNode row) {
-        if (FIELDS.containsKey(table)) {
-            if (!(row instanceof ObjectNode object)) throw new IllegalArgumentException("Backup row must be an object.");
-            object.retain(FIELDS.get(table));
-            rows.computeIfAbsent(table, ignored -> new ArrayList<>()).add(object);
+        if (!FIELDS.containsKey(table)) return;
+        if (version < 4) {
+            validateLegacyRow(table, row);
+            return;
         }
+        if (!(row instanceof ObjectNode object)) throw new IllegalArgumentException("Backup row must be an object.");
+        String id = uuid(row, "id");
+        var indexed = rows.computeIfAbsent(table, ignored -> new LinkedHashMap<>());
+        if (indexed.containsKey(id)) fail("Duplicate ID in " + table);
+        if (retainedRows >= MAX_RETAINED_ROWS) fail("Category pool validation exceeds the 100000-row budget.");
+        object.retain(FIELDS.get(table));
+        indexed.put(id, object);
+        retainedRows++;
+    }
+
+    private static void validateLegacyRow(String table, JsonNode row) {
+        if (table.startsWith("season_car_pool_") || table.equals("races") && row.hasNonNull("carPoolEntry")) fail("Pool data requires backup schema version 4.");
+        if (table.equals("seasons") && (CarPoolMode.valueOf(row.path("carPoolMode").asText("FIXED_CARS")) != CarPoolMode.FIXED_CARS
+                || CarPoolState.valueOf(row.path("carPoolState").asText("DRAFT")) != CarPoolState.DRAFT)) fail("Category pools require backup schema version 4.");
     }
 
     public void validate() {
@@ -38,15 +56,13 @@ public final class CarPoolBackupValidator {
         var states = new HashMap<String, CarPoolState>();
         for (var item : seasons.entrySet()) {
             var row = item.getValue();
-            if (version >= 4 && (!row.hasNonNull("carPoolMode") || !row.hasNonNull("carPoolState"))) fail("Missing season pool mode/state.");
+            if (!row.hasNonNull("carPoolMode") || !row.hasNonNull("carPoolState")) fail("Missing season pool mode/state.");
             var mode = CarPoolMode.valueOf(row.path("carPoolMode").asText("FIXED_CARS"));
             var state = CarPoolState.valueOf(row.path("carPoolState").asText("DRAFT"));
-            if (version < 4 && (mode != CarPoolMode.FIXED_CARS || state != CarPoolState.DRAFT)) fail("Category pools require backup schema version 4.");
             if (mode == CarPoolMode.FIXED_CARS && state != CarPoolState.DRAFT) fail("Fixed season cannot have a frozen category pool.");
             modes.put(item.getKey(), mode);
             states.put(item.getKey(), state);
         }
-        if (version < 4 && (!entries.isEmpty() || !clauses.isEmpty() || !members.isEmpty())) fail("Pool data requires backup schema version 4.");
         var bySeason = new HashMap<String, List<String>>();
         for (var item : entries.entrySet()) {
             var row = item.getValue();
@@ -91,26 +107,38 @@ public final class CarPoolBackupValidator {
         }
         var matchdays = index("matchdays");
         var phases = index("season_phases");
-        for (var row : list("races")) {
-            if (!row.hasNonNull("carPoolEntry")) continue;
-            var entry = reference(row, "carPoolEntry", entries);
-            var car = reference(row, "car", cars);
+        var matches = index("matches");
+        var matchups = index("playoff_matchups");
+        var consumption = new HashSet<String>();
+        for (var row : index("races").values()) {
+            boolean hasEntry = row.hasNonNull("carPoolEntry");
+            boolean hasCar = row.hasNonNull("car");
+            if (!hasEntry && !hasCar) continue;
             var matchday = reference(row, "matchday", matchdays);
             var phase = reference(matchdays.get(matchday), "phase", phases);
             var season = reference(phases.get(phase), "season", seasons);
+            if (modes.get(season) == CarPoolMode.FIXED_CARS) {
+                if (hasEntry) fail("Fixed mode race cannot reference a pool entry.");
+                continue;
+            }
+            if (!hasEntry || !hasCar) fail("A category selection requires both entry and car.");
+            var entry = reference(row, "carPoolEntry", entries);
+            var car = reference(row, "car", cars);
             if (!uuid(entries.get(entry), "season").equals(season)) fail("Race pool entry belongs to a different season.");
             if (!memberships.getOrDefault(entry, Set.of()).contains(car)) fail("Race car is not a frozen pool member.");
+            JsonNode match = row.hasNonNull("match") ? matches.get(reference(row, "match", matches)) : null;
+            if (match != null && match.path("bye").asBoolean()) fail("A bye cannot consume a pool entry.");
+            String home;
+            if (row.hasNonNull("homeTeamOverride")) home = uuid(row, "homeTeamOverride");
+            else if (match != null) home = uuid(match, "homeTeam");
+            else if (row.hasNonNull("playoffMatchup")) home = uuid(matchups.get(reference(row, "playoffMatchup", matchups)), "team1");
+            else throw new IllegalArgumentException("Category selection has no effective home team.");
+            if (!consumption.add(season + "/" + home + "/" + entry)) fail("Duplicate entry consumption by effective home team.");
         }
     }
 
-    private List<JsonNode> list(String table) { return rows.getOrDefault(table, List.of()); }
-
     private Map<String, JsonNode> index(String table) {
-        var result = new LinkedHashMap<String, JsonNode>();
-        for (var row : list(table)) {
-            if (result.putIfAbsent(uuid(row, "id"), row) != null) fail("Duplicate ID in " + table);
-        }
-        return result;
+        return rows.getOrDefault(table, Map.of());
     }
 
     private static String reference(JsonNode row, String field, Map<String, JsonNode> targets) {

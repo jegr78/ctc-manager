@@ -29,6 +29,7 @@ class SeasonCarPoolE2ETest extends PlaywrightConfig {
     @ParameterizedTest
     @ValueSource(ints = {1440, 390})
     void givenNativeBrowser_whenBuildingFreezingAndReopeningPool_thenSnapshotAndControlsWork(int width) {
+        // given
         context = browser.newContext(new Browser.NewContextOptions().setJavaScriptEnabled(false).setViewportSize(width, 1000));
         page = context.newPage();
         var season = tx.execute(status -> helper.createSeason("NativePool " + UUID.randomUUID().toString().substring(0, 8)));
@@ -42,6 +43,7 @@ class SeasonCarPoolE2ETest extends PlaywrightConfig {
             return cars.saveAllAndFlush(List.of(mr, rr)).stream().map(Car::getId).toList();
         });
         try {
+            // when
             page.navigate(url("/admin/seasons/" + season.getId() + "/edit"));
             page.locator("#carPoolMode").selectOption("CATEGORY_POOL");
             page.getByRole(com.microsoft.playwright.options.AriaRole.BUTTON, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Save pool mode").setExact(true)).click();
@@ -49,6 +51,7 @@ class SeasonCarPoolE2ETest extends PlaywrightConfig {
             page.locator("#pool-category-0").selectOption("GR_3");
             page.locator("#pool-drive-0").selectOption("MR");
             page.locator("button[value='add-clause']").click();
+            // then
             assertThat(page.locator("#pool-label")).hasValue("Gr.3 MR + RR");
             assertThat(page.locator("#pool-drive-0")).hasValue("MR");
             page.locator("#pool-category-1").selectOption("GR_3");
