@@ -67,17 +67,21 @@ class MigrationFixtureRuntime(NativeRuntime):
 
 
 def assert_synthetic(runtime):
-    assert runtime.root == Path('/srv/ctc-manager'), 'only the known host qualification installation is eligible'
-    assert (runtime.root / '.ctc-manager.lock/owner').read_text().strip() == str(os.getppid()), 'caller must hold the installation lock'
+    def require(condition, message):
+        if not condition:
+            raise ValueError(message)
+
+    require(runtime.root == Path('/srv/ctc-manager'), 'only the known host qualification installation is eligible')
+    require((runtime.root / '.ctc-manager.lock/owner').read_text().strip() == str(os.getppid()), 'caller must hold the installation lock')
     runtime.preflight()
-    assert runtime.config.get('outboundPaused') is True, 'qualification must keep integrations paused'
+    require(runtime.config.get('outboundPaused') is True, 'qualification must keep integrations paused')
     metadata = runtime.database_metadata()
-    assert all(metadata['records'].get(name) == 0 for name in ['seasons', 'teams', 'drivers', 'races']), 'never qualify against real domain data'
-    assert metadata['records'].get('ctc_runtime_qualification') == 1, 'require the dedicated qualification marker'
-    assert 'ctc_update_native_fixture' not in metadata['records'], 'an earlier migration fixture needs recovery first'
-    assert json.loads(Path(runtime.config['googleCredentialsFile']).read_text()) == {}, 'never use real Google credentials'
+    require(all(metadata['records'].get(name) == 0 for name in ['seasons', 'teams', 'drivers', 'races']), 'never qualify against real domain data')
+    require(metadata['records'].get('ctc_runtime_qualification') == 1, 'require the dedicated qualification marker')
+    require('ctc_update_native_fixture' not in metadata['records'], 'an earlier migration fixture needs recovery first')
+    require(json.loads(Path(runtime.config['googleCredentialsFile']).read_text()) == {}, 'never use real Google credentials')
     environment = probe_environment(runtime.config['appEnvFile'], Path(runtime.config['databasePasswordFile']).read_text().strip())
-    assert not environment.get('DISCORD_BOT_TOKEN') and not environment.get('GOOGLE_CALENDAR_ID'), 'no live integration identities'
+    require(not environment.get('DISCORD_BOT_TOKEN') and not environment.get('GOOGLE_CALENDAR_ID'), 'no live integration identities')
     return metadata
 
 

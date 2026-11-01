@@ -494,5 +494,42 @@ class UpdateTest(unittest.TestCase):
         self.assertEqual('failed-review-required', self.receipt()['stage'])
 
 
+class NativeUpdateSafetyTest(unittest.TestCase):
+    def test_optimized_python_still_refuses_real_domain_data_before_native_changes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            for name, value in [('google.json', '{}'), ('db-password', 'fixture'),
+                                ('app.env', 'SPRING_SECURITY_USER_NAME=fixture\nSPRING_SECURITY_USER_PASSWORD=fixture\n')]:
+                (directory / name).write_text(value)
+            program = '''
+import importlib.util
+import os
+from pathlib import Path
+import sys
+from types import SimpleNamespace
+from unittest.mock import patch
+spec=importlib.util.spec_from_file_location('native_update',sys.argv[1])
+module=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+directory=Path(sys.argv[2])
+runtime=SimpleNamespace(root=Path('/srv/ctc-manager'),preflight=lambda:None,
+ config={'outboundPaused':True,'googleCredentialsFile':str(directory/'google.json'),
+         'appEnvFile':str(directory/'app.env'),'databasePasswordFile':str(directory/'db-password')},
+ database_metadata=lambda:{'records':{'seasons':4,'teams':0,'drivers':0,'races':0,'ctc_runtime_qualification':1}})
+original=Path.read_text
+def read(path,*args,**kwargs):
+ if path.name=='owner': return str(os.getppid())
+ return original(path,*args,**kwargs)
+with patch.object(Path,'read_text',read): module.assert_synthetic(runtime)
+print('unsafe acceptance')
+'''
+            result = subprocess.run([sys.executable, '-O', '-c', program,
+                str(ROOT / 'deploy/tests/native_update.py'), str(directory)], capture_output=True, text=True,
+                env={**os.environ, 'PYTHONOPTIMIZE': '1'})
+            self.assertNotEqual(0, result.returncode, 'optimization must never remove the real-data refusal')
+            self.assertIn('never qualify against real domain data', result.stderr)
+            self.assertNotIn('unsafe acceptance', result.stdout)
+
+
 if __name__ == '__main__':
     unittest.main()
