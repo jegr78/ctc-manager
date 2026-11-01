@@ -19,18 +19,20 @@ can preserve its race identity. It does not infer entries for historical races.
 | Exact backup and legacy defaults | Backup schema, MixIns, restorers and preflight | Exact frozen membership, supported older fixed-only archive | Missing declared files, foreign/duplicate/invalid references | Backup unit and real archive IT |
 | Read-only consistency audit | DataAuditService | Consistent draft/frozen pools | Broken ownership, membership and overlap fixtures | Synthetic integration fixture |
 
-## Checklist
+## Implementation checkpoint before final gates
 
 - [x] Inspect current tracker, dependency chain, parallel work and repository rules.
 - [x] Create a branch from current origin/master and record the requirement matrix.
 - [x] Observe new focused tests failing before implementation.
 - [x] Implement and verify persistence, services, editor, backups and audit.
 - [x] Verify desktop/mobile and native forms without JavaScript.
-- [ ] Commit the correct implementation and falsify each new guard individually.
-- [ ] Complete code review and an independent security review; address all findings.
-- [ ] Run the authoritative committed-head `./mvnw clean verify -Pe2e`.
-- [ ] Confirm matching-head CI, squash merge and reconcile the entire issue hierarchy.
-- [ ] Update README, CLAUDE.md and Wiki; remove the verified merged topic branch.
+- [x] Commit the correct implementation and falsify each new guard individually.
+- [x] Complete code review and an independent security review; address all findings.
+
+The remaining delivery gates are the authoritative committed-head clean build, matching-head CI,
+confirmed squash merge, Wiki and tracker synchronization, and branch cleanup. Their measured
+results and current status are recorded on [issue #275](https://github.com/jegr78/ctc-manager/issues/275).
+This file records the implementation checkpoint and reproducible verification paths.
 
 ## Evidence
 
@@ -82,3 +84,24 @@ Both desktop and mobile cases failed the retained-anchor assertion. All pool for
 carry their section fragment, including the entry editor for clause actions. The same two
 no-JavaScript browser cases and nine controller integration tests then passed, with the pool
 section positioned below the mobile menu.
+
+
+## Individual guard falsification
+
+All 98 individual experiments caused the intended assertion failure with no unexpected JUnit
+errors. Each changed file was restored byte-for-byte from its recorded committed checkpoint.
+Source SHA-256 values from all manifests match the final production source after rebasing onto
+the current release base. The timestamp-based compiler mode was used only for statement-level
+mutation loops without signature changes; the authoritative clean build uses the normal compiler
+configuration.
+
+- season-pools-service-falsification.json: 30 proved guards.
+  category-match, drivetrain-match, year-match, label-null, label-empty, label-length, clauses-null, clauses-empty, clauses-limit, clause-null, clause-category, duplicate-clause, entry-owner, category-mode, frozen-edit, used-entry, fixed-selection-mode-switch, mode-required, reopen-state, empty-pool, empty-membership, overlap, freeze-problems, snapshot-preview, pool-write-lock-call, member-car-deletion, fixed-assignment-mode, legacy-race-category, race-write-lock-call, import-preserves-entry.
+- season-pools-backup-falsification.json: 38 proved guards.
+  backup-scalar-text-type, backup-scalar-integral, backup-scalar-int-range, backup-scalar-boolean, backup-label-length, backup-reference-length, backup-scalar-copy, backup-duplicate-id, backup-row-budget, backup-legacy-tables, backup-legacy-race-entry, backup-blank-label, backup-negative-sort, backup-year-lower-bound, backup-year-upper-bound, backup-duplicate-clause, backup-clause-limit, backup-draft-members, backup-duplicate-members, backup-overlap-members, backup-missing-clauses, backup-empty-entry, backup-empty-pool, backup-fixed-race-entry, backup-partial-race-pair, backup-race-season-owner, backup-race-member, backup-bye-selection, backup-effective-home, backup-playoff-home, backup-missing-home, backup-duplicate-consumption, backup-foreign-reference, backup-required-fields, backup-fixed-frozen-state, backup-legacy-mode-state, backup-required-id-text, clause-year-validation.
+- season-pools-runtime-falsification.json: 30 proved guards.
+  lock-pending-flush, lock-refresh, lock-database-write, freeze-transaction, unrelated-dynamic-update, season-details-lock, form-index-limit, form-add-limit, form-remove-range, form-unknown-action, form-reindex-errors, form-numeric-year-field, restore-execute-version, sql-fk_car_pool_entry_season, sql-fk_car_pool_member_entry, sql-fk_car_pool_member_car, sql-fk_car_pool_clause_entry, sql-fk_race_car_pool_entry, sql-chk_season_car_pool_mode, sql-chk_season_car_pool_state, sql-chk_car_pool_clause_category, sql-chk_car_pool_clause_drivetrain, sql-member-uniqueness, sql-clause-year-lower, sql-clause-year-upper, fixed-add-lock-call, fixed-remove-lock-call, saved-race-entry-guard, category-race-car-guard, empty-category-draft.
+
+The independent security pass reported all three findings fixed on `22f97e8f`. Business and
+persistence code remained unchanged afterward. The later native form-anchor correction was
+checked separately. The final clean build and CI validate the rebased, committed delivery head.
