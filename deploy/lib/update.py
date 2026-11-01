@@ -125,7 +125,7 @@ def stage_release(runtime, selected, provider=None):
             for member in archive:
                 relative = PurePosixPath(*PurePosixPath(member.name).parts[1:])
                 path = extracted / relative
-                if not path.is_relative_to(extracted):
+                if not path.resolve().is_relative_to(extracted):
                     raise ValueError('unsafe release extraction path')
                 path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
                 with path.open('xb') as output:

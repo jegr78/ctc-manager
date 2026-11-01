@@ -403,12 +403,39 @@ class UpdateTest(unittest.TestCase):
         self.assertNotIn('resume-source', self.runtime.trace)
 
     def test_incomplete_or_unrelated_restore_receipt_prevents_activation(self):
-        def unrelated(runtime, unit):
-            return {**self.prove(runtime, unit), 'unitId': 'other-unit'}
+        for key, value in [('status', 'failed'), ('unitId', 'other-unit'), ('manifestSha256', '0' * 64),
+                           ('outboundEnabled', True), ('credentialsVerified', False), ('hostPorts', [9092])]:
+            def unrelated(runtime, unit):
+                return {**self.prove(runtime, unit), key: value}
+            with self.subTest(field=key), self.assertRaisesRegex(ValueError, 'proof|receipt'):
+                self.execute(prove_unit=unrelated)
+            self.assertNotIn('activate-paused', self.runtime.trace)
+            self.assertTrue(self.runtime.running)
+
+    def test_non_newer_installed_candidate_rejects_before_freeze(self):
+        with self.assertRaisesRegex(ValueError, 'newer released version'):
+            self.execute(self.source_directory)
+        self.assert_source_unchanged()
+
+    def test_changed_unit_after_proof_rejects_before_activation(self):
+        def changed(runtime, unit):
+            proof = self.prove(runtime, unit)
+            with (unit / 'manifest.json').open('a') as output:
+                output.write('\n')
+            return proof
         with self.assertRaisesRegex(ValueError, 'proof|receipt'):
-            self.execute(prove_unit=unrelated)
+            self.execute(prove_unit=changed)
         self.assertNotIn('activate-paused', self.runtime.trace)
         self.assertTrue(self.runtime.running)
+
+    def test_restarted_source_during_proof_cannot_activate_candidate(self):
+        def restarted(runtime, unit):
+            proof = self.prove(runtime, unit)
+            runtime.running = True
+            return proof
+        with self.assertRaisesRegex(ValueError, 'restarted|freeze'):
+            self.execute(prove_unit=restarted)
+        self.assertNotIn('activate-paused', self.runtime.trace)
 
     def test_candidate_changed_during_proof_is_rejected_before_activation(self):
         candidate = self.stage()
