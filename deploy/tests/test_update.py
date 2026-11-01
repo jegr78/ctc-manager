@@ -209,6 +209,7 @@ class UpdateTest(unittest.TestCase):
         candidate = self.stage()
         self.assertEqual('1.24.0', installed_release(candidate)['version'])
         self.assertTrue((candidate / 'guides/updates.md').is_file())
+        self.assertTrue((candidate / 'migrate-from-mac.sh').stat().st_mode & 0o100)
         self.assertIn('pull', self.runtime.trace)
         self.assert_source_unchanged()
 

@@ -402,3 +402,8 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
   Pending update recovery remains protected until a verified backup of the active image exists.
   Use one daily backup service/timer and local journal errors. No off-host requirement, alert hook,
   Discord delivery or separate monitoring service belongs to this single-admin deployment.
+
+### Native Mac migration
+
+* Keep native source provenance separate from the normalized supported recovery unit. An unrecorded source app version is null. Verify an existing observer's global PROCESS visibility and matching database before accepting a source freeze; do not add privileges to make it pass.
+* Initial cutover accepts only the empty paused qualification target and an exact rehearsed source/unit proof. Persist the authority boundary before target HTTP activation. After possible target writes, stop a failed candidate and require complete state-preserving reverse migration, never stale Mac restart.

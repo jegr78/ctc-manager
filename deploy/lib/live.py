@@ -37,7 +37,7 @@ class RecoveryStorage(Probe):
                                                '--label', 'com.docker.compose.volume=' + role]
 
 
-def restore(runtime, unit, confirmation):
+def restore(runtime, unit, confirmation, *, before_activation=None):
     from recovery import admit_recovery_image, flush_directory, probe_environment, restore_check, validate_unit
     import os
     generation = recovery_target(runtime.config, confirmation)
@@ -119,6 +119,8 @@ def restore(runtime, unit, confirmation):
         os.replace(temporary, current)
         flush_directory(runtime.root)
         runtime.config = target
+        if before_activation is not None:
+            before_activation()
         runtime.compose(['up', '-d', '--wait', '--wait-timeout', '180'])
         receipt['stage'] = 'active-integrations-paused'
         atomic_json(receipt_path, receipt)

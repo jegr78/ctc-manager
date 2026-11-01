@@ -13,7 +13,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'deploy/lib'))
-from release import FILES, canonical_database_image, digest, version, verify
+from release import EXECUTABLES, FILES, canonical_database_image, digest, version, verify
 
 
 def create(args):
@@ -42,7 +42,7 @@ def create(args):
             for name, value in sorted(content.items()):
                 info = tarfile.TarInfo(prefix + '/' + name)
                 info.size = len(value)
-                info.mode = 0o755 if name in ['ctc-manager', 'setup-host.sh'] else 0o644
+                info.mode = 0o755 if name in EXECUTABLES else 0o644
                 archive.addfile(info, io.BytesIO(value))
         verify(staging)
         os.replace(staging, target)
