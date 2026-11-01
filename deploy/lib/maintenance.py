@@ -12,7 +12,7 @@ import time
 import uuid
 
 from config import atomic_json, private_path
-from recovery import NativeRuntime, capture, read_json, restore_check, sha256, validate_unit
+from recovery import NativeRuntime, capture, read_json, restore_check, sha256, validate_unit, select_recovery_release
 
 UNIT_ROOT = Path('/mnt/backup/ctc-manager/units')
 REMOTE_FIELDS = {'format', 'repositoryFile', 'passwordFile', 'environmentFile',
@@ -269,6 +269,16 @@ def run_backup(runtime, destination, remote, *, capture_unit=capture, prove_unit
         raise ValueError(stage + '; inspect private backup evidence') from None
 
 
+def prove_retrieved(runtime, directory, *, prove_unit=restore_check):
+    manifest = validate_unit(directory)
+    selected = select_recovery_release(runtime.root, read_json(directory / 'release.json'))
+    proof_runtime = NativeRuntime(runtime.root, selected, require_selected=False)
+    proof = prove_unit(proof_runtime, directory)
+    if not proof_matches(proof, directory, manifest):
+        raise ValueError('retrieved isolated proof mismatch')
+    return proof
+
+
 def freshness(state, now):
     problems = []
     for field in ['local', 'remote', 'proof']:
@@ -306,6 +316,8 @@ def main():
         except (OSError, ValueError, KeyError, TypeError):
             problems.append('backup-configuration-incomplete')
         print(json.dumps({'backupStatus': 'incomplete' if problems else 'ready', 'issues': problems}))
+        if problems:
+            raise ValueError('backup readiness incomplete')
         return
     config = load_backup(root)
     if args.operation == 'alert':
@@ -337,10 +349,7 @@ def main():
         directory = Path(tempfile.mkdtemp(prefix='remote-check-', dir=root/'state'))
         try:
             remote.retrieve(unit, receipt, directory)
-            manifest = validate_unit(directory)
-            proof = restore_check(runtime, directory)
-            if not proof_matches(proof, directory, manifest):
-                raise ValueError('retrieved isolated proof mismatch')
+            prove_retrieved(runtime, directory)
             state = evidence(root)
             state['retrieval'] = {'completedAt': time.time(), 'unit': str(unit), 'snapshot': receipt['snapshot']}
             save(root, state)

@@ -90,10 +90,24 @@ class MaintenanceTest(unittest.TestCase):
         p.write_text('sftp:backup@example.invalid:/ctc');p.chmod(0o644)
         with self.assertRaisesRegex(ValueError,'private'):maintenance.load_backup(self.root)
 
+    def test_empty_password_unexecutable_hook_or_outside_secret_refuses(self):
+        password=Path(self.config['passwordFile']);password.write_text('')
+        with self.assertRaisesRegex(ValueError,'password'):maintenance.load_backup(self.root)
+        password.write_text('private-key')
+        hook=Path(self.config['alertHook']);hook.chmod(0o600)
+        with self.assertRaisesRegex(ValueError,'executable'):maintenance.load_backup(self.root)
+        hook.chmod(0o700)
+        outside=self.root.parent/'outside';outside.write_text('private-key');outside.chmod(0o600)
+        atomic_json(self.root/'config/backup.json',{**self.config,'passwordFile':str(outside)})
+        with self.assertRaisesRegex(ValueError,'inside'):maintenance.load_backup(self.root)
+
     def test_environment_cannot_override_command_or_restic_identity(self):
         p=Path(self.config['environmentFile'])
         for key in ['RESTIC_PASSWORD_COMMAND','RESTIC_REPOSITORY','LD_PRELOAD','PATH']:
             atomic_json(p,{key:'private-value'})
+            with self.assertRaisesRegex(ValueError,'environment'):maintenance.load_backup(self.root)
+        for value in [1,'invalid\x00value']:
+            atomic_json(p,{'AWS_SECRET_ACCESS_KEY':value})
             with self.assertRaisesRegex(ValueError,'environment'):maintenance.load_backup(self.root)
 
     def test_retention_keeps_calendar_union_newest_and_unreplicated(self):
@@ -130,6 +144,11 @@ class MaintenanceTest(unittest.TestCase):
     def test_changed_replica_identity_refuses(self):
         unit=self.make_unit();state=self.evidence([unit]);state['replicas'][str(unit)]['manifestSha256']='0'*64
         with self.assertRaisesRegex(ValueError,'replica'):maintenance.retention_plan(self.runtime,self.units,state,self.now)
+
+    def test_changed_protected_reference_aborts_retention(self):
+        unit=self.make_unit();state=self.evidence([unit])
+        atomic_json(self.root/'state/protected-recovery.json',{'unit':str(unit),'manifestSha256':'0'*64,'previousUnits':[]})
+        with self.assertRaisesRegex(ValueError,'protected'):maintenance.retention_plan(self.runtime,self.units,state,self.now)
 
     def test_mount_failure_prevents_capture(self):
         self.runtime.check_destination=lambda path: (_ for _ in ()).throw(ValueError('wrong mount'))
@@ -183,6 +202,14 @@ class MaintenanceTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'proof-failed'):
             maintenance.run_backup(self.runtime,self.units,self.remote,capture_unit=lambda *a:unit,prove_unit=lambda *a:{'status':'passed'},alert=self.alerts.append,now=self.now)
 
+    def test_each_restore_proof_field_is_required_before_replication(self):
+        unit=self.make_unit();proof={'status':'passed','unitId':validate_unit(unit)['id'],'manifestSha256':sha256(unit/'manifest.json'),'outboundEnabled':False,'credentialsVerified':True,'hostPorts':[]}
+        for key,value in [('status','failed'),('unitId','wrong'),('manifestSha256','0'*64),('outboundEnabled',True),('credentialsVerified',False),('hostPorts',[9092])]:
+            with self.subTest(field=key):
+                changed={**proof,key:value}
+                self.assertFalse(maintenance.proof_matches(changed,unit,validate_unit(unit)))
+        self.assertTrue(maintenance.proof_matches(proof,unit,validate_unit(unit)))
+
     def test_freshness_distinguishes_missing_stale_and_failed_evidence(self):
         self.assertIn('local-missing',maintenance.freshness({},self.now))
         state=self.evidence([]);self.assertEqual([],maintenance.freshness(state,self.now))
@@ -194,6 +221,28 @@ class MaintenanceTest(unittest.TestCase):
         self.assertIn('remote-invalid',maintenance.freshness(state,self.now))
         state['remote']['completedAt']=self.now+120
         self.assertIn('remote-invalid',maintenance.freshness(state,self.now))
+
+    def test_doctor_returns_failure_for_missing_configuration_or_stale_evidence(self):
+        self.evidence([])
+        argv=['maintenance.py','--directory',str(self.root),'doctor']
+        with patch.object(sys,'argv',argv),patch.object(maintenance.time,'time',return_value=self.now):maintenance.main()
+        (self.root/'config/backup.json').unlink()
+        with patch.object(sys,'argv',argv),patch.object(maintenance.time,'time',return_value=self.now),self.assertRaisesRegex(ValueError,'readiness'):maintenance.main()
+        atomic_json(self.root/'config/backup.json',self.config)
+        state=self.evidence([]);state['local']['completedAt']=0;atomic_json(self.root/'state/backups.json',state)
+        with patch.object(sys,'argv',argv),patch.object(maintenance.time,'time',return_value=self.now),self.assertRaisesRegex(ValueError,'readiness'):maintenance.main()
+
+    def test_historical_remote_unit_uses_matching_trusted_installed_release(self):
+        unit=self.make_unit();expected=json.loads((unit/'release.json').read_text())
+        old=self.root/'releases/old';proof_runtime=object();seen=[]
+        def prove(runtime,directory):
+            seen.append(runtime)
+            return {'status':'passed','unitId':validate_unit(directory)['id'],'manifestSha256':sha256(directory/'manifest.json'),'outboundEnabled':False,'credentialsVerified':True,'hostPorts':[]}
+        with patch.object(maintenance,'select_recovery_release',return_value=old) as select,patch.object(maintenance,'NativeRuntime',return_value=proof_runtime) as construct:
+            maintenance.prove_retrieved(self.runtime,unit,prove_unit=prove)
+        select.assert_called_once_with(self.root,expected)
+        construct.assert_called_once_with(self.root,old,require_selected=False)
+        self.assertEqual([proof_runtime],seen)
 
     def test_operation_specific_flags_cannot_be_silently_ignored(self):
         for operation,flags in [('maintenance',['--dry-run']),('prune',['--unit','/wrong']),('retrieve-check',[]),('backup-check',['--source','anything'])]:
@@ -218,6 +267,9 @@ class MaintenanceTest(unittest.TestCase):
         snapshot={'id':receipt['snapshot'],'paths':[str(unit)],'tags':remote.tags(metadata,receipt['manifestSha256'])}
         remote.command=lambda args,**kwargs: json.dumps({'id':self.config['repositoryId']}) if args[0]=='cat' else json.dumps([snapshot])
         remote.verify();remote.confirm(unit,receipt)
+        for key,value in [('manifestSha256','0'*64),('unitId','wrong'),('unitPath','/wrong'),('repositoryId','0'*64),('snapshot','short')]:
+            with self.subTest(receiptField=key):
+                with self.assertRaisesRegex(ValueError,'replica'):remote.confirm(unit,{**receipt,key:value})
         for field,value in [('id','e'*64),('paths',['/another/unit']),('tags',[])]:
             with self.subTest(field=field):
                 changed={**snapshot,field:value};remote.command=lambda args,**kwargs:json.dumps([changed])

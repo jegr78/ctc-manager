@@ -69,7 +69,8 @@ source path, installation/unit tags and sealed manifest checksum. The remote ret
 uses that exact snapshot, validates every artifact and runs the isolated full application proof.
 Its `retrieval` receipt is separate from upload success.
 
-`doctor` includes backup freshness and missing configuration. `backup-check` exits nonzero when
+`doctor` includes backup freshness and missing configuration, and exits nonzero while protection
+is incomplete. `backup-check` exits nonzero when
 any required evidence is absent, older than 30 hours or failed. The hourly timer catches a missed
 daily run even when the last successful backup service status is still green. Check the journal,
 `systemctl --user list-timers` and the independent alert route after an outage.
@@ -91,6 +92,10 @@ Unknown, corrupt or foreign units, a failed newest operation, changed replica re
 protected references stop pruning. Inspect these entries rather than deleting them to make a run
 pass. An interrupted `.partial-*` entry requires operator reconciliation. A full disk remains a
 failure; required recovery units are never removed as an emergency space workaround.
+
+Remote snapshots currently accumulate without automatic deletion. The calendar policy above bounds
+local units only. Provision and monitor remote capacity separately; record the destination retention
+policy before production acceptance. CTC does not issue `restic forget` or prune unrelated remote data.
 
 ## enable during cutover
 
