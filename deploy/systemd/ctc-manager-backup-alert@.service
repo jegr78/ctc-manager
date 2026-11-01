@@ -1,9 +1,0 @@
-[Unit]
-Description=Report CTC Manager scheduled backup failure
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/python3 /srv/ctc-manager/current/lib/maintenance.py --directory /srv/ctc-manager alert --source %i
-UMask=0077
-NoNewPrivileges=true
-TimeoutStartSec=45s

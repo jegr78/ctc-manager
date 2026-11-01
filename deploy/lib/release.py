@@ -11,11 +11,14 @@ HOST_FILES = CORE_FILES + ['setup-host.sh', 'lib/host.py', 'systemd/docker-rootl
 RECOVERY_FILES = HOST_FILES + ['lib/runtime.py', 'lib/release.py', 'lib/recovery.py', 'lib/recovery.sh',
                       'lib/probe.py', 'lib/live.py', 'recovery-manifest.schema.json', 'guides/recovery.md']
 UPDATE_FILES = RECOVERY_FILES + ['lib/update.py', 'lib/update.sh', 'upgrade.json', 'guides/updates.md']
-FILES = UPDATE_FILES + ['lib/maintenance.py', 'lib/maintenance.sh', 'guides/backups.md',
+LEGACY_MAINTENANCE_FILES = UPDATE_FILES + ['lib/maintenance.py', 'lib/maintenance.sh', 'guides/backups.md',
                         'systemd/ctc-manager-backup.service', 'systemd/ctc-manager-backup.timer',
                         'systemd/ctc-manager-backup-check.service', 'systemd/ctc-manager-backup-check.timer',
                         'systemd/ctc-manager-backup-alert@.service']
-SUPPORTED_INVENTORIES = [set(CORE_FILES), set(HOST_FILES), set(RECOVERY_FILES), set(UPDATE_FILES), set(FILES)]
+FILES = UPDATE_FILES + ['lib/maintenance.py', 'lib/maintenance.sh', 'guides/backups.md',
+                        'systemd/ctc-manager-backup.service', 'systemd/ctc-manager-backup.timer']
+SUPPORTED_INVENTORIES = [set(CORE_FILES), set(HOST_FILES), set(RECOVERY_FILES), set(UPDATE_FILES),
+                         set(LEGACY_MAINTENANCE_FILES), set(FILES)]
 MAX_MEMBER = 4 * 1024 * 1024
 MAX_ARCHIVE = 32 * 1024 * 1024
 
@@ -55,7 +58,7 @@ def verify(path):
                 raise ValueError('mixed archive releases')
             prefix = name.parts[0]
             relative = str(PurePosixPath(*name.parts[1:]))
-            if relative in values or relative not in FILES + ['manifest.json']:
+            if relative in values or relative not in set().union(*SUPPORTED_INVENTORIES) | {'manifest.json'}:
                 raise ValueError('unexpected or duplicate archive entry')
             total += member.size
             if total > MAX_ARCHIVE:

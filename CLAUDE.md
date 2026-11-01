@@ -397,7 +397,8 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 * Reject subordinate mappings that overlap other allocated ranges or actual host UIDs/GIDs, including numeric CTC owner entries. Keep host memory and expected backup UUID checks fail-closed.
 * Release inventories may grow, but verification must still accept complete supported earlier inventories and reject partial additions. Package host setup, its unit/helper and guide together.
 
-* Scheduled deployment maintenance uses the shared installation lock and complete recovery units.
-  Record local/proof/remote completion separately. Retention must keep unreplicated and protected
-  units and verify remote identity before deletion. Never enable timers or claim operational readiness
-  without the operator-selected off-host destination, external key custody and working failure alerts.
+* Scheduled maintenance stays local and uses the existing lock and complete recovery proof.
+  Keep two daily stands and the first successful stand of the newest Berlin calendar month.
+  Pending update recovery remains protected until a verified backup of the active image exists.
+  Use one daily backup service/timer and local journal errors. No off-host requirement, alert hook,
+  Discord delivery or separate monitoring service belongs to this single-admin deployment.

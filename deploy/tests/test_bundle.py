@@ -126,10 +126,28 @@ class BundleTest(unittest.TestCase):
         with tarfile.open(self.output/'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
             names=set(bundle.getnames())
             for name in ['lib/maintenance.py','lib/maintenance.sh','guides/backups.md',
-                         'systemd/ctc-manager-backup.service','systemd/ctc-manager-backup.timer',
-                         'systemd/ctc-manager-backup-check.service','systemd/ctc-manager-backup-check.timer',
-                         'systemd/ctc-manager-backup-alert@.service']:
+                         'systemd/ctc-manager-backup.service','systemd/ctc-manager-backup.timer']:
                 self.assertIn('ctc-manager-deployment-1.21.0/'+name,names)
+
+    def test_previous_32_file_maintenance_inventory_still_verifies(self):
+        self.assertEqual(0, self.create().returncode)
+        prefix='ctc-manager-deployment-1.21.0/'
+        source=self.output/'ctc-manager-deployment-1.21.0.tar.gz'
+        with tarfile.open(source) as bundle:
+            content={m.name:bundle.extractfile(m).read() for m in bundle}
+        manifest=json.loads(content[prefix+'manifest.json'])
+        for name in ['systemd/ctc-manager-backup-check.service','systemd/ctc-manager-backup-check.timer',
+                     'systemd/ctc-manager-backup-alert@.service']:
+            content[prefix+name]=b'legacy unit fixture\n'
+            manifest['files'][name]=hashlib.sha256(content[prefix+name]).hexdigest()
+        content[prefix+'manifest.json']=json.dumps(manifest).encode()
+        archive=self.output/'legacy-maintenance.tar.gz'
+        with tarfile.open(archive,'w:gz') as bundle:
+            for name,value in content.items():
+                entry=tarfile.TarInfo(name);entry.size=len(value)
+                bundle.addfile(entry,io.BytesIO(value))
+        result=self.run_bundle('verify',archive)
+        self.assertEqual(0,result.returncode,result.stderr)
 
     def test_host_setup_and_guide_are_packaged(self):
         self.assertEqual(0,self.create().returncode)

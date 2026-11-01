@@ -96,7 +96,7 @@ Ruling: use the existing Bash launcher and shared lock as the operator interface
 
 Ruling: expose authenticated recovery capability information only in recovery-check mode and bind admission to the actual immutable image. An old image that ignores the profile must fail admission before it receives restored credentials. Preserve source Mac export provenance and migrate copies only into a supported target.
 
-Pre-flight interfaces: config.load/private_path/atomic_json and common.sh lock/Compose are existing shared primitives. Recovery capture produces immutable unit identities and hold-stopped mode for 298. Private state stores later replication/restore evidence for 299. Storage generations must permit fresh 300 targets without deleting the current qualification volumes.
+Pre-flight interfaces: config.load/private_path/atomic_json and common.sh lock/Compose are existing shared primitives. Recovery capture produces immutable unit identities and hold-stopped mode for 298. Private state stores local backup/restore evidence for 299. Storage generations must permit fresh 300 targets without deleting the current qualification volumes.
 
 - RecoveryPolicyIT first failed at three intended assertions: startup/manual Discord calls reached the recording transport and the recovery profile used an unintended generated database. After the policy/profile implementation all five cases pass, including existing Basic authentication and configured-database selection. The recording transport prevents real network traffic even when guards are missing. Targeted verify still fails the global coverage threshold because it runs only selected tests; no threshold or check was disabled. Full verification remains the phase-end gate.
 
@@ -254,18 +254,17 @@ previous volumes. The original Mac installation remains untouched.
 Implementation follows the canonical specification and task sequence in #294/#298.
 The first capable recovery release must pass #297 runtime acceptance before update finalization.
 
-### scheduled recovery maintenance, #299
+### simple local maintenance, #299
 
-| Requirement | Production path | Positive proof | Failure proof | Host acceptance |
+The owner reduced the current scope to local backups, two daily states and one monthly state.
+No replication, Discord, alert hook or separate monitoring service is required. One daily systemd
+service/timer and the existing manual doctor are sufficient. The monthly state is the first successful
+backup of the newest Europe/Berlin calendar month. Preserve pending update recovery until a verified
+backup of the active image exists. Continue the real Mac migration after local acceptance.
+
+| Requirement | Production path | Positive test | Failure test | Runtime proof |
 | --- | --- | --- | --- | --- |
-| Consistent scheduled local backup and isolated proof | maintenance coordinator and existing shared launcher lock | capture/proof/replication order and separate completion timestamps | capture/proof/replication failures persist safe stages and never prune | scheduled complete unit and restored graphic |
-| Encrypted copy outside this host | private restic configuration and exact repository/snapshot identity | JSON summary and exact path/tag validation | absent configuration, local backend, wrong repository or snapshot refuse | actual off-host retrieval and isolated restore |
-| Bounded retention without losing recovery states | verified unit scan and calendar bucket plan | daily14/weekly8/monthly12 union | corrupt/unknown/foreign/unreplicated/protected units and latest failed run prevent unsafe deletion | measured capacity and retained required units |
-| Visible failure and freshness | doctor evidence, private alert hook and user timers | separate local/remote/proof ages and successful hook | stale/missing/failed evidence, missed timer and hook failure return nonzero | selected alert route receives safe injected failure |
-| Private scheduling and cutover | user systemd units, current launcher and private umask | Berlin03:45 plus15minute jitter and Persistent | competing mutation preserves lock and surfaces failure | enable only after destination, key custody and alert route are provisioned |
-
-Reference courtside commit `6cc8c35f28fa7ff393828d5665d5b31c541f2465` supplies the private
-oneshot and persistent timer pattern. CTC keeps its separate rootless socket, lock and sealed-unit
-contract. The off-host destination and alert route are operator inputs and remain unprovisioned;
-local-only or a temporary test repository cannot satisfy deployment acceptance. No timer is enabled
-while the host still contains only qualification fixtures.
+| Local backup without extra configuration | maintenance/capture/restore-check | capture then exact isolated proof | mount, capture and proof errors stay incomplete | scheduled local backup and local journal |
+| Two daily and one monthly state | retention plan | exact counts and Berlin month boundary | unknown/corrupt/foreign units and failed operation refuse deletion | dry run and protected update unit |
+| Manual status and one timer | doctor/systemd backup pair | fresh local proof and persistent daily schedule | stale proof, missing mount and competing lock | actual timer invocation and failed service log |
+| Published bundle compatibility | release inventory | current29 and previous32 inventory | unknown or mixed archive rejected | genuine previous source/new controller update |
