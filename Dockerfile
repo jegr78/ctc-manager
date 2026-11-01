@@ -20,6 +20,8 @@ RUN ./mvnw package -DskipTests -B
 # Pinned to -noble: Playwright does not support Ubuntu 26.04 yet.
 FROM eclipse-temurin:25.0.5_8-jre-noble
 
+LABEL org.ctc.recovery.version="1"
+
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 

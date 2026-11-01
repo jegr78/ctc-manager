@@ -8,6 +8,7 @@ import org.ctc.discord.event.MatchScheduleFieldsChangedEvent;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.repository.MatchRepository;
+import org.ctc.integration.OutboundPolicy;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,10 +27,14 @@ public class DiscordAutoPostListener {
 
 	private final DiscordPostService discordPostService;
 	private final MatchRepository matchRepository;
+	private final OutboundPolicy outboundPolicy;
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void onChannelCreated(ChannelCreatedEvent event) {
+		if (!outboundPolicy.isEnabled()) {
+			return;
+		}
 		Match match = matchRepository.findById(event.matchId()).orElse(null);
 		if (match == null) {
 			log.warn("Auto-post TEAM_CARDS skipped — match {} not found post-commit", event.matchId());
@@ -50,6 +55,9 @@ public class DiscordAutoPostListener {
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void onScheduleFieldsChanged(MatchScheduleFieldsChangedEvent event) {
+		if (!outboundPolicy.isEnabled()) {
+			return;
+		}
 		Match match = matchRepository.findById(event.matchId()).orElse(null);
 		if (match == null) {
 			log.warn("Auto-edit SCHEDULE skipped — match {} not found post-commit", event.matchId());
@@ -70,6 +78,9 @@ public class DiscordAutoPostListener {
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void onMatchPreviewFieldsChanged(MatchPreviewFieldsChangedEvent event) {
+		if (!outboundPolicy.isEnabled()) {
+			return;
+		}
 		Match match = matchRepository.findById(event.matchId()).orElse(null);
 		if (match == null) {
 			log.warn("Auto-edit MATCH_PREVIEW skipped — match {} not found post-commit", event.matchId());

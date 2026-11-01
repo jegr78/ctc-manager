@@ -1,0 +1,9 @@
+ctc:
+  outbound:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

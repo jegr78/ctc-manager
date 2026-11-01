@@ -7,14 +7,16 @@ public abstract sealed class DiscordApiException extends IOException
 				DiscordAuthException,
 				DiscordMissingPermissionsException,
 				DiscordNotFoundException,
-				DiscordCategoryFullException {
+				DiscordCategoryFullException,
+				DiscordDisabledException {
 
 	public enum Category {
 		TRANSIENT,
 		AUTH,
 		MISSING_PERMISSIONS,
 		NOT_FOUND,
-		CATEGORY_FULL
+		CATEGORY_FULL,
+		DISABLED
 	}
 
 	protected DiscordApiException(String message, Throwable cause) {

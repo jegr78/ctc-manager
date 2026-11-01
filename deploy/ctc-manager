@@ -3,12 +3,18 @@ set -euo pipefail
 umask 077
 DEPLOY_ROOT=$(cd "$(dirname "$0")" && pwd -P)
 export DEPLOY_ROOT
+export PYTHONDONTWRITEBYTECODE=1
 # shellcheck source=lib/common.sh
 source "$DEPLOY_ROOT/lib/common.sh"
-[ "$#" -eq 3 ] && [ "$1" = '--directory' ] || fail 'usage: ctc-manager --directory PATH doctor|status|up|stop'
+[ "$#" -ge 3 ] && [ "$1" = '--directory' ] || fail 'usage: ctc-manager --directory PATH OPERATION [OPTIONS]'
 installation=$2
 operation=$3
-case "$operation" in doctor|status|up|stop) ;; *) fail 'unknown operation' ;; esac
+shift 3
+case "$operation" in
+  doctor|status|up|stop) [ "$#" -eq 0 ] || fail 'unexpected operation arguments' ;;
+  backup|restore-check|restore|resume-integrations) ;;
+  *) fail 'unknown operation' ;;
+esac
 python3 "$DEPLOY_ROOT/lib/config.py" validate "$installation"
 installation=$(cd "$installation" && pwd -P)
 cd "$installation"
@@ -28,5 +34,26 @@ case "$operation" in
       compose stop app
     fi
     write_journal completed
+    ;;
+  backup|restore-check|restore|resume-integrations)
+    # shellcheck source=lib/recovery.sh
+    source "$DEPLOY_ROOT/lib/recovery.sh"
+    acquire_lock
+    trap release_lock EXIT
+    trap 'write_journal interrupted; trap - EXIT; exit 143' TERM
+    trap 'write_journal interrupted; trap - EXIT; exit 130' INT
+    write_journal started
+    if run_recovery "$@"; then
+      write_journal completed
+    else
+      result=$?
+      if [ "$result" -ge 128 ]; then
+        write_journal interrupted
+        trap - EXIT
+      else
+        write_journal failed
+      fi
+      exit "$result"
+    fi
     ;;
 esac

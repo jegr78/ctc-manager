@@ -4,19 +4,25 @@ import static org.springframework.util.StringUtils.hasText;
 
 import java.io.IOException;
 import java.util.regex.Pattern;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.integration.OutboundPolicy;
+import org.ctc.integration.ExternalIntegrationDisabledException;
 import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class YouTubeScraperService {
+
+    private final OutboundPolicy outboundPolicy;
 
     private static final Pattern VIDEO_ID_PATTERN =
             Pattern.compile("\"videoId\":\"([a-zA-Z0-9_-]{11,})\"");
 
-    // package-private for testability via @Spy.
     String fetchChannelHtml(String channelUrl) throws IOException {
+        outboundPolicy.requireEnabled();
         return Jsoup.connect(channelUrl)
                 .timeout(10_000)
                 .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
@@ -38,6 +44,8 @@ public class YouTubeScraperService {
                 return videoId;
             }
             log.warn("No videoId found on YouTube channel page: {}", channelUrl);
+        } catch (ExternalIntegrationDisabledException disabled) {
+            return fallbackVideoId;
         } catch (Exception e) {
             log.warn("Failed to scrape YouTube channel page {}: {}", channelUrl, e.getMessage());
         }

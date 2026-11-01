@@ -22,6 +22,10 @@ app:
       max-retry-after-ms: 10000
 
 spring:
+  profiles:
+    group:
+      recovery-check:
+        - prod
   application:
     name: ctc-manager
   servlet:

@@ -1,0 +1,10 @@
+INSERT INTO race_scorings (id,name,race_points) VALUES ('00000000-0000-0000-0000-000000000001','Recovery fixture','25,18,15');
+INSERT INTO match_scorings (id,name,points_win,points_draw,points_loss) VALUES ('00000000-0000-0000-0000-000000000002','Recovery fixture',3,1,0);
+INSERT INTO seasons (id,name,season_year,season_number,active) VALUES ('00000000-0000-0000-0000-000000000003','Test-Recovery',2026,1,1);
+INSERT INTO season_phases (id,season_id,sort_index,phase_type,layout,race_scoring_id,match_scoring_id) VALUES ('00000000-0000-0000-0000-000000000007','00000000-0000-0000-0000-000000000003',0,'REGULAR','LEAGUE','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002');
+INSERT INTO teams (id,name,short_name,primary_color,secondary_color,accent_color) VALUES ('00000000-0000-0000-0000-000000000004','Test-Recovery Team','T-REC','#112233','#445566','#778899');
+INSERT INTO season_teams (id,season_id,team_id) VALUES ('00000000-0000-0000-0000-000000000005','00000000-0000-0000-0000-000000000003','00000000-0000-0000-0000-000000000004');
+INSERT INTO drivers (id,psn_id,nickname) VALUES ('00000000-0000-0000-0000-000000000006','Test-Recovery-Driver','Recovery fixture');
+CREATE TABLE ctc_recovery_pending_fixture (id INT PRIMARY KEY, state VARCHAR(20), payload VARCHAR(100));
+INSERT INTO ctc_recovery_pending_fixture VALUES (1,'PENDING','synthetic future delivery');
+INSERT INTO phase_teams (id,phase_id,team_id) VALUES ('00000000-0000-0000-0000-000000000008','00000000-0000-0000-0000-000000000007','00000000-0000-0000-0000-000000000004');

@@ -1,5 +1,8 @@
 package org.ctc;
 
+import org.ctc.integration.OutboundPolicy;
+import org.springframework.mock.env.MockEnvironment;
+
 import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +14,11 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class TestHelper {
+
+	public static OutboundPolicy enabledOutboundPolicy() {
+		return new OutboundPolicy(true, new MockEnvironment());
+	}
+
 
 	private final RaceScoringRepository raceScoringRepository;
 	private final MatchScoringRepository matchScoringRepository;

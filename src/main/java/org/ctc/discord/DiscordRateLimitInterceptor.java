@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
 import org.ctc.discord.exception.DiscordTransientException;
 import org.ctc.discord.util.BucketState;
+import org.ctc.integration.OutboundPolicy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpRequest;
@@ -28,6 +29,7 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 	private static final long[] DEFAULT_FIVE_XX_BACKOFF_MS = {200L, 1000L, 5000L};
 
 	private final Clock clock;
+	private final OutboundPolicy outboundPolicy;
 	private final long jitterMinMs;
 	private final long jitterMaxMs;
 	private final long[] fiveXxBackoffMs;
@@ -38,8 +40,10 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 			Clock clock,
 			@Value("${app.discord.rate-limit.jitter-ms:100-500}") String jitterRange,
 			@Value("${app.discord.rate-limit.fivexx-backoff-ms:}") String fiveXxBackoffCsv,
-			@Value("${app.discord.rate-limit.max-retry-after-ms:10000}") long maxRetryAfterMs) {
+			@Value("${app.discord.rate-limit.max-retry-after-ms:10000}") long maxRetryAfterMs,
+			OutboundPolicy outboundPolicy) {
 		this.clock = clock;
+		this.outboundPolicy = outboundPolicy;
 		this.maxRetryAfterMs = maxRetryAfterMs;
 		long[] jitter = parseJitter(jitterRange);
 		this.jitterMinMs = jitter[0];
@@ -50,6 +54,7 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 	@Override
 	public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution)
 			throws IOException {
+		outboundPolicy.requireEnabled();
 		int four29Attempts = 0;
 		int fiveXxAttempts = 0;
 		while (true) {

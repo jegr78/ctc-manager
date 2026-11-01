@@ -1,5 +1,7 @@
 package org.ctc.dataimport;
 
+import static org.ctc.TestHelper.enabledOutboundPolicy;
+
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.calendar.Calendar;
 import java.io.IOException;
@@ -36,7 +38,7 @@ class GoogleCalendarServiceTest {
 			Path credentialsFile = tempDir.resolve("credentials.json");
 			Files.writeString(credentialsFile, "{}");
 
-			var service = new GoogleCalendarService(credentialsFile.toString(), "test-calendar-id@group.calendar.google.com");
+			var service = new GoogleCalendarService(enabledOutboundPolicy(), credentialsFile.toString(), "test-calendar-id@group.calendar.google.com");
 
 			// when / then
 			assertTrue(service.isAvailable());
@@ -48,7 +50,7 @@ class GoogleCalendarServiceTest {
 			Path credentialsFile = tempDir.resolve("credentials.json");
 			Files.writeString(credentialsFile, "{}");
 
-			var service = new GoogleCalendarService(credentialsFile.toString(), "");
+			var service = new GoogleCalendarService(enabledOutboundPolicy(), credentialsFile.toString(), "");
 
 			// when / then
 			assertFalse(service.isAvailable());
@@ -60,7 +62,7 @@ class GoogleCalendarServiceTest {
 			Path credentialsFile = tempDir.resolve("credentials.json");
 			Files.writeString(credentialsFile, "{}");
 
-			var service = new GoogleCalendarService(credentialsFile.toString(), null);
+			var service = new GoogleCalendarService(enabledOutboundPolicy(), credentialsFile.toString(), null);
 
 			// when / then
 			assertFalse(service.isAvailable());
@@ -69,7 +71,7 @@ class GoogleCalendarServiceTest {
 		@Test
 		void givenEmptyCredentials_whenIsAvailable_thenReturnsFalse() {
 			// given
-			var service = new GoogleCalendarService("", "test-calendar-id");
+			var service = new GoogleCalendarService(enabledOutboundPolicy(), "", "test-calendar-id");
 
 			// when / then
 			assertFalse(service.isAvailable());
@@ -78,7 +80,7 @@ class GoogleCalendarServiceTest {
 		@Test
 		void givenNullCredentials_whenIsAvailable_thenReturnsFalse() {
 			// given
-			var service = new GoogleCalendarService(null, "test-calendar-id");
+			var service = new GoogleCalendarService(enabledOutboundPolicy(), null, "test-calendar-id");
 
 			// when / then
 			assertFalse(service.isAvailable());
@@ -87,7 +89,7 @@ class GoogleCalendarServiceTest {
 		@Test
 		void givenNonExistentCredentialsFile_whenIsAvailable_thenReturnsFalse() {
 			// given
-			var service = new GoogleCalendarService("/nonexistent/path.json", "test-calendar-id");
+			var service = new GoogleCalendarService(enabledOutboundPolicy(), "/nonexistent/path.json", "test-calendar-id");
 
 			// when / then
 			assertFalse(service.isAvailable());
@@ -116,7 +118,7 @@ class GoogleCalendarServiceTest {
 		@Test
 		void givenCalendarClientThrowing401_whenCreateEvent_thenWrapsToAuthGoogleApiException() throws Exception {
 			// given
-			var service = new GoogleCalendarService("", "cal-id");
+			var service = new GoogleCalendarService(enabledOutboundPolicy(), "", "cal-id");
 			var mockCalendar = mock(Calendar.class, RETURNS_DEEP_STUBS);
 			var gjre = mock(GoogleJsonResponseException.class);
 			when(gjre.getStatusCode()).thenReturn(401);
@@ -131,7 +133,7 @@ class GoogleCalendarServiceTest {
 		@Test
 		void givenCalendarClientThrowingNetworkFailure_whenUpdateEvent_thenWrapsToTransientGoogleApiException() throws Exception {
 			// given
-			var service = new GoogleCalendarService("", "cal-id");
+			var service = new GoogleCalendarService(enabledOutboundPolicy(), "", "cal-id");
 			var mockCalendar = mock(Calendar.class, RETURNS_DEEP_STUBS);
 			when(mockCalendar.events().update(anyString(), anyString(), any()).execute())
 					.thenThrow(new SocketTimeoutException("connection reset"));

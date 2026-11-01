@@ -1,5 +1,7 @@
 package org.ctc.dataimport;
 
+import static org.ctc.TestHelper.enabledOutboundPolicy;
+
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.sheets.v4.Sheets;
 import java.io.IOException;
@@ -30,7 +32,7 @@ class GoogleSheetsServiceTest {
 	@Nested
 	class ExtractSpreadsheetIdTest {
 
-		private final GoogleSheetsService service = new GoogleSheetsService("");
+		private final GoogleSheetsService service = new GoogleSheetsService(enabledOutboundPolicy(), "");
 
 		@Test
 		void givenFullUrl_whenExtractSpreadsheetId_thenReturnsId() {
@@ -105,7 +107,7 @@ class GoogleSheetsServiceTest {
 			Path credentialsFile = tempDir.resolve("credentials.json");
 			Files.writeString(credentialsFile, "{}");
 
-			var service = new GoogleSheetsService(credentialsFile.toString());
+			var service = new GoogleSheetsService(enabledOutboundPolicy(), credentialsFile.toString());
 
 			// when / then
 			assertTrue(service.isAvailable());
@@ -114,7 +116,7 @@ class GoogleSheetsServiceTest {
 		@Test
 		void givenEmptyCredentialsPath_whenIsAvailable_thenReturnsFalse() {
 			// given
-			var service = new GoogleSheetsService("");
+			var service = new GoogleSheetsService(enabledOutboundPolicy(), "");
 
 			// when / then
 			assertFalse(service.isAvailable());
@@ -123,7 +125,7 @@ class GoogleSheetsServiceTest {
 		@Test
 		void givenNullCredentialsPath_whenIsAvailable_thenReturnsFalse() {
 			// given
-			var service = new GoogleSheetsService(null);
+			var service = new GoogleSheetsService(enabledOutboundPolicy(), null);
 
 			// when / then
 			assertFalse(service.isAvailable());
@@ -132,7 +134,7 @@ class GoogleSheetsServiceTest {
 		@Test
 		void givenNonExistentCredentialsFile_whenIsAvailable_thenReturnsFalse() {
 			// given
-			var service = new GoogleSheetsService("/nonexistent/path.json");
+			var service = new GoogleSheetsService(enabledOutboundPolicy(), "/nonexistent/path.json");
 
 			// when / then
 			assertFalse(service.isAvailable());
@@ -142,7 +144,7 @@ class GoogleSheetsServiceTest {
 	@Nested
 	class GetSheetNamesTest {
 
-		private final GoogleSheetsService service = new GoogleSheetsService("");
+		private final GoogleSheetsService service = new GoogleSheetsService(enabledOutboundPolicy(), "");
 
 		@Test
 		void givenSheetNames_whenFilterRaceSheets_thenReturnsOnlyRaceTabs() {
@@ -279,7 +281,7 @@ class GoogleSheetsServiceTest {
 		@Test
 		void givenAllFieldsNull_whenIsAvailable_thenReturnsFalse() {
 			// given - service with null credentials path
-			var service = new GoogleSheetsService(null);
+			var service = new GoogleSheetsService(enabledOutboundPolicy(), null);
 
 			// when
 			var available = service.isAvailable();
@@ -291,7 +293,7 @@ class GoogleSheetsServiceTest {
 		@Test
 		void givenBlankCredentialsPath_whenIsAvailable_thenReturnsFalse() {
 			// given - service with blank credentials path
-			var service = new GoogleSheetsService("   ");
+			var service = new GoogleSheetsService(enabledOutboundPolicy(), "   ");
 
 			// when
 			var available = service.isAvailable();
@@ -303,7 +305,7 @@ class GoogleSheetsServiceTest {
 		@Test
 		void givenCredentialsPathWithSpecialCharacters_whenExtractSpreadsheetId_thenHandlesProperly() {
 			// given
-			var service = new GoogleSheetsService("");
+			var service = new GoogleSheetsService(enabledOutboundPolicy(), "");
 			var urlWithSpecialChars = "https://docs.google.com/spreadsheets/d/abc-123_XYZ/edit";
 
 			// when
@@ -316,7 +318,7 @@ class GoogleSheetsServiceTest {
 		@Test
 		void givenSpreadsheetIdWithHyphensAndUnderscores_whenExtractSpreadsheetId_thenReturnsId() {
 			// given
-			var service = new GoogleSheetsService("");
+			var service = new GoogleSheetsService(enabledOutboundPolicy(), "");
 			var bareId = "abc-123_def-456";
 
 			// when
@@ -329,7 +331,7 @@ class GoogleSheetsServiceTest {
 		@Test
 		void givenInvalidSpreadsheetIdWithSpecialChars_whenExtractSpreadsheetId_thenThrows() {
 			// given
-			var service = new GoogleSheetsService("");
+			var service = new GoogleSheetsService(enabledOutboundPolicy(), "");
 			var invalidId = "abc@123#def";
 
 			// when/then
@@ -339,7 +341,7 @@ class GoogleSheetsServiceTest {
 		@Test
 		void givenUrlWithQueryParams_whenExtractSpreadsheetId_thenExtracts() {
 			// given
-			var service = new GoogleSheetsService("");
+			var service = new GoogleSheetsService(enabledOutboundPolicy(), "");
 			var urlWithParams = "https://docs.google.com/spreadsheets/d/abc123def456/edit?usp=sharing#gid=0";
 
 			// when
@@ -371,7 +373,7 @@ class GoogleSheetsServiceTest {
 		@Test
 		void givenSheetsClientThrowing401_whenReadRange_thenWrapsToAuthGoogleApiException() throws Exception {
 			// given
-			var service = new GoogleSheetsService("");
+			var service = new GoogleSheetsService(enabledOutboundPolicy(), "");
 			var mockSheets = mock(Sheets.class, RETURNS_DEEP_STUBS);
 			var gjre = mock(GoogleJsonResponseException.class);
 			when(gjre.getStatusCode()).thenReturn(401);
@@ -386,7 +388,7 @@ class GoogleSheetsServiceTest {
 		@Test
 		void givenSheetsClientThrowingNetworkFailure_whenReadRange_thenWrapsToTransientGoogleApiException() throws Exception {
 			// given
-			var service = new GoogleSheetsService("");
+			var service = new GoogleSheetsService(enabledOutboundPolicy(), "");
 			var mockSheets = mock(Sheets.class, RETURNS_DEEP_STUBS);
 			when(mockSheets.spreadsheets().values().get(anyString(), anyString()).execute())
 					.thenThrow(new SocketException("connection reset"));
@@ -400,7 +402,7 @@ class GoogleSheetsServiceTest {
 		@Test
 		void givenSheetsClientThrowing404_whenGetSheetNames_thenWrapsToNotFoundGoogleApiException() throws Exception {
 			// given
-			var service = new GoogleSheetsService("");
+			var service = new GoogleSheetsService(enabledOutboundPolicy(), "");
 			var mockSheets = mock(Sheets.class, RETURNS_DEEP_STUBS);
 			var gjre = mock(GoogleJsonResponseException.class);
 			when(gjre.getStatusCode()).thenReturn(404);

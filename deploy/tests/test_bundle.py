@@ -135,7 +135,9 @@ class BundleTest(unittest.TestCase):
         with tarfile.open(self.output/'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
             contents={member.name:bundle.extractfile(member).read() for member in bundle}
         manifest=json.loads(contents[prefix+'manifest.json'])
-        for name in ['setup-host.sh','lib/host.py','systemd/docker-rootless.service','guides/host.md']:
+        core = {'ctc-manager','compose.yaml','config.example','lib/common.sh','lib/config.py','README.md',
+                'database-image','release-manifest.schema.json'}
+        for name in set(manifest['files']) - core:
             contents.pop(prefix+name,None)
             manifest['files'].pop(name,None)
         contents[prefix+'manifest.json']=json.dumps(manifest).encode()
@@ -164,3 +166,11 @@ class BundleTest(unittest.TestCase):
         result=self.run_bundle('verify',archive)
         self.assertNotEqual(0,result.returncode)
         self.assertIn('inventory',result.stderr)
+
+    def test_recovery_tools_and_operator_guide_are_packaged(self):
+        self.assertEqual(0, self.create().returncode)
+        with tarfile.open(self.output / 'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
+            names = set(bundle.getnames())
+        for name in ['lib/runtime.py', 'lib/release.py', 'lib/recovery.py', 'lib/recovery.sh',
+                     'lib/probe.py', 'lib/live.py', 'recovery-manifest.schema.json', 'guides/recovery.md']:
+            self.assertIn('ctc-manager-deployment-1.21.0/' + name, names)

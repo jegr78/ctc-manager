@@ -147,6 +147,10 @@ only loopback port 9092 and validates private configuration before operating the
 Release assets include a deployment archive and checksum inventory. This recipe is separate
 from the existing local and external-database Compose files. Host provisioning, backup,
 updates and migration follow the deployment issue sequence before production activation.
+Complete recovery units and isolated restore checks are documented in
+[the recovery guide](deploy/guides/recovery.md). Restore probes retain production authentication,
+force integrations off and use independent storage without a host port. Historical images need
+explicit supported recovery capability before automatic full checks.
 
 ### Docker
 
@@ -230,3 +234,5 @@ Renovate proposes current stable dependency updates, including majors, without a
 approval gate or PR throttling. Patch automerge retains required CI checks. CodeQL runs daily
 and reports unresolved HIGH/CRITICAL findings as failures on scheduled/manual scans. See
 [dependency update policy](docs/security/dependency-updates.md) for alert coverage and operations.
+The MariaDB JDBC connector has an explicit version so Renovate can update it independently
+of the Spring Boot BOM. A runtime dependency check rejects its known vulnerable versions.

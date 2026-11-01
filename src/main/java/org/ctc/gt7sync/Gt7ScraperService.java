@@ -8,13 +8,19 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.integration.OutboundPolicy;
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class Gt7ScraperService {
+
+	private final OutboundPolicy outboundPolicy;
 
 	private static final String BASE_URL = "https://www.gran-turismo.com";
 	static final String CAR_IMAGE_BASE = BASE_URL + "/common/dist/gt7/carlist/car_thumbnails/";
@@ -35,7 +41,7 @@ public class Gt7ScraperService {
 	}
 
 	public List<ScrapedCar> scrapeCars() throws IOException {
-		String html = Jsoup.connect(CARS_PAGE).get().html();
+		String html = externalConnection(CARS_PAGE).get().html();
 		String indexJsPath = extractScriptSrc(html, "/common/dist/gt7/carlist/assets/index-");
 
 		String indexJs = fetchText(BASE_URL + indexJsPath);
@@ -54,7 +60,7 @@ public class Gt7ScraperService {
 	}
 
 	public List<ScrapedTrack> scrapeTracks(boolean resolveImages) throws IOException {
-		String html = Jsoup.connect(TRACKS_PAGE).get().html();
+		String html = externalConnection(TRACKS_PAGE).get().html();
 		String indexJsPath = extractScriptSrc(html, "/common/dist/gt7/tracklist/assets/index-");
 
 		String indexJs = fetchText(BASE_URL + indexJsPath);
@@ -207,8 +213,13 @@ public class Gt7ScraperService {
 		return m.group(1);
 	}
 
+	private Connection externalConnection(String url) throws IOException {
+		outboundPolicy.requireEnabled();
+		return Jsoup.connect(url);
+	}
+
 	private String fetchText(String url) throws IOException {
-		return Jsoup.connect(url).ignoreContentType(true).execute().body();
+		return externalConnection(url).ignoreContentType(true).execute().body();
 	}
 
 	public record ScrapedCar(String gt7Id, String manufacturer, String name, String imageUrl) {

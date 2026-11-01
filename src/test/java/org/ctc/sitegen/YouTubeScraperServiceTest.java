@@ -15,7 +15,7 @@ import static org.mockito.Mockito.doThrow;
 class YouTubeScraperServiceTest {
 
     @Spy
-    private YouTubeScraperService service;
+    private YouTubeScraperService service = new YouTubeScraperService(org.ctc.TestHelper.enabledOutboundPolicy());
 
     @Test
     void givenValidChannelPage_whenScrapeVideoId_thenReturnsFirstVideoId() throws IOException {

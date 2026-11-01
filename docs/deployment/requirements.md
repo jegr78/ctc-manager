@@ -70,3 +70,149 @@ Run host setup from the owner's verified source copy, outside the CTC user's wri
 
 - Primary GIDs must also be unique and non-root so numeric group aliases cannot bypass the group-name check. The negative case failed before implementation, passed after it and was individually falsified. The independent security recheck found no material findings. Final totals are 36 host cases and 35 individual falsifications; archive/publication cases remain 11/3.
 - The exact published v1.21.0 image generated a Chromium screenshot as the app user inside its 2 GiB container. The SQL qualification row also survived the dedicated daemon restart. These remain synthetic target fixtures, separate from all Mac source data.
+
+- Issue 296 completed through PR306, merge 4870f9dc. Local committed-head full verification passed 2,987 tests in 7m37s, no failures/errors, 91.60 percent line coverage and no SpotBugs findings. GitHub CI/CodeQL/Docker checks passed. Wiki host setup documentation pushed as 827cd94. Native parent 294 remains open with six remaining children. No new issue was created. The topic branch was removed after exact merged-head comparison.
+
+## Complete recovery units and isolated checks, issue 297
+
+| Requirement | Production path | Positive verification | Failure verification | Runtime evidence |
+| --- | --- | --- | --- | --- |
+| Authenticated recovery mode | profile group, policy and existing security | recovery activates prod authentication | source flag cannot re-enable outbound | authenticated restored admin reads |
+| No integration side effects | Discord/Google/GT7/download/YouTube boundaries | production-shaped real clients stop before transport | cached clients and startup/after-commit calls | isolated app with populated credentials |
+| Supported-image admission | image capability and trusted release | supported immutable release accepted | historical/foreign image refused before start | actual pinned image and policy state |
+| One shared installation context | launcher/common/config and recovery helper | same owned daemon and lock | foreign daemon, concurrent operation and stale lock reject | rootless native command fixtures |
+| Consistent full capture | backup and private staging | exited app, dump, full data/config/secrets | failed stop/dump/full mount never publishes | actual MariaDB and file hashes |
+| Preserve previous running state | standalone and update capture modes | standalone restores previous state | interruption and hold-stopped update path | bounded app lifecycle checks |
+| Exact private inventory | recovery manifest and validation | complete hashes and provenance | corruption, traversal, links and wrong owner reject | immutable completed unit |
+| Isolated import | fresh probe volumes and internal network | DB rows/files/schema reconcile | import failure, shell escape, egress and unsafe env reject | native MariaDB client sandbox |
+| Read/graphics proof | authenticated internal HTTP probes | representative records and local graphic | wrong data/auth/health fails | isolated app with no host port |
+| Safe live recovery | independent target generation | validated separate storage switch | no confirmation, changed source or failed probe refuses | old storage retained, integrations paused |
+| Owned cleanup and evidence | run identity and private journal | only run-owned resources removed | failure leaves diagnostic evidence | no live/courtside resources touched |
+| Release compatibility | exact runtime inventory and schema | supported earlier bundles still verify | partial/changed inventories fail | released deployment material |
+
+Execution order: outbound policy and recovery profile; shared runtime/storage identity; manifest and capture; isolated restore-check; independent live recovery; packaging/runbooks and whole-branch review. Preserve existing app ZIP backup behavior and all earlier recipe guards. No Flyway migration or new app user/role model is required.
+
+Ruling: use the existing Bash launcher and shared lock as the operator interface. Keep structured configuration, archive validation, recovery state and fixed native argv in Python helpers, following the established host setup pattern. Docker/systemd remain process supervisors. Centralize daemon/Compose construction so later update and maintenance commands cannot diverge.
+
+Ruling: expose authenticated recovery capability information only in recovery-check mode and bind admission to the actual immutable image. An old image that ignores the profile must fail admission before it receives restored credentials. Preserve source Mac export provenance and migrate copies only into a supported target.
+
+Pre-flight interfaces: config.load/private_path/atomic_json and common.sh lock/Compose are existing shared primitives. Recovery capture produces immutable unit identities and hold-stopped mode for 298. Private state stores later replication/restore evidence for 299. Storage generations must permit fresh 300 targets without deleting the current qualification volumes.
+
+- RecoveryPolicyIT first failed at three intended assertions: startup/manual Discord calls reached the recording transport and the recovery profile used an unintended generated database. After the policy/profile implementation all five cases pass, including existing Basic authentication and configured-database selection. The recording transport prevents real network traffic even when guards are missing. Targeted verify still fails the global coverage threshold because it runs only selected tests; no threshold or check was disabled. Full verification remains the phase-end gate.
+
+- Google recovery checks first failed for availability and attempted read/write calls. Both services now enforce policy even when their SDK clients are already configured, with a typed DISABLED outcome. All eight recovery cases and 55 selected unit/script tests pass; global coverage remains reserved for the full phase-end run. The constructor audit also corrected the inherited test-subclass call found by a reproducible clean test-compile failure.
+
+- Catalog, remote-image and YouTube cases first failed at four intended assertions. All three network-reading services now enforce the same policy; YouTube preserves its configured local fallback. Twelve recovery cases and 56 selected unit/script cases pass. Local file upload behavior remains covered by the existing storage tests.
+
+- The disabled-callback case first observed all three handlers starting publication work. Their early policy checks now pause before repository/publication work. Both policy unit cases and 17 selected integration cases pass, including the existing real transaction/proxy callback tests. The transport guard remains independent of this early pause.
+
+- The capability HTTP case first failed with 404. Recovery-only authenticated actuator info now reports version 1 and the actual outbound-policy state. Fourteen recovery cases and three selected unit/script cases pass. Anonymous capability access remains 401. Historical image admission will additionally verify its immutable image capability before startup.
+
+Recovery storage selection now uses the same structured Compose environment for the existing
+launcher and recovery tooling. An optional validated storage generation selects independent
+volumes; absent generation preserves existing volume names. `outboundPaused` accepts only a
+JSON boolean. Three new behavioral recipe tests failed before implementation and all 21 recipe
+tests pass afterward. Recovery configuration writes also flush the containing directory.
+
+Recovery unit validation has exact inventories, streamed SHA-256 checks, private owner/type
+checks, bounded strict JSON and a restricted data tar format. Capture orchestration restores
+prior application state on handled errors and only publishes validated, flushed units by rename.
+The backup destination checks the host receipt's UUID against the mounted backup device and
+requires free space. A recovery environment preserves Basic/Discord/Google credentials but
+replaces runtime, database and policy settings with trusted values. Historical images without
+capability version 1 are refused. All 21 recovery tests, 21 recipe tests and 14 release tests pass;
+real native capture and restore qualification remain pending. The first tests for newly added
+Python interfaces failed on absent symbols, so their guard falsifications remain required before
+final verification rather than being counted as semantic red evidence.
+
+The candidate native recovery run passed on CachyOS rootless Docker with immutable local image
+`sha256:10fd5b1755107ffcad40eb40022714a3b5dfd0b575b190de87a4cc7e4df14d38`.
+It restored 32 application/fixture tables and files into a second fresh network/volume set,
+verified authenticated reads and generated a new team card from restored SeasonTeam data.
+MariaDB sandbox mode rejected a client shell escape and invalid SQL. This qualifies unreleased
+code, not a fabricated published image/release. Public release admission stays strict.
+The graphics test exposed Playwright's separate API driver installer path; the renderer now
+prohibits automatic browser downloads before driver initialization. Its new unit assertion first
+failed semantically and passes after the fix. Fourteen recovery ITs and the deployment script
+contract pass; the targeted Maven run still fails only the expected global coverage threshold.
+Live activation tests cover failed isolated proof, preserved predecessor configuration, paused
+integrations, activation failure and a secret-flush failure before any active changes.
+
+Native capture also passed against the existing synthetic Box installation while holding the
+shared installation lock. It captured 32 tables and complete files/configuration/secrets with the
+real source release 1.21.0, restored the app after a handled error, preserved originally stopped
+state and exercised hold-stopped capture without an intermediate restart. The historical image
+failed explicit full-restore admission. Source Mac data was not accessed.
+Independent security review found cleanup aborting on resources registered before failed
+creation. The fix distinguishes successful empty resource listings from inspect/daemon failures,
+continues independent cleanup, journals remaining resources and writes passed evidence only after
+cleanup succeeds. New negative tests reproduced all three prior failures. Self-review also found
+a linked secret parent could be followed before validation and an oversized PAX header could be
+allocated by tarfile before its metadata limit. Dedicated tests reproduced both paths; validation
+now precedes directory creation and raw tar headers are bounded before tarfile reads metadata.
+The current recovery suite has 51 passing cases, and the recipe suite has 23 including an actual
+SIGTERM/retained-lock/interrupted-journal scenario. Final guard falsifications and canonical full
+verification remain required.
+The final native candidate run additionally forced app-container creation to fail before Docker
+created its object. Cleanup removed every run-owned container, volume and network, and failure
+receipts remained failed. The live path now checks an existing running source database for
+unexpected writers before probing/activation, including recovery after loss of the app container.
+The recovery suite now has 60 passing cases. Final release-tool qualification and live activation
+against a genuinely published capable image remain post-merge acceptance work for #297.
+All 18 Java guard falsifications reached their intended test assertions. The initial two Google
+mutants removed the only checked-IOException call and therefore failed javac instead; clean
+test-compile reproduced that diagnostic, and valid conditional bypasses then reached the intended
+Google boundary assertions. Those compiler-only attempts are not counted. Every temporary edit
+used a stash snapshot and was restored exactly. Deployment guard falsifications additionally
+cover the expected parent mount and the effective destination filesystem independently, preventing
+nested mounts from redirecting backup writes to another device. The effective destination check
+also passed against the actual Box backup filesystem. The positive recovery suite has 66 cases.
+Final targeted verification passed 66 recovery cases, 24 recipe cases, 15 release/publisher cases
+and 36 host cases. All 53 deployment guard falsifications and all 18 Java falsifications reached
+intended assertions after restoring each exact snapshot. The independent security re-review of
+5f6fb371 found no remaining material findings. The only upstream advance is the v1.22.0 release
+and subsequent pom version bump to 1.23.0-SNAPSHOT. Integrate that base before the canonical full
+build. Post-merge #297 acceptance still includes a genuinely published capable-image recovery
+unit and live activation; no real Mac cutover is claimed here.
+The first canonical build on 36a6543a was deliberately stopped with SIGTERM before completion
+when the final acceptance audit identified a missing restored-secret proof. It is not counted as
+passing verification. Two new credential-proof tests first failed at five intended assertions:
+healthy/authenticated pages alone did not prove readable exact Google bytes or the recreated
+MariaDB root login. The probe now checks Google SHA-256 through the actual app user/container
+and validates the restored root password with fixed SELECT 1 only. Imported SQL still uses the
+unprivileged app database account. All 68 recovery cases pass; native credential qualification,
+three added guard falsifications and a fresh complete canonical run remain pending.
+Native run07 passed the restored-credential proof, full domain/file/graphic recovery and failed
+container-creation cleanup. Its output reports credentialsVerified=true without credential values.
+The root proof now explicitly uses TCP to avoid Unix-socket authentication substituting for a
+password check. A dedicated bypass-model assertion first failed and passes after forcing TCP.
+Native run08 additionally changes only the synthetic root secret after initialization, requires
+login rejection, restores it and repeats complete recovery. Its result is still pending here.
+Native run08 passed all restored-secret checks, rejected the intentionally wrong root password,
+restored 32 tables/files and generated the domain team card. It also rejected sandbox escapes and
+invalid SQL, cleaned all resources after failed container creation and left production untouched.
+All 57 deployment guard falsifications and 18 Java falsifications reached intended assertions;
+the tree was restored after each. Final targeted suites pass 68 recovery, 24 recipe, 15
+release/publisher and 36 host cases. Independent security review of 6a9422c5 found no material
+findings. The canonical full-build receipt belongs in the PR for the committed final head.
+Post-release capable-image admission/live activation remains #297 acceptance work before closure.
+The enriched default-branch dependency graph subsequently surfaced four Connector/J advisories
+against Spring Boot 4.1.2's managed driver 3.5.10. GitHub identifies 3.5.11 as patched for
+GHSA-h599-m3w5-9m7x, GHSA-4jq2-8v3c-97w8, GHSA-fhx5-2xqw-2cgm and
+GHSA-grfq-r75j-rw9x. Upstream release: https://github.com/mariadb-corporation/mariadb-connector-j/releases/tag/3.5.11.
+The runtime-version regression test first failed on the actual resolved 3.5.10 artifact. An explicit
+mariadb.version property and dependency version now select 3.5.11 independently of the Boot BOM
+and expose the connector directly to Renovate. The test accepts later minor and major versions.
+Targeted security/script/renderer units and all 14 recovery ITs pass with the patched dependency;
+the subset lifecycle still stops only at the unchanged global coverage threshold. The packaged
+JAR contains mariadb-java-client-3.5.11.jar. Native qualification and canonical verification are
+repeated for the changed runtime dependency before rollout.
+
+The patched-driver native run09 passed the same complete recovery, credential, graphic and
+failed-creation cleanup checks against MariaDB 13 using candidate image
+sha256:ac6f67e6c1110cd1dfec4aeb63db53e3fccc393aed4b7b3d5f2bb6083145f2f3.
+The vulnerable 3.5.10 dependency was independently reintroduced after the correct commit; its
+runtime-version test failed at the intended assertion and the exact snapshot was restored.
+Native Renovate44.198.3 under verified official Node24.22.2 resolves the new property to3.5.11 and
+offers stable4.0.0 as a major update. No upper version constraint or major approval gate was added.
+The updated runtime dependency requires fresh full verification and CI before the PR becomes ready.

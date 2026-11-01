@@ -14,15 +14,7 @@ if info.get("MemoryLimit") is not True:
 '
 }
 compose() {
-  CTC_APP_IMAGE=$(config_value appImage) \
-  CTC_DATABASE_IMAGE=$(config_value databaseImage) \
-  CTC_APP_ENV_FILE=$(config_value appEnvFile) \
-  CTC_DB_PASSWORD_FILE=$(config_value databasePasswordFile) \
-  CTC_DB_ROOT_PASSWORD_FILE=$(config_value databaseRootPasswordFile) \
-  CTC_GOOGLE_FILE=$(config_value googleCredentialsFile) \
-  docker --host "$docker_host" compose --project-name ctc-manager \
-    --project-directory "$installation" --env-file /dev/null \
-    -f "$DEPLOY_ROOT/compose.yaml" "$@"
+  python3 "$DEPLOY_ROOT/lib/runtime.py" "$installation" "$DEPLOY_ROOT" "$@"
 }
 acquire_lock() {
   lock_directory="$installation/.ctc-manager.lock"

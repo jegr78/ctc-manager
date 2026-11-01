@@ -336,7 +336,7 @@ class ImportE2eTest extends PlaywrightConfig {
 
 	static class TestSheetsService extends GoogleSheetsService {
 		List<List<Object>> rows = List.of();
-		TestSheetsService() { super(""); }
+		TestSheetsService() { super(org.ctc.TestHelper.enabledOutboundPolicy(), ""); }
 		@Override public boolean isAvailable() { return true; }
 		@Override public List<String> getSheetNames(String spreadsheetId) { return List.of("Race 1", "Race 2"); }
 		@Override public List<List<Object>> readRangeFromSheet(String spreadsheetId, String sheetName, String range) { return rows; }

@@ -142,6 +142,7 @@ public class DiscordConfigController {
 	private void applyErrorFlash(RedirectAttributes ra, DiscordApiException e, String action) {
 		String message = switch (e.category()) {
 			case TRANSIENT -> DiscordApiExceptionMapper.TRANSIENT_MESSAGE;
+			case DISABLED -> DiscordApiExceptionMapper.DISABLED_MESSAGE;
 			case AUTH -> DiscordApiExceptionMapper.AUTH_MESSAGE;
 			case MISSING_PERMISSIONS -> DiscordApiExceptionMapper.MISSING_PERMISSIONS_MESSAGE;
 			case NOT_FOUND -> DiscordApiExceptionMapper.NOT_FOUND_MESSAGE;

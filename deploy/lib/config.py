@@ -51,6 +51,10 @@ def load(installation):
     for field, repository in [('appImage', 'ghcr.io/jegr78/ctc-manager'), ('databaseImage', 'mariadb')]:
         if not re.fullmatch(re.escape(repository) + r'@sha256:[a-f0-9]{64}', config.get(field, '')):
             raise ValueError(field + ' must use the expected repository and immutable digest')
+    if 'storageGeneration' in config and not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,47}', config['storageGeneration'] if isinstance(config['storageGeneration'], str) else ''):
+        raise ValueError('invalid storageGeneration')
+    if 'outboundPaused' in config and type(config['outboundPaused']) is not bool:
+        raise ValueError('outboundPaused must be boolean')
     for field in ['appEnvFile', 'databasePasswordFile', 'databaseRootPasswordFile', 'googleCredentialsFile']:
         try:
             value = Path(config[field])
@@ -72,6 +76,11 @@ def atomic_json(path, data):
             output.flush()
             os.fsync(output.fileno())
         os.replace(temporary, path)
+        directory = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)

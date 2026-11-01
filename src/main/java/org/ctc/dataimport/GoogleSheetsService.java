@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.dataimport.exception.GoogleApiException;
 import org.ctc.dataimport.exception.GoogleApiExceptionMapper;
+import org.ctc.integration.OutboundPolicy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -34,28 +35,29 @@ public class GoogleSheetsService {
 	private static final Pattern SPREADSHEET_ID_PATTERN =
 			Pattern.compile("^[a-zA-Z0-9_-]+$");
 
+	private final OutboundPolicy outboundPolicy;
 	private final String credentialsPath;
 	private Sheets sheetsClient;
 
-	public GoogleSheetsService(@Value("${google.sheets.credentials-path:}") String credentialsPath) {
+	public GoogleSheetsService(OutboundPolicy outboundPolicy, @Value("${google.sheets.credentials-path:}") String credentialsPath) {
+		this.outboundPolicy = outboundPolicy;
 		this.credentialsPath = credentialsPath;
 	}
 
 	@PostConstruct
 	void logAvailability() {
-		if (isAvailable()) {
+		if (!outboundPolicy.isEnabled()) {
+			log.info("Google Sheets integration is disabled for this instance");
+		} else if (isAvailable()) {
 			log.info("Google Sheets integration available (credentials: {})", credentialsPath);
 		} else {
 			log.info("Google Sheets integration not available (no credentials configured)");
 		}
 	}
 
-	/**
-	 * Checks whether Google Sheets integration is available.
-	 * Returns true when a credentials path is configured and the file exists.
-	 */
 	public boolean isAvailable() {
-		return hasText(credentialsPath)
+		return outboundPolicy.isEnabled()
+				&& hasText(credentialsPath)
 				&& Files.exists(Path.of(credentialsPath));
 	}
 
@@ -166,6 +168,11 @@ public class GoogleSheetsService {
 	}
 
 	private synchronized Sheets getSheetsClient() throws GoogleApiException {
+		try {
+			outboundPolicy.requireEnabled();
+		} catch (IOException exception) {
+			throw GoogleApiExceptionMapper.from(exception);
+		}
 		if (sheetsClient == null) {
 			if (!isAvailable()) {
 				throw new IllegalStateException(

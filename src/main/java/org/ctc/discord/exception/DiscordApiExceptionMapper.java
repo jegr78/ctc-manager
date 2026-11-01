@@ -5,10 +5,12 @@ import static org.springframework.util.StringUtils.hasText;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import org.ctc.integration.ExternalIntegrationDisabledException;
 import org.springframework.web.client.RestClientResponseException;
 
 public final class DiscordApiExceptionMapper {
 
+	public static final String DISABLED_MESSAGE = ExternalIntegrationDisabledException.MESSAGE;
 	public static final String TRANSIENT_MESSAGE = "Discord connection problem — retry";
 	public static final String AUTH_MESSAGE = "Discord authentication problem — check bot token";
 	public static final String MISSING_PERMISSIONS_MESSAGE =
