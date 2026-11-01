@@ -280,6 +280,14 @@ class MaintenanceTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'proof changed'):
                     maintenance.retention_plan(self.runtime, self.units, changed, self.now)
 
+    def test_matching_but_incorrect_proof_hash_still_refuses_pruning(self):
+        unit = self.unit()
+        state = self.state(unit)
+        state['local']['manifestSha256'] = '0' * 64
+        state['proof']['manifestSha256'] = '0' * 64
+        with self.assertRaisesRegex(ValueError, 'proof changed'):
+            maintenance.retention_plan(self.runtime, self.units, state, self.now)
+
     def test_changed_retention_plan_prevents_deletion(self):
         old = self.unit('2026-09-01T03:00:00Z')
         with patch.object(maintenance, 'retention_plan', side_effect=[[old], []]):
