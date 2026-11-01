@@ -261,6 +261,36 @@ class SeasonCarPoolPersistenceIT {
 
     @Test
     @Transactional
+    void givenInvalidPoolForeignKeysAndClassificationValues_whenWrittenDirectly_thenDatabaseRejectsThem() {
+        // given
+        var season = newSeason();
+        var car = car("Constraint member", CarCategory.GR_2, 2016);
+        var id = pools.saveEntry(season.getId(), null, "Constraints", List.of(new SeasonCarPoolService.ClauseInput(CarCategory.GR_2, null, 2016)));
+        seasons.flush();
+        // when / then
+        assertThatThrownBy(() -> jdbc.update("INSERT INTO season_car_pool_entries (id, season_id, label, sort_index) VALUES (?, ?, 'Foreign', 0)", UUID.randomUUID(), UUID.randomUUID()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbc.update("INSERT INTO season_car_pool_members (id, entry_id, car_id) VALUES (?, ?, ?)", UUID.randomUUID(), UUID.randomUUID(), car.getId()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbc.update("INSERT INTO season_car_pool_members (id, entry_id, car_id) VALUES (?, ?, ?)", UUID.randomUUID(), id, UUID.randomUUID()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        for (var values : List.of(new Object[]{"UNKNOWN", null, null}, new Object[]{"GR_2", "AWD", null},
+                new Object[]{"GR_2", null, 99}, new Object[]{"GR_2", null, 10000})) {
+            assertThatThrownBy(() -> jdbc.update("INSERT INTO season_car_pool_clauses (id, entry_id, category, drivetrain, model_year, sort_index) VALUES (?, ?, ?, ?, ?, 0)", UUID.randomUUID(), id, values[0], values[1], values[2]))
+                    .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        }
+        assertThatThrownBy(() -> jdbc.update("UPDATE seasons SET car_pool_mode='UNKNOWN' WHERE id=?", season.getId()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbc.update("UPDATE seasons SET car_pool_state='UNKNOWN' WHERE id=?", season.getId()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        var fixture = helper.createFullSeasonFixture("PoolFK " + UUID.randomUUID().toString().substring(0, 8));
+        races.flush();
+        assertThatThrownBy(() -> jdbc.update("UPDATE races SET car_pool_entry_id=? WHERE id=?", UUID.randomUUID(), fixture.race().getId()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @Transactional
     void givenDuplicateSnapshotMembership_whenPersisted_thenDatabaseRejectsDuplicatePair() {
         // given
         var season = newSeason();
