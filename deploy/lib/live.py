@@ -42,6 +42,7 @@ def restore(runtime, unit, confirmation):
     import os
     generation = recovery_target(runtime.config, confirmation)
     manifest = validate_unit(unit)
+    secrets_parent = private_path(runtime.root / 'secrets', directory=True)
     existing = set(runtime.docker(['volume', 'ls', '--quiet']).decode().splitlines())
     targets = {'ctc-manager_' + generation + '_' + role for role in ['database', 'data', 'logs', 'credentials']}
     if targets & existing:
@@ -68,7 +69,7 @@ def restore(runtime, unit, confirmation):
         storage.docker(['stop', '--time', '60', storage.prefix + '-db'])
         keep_volumes = True
         storage.cleanup(keep_volumes=True)
-        secrets = runtime.root / 'secrets' / generation
+        secrets = secrets_parent / generation
         secrets.mkdir(mode=0o700)
         private_path(secrets, directory=True)
         for name in ['db-password', 'db-root-password', 'google.json']:

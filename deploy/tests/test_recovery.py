@@ -106,17 +106,34 @@ class RecoveryUnitTest(unittest.TestCase):
                     self.private_write('unexpected.sh', b'echo unsafe')
                 with self.assertRaisesRegex(ValueError, 'inventory'):
                     recovery.validate_unit(self.unit)
-                self.private_write('google.json', b'{}')
+                self.private_write('google.json', b'{"private_key":"fixture"}')
 
     def test_unsafe_archive_types_and_paths_refuse(self):
         for name, kind in [('../outside', tarfile.REGTYPE), ('/outside', tarfile.REGTYPE),
                            ('uploads/link', tarfile.SYMTYPE), ('uploads/hard', tarfile.LNKTYPE),
-                           ('uploads/fifo', tarfile.FIFOTYPE), ('uploads/./x', tarfile.REGTYPE)]:
+                           ('uploads/fifo', tarfile.FIFOTYPE), ('uploads/contiguous', tarfile.CONTTYPE), ('uploads/./x', tarfile.REGTYPE)]:
             with self.subTest(name=name, kind=kind):
                 self.write_tar([(name, b'x', kind)])
                 self.seal()
                 with self.assertRaisesRegex(ValueError, 'archive'):
                     recovery.validate_unit(self.unit)
+
+    def test_oversized_extended_header_refuses_before_tarfile_metadata_allocation(self):
+        with tarfile.open(self.unit / 'data.tar', 'w', format=tarfile.PAX_FORMAT) as archive:
+            member = tarfile.TarInfo('uploads/file')
+            member.size = 1
+            member.pax_headers = {'comment': 'x' * (128 * 1024)}
+            archive.addfile(member, io.BytesIO(b'x'))
+        with self.assertRaisesRegex(ValueError, 'archive'):
+            recovery.validate_data_archive(self.unit / 'data.tar')
+
+    def test_archive_entry_and_expanded_size_limits_refuse(self):
+        from unittest.mock import patch
+        self.write_tar([('one', b'1', tarfile.REGTYPE), ('two', b'2', tarfile.REGTYPE)])
+        for key in ['MAX_ENTRIES', 'MAX_DATA']:
+            with self.subTest(limit=key), patch.object(recovery, key, 1):
+                with self.assertRaisesRegex(ValueError, 'archive'):
+                    recovery.validate_data_archive(self.unit / 'data.tar')
 
     def test_duplicate_archive_entries_refuse(self):
         self.write_tar([('uploads/a', b'a', tarfile.REGTYPE)] * 2)
@@ -362,6 +379,8 @@ class ProbeIsolationTest(unittest.TestCase):
             calls = []
             def docker(arguments, **kwargs):
                 calls.append(arguments)
+                if arguments[1] == 'ls':
+                    return (probe.prefix + '-data\n').encode()
                 return json.dumps([{'Labels': {'org.ctc.recovery.run': 'another-run'}}]).encode()
             probe = recovery.Probe(SimpleNamespace(root=root, docker=docker), root, {}, 'sha256:' + 'a' * 64,
                                    'sha256:' + 'b' * 64)
@@ -457,6 +476,19 @@ class LiveRecoveryActivationTest(unittest.TestCase):
         self.assertNotIn('--volumes', str(self.runtime.compose.call_args_list))
         self.assertEqual(1, self.runtime.stop_app.call_count)
 
+    def test_linked_secret_parent_cannot_create_a_directory_outside_target(self):
+        from unittest.mock import patch
+        secrets = self.runtime.root / 'secrets'
+        secrets.rmdir()
+        outside = self.runtime.root / 'outside-secrets'
+        outside.mkdir(mode=0o700)
+        secrets.symlink_to(outside, target_is_directory=True)
+        with patch('recovery.restore_check', return_value={'run': 'proven'}), patch('live.RecoveryStorage', return_value=PreparedStorage()):
+            with self.assertRaisesRegex(ValueError, 'symlink'):
+                recovery.restore(self.runtime, self.fixture.unit, self.confirmation)
+        self.assertFalse((outside / 'recovery-qualified').exists())
+        self.runtime.stop_app.assert_not_called()
+
     def test_unflushed_restored_secrets_never_replace_active_configuration(self):
         from unittest.mock import patch
         original_flush = recovery.flush_directory
@@ -516,3 +548,159 @@ class ProbeCreationOwnershipTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'ownership'):
                 probe.create_resources()
             self.assertFalse(any(call[0] == 'run' for call in calls))
+
+class ProbeCleanupFailureTest(unittest.TestCase):
+    def test_missing_failed_container_does_not_leave_owned_database_or_volume(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            calls = []
+            def docker(arguments, **kwargs):
+                calls.append(arguments)
+                if arguments[1] == 'ls':
+                    return ('\n'.join([probe.prefix + '-db', probe.prefix + '-data']) + '\n').encode()
+                return json.dumps([{'Config': {'Labels': {'org.ctc.recovery.run': probe.id}},
+                                    'Labels': {'org.ctc.recovery.run': probe.id}}]).encode()
+            probe = recovery.Probe(SimpleNamespace(root=root, docker=docker), root, {}, 'sha256:' + 'a' * 64,
+                                   'sha256:' + 'b' * 64)
+            probe.resources = [('volume', probe.prefix + '-data'), ('container', probe.prefix + '-db'),
+                               ('container', probe.prefix + '-app')]
+            probe.cleanup()
+            removed = [name for call in calls if 'rm' in call for name in call[-1:]]
+            self.assertIn(probe.prefix + '-db', removed)
+            self.assertIn(probe.prefix + '-data', removed)
+            self.assertNotIn(probe.prefix + '-app', removed)
+            self.assertEqual([], probe.resources)
+
+    def test_inspect_failure_does_not_prevent_other_independent_cleanup(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            calls = []
+            def docker(arguments, **kwargs):
+                calls.append(arguments)
+                if arguments[1] == 'ls':
+                    return ('\n'.join([probe.prefix + '-db', probe.prefix + '-data']) + '\n').encode()
+                if 'inspect' in arguments and arguments[-1].endswith('-db'):
+                    raise ValueError('daemon inspection failed')
+                return json.dumps([{'Labels': {'org.ctc.recovery.run': probe.id}}]).encode()
+            probe = recovery.Probe(SimpleNamespace(root=root, docker=docker), root, {}, 'sha256:' + 'a' * 64,
+                                   'sha256:' + 'b' * 64)
+            probe.resources = [('volume', probe.prefix + '-data'), ('container', probe.prefix + '-db')]
+            with self.assertRaisesRegex(ValueError, 'cleanup'):
+                probe.cleanup()
+            self.assertIn(['volume', 'rm', probe.prefix + '-data'], calls)
+            self.assertEqual([('container', probe.prefix + '-db')], probe.resources)
+
+    def test_cleanup_failure_cannot_leave_passed_result(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        fixture = RecoveryUnitTest()
+        fixture.setUp()
+        self.addCleanup(fixture.temp.cleanup)
+        runtime = SimpleNamespace(root=fixture.unit.parent, docker=Mock(return_value=b''))
+        probe = recovery.Probe(runtime, fixture.unit, fixture.manifest, 'sha256:' + 'a' * 64, 'sha256:' + 'b' * 64)
+        for method in ['create_resources', 'wait_database', 'import_database', 'verify_database', 'restore_files', 'verify_files', 'verify_application']:
+            setattr(probe, method, Mock())
+        probe.database_arguments = Mock(return_value=[])
+        probe.app_arguments = Mock(return_value=[])
+        probe.verify_graphic = Mock(return_value='fixture')
+        probe.cleanup = Mock(side_effect=ValueError('cleanup failed'))
+        with self.assertRaisesRegex(ValueError, 'cleanup failed'):
+            probe.run()
+        result = json.loads((probe.directory / 'result.json').read_text())
+        self.assertEqual('failed', result['status'])
+
+class SourceRuntimeGuardTest(unittest.TestCase):
+    def setUp(self):
+        from unittest.mock import Mock
+        self.runtime = recovery.NativeRuntime.__new__(recovery.NativeRuntime)
+        self.runtime.root = Path('/fixture')
+        self.runtime.deploy_root = Path('/release')
+        self.runtime.config = {'dockerHost': 'unix:///fixture/socket', 'appImage': 'ghcr.io/jegr78/ctc-manager@sha256:' + 'a' * 64,
+                               'databaseImage': 'mariadb@sha256:' + 'b' * 64,
+                               **{key: '/fixture/secret' for key in ['appEnvFile', 'databasePasswordFile', 'databaseRootPasswordFile', 'googleCredentialsFile']}}
+        self.db = {'Id': 'db', 'State': {'Running': True},
+                   'Config': {'Image': self.runtime.config['databaseImage']}, 'Image': 'sha256:database',
+                   'Mounts': [{'Destination': '/var/lib/mysql', 'Name': 'ctc-manager_database'}],
+                   'NetworkSettings': {'Networks': {'private': {'NetworkID': 'network'}}}}
+        self.app = {'Id': 'app', 'State': {'Running': True},
+                    'Config': {'Image': self.runtime.config['appImage']}, 'Image': 'sha256:app',
+                    'Mounts': [{'Destination': '/app/data', 'Name': 'ctc-manager_data'}]}
+        self.runtime.db = self.db
+        self.runtime.app = self.app
+        self.containers = [self.db, self.app]
+        self.network = {'Internal': True, 'Containers': {'db': {}, 'app': {}}}
+        self.info = {'SecurityOptions': ['name=rootless'], 'MemoryLimit': True}
+        self.runtime.container = Mock(side_effect=lambda role: self.db if role == 'db' else self.app)
+        self.runtime.compose = Mock(return_value=b'')
+        def docker(arguments, **kwargs):
+            if arguments[0] == 'info':
+                return json.dumps(self.info).encode()
+            if arguments[:2] == ['ps', '--quiet']:
+                return ' '.join(c['Id'] for c in self.containers).encode()
+            if arguments[0] == 'inspect':
+                return json.dumps(self.containers).encode()
+            if arguments[:2] == ['image', 'inspect']:
+                image = self.db if arguments[-1] == self.runtime.config['databaseImage'] else self.app
+                return json.dumps([{'Id': 'sha256:database' if image is self.db else 'sha256:app'}]).encode()
+            if arguments[:2] == ['network', 'inspect']:
+                return json.dumps([self.network]).encode()
+            raise AssertionError(arguments)
+        self.runtime.docker = Mock(side_effect=docker)
+
+    def test_exact_running_source_passes_without_starting_any_service(self):
+        self.runtime.preflight()
+        self.runtime.compose.assert_not_called()
+
+    def test_unexpected_volume_writer_refuses(self):
+        self.containers.append({'Id': 'foreign', 'Mounts': [{'Name': 'ctc-manager_data'}]})
+        with self.assertRaisesRegex(ValueError, 'unexpected writer'):
+            self.runtime.preflight()
+
+    def test_unexpected_network_writer_refuses(self):
+        self.network['Containers']['foreign'] = {}
+        with self.assertRaisesRegex(ValueError, 'unexpected writer'):
+            self.runtime.preflight()
+
+    def test_non_private_database_network_refuses(self):
+        self.network['Internal'] = False
+        with self.assertRaisesRegex(ValueError, 'private database network'):
+            self.runtime.preflight()
+
+    def test_wrong_selected_storage_refuses(self):
+        self.app['Mounts'][0]['Name'] = 'courtside_data'
+        with self.assertRaisesRegex(ValueError, 'storage'):
+            self.runtime.preflight()
+
+    def test_wrong_declared_or_actual_image_refuses(self):
+        for field in ['Image', 'Config']:
+            with self.subTest(field=field):
+                previous = self.app[field]
+                self.app[field] = 'sha256:foreign' if field == 'Image' else {'Image': 'app:latest'}
+                with self.assertRaisesRegex(ValueError, 'immutable release'):
+                    self.runtime.preflight()
+                self.app[field] = previous
+
+    def test_stopped_database_refuses_without_starting_it(self):
+        self.db['State']['Running'] = False
+        with self.assertRaisesRegex(ValueError, 'already be running'):
+            self.runtime.preflight()
+        self.runtime.compose.assert_not_called()
+
+    def test_rootful_or_unlimited_daemon_refuses(self):
+        for key, invalid in [('SecurityOptions', []), ('MemoryLimit', False)]:
+            with self.subTest(key=key):
+                previous = self.info[key]
+                self.info[key] = invalid
+                with self.assertRaisesRegex(ValueError, 'rootless Docker'):
+                    self.runtime.preflight()
+                self.info[key] = previous
+
+    def test_forced_or_failed_stop_refuses_capture(self):
+        for state in [{'Running': True}, {'Running': False, 'OOMKilled': True},
+                      {'Running': False, 'ExitCode': 137}, {'Running': False, 'ExitCode': 139}]:
+            with self.subTest(state=state):
+                self.app['State'] = state
+                with self.assertRaisesRegex(ValueError, 'stop cleanly'):
+                    self.runtime.stop_app()

@@ -79,7 +79,43 @@ def validate_manifest(value):
         require(isinstance(item['sha256'], str) and re.fullmatch(r'[a-f0-9]{64}', item['sha256']))
 
 
+def check_tar_headers(path):
+    metadata_types = {tarfile.XHDTYPE, tarfile.XGLTYPE, tarfile.GNUTYPE_LONGNAME}
+    allowed = metadata_types | {tarfile.REGTYPE, tarfile.AREGTYPE, tarfile.DIRTYPE}
+    length = path.stat().st_size
+    count = 0
+    with path.open('rb') as source:
+        while True:
+            block = source.read(512)
+            if len(block) != 512:
+                raise ValueError('truncated data archive header')
+            if not any(block):
+                padding = source.read(512)
+                if len(padding) != 512 or any(padding):
+                    raise ValueError('invalid data archive end marker')
+                while padding := source.read(65536):
+                    if any(padding):
+                        raise ValueError('unexpected trailing data archive content')
+                return
+            try:
+                member = tarfile.TarInfo.frombuf(block, 'utf-8', 'surrogateescape')
+            except tarfile.TarError as error:
+                raise ValueError('invalid data archive header') from error
+            count += 1
+            if member.type not in allowed or member.size < 0 or member.size > MAX_DATA or count > MAX_ENTRIES * 3:
+                raise ValueError('unsupported data archive header')
+            if member.type in metadata_types and member.size > 65536:
+                raise ValueError('data archive metadata exceeds limit')
+            if member.isdir() and member.size:
+                raise ValueError('data archive directory has a payload')
+            following = source.tell() + ((member.size + 511) // 512) * 512
+            if following > length:
+                raise ValueError('truncated data archive payload')
+            source.seek(following)
+
+
 def validate_data_archive(path, inventory=False):
+    check_tar_headers(path)
     seen = {}
     result = {}
     total = 0
@@ -94,7 +130,7 @@ def validate_data_archive(path, inventory=False):
                 parts = name.split('/')
                 if (not name or name.startswith('/') or any(p in ['', '.', '..'] for p in parts)
                         or str(PurePosixPath(name)) != name or name in seen
-                        or not (member.isfile() or member.isdir()) or member.sparse
+                        or member.type not in {tarfile.REGTYPE, tarfile.AREGTYPE, tarfile.DIRTYPE} or member.sparse
                         or member.mode & 0o7000 or member.size < 0):
                     raise ValueError('unsafe data archive entry')
                 if any(seen.get(str(parent)) == 'file' for parent in PurePosixPath(name).parents):

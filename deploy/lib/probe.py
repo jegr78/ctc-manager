@@ -232,20 +232,42 @@ class Probe:
             raise ValueError('local graphic is not a valid PNG')
         return kind
 
+    def lookup_resource(self, kind, name):
+        def listed():
+            args = [kind, 'ls'] + (['--all'] if kind == 'container' else [])
+            template = '{{.Names}}' if kind == 'container' else '{{.Name}}'
+            return self.docker(args + ['--filter', 'name=' + name, '--format', template]).decode().splitlines()
+        if name not in listed():
+            return None
+        try:
+            return json.loads(self.docker([kind, 'inspect', name]))[0]
+        except ValueError:
+            if name not in listed():
+                return None
+            raise
+
     def cleanup(self, keep_volumes=False):
         remaining = []
+        errors = []
         for kind, name in reversed(self.resources):
             if keep_volumes and kind == 'volume':
                 remaining.append((kind, name))
                 continue
-            command = ['inspect', name] if kind == 'container' else [kind, 'inspect', name]
-            inspected = json.loads(self.docker(command))[0]
-            labels = inspected.get('Config', {}).get('Labels', {}) if kind == 'container' else inspected.get('Labels', {})
-            if (labels or {}).get(LABEL) != self.id:
-                raise ValueError('probe resource ownership mismatch; cleanup refused')
-            self.docker(['rm', '--force', name] if kind == 'container' else [kind, 'rm', name])
+            try:
+                inspected = self.lookup_resource(kind, name)
+                if inspected is None:
+                    continue
+                labels = inspected.get('Config', {}).get('Labels', {}) if kind == 'container' else inspected.get('Labels', {})
+                if (labels or {}).get(LABEL) != self.id:
+                    raise ValueError('resource ownership mismatch')
+                self.docker(['rm', '--force', name] if kind == 'container' else [kind, 'rm', name])
+            except ValueError as error:
+                remaining.append((kind, name))
+                errors.append(str(error))
         self.resources = remaining
         atomic_json(self.directory / 'resources.json', {'run': self.id, 'resources': remaining})
+        if errors:
+            raise ValueError('probe cleanup incomplete: ' + '; '.join(errors))
 
     def run(self):
         from recovery import probe_environment, sha256
@@ -268,8 +290,6 @@ class Probe:
                       'manifestSha256': sha256(self.unit / 'manifest.json'), 'status': 'passed',
                       'graphic': graphic, 'outboundEnabled': False, 'hostPorts': [],
                       'appImageId': self.app_image, 'databaseImageId': self.database_image}
-            atomic_json(self.directory / 'result.json', result)
-            return result
         except Exception:
             for role in ['app', 'db']:
                 try:
@@ -282,4 +302,10 @@ class Probe:
             atomic_json(self.directory / 'result.json', {'format': 1, 'run': self.id, 'status': 'failed'})
             raise
         finally:
-            self.cleanup()
+            try:
+                self.cleanup()
+            except Exception:
+                atomic_json(self.directory / 'result.json', {'format': 1, 'run': self.id, 'status': 'failed', 'stage': 'cleanup'})
+                raise
+        atomic_json(self.directory / 'result.json', result)
+        return result

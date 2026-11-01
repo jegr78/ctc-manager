@@ -137,3 +137,19 @@ failed semantically and passes after the fix. Fourteen recovery ITs and the depl
 contract pass; the targeted Maven run still fails only the expected global coverage threshold.
 Live activation tests cover failed isolated proof, preserved predecessor configuration, paused
 integrations, activation failure and a secret-flush failure before any active changes.
+
+Native capture also passed against the existing synthetic Box installation while holding the
+shared installation lock. It captured 32 tables and complete files/configuration/secrets with the
+real source release 1.21.0, restored the app after a handled error, preserved originally stopped
+state and exercised hold-stopped capture without an intermediate restart. The historical image
+failed explicit full-restore admission. Source Mac data was not accessed.
+Independent security review found cleanup aborting on resources registered before failed
+creation. The fix distinguishes successful empty resource listings from inspect/daemon failures,
+continues independent cleanup, journals remaining resources and writes passed evidence only after
+cleanup succeeds. New negative tests reproduced all three prior failures. Self-review also found
+a linked secret parent could be followed before validation and an oversized PAX header could be
+allocated by tarfile before its metadata limit. Dedicated tests reproduced both paths; validation
+now precedes directory creation and raw tar headers are bounded before tarfile reads metadata.
+The current recovery suite has 51 passing cases, and the recipe suite has 23 including an actual
+SIGTERM/retained-lock/interrupted-journal scenario. Final guard falsifications and canonical full
+verification remain required.
