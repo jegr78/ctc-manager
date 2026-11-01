@@ -167,3 +167,10 @@ used a stash snapshot and was restored exactly. Deployment guard falsifications 
 cover the expected parent mount and the effective destination filesystem independently, preventing
 nested mounts from redirecting backup writes to another device. The effective destination check
 also passed against the actual Box backup filesystem. The positive recovery suite has 66 cases.
+Final targeted verification passed 66 recovery cases, 24 recipe cases, 15 release/publisher cases
+and 36 host cases. All 53 deployment guard falsifications and all 18 Java falsifications reached
+intended assertions after restoring each exact snapshot. The independent security re-review of
+5f6fb371 found no remaining material findings. The only upstream advance is the v1.22.0 release
+and subsequent pom version bump to 1.23.0-SNAPSHOT. Integrate that base before the canonical full
+build. Post-merge #297 acceptance still includes a genuinely published capable-image recovery
+unit and live activation; no real Mac cutover is claimed here.
