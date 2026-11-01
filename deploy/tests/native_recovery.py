@@ -91,6 +91,7 @@ def main():
     probe = Probe(runtime, unit, manifest, app['Id'], database)
     result = probe.run()
     assert result['graphic'] == 'restored-season-team-card', 'prove graphic generation from restored domain data'
+    assert result['credentialsVerified'] is True, 'prove Google bytes as app user and the restored database root login'
     remaining = runtime.docker(['ps', '--all', '--quiet', '--filter', 'label=org.ctc.recovery.run=' + probe.id]).decode().strip()
     assert not remaining, 'probe containers must be removed'
     failed = Probe(runtime, unit, manifest, app['Id'], database)
@@ -115,7 +116,7 @@ def main():
         leftover = runtime.docker(command + ['--quiet', '--filter', 'label=org.ctc.recovery.run=' + failed.id]).decode().strip()
         assert not leftover, 'failed creation must clean all owned ' + kind + ' resources'
     print(json.dumps({'status': 'passed', 'candidateImageId': app['Id'], 'restoredTables': len(manifest['records']),
-                      'graphic': result['graphic'], 'sandboxEscape': 'rejected', 'invalidSql': 'rejected',
+                      'graphic': result['graphic'], 'credentialsVerified': result['credentialsVerified'], 'sandboxEscape': 'rejected', 'invalidSql': 'rejected',
                       'failedContainerCreate': 'all-owned-resources-cleaned', 'productionTouched': False}))
 
 

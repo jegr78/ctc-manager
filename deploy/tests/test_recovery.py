@@ -883,3 +883,47 @@ class ProbeRuntimeProofTest(unittest.TestCase):
                 probe.curl = curl
                 with self.subTest(failure=failure), self.assertRaisesRegex(ValueError, 'policy|authenticated|recovery read'):
                     probe.verify_application({})
+
+class ProbeCredentialProofTest(unittest.TestCase):
+    def setUp(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        fixture = RecoveryUnitTest()
+        fixture.setUp()
+        self.addCleanup(fixture.temp.cleanup)
+        self.failure = None
+        runtime = SimpleNamespace(root=fixture.unit.parent)
+        self.probe = recovery.Probe(runtime, fixture.unit, fixture.manifest, 'sha256:' + 'a' * 64, 'sha256:' + 'b' * 64)
+        def docker(arguments, **kwargs):
+            if arguments[0] == 'inspect':
+                return b'[{"State":{"Running":true}}]'
+            if arguments[:3] == ['exec', self.probe.prefix + '-app', 'sha256sum']:
+                if self.failure == 'google-unreadable':
+                    raise ValueError('private Docker diagnostic')
+                checksum = '0' * 64 if self.failure == 'google-mismatch' else recovery.sha256(fixture.unit / 'google.json')
+                return (checksum + '  /run/ctc/google-credentials.json\n').encode()
+            if arguments[:2] == ['exec', self.probe.prefix + '-db']:
+                if self.failure == 'root-login':
+                    raise ValueError('private Docker diagnostic')
+                return b'0\n' if self.failure == 'root-result' else b'1\n'
+            raise AssertionError(arguments)
+        runtime.docker = Mock(side_effect=docker)
+        def curl(path, environment, authenticated=True, data=None):
+            if path == '/actuator/info':
+                return 200, b'{"ctcRecovery":{"version":1,"outboundEnabled":false}}'
+            if path == '/admin/teams' and not authenticated:
+                return 401, b''
+            return 200, b''
+        self.probe.curl = curl
+
+    def test_healthy_authenticated_app_still_requires_restored_credentials(self):
+        for failure in ['google-unreadable', 'google-mismatch', 'root-login', 'root-result']:
+            self.failure = failure
+            with self.subTest(failure=failure), self.assertRaisesRegex(ValueError, 'credential'):
+                self.probe.verify_application({})
+
+    def test_exact_google_bytes_and_database_root_login_complete_application_proof(self):
+        self.probe.verify_application({})
+        calls = [call.args[0] for call in self.probe.runtime.docker.call_args_list]
+        self.assertIn(['exec', self.probe.prefix + '-app', 'sha256sum', '/run/ctc/google-credentials.json'], calls)
+        self.assertTrue(any(call[:2] == ['exec', self.probe.prefix + '-db'] for call in calls))

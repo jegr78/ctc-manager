@@ -197,6 +197,26 @@ class Probe:
             if status != 200:
                 raise ValueError('authenticated recovery read failed: ' + path)
 
+        self.verify_credentials()
+
+    def verify_credentials(self):
+        from recovery import sha256
+        try:
+            checksum = self.docker(['exec', self.prefix + '-app', 'sha256sum',
+                                    '/run/ctc/google-credentials.json']).decode().split()
+        except ValueError:
+            raise ValueError('restored Google credentials are not readable by the application') from None
+        if not checksum or checksum[0] != sha256(self.unit / 'google.json'):
+            raise ValueError('restored Google credential bytes differ')
+        try:
+            result = self.docker(['exec', self.prefix + '-db', '/bin/sh', '-ec',
+                                  'MYSQL_PWD="$(cat /run/secrets/db-root-password)" exec mariadb --sandbox '
+                                  '--user=root --batch --skip-column-names --execute "SELECT 1;"']).decode().strip()
+        except ValueError:
+            raise ValueError('restored database root credential login failed') from None
+        if result != '1':
+            raise ValueError('restored database root credential proof failed')
+
     def verify_graphic(self, environment):
         from html.parser import HTMLParser
         from urllib.parse import urlencode
@@ -288,7 +308,7 @@ class Probe:
             graphic = self.verify_graphic(environment)
             result = {'format': 1, 'run': self.id, 'unitId': self.manifest['id'],
                       'manifestSha256': sha256(self.unit / 'manifest.json'), 'status': 'passed',
-                      'graphic': graphic, 'outboundEnabled': False, 'hostPorts': [],
+                      'graphic': graphic, 'credentialsVerified': True, 'outboundEnabled': False, 'hostPorts': [],
                       'appImageId': self.app_image, 'databaseImageId': self.database_image}
         except Exception:
             for role in ['app', 'db']:

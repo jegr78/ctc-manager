@@ -51,7 +51,8 @@ the check. A client shell escape must not execute. File restoration ignores arch
 sets the target image's application owner inside the rootless namespace.
 
 The check compares table counts and Flyway history, compares complete file contents and empty
-directories, verifies Basic authentication and admin reads, and generates a local team card from a
+directories, verifies Google credential bytes as the app user and the restored database root login,
+verifies Basic authentication and admin reads, and generates a local team card from a
 restored season team. An empty installation uses a Chromium screenshot and records that fallback.
 Graphical output and probes stay local. Discord/Google tokens and Google JSON are retained, while
 the application policy disables external reads and writes. The probe also has no external network.

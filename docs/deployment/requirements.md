@@ -174,3 +174,11 @@ intended assertions after restoring each exact snapshot. The independent securit
 and subsequent pom version bump to 1.23.0-SNAPSHOT. Integrate that base before the canonical full
 build. Post-merge #297 acceptance still includes a genuinely published capable-image recovery
 unit and live activation; no real Mac cutover is claimed here.
+The first canonical build on 36a6543a was deliberately stopped with SIGTERM before completion
+when the final acceptance audit identified a missing restored-secret proof. It is not counted as
+passing verification. Two new credential-proof tests first failed at five intended assertions:
+healthy/authenticated pages alone did not prove readable exact Google bytes or the recreated
+MariaDB root login. The probe now checks Google SHA-256 through the actual app user/container
+and validates the restored root password with fixed SELECT 1 only. Imported SQL still uses the
+unprivileged app database account. All 68 recovery cases pass; native credential qualification,
+three added guard falsifications and a fresh complete canonical run remain pending.
