@@ -2,7 +2,7 @@
 
 The Manager remains a single-admin application behind Tailnet HTTPS and existing Basic authentication. Generate Site creates an immutable private snapshot before replacing local output. The owner reviews that exact snapshot and confirms Publish. Generation alone never requests publication.
 
-The snapshot contains only generated public website files. Storage retains the three most recent snapshots plus the snapshot referenced by the current publication request. Private preview requires authentication and uses a response-level CSP sandbox and an iframe without same-origin permission. Scripts cannot read Manager pages, submit forms or connect to backend endpoints. Direct preview links retain the sandbox. Preview files have no-store caching.
+The snapshot contains only generated public website files. Storage retains the three most recent snapshots plus the snapshot referenced by the current publication request. Private preview requires authentication and uses a response-level CSP sandbox and an iframe without same-origin permission. Scripts cannot read Manager pages, submit forms or connect to backend endpoints. Direct preview links retain the sandbox. Private CSS responses embed their validated local fonts as data URLs so fonts render under Basic authentication without granting same-origin access or anonymous preview access. Stored snapshots and published website files remain unchanged. Preview files have no-store caching.
 
 ## Host setup
 

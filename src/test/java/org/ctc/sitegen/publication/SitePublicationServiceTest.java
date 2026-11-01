@@ -191,4 +191,48 @@ class SitePublicationServiceTest {
         assertThat(service.submit(next.id(), next.manifestSha256()).id()).isNotEqualTo(request.id());
     }
 
+    @Test
+    void givenStylesheetFont_whenPreviewed_thenFontIsEmbeddedAndSnapshotBytesStayUnchanged() throws Exception {
+        Files.createDirectory(source.resolve("fonts"));
+        Files.write(source.resolve("fonts/font.woff2"), new byte[]{1, 2, 3});
+        String css = "@font-face{font-family:Test;src:url('../fonts/font.woff2')}";
+        Files.writeString(source.resolve("assets/site.css"), css);
+        var snapshot = service.capture(source);
+        String preview;
+        try (var input = service.previewAsset(snapshot.id(), "assets/site.css").getInputStream()) {
+            preview = new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        }
+        assertThat(preview).contains("url('data:font/woff2;base64,AQID')");
+        assertThat(service.asset(snapshot.id(), "assets/site.css")).hasContent(css);
+        assertThat(service.snapshot(snapshot.id()).manifestSha256()).isEqualTo(snapshot.manifestSha256());
+    }
+
+    @Test
+    void givenUnlistedOrEscapingFont_whenPreviewed_thenNoFontBytesAreRead() throws Exception {
+        Files.writeString(source.resolve("assets/site.css"), "@font-face{src:url('../../private.woff2')}");
+        var snapshot = service.capture(source);
+        assertThatThrownBy(() -> service.previewAsset(snapshot.id(), "assets/site.css")).isInstanceOf(java.io.IOException.class);
+    }
+
+    @Test
+    void givenChangedFontBytes_whenPreviewed_thenEmbeddedContentIsRefused() throws Exception {
+        Files.createDirectory(source.resolve("fonts"));
+        Files.write(source.resolve("fonts/font.woff2"), new byte[]{1, 2, 3});
+        Files.writeString(source.resolve("assets/site.css"), "@font-face{src:url('../fonts/font.woff2')}");
+        var snapshot = service.capture(source);
+        Files.write(directory.resolve("snapshots").resolve(snapshot.id()).resolve("site/fonts/font.woff2"), new byte[]{4, 5, 6});
+        assertThatThrownBy(() -> service.previewAsset(snapshot.id(), "assets/site.css")).isInstanceOf(java.io.IOException.class);
+    }
+
+    @Test
+    void givenFontWithinSnapshotLimit_whenEmbeddingExceedsPreviewLimit_thenPreviewIsRefused() throws Exception {
+        Files.createDirectory(source.resolve("fonts"));
+        try (var font = new java.io.RandomAccessFile(source.resolve("fonts/font.woff2").toFile(), "rw")) {
+            font.setLength(32L * 1024 * 1024);
+        }
+        Files.writeString(source.resolve("assets/site.css"), "@font-face{src:url('../fonts/font.woff2')}");
+        var snapshot = service.capture(source);
+        assertThatThrownBy(() -> service.previewAsset(snapshot.id(), "assets/site.css")).isInstanceOf(java.io.IOException.class);
+    }
+
 }

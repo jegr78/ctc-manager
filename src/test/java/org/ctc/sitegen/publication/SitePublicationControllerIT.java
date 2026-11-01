@@ -61,7 +61,7 @@ class SitePublicationControllerIT {
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Frame-Options", "SAMEORIGIN"))
                 .andExpect(header().string("Cache-Control", "no-store"))
-                .andExpect(header().string("Content-Security-Policy", "sandbox allow-scripts; default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-src 'none'; frame-ancestors 'self'"))
+                .andExpect(header().string("Content-Security-Policy", "sandbox allow-scripts; default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-src 'none'; frame-ancestors 'self'"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("window.parent.document")));
         mvc.perform(get("/admin/site-preview/" + snapshot.id() + "/style.css")).andExpect(status().isOk());
         mvc.perform(get("/admin/site-preview/" + snapshot.id() + "/private.env"))
