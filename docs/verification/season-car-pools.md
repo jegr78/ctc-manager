@@ -68,3 +68,10 @@ race entry is rejected at both preview and execution before the original selecti
 Final visual captures show 1440-pixel desktop and 390-pixel mobile widths without overflow; the
 mobile editor anchor starts 72 pixels below the viewport top. Frozen membership displays the two
 reviewed local cars. Screenshots are kept outside version control.
+
+
+The resource follow-up rejects container values and oversized retained text in `accept()` before
+accumulation. It copies only validated scalar fields into a fresh small object, so neither nested
+payloads nor the original object's map capacity remain retained. Tests first demonstrated rejection
+was missing, and that the old retained object changed when its caller mutated the payload. The
+bounded copy, immediate duplicate check and row budget now pass those regressions.

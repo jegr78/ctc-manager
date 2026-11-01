@@ -2,6 +2,7 @@ package org.ctc.backup.schema;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import java.util.*;
 import org.ctc.domain.model.*;
 
@@ -35,9 +36,24 @@ public final class CarPoolBackupValidator {
         var indexed = rows.computeIfAbsent(table, ignored -> new LinkedHashMap<>());
         if (indexed.containsKey(id)) fail("Duplicate ID in " + table);
         if (retainedRows >= MAX_RETAINED_ROWS) fail("Category pool validation exceeds the 100000-row budget.");
-        object.retain(FIELDS.get(table));
-        indexed.put(id, object);
+        indexed.put(id, scalarProjection(table, object));
         retainedRows++;
+    }
+
+    private static ObjectNode scalarProjection(String table, ObjectNode source) {
+        var projection = JsonNodeFactory.instance.objectNode();
+        for (String field : FIELDS.get(table)) {
+            JsonNode value = source.get(field);
+            if (value == null) continue;
+            boolean valid = value.isNull() || switch (field) {
+                case "sortIndex", "modelYear" -> value.isIntegralNumber() && value.canConvertToInt();
+                case "bye" -> value.isBoolean();
+                default -> value.isTextual() && value.textValue().length() <= (field.equals("label") ? 120 : 36);
+            };
+            if (!valid) fail("Invalid retained scalar field " + (field.equals("modelYear") ? "model year" : field));
+            projection.set(field, value);
+        }
+        return projection;
     }
 
     private static void validateLegacyRow(String table, JsonNode row) {
@@ -68,7 +84,7 @@ public final class CarPoolBackupValidator {
             var row = item.getValue();
             var season = reference(row, "season", seasons);
             String label = text(row, "label");
-            if (label.isBlank() || label.length() > 120) fail("Invalid pool entry label.");
+            if (label.isBlank()) fail("Invalid pool entry label.");
             nonnegativeInt(row, "sortIndex");
             bySeason.computeIfAbsent(season, ignored -> new ArrayList<>()).add(item.getKey());
         }
@@ -79,7 +95,7 @@ public final class CarPoolBackupValidator {
             var drivetrain = row.hasNonNull("drivetrain") ? Drivetrain.valueOf(text(row, "drivetrain")) : null;
             if (row.hasNonNull("modelYear")) {
                 var year = row.get("modelYear");
-                if (!year.isIntegralNumber() || !year.canConvertToInt() || year.intValue() < 1000 || year.intValue() > 9999) fail("Invalid pool clause year.");
+                if (year.intValue() < 1000 || year.intValue() > 9999) fail("Invalid pool clause year.");
             }
             nonnegativeInt(row, "sortIndex");
             var definition = List.of(category.name(), drivetrain == null ? "" : drivetrain.name(), row.path("modelYear").asText(""));
