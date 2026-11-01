@@ -236,6 +236,34 @@ class UnpublishedMatchingTreeTest(GitSnapshotTest):
         self.assertEqual(state['mergeSha'], base)
         self.assertEqual(state['indexSha256'], hashlib.sha256(fixture.files['index.html']).hexdigest())
 
+    def test_git_normalization_cannot_turn_different_snapshot_bytes_into_no_change(self):
+        from unittest.mock import Mock
+        fixture = SnapshotTest()
+        fixture.setUp()
+        fixture.files['index.html'] = b'approved\r\n'
+        fixture.manifest['files']['index.html'] = dict(bytes=10, sha256=hashlib.sha256(b'approved\r\n').hexdigest())
+        archive = fixture.archive()
+        (self.root / '.gitattributes').write_text('docs/site/** text eol=lf\n')
+        for name, value in fixture.files.items():
+            target = self.root / 'docs/site' / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(value)
+        self.git('add', '.')
+        self.git('commit', '-m', 'same files already in Git, no Pages deployment yet')
+        base = self.git('rev-parse', 'HEAD')
+        self.publisher.root = self.root.parent
+        self.publisher.helper = Mock(return_value=archive)
+        self.publisher.save = Mock()
+        def git(directory, *args):
+            if args[:3] == ('remote', 'get-url', 'origin'): return publication.REMOTE
+            if args[0] in {'fetch', 'ls-remote'}: return ''
+            if args == ('rev-parse', 'FETCH_HEAD'): return base
+            return self.git(*args)
+        self.publisher.github.git.side_effect = git
+        state = dict(id=fixture.id, branch='site/publish-' + fixture.id, stage='preparing')
+        with self.assertRaisesRegex(ValueError, 'tree differs'):
+            self.publisher.prepare(fixture.request, state)
+
 
 class PagesArtifactGuardTest(GitSnapshotTest):
     def test_concurrent_site_addition_cannot_pass_artifact_guard(self):
@@ -341,3 +369,14 @@ class DurableStateTest(unittest.TestCase):
             self.assertEqual(json.loads(path.read_text()), dict(stage='checking', id='second'))
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
             self.assertEqual([file.name for file in root.iterdir()], ['worker.json'])
+
+
+class ApiVersionTest(unittest.TestCase):
+    def test_pull_metadata_preserves_merge_sha_and_dispatch_returns_run_id(self):
+        from unittest.mock import Mock
+        github = object.__new__(publication.GitHub)
+        github.command = Mock(return_value='{}')
+        for endpoint, expected in [('pulls/1', '2022-11-28'), ('actions/workflows/deploy-site.yml/dispatches', '2026-03-10')]:
+            github.api(endpoint)
+            arguments = github.command.call_args.args[0]
+            self.assertEqual(arguments[arguments.index('-H') + 1], 'X-GitHub-Api-Version: ' + expected)

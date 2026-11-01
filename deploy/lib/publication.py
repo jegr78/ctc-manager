@@ -120,7 +120,8 @@ class GitHub:
         return result.stdout.decode().strip()
 
     def api(self, path, method='GET', fields=None):
-        args = ['gh', 'api', '-H', 'X-GitHub-Api-Version: 2026-03-10', '--method', method, 'repos/' + REPOSITORY + '/' + path]
+        version = '2026-03-10' if path.endswith('/dispatches') else '2022-11-28'
+        args = ['gh', 'api', '-H', 'X-GitHub-Api-Version: ' + version, '--method', method, 'repos/' + REPOSITORY + '/' + path]
         if fields is not None:
             args += ['--input', '-']
         output = self.command(args, data=json.dumps(fields).encode() if fields is not None else None)
@@ -286,7 +287,7 @@ class Publisher:
             if not self.github.git(self.checkout, 'diff', '--cached', '--name-only'):
                 state.update(stage='deploying', mergeSha=base, needsDispatch=True,
                              siteTree=self.github.git(self.checkout, 'rev-parse', base + ':docs/site'),
-                             indexSha256=hashlib.sha256(files['index.html']).hexdigest(),
+                             indexSha256=self.verify_site_tree(base, files),
                              detail='Git already matches. Verifying actual Pages publication.')
                 return
             self.github.git(self.checkout, '-c', 'user.name=CTC Pages Publisher', '-c', 'user.email=ctc-pages@users.noreply.github.com',
@@ -317,6 +318,9 @@ class Publisher:
         paths = self.github.git(self.checkout, 'diff', '--name-only', base, head).splitlines()
         if not paths or any(not path.startswith('docs/site/') for path in paths):
             raise ValueError('publication contains changes outside docs/site')
+        return self.verify_site_tree(head, files)
+
+    def verify_site_tree(self, head, files):
         tree = self.github.git(self.checkout, 'ls-tree', '-rz', head + ':docs/site')
         actual = {}
         for record in tree.split('\0'):
