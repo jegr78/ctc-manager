@@ -39,6 +39,29 @@ class RaceServiceTest {
 
 
     @Test
+    void givenCategorySeasonWithoutSelection_whenSaving_thenDraftSettingsRemainSavable() {
+        // given
+        var matchday = createMatchday();
+        matchday.getSeason().setCarPoolMode(CarPoolMode.CATEGORY_POOL);
+        var home = createTeam("HOME", "Home");
+        var away = createTeam("AWAY", "Away");
+        when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
+        when(teamRepository.findById(home.getId())).thenReturn(Optional.of(home));
+        when(teamRepository.findById(away.getId())).thenReturn(Optional.of(away));
+        // when
+        var result = service.saveRace(null, matchday.getId(), home.getId(), away.getId(), null, null, null,
+                12, null, null, null, null, null, TimeProgressionMode.MULTIPLIER, 0, null, null, null, null);
+        // then
+        assertThat(result.success()).isTrue();
+        var saved = org.mockito.ArgumentCaptor.forClass(Race.class);
+        verify(raceRepository).save(saved.capture());
+        assertThat(saved.getValue().getCar()).isNull();
+        assertThat(saved.getValue().getCarPoolEntry()).isNull();
+        assertThat(saved.getValue().getSettings().getNumberOfLaps()).isEqualTo(12);
+        assertThat(saved.getValue().getSettings().getTimeProgressionMultiplier()).isZero();
+    }
+
+    @Test
     void givenSavedPoolEntry_whenLegacySaveClearsCar_thenRejectWithoutChangingTheSelection() {
         // given
         var matchday = createMatchday();
