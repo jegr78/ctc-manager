@@ -47,6 +47,8 @@ def restore(runtime, unit, confirmation):
     targets = {'ctc-manager_' + generation + '_' + role for role in ['database', 'data', 'logs', 'credentials']}
     if targets & existing:
         raise ValueError('target recovery storage already exists; never overwrite it')
+    if runtime.compose(['ps', '--status', 'running', '--quiet', 'db']).strip():
+        runtime.preflight(allow_missing_app=True)
     proof = restore_check(runtime, unit)
     app = json.loads(runtime.docker(['image', 'inspect', manifest['appImage']]))[0]
     admit_recovery_image(app)

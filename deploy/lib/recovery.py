@@ -321,15 +321,17 @@ class NativeRuntime:
             raise ValueError('exactly one selected ' + service + ' container required')
         return json.loads(self.docker(['inspect', identifiers[0]]))[0]
 
-    def preflight(self):
+    def preflight(self, allow_missing_app=False):
         info = json.loads(self.docker(['info', '--format', '{{json .}}']))
         if 'name=rootless' not in info.get('SecurityOptions', []) or info.get('MemoryLimit') is not True:
             raise ValueError('rootless Docker with memory enforcement required')
         self.db = self.container('db')
-        self.app = self.container('app')
+        self.app = None if allow_missing_app and not self.compose(['ps', '--all', '--quiet', 'app']).strip() else self.container('app')
         if self.db['State']['Running'] is not True:
             raise ValueError('selected database must already be running')
         for container, key in [(self.db, 'databaseImage'), (self.app, 'appImage')]:
+            if container is None:
+                continue
             selected = self.config[key]
             image = json.loads(self.docker(['image', 'inspect', selected]))[0]
             if container['Config']['Image'] != selected or container['Image'] != image['Id']:
@@ -342,10 +344,12 @@ class NativeRuntime:
         expected = {'/var/lib/mysql': environment['CTC_DATABASE_VOLUME'],
                     '/app/data': environment['CTC_DATA_VOLUME']}
         for container, target in [(self.db, '/var/lib/mysql'), (self.app, '/app/data')]:
+            if container is None:
+                continue
             selected = [m for m in container['Mounts'] if m['Destination'] == target]
             if len(selected) != 1 or selected[0].get('Name') != expected[target]:
                 raise ValueError('container storage differs from selected generation')
-        allowed = {self.db['Id'], self.app['Id']}
+        allowed = {container['Id'] for container in [self.db, self.app] if container is not None}
         identifiers = self.docker(['ps', '--quiet']).decode().split()
         if identifiers:
             for container in json.loads(self.docker(['inspect', *identifiers])):

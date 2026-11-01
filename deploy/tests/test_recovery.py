@@ -135,6 +135,11 @@ class RecoveryUnitTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'archive'):
                     recovery.validate_data_archive(self.unit / 'data.tar')
 
+    def test_raw_archive_header_rejects_unsupported_type(self):
+        self.write_tar([('contiguous', b'', tarfile.CONTTYPE)])
+        with self.assertRaisesRegex(ValueError, 'archive'):
+            recovery.check_tar_headers(self.unit / 'data.tar')
+
     def test_duplicate_archive_entries_refuse(self):
         self.write_tar([('uploads/a', b'a', tarfile.REGTYPE)] * 2)
         self.seal()
@@ -219,6 +224,13 @@ class CaptureTest(unittest.TestCase):
         self.assertEqual('13.0.2-MariaDB', recovery.validate_unit(unit)['databaseVersion'])
         self.assertEqual(b'private-fixture', (unit / 'db-password').read_bytes())
 
+    def test_invalid_exported_archive_is_never_published(self):
+        self.runtime.fixture.write_tar([('uploads/link', b'', tarfile.SYMTYPE)])
+        with self.assertRaisesRegex(ValueError, 'archive'):
+            recovery.capture(self.runtime, self.destination)
+        self.assertTrue(self.runtime.running)
+        self.assertFalse(any(p.name.startswith('recovery-') for p in self.destination.iterdir()))
+
     def test_originally_stopped_app_remains_stopped(self):
         self.runtime.running = False
         recovery.capture(self.runtime, self.destination)
@@ -301,7 +313,9 @@ class BackupDestinationTest(unittest.TestCase):
             receipt.chmod(0o600)
             runtime = recovery.NativeRuntime.__new__(recovery.NativeRuntime)
             runtime.root = root
-            with patch('subprocess.run') as command:
+            with patch('subprocess.run') as command, patch('shutil.disk_usage') as usage:
+                usage.return_value.free = 4 * 1024 ** 3
+                command.return_value.stdout = json.dumps({'filesystems': [{'target': '/mnt/backup', 'uuid': '31d7af2e-b6de-4680-9dfb-692ffb692fc4'}]}).encode()
                 command.return_value.returncode = 1
                 with self.assertRaisesRegex(ValueError, 'mount'):
                     runtime.check_destination(Path('/mnt/backup/ctc-manager'))
@@ -321,7 +335,7 @@ class BackupDestinationTest(unittest.TestCase):
                 with self.subTest(device=device), patch('subprocess.run') as command, patch('shutil.disk_usage') as usage:
                     command.return_value.returncode = 0
                     command.return_value.stdout = json.dumps({'filesystems': [{'target': '/mnt/backup', 'uuid': device}]}).encode()
-                    usage.return_value = namedtuple('Usage', 'total used free')(100, 99, 1)
+                    usage.return_value = namedtuple('Usage', 'total used free')(10 * 1024 ** 3, 1, 1 if device.startswith('31d7') else 4 * 1024 ** 3)
                     with self.assertRaisesRegex(ValueError, 'device|space'):
                         runtime.check_destination(Path('/mnt/backup/ctc-manager'))
 
@@ -408,6 +422,16 @@ class RestoreCheckTest(unittest.TestCase):
             recovery.restore_check(self.runtime, self.fixture.unit)
         self.assertFalse(any('create' in call or 'run' in call for call in self.calls))
 
+    def test_matching_installed_release_is_required_before_creating_resources(self):
+        def supported(arguments, **kwargs):
+            self.calls.append(arguments)
+            return json.dumps([{'Id': 'sha256:' + 'a' * 64, 'Config': {'Labels': {'org.ctc.recovery.version': '1'}}}]).encode()
+        self.runtime.docker = supported
+        self.runtime.release['version'] = '1.99.0'
+        with self.assertRaisesRegex(ValueError, 'matching installed release'):
+            recovery.restore_check(self.runtime, self.fixture.unit)
+        self.assertFalse(any('create' in call or 'run' in call for call in self.calls))
+
     def test_corrupt_unit_refuses_before_any_docker_operation(self):
         self.fixture.private_write('database.sql', b'corrupt')
         with self.assertRaisesRegex(ValueError, 'size|checksum'):
@@ -448,10 +472,31 @@ class LiveRecoveryActivationTest(unittest.TestCase):
         config = json.loads((fixture.unit / 'installation.json').read_text())
         config.update(storageGeneration='active', dockerHost='unix:///fixture/docker.sock', outboundPaused=False)
         self.original = dict(config)
-        self.runtime = SimpleNamespace(root=root, config=config, stop_app=Mock(), compose=Mock(return_value=b'active-app'))
+        self.runtime = SimpleNamespace(root=root, config=config, stop_app=Mock(), preflight=Mock(), compose=Mock(return_value=b'active-app'))
         self.runtime.docker = Mock(side_effect=lambda args: b'' if args[:2] == ['volume', 'ls'] else
                                    json.dumps([{'Id': 'sha256:' + 'a' * 64, 'Config': {'Labels': {'org.ctc.recovery.version': '1'}}}]).encode())
         self.confirmation = 'ctc-manager:' + config['installationId'] + ':recovery-qualified'
+
+    def test_unexpected_active_writer_refuses_before_isolated_check_or_activation(self):
+        from unittest.mock import patch
+        self.runtime.preflight.side_effect = ValueError('unexpected writer')
+        with patch('recovery.restore_check', return_value={'run': 'unexpected'}) as check, patch('live.RecoveryStorage', return_value=PreparedStorage()):
+            with self.assertRaisesRegex(ValueError, 'unexpected writer'):
+                recovery.restore(self.runtime, self.fixture.unit, self.confirmation)
+        check.assert_not_called()
+        self.runtime.stop_app.assert_not_called()
+        self.assertEqual(self.original, self.runtime.config)
+
+    def test_existing_target_volume_refuses_before_restore_or_active_changes(self):
+        from unittest.mock import patch
+        self.runtime.docker.return_value = b'ctc-manager_recovery-qualified_data\n'
+        self.runtime.docker.side_effect = None
+        with patch('recovery.restore_check') as check:
+            with self.assertRaisesRegex(ValueError, 'already exists'):
+                recovery.restore(self.runtime, self.fixture.unit, self.confirmation)
+        check.assert_not_called()
+        self.runtime.stop_app.assert_not_called()
+        self.runtime.compose.assert_not_called()
 
     def test_failed_isolated_check_never_stops_or_reconfigures_active_app(self):
         from unittest.mock import patch
@@ -459,7 +504,7 @@ class LiveRecoveryActivationTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'probe failed'):
                 recovery.restore(self.runtime, self.fixture.unit, self.confirmation)
         self.runtime.stop_app.assert_not_called()
-        self.runtime.compose.assert_not_called()
+        self.assertFalse(any(call.args[0][0] != 'ps' for call in self.runtime.compose.call_args_list))
         self.assertEqual(self.original, self.runtime.config)
         self.assertFalse((self.runtime.root / 'secrets/recovery-qualified').exists())
 
@@ -500,7 +545,7 @@ class LiveRecoveryActivationTest(unittest.TestCase):
             with self.assertRaisesRegex(OSError, 'secret flush failed'):
                 recovery.restore(self.runtime, self.fixture.unit, self.confirmation)
         self.runtime.stop_app.assert_not_called()
-        self.runtime.compose.assert_not_called()
+        self.assertFalse(any(call.args[0][0] != 'ps' for call in self.runtime.compose.call_args_list))
         self.assertEqual(self.original, self.runtime.config)
 
     def test_failed_activation_preserves_both_configurations_and_requires_review(self):
@@ -653,6 +698,16 @@ class SourceRuntimeGuardTest(unittest.TestCase):
         self.runtime.preflight()
         self.runtime.compose.assert_not_called()
 
+    def test_recovery_can_inspect_running_database_after_app_container_loss(self):
+        self.containers = [self.db]
+        self.network['Containers'] = {'db': {}}
+        self.runtime.preflight(allow_missing_app=True)
+        self.assertIsNone(self.runtime.app)
+        self.runtime.container.assert_called_once_with('db')
+        self.containers.append({'Id': 'foreign', 'Mounts': [{'Name': 'ctc-manager_data'}]})
+        with self.assertRaisesRegex(ValueError, 'unexpected writer'):
+            self.runtime.preflight(allow_missing_app=True)
+
     def test_unexpected_volume_writer_refuses(self):
         self.containers.append({'Id': 'foreign', 'Mounts': [{'Name': 'ctc-manager_data'}]})
         with self.assertRaisesRegex(ValueError, 'unexpected writer'):
@@ -704,3 +759,50 @@ class SourceRuntimeGuardTest(unittest.TestCase):
                 self.app['State'] = state
                 with self.assertRaisesRegex(ValueError, 'stop cleanly'):
                     self.runtime.stop_app()
+
+class IntegrationResumeTest(unittest.TestCase):
+    def setUp(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        root = Path(self.temp.name).resolve()
+        (root / 'config').mkdir(mode=0o700)
+        self.identity = '8975b8e1-c388-4893-8832-039eb8d439cd'
+        self.runtime = SimpleNamespace(root=root, config={'installationId': self.identity, 'outboundPaused': True, 'appImage': 'fixture'},
+                                       preflight=Mock(), docker=Mock(return_value=json.dumps([{'Config': {'Labels': {'org.ctc.recovery.version': '1'}}}]).encode()), compose=Mock())
+
+    def test_invalid_confirmation_cannot_resume_integrations(self):
+        with self.assertRaisesRegex(ValueError, 'confirm the paused installation'):
+            recovery.resume_integrations(self.runtime, 'another-installation')
+        self.runtime.preflight.assert_not_called()
+        self.runtime.compose.assert_not_called()
+        self.assertTrue(self.runtime.config['outboundPaused'])
+
+    def test_explicit_confirmation_recreates_only_the_verified_app(self):
+        result = recovery.resume_integrations(self.runtime, self.identity)
+        self.assertEqual('integrations-resumed', result['status'])
+        self.assertFalse(self.runtime.config['outboundPaused'])
+        self.runtime.preflight.assert_called_once()
+        self.runtime.compose.assert_called_once_with(['up', '-d', '--wait', '--wait-timeout', '180', 'app'])
+
+
+class ProbeRuntimeProofTest(unittest.TestCase):
+    def test_enabled_policy_or_missing_authentication_cannot_pass(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = SimpleNamespace(root=Path(directory).resolve(), docker=Mock(return_value=b'[{"State":{"Running":true}}]'))
+            probe = recovery.Probe(runtime, runtime.root, {}, 'sha256:' + 'a' * 64, 'sha256:' + 'b' * 64)
+            for failure in ['policy', 'anonymous', 'authenticated']:
+                def curl(path, environment, authenticated=True, data=None):
+                    if path == '/actuator/info':
+                        return 200, json.dumps({'ctcRecovery': {'version': 1, 'outboundEnabled': failure == 'policy'}}).encode()
+                    if path == '/admin/teams' and not authenticated:
+                        return (200 if failure == 'anonymous' else 401), b''
+                    if path.startswith('/admin/') and failure == 'authenticated':
+                        return 403, b''
+                    return 200, b''
+                probe.curl = curl
+                with self.subTest(failure=failure), self.assertRaisesRegex(ValueError, 'policy|authenticated|recovery read'):
+                    probe.verify_application({})

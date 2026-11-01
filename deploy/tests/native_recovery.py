@@ -93,8 +93,30 @@ def main():
     assert result['graphic'] == 'restored-season-team-card', 'prove graphic generation from restored domain data'
     remaining = runtime.docker(['ps', '--all', '--quiet', '--filter', 'label=org.ctc.recovery.run=' + probe.id]).decode().strip()
     assert not remaining, 'probe containers must be removed'
+    failed = Probe(runtime, unit, manifest, app['Id'], database)
+    original_docker = runtime.docker
+    def fail_app_creation(arguments, **kwargs):
+        if arguments[0] == 'run' and '--name' in arguments and arguments[arguments.index('--name') + 1] == failed.prefix + '-app':
+            arguments = [arguments[0], '--invalid-ctc-recovery-fixture-option', *arguments[1:]]
+        return original_docker(arguments, **kwargs)
+    runtime.docker = fail_app_creation
+    try:
+        try:
+            failed.run()
+            raise AssertionError('invalid container creation unexpectedly succeeded')
+        except ValueError:
+            pass
+    finally:
+        runtime.docker = original_docker
+    evidence = json.loads((failed.directory / 'result.json').read_text())
+    assert evidence['status'] == 'failed', 'failed creation must not leave passed evidence'
+    for kind in ['container', 'volume', 'network']:
+        command = [kind, 'ls'] + (['--all'] if kind == 'container' else [])
+        leftover = runtime.docker(command + ['--quiet', '--filter', 'label=org.ctc.recovery.run=' + failed.id]).decode().strip()
+        assert not leftover, 'failed creation must clean all owned ' + kind + ' resources'
     print(json.dumps({'status': 'passed', 'candidateImageId': app['Id'], 'restoredTables': len(manifest['records']),
-                      'graphic': result['graphic'], 'sandboxEscape': 'rejected', 'invalidSql': 'rejected', 'productionTouched': False}))
+                      'graphic': result['graphic'], 'sandboxEscape': 'rejected', 'invalidSql': 'rejected',
+                      'failedContainerCreate': 'all-owned-resources-cleaned', 'productionTouched': False}))
 
 
 if __name__ == '__main__':

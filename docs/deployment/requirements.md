@@ -153,3 +153,9 @@ now precedes directory creation and raw tar headers are bounded before tarfile r
 The current recovery suite has 51 passing cases, and the recipe suite has 23 including an actual
 SIGTERM/retained-lock/interrupted-journal scenario. Final guard falsifications and canonical full
 verification remain required.
+The final native candidate run additionally forced app-container creation to fail before Docker
+created its object. Cleanup removed every run-owned container, volume and network, and failure
+receipts remained failed. The live path now checks an existing running source database for
+unexpected writers before probing/activation, including recovery after loss of the app container.
+The recovery suite now has 60 passing cases. Final release-tool qualification and live activation
+against a genuinely published capable image remain post-merge acceptance work for #297.
