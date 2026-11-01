@@ -17,6 +17,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.Base64;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import java.util.Map;
 import java.util.Objects;
 import java.nio.charset.StandardCharsets;
@@ -30,6 +36,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class SitePublicationService {
+    private static final Pattern FONT_URL = Pattern.compile("url\\(\\s*(['\"]?)([^()'\"\\r\\n]+\\.(?:woff2?|ttf))\\1\\s*\\)", Pattern.CASE_INSENSITIVE);
     private static final Set<String> EXTENSIONS = Set.of("html", "css", "js", "json", "png", "jpg", "jpeg", "webp", "gif", "svg", "ico", "woff", "woff2", "ttf");
     private static final Set<String> FINISHED = Set.of("published", "no-change", "cancelled");
     private static final Set<String> STAGES = Set.of("preparing", "checking", "deploying", "published", "no-change", "cancelled", "failed");
@@ -149,6 +156,31 @@ public class SitePublicationService {
             throw new IOException("Snapshot file changed");
         }
         return file;
+    }
+
+    public synchronized Resource previewAsset(String id, String name) throws IOException {
+        Path file = asset(id, name);
+        if (!name.toLowerCase(java.util.Locale.ENGLISH).endsWith(".css")) return new FileSystemResource(file);
+        String css = Files.readString(file);
+        Matcher fonts = FONT_URL.matcher(css);
+        var rendered = new StringBuilder();
+        Path parent = Path.of(name).getParent();
+        while (fonts.find()) {
+            String reference = fonts.group(2).strip();
+            if (reference.contains(":") || reference.startsWith("/")) continue;
+            String relative = (parent == null ? Path.of("") : parent).resolve(reference).normalize().toString().replace('\\', '/');
+            Path font = asset(id, relative);
+            String extension = relative.substring(relative.lastIndexOf('.') + 1).toLowerCase(java.util.Locale.ENGLISH);
+            String data = "data:font/" + extension + ";base64," + Base64.getEncoder().encodeToString(Files.readAllBytes(font));
+            fonts.appendReplacement(rendered, Matcher.quoteReplacement("url('" + data + "')"));
+            if (rendered.length() > MAX_FILE) throw new IOException("Preview stylesheet exceeds its byte limit");
+        }
+        fonts.appendTail(rendered);
+        byte[] bytes = rendered.toString().getBytes(StandardCharsets.UTF_8);
+        if (bytes.length > MAX_FILE) throw new IOException("Preview stylesheet exceeds its byte limit");
+        return new ByteArrayResource(bytes) {
+            @Override public String getFilename() { return name; }
+        };
     }
 
     public synchronized boolean isPublicationEnabled() {

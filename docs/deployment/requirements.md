@@ -290,7 +290,7 @@ Reuse the current Generate workspace, Basic authentication and CSRF. One immutab
 | Requirement | Production path | Positive test | Failure/runtime proof |
 |---|---|---|---|
 | Exact snapshot | Capture validated staging under generation coordination | A remains unchanged after B; approval binds UUID/hash | Changed file/hash, private path, link and failed generation cannot become new approved output |
-| Private preview | Authenticated allowlisted resources and opaque sandbox | Relative local assets and navigation work | Traversal, missing assets and parent/admin-origin access fail; direct responses retain CSP |
+| Private preview | Authenticated allowlisted resources and opaque sandbox | Relative local assets and navigation work, including webfonts under production Basic authentication | Traversal, missing assets and parent/admin-origin access fail; direct responses retain CSP |
 | Explicit owner action | Existing CSRF form, prod enable flag and OutboundPolicy | One request for selected A, duplicate click deduplicated | Dev, recovery, disabled operation and mismatched hash refuse; startup suspends pending approval |
 | Host boundary | Current rootless runtime and networkless data helper | Exact snapshot reaches dedicated checkout | Token/socket absent from app; untrusted fields/paths, unknown remote outcome and restore replay refuse |
 | GitHub publication | Fixed repo, docs/site-only PR and exact-head checks | Merge and correlated successful Pages run, public index hash | Token/API/check/merge/Pages failure remains visible; merge alone is not published |
