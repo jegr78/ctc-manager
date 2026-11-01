@@ -54,3 +54,10 @@ probe with a fixture-local mocked TCP bind and assert its exact loopback address
 They cover free and occupied results without binding that host port themselves.
 The production port guard is unchanged. Fixture staging also uses the task-local
 temporary directory on `/home`, which has the required free space.
+
+The full E2E run exposed an overly strict first implementation: rejecting a null
+numeric multiplier blocked existing native draft edits and masked catalog
+validation errors. Both numeric save signatures now preserve null as incomplete,
+while negative multipliers and Equal Conditions with a number are rejected. The
+existing RaceSetupEditorsE2ETest remains unchanged. The service test pins 0, 6,
+60 and null through the same explicit numeric save path and checks completeness.

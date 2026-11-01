@@ -173,7 +173,7 @@ public class RaceService {
         String error = timeProgressionMode == null ? "Choose a time progression mode."
                 : timeProgressionMode == TimeProgressionMode.EQUAL_CONDITIONS
                     ? (timeProgressionMultiplier != null ? "Equal Conditions requires an empty time multiplier." : null)
-                    : (timeProgressionMultiplier == null || timeProgressionMultiplier < 0
+                    : (timeProgressionMultiplier != null && timeProgressionMultiplier < 0
                         ? "Time multiplier must be a nonnegative integer." : null);
         if (error != null) return new SaveResult(false, error, id, matchdayId);
         return saveRaceInternal(id, matchdayId, homeTeamId, awayTeamId, trackId, carId, dateTime,

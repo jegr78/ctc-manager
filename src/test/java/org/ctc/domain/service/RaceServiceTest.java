@@ -55,7 +55,7 @@ class RaceServiceTest {
     void givenMissingModeOrInvalidNumericValue_whenSaving_thenRejectsBeforeReadingRepositories() {
         org.assertj.core.api.Assertions.assertThatCode(() -> {
             // given / when / then
-            for (Integer value : new Integer[]{null, -1}) {
+            for (Integer value : new Integer[]{-1}) {
                 var result = service.saveRace(null, null, null, null, null, null, null,
                         null, null, null, null, null, null, TimeProgressionMode.MULTIPLIER, value,
                         null, null, null, null);
@@ -523,8 +523,10 @@ class RaceServiceTest {
     }
 
 
-    @Test
-    void givenRaceDataWithSettings_whenSaveRace_thenRaceSettingsCreated() {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.NullSource
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 6, 60})
+    void givenNumericSettings_whenSaveRace_thenModeAndDraftCompletenessPersist(Integer multiplier) {
         // given
         var matchdayId = UUID.randomUUID();
         var homeTeamId = UUID.randomUUID();
@@ -543,12 +545,15 @@ class RaceServiceTest {
             assertThat(saved.getSettings()).isNotNull();
             assertThat(saved.getSettings().getNumberOfLaps()).isEqualTo(20);
             assertThat(saved.getSettings().getWeather()).isEqualTo("Preset S02");
+            assertThat(saved.getSettings().getTimeProgressionMode()).isEqualTo(TimeProgressionMode.MULTIPLIER);
+            assertThat(saved.getSettings().getTimeProgressionMultiplier()).isEqualTo(multiplier);
+            assertThat(saved.getSettings().isComplete()).isEqualTo(multiplier != null);
             return saved;
         });
 
         // when
         var result = service.saveRace(null, matchdayId, homeTeamId, awayTeamId,
-                null, null, null, 20, 3, 4, 10, "90", 0, 5, "Preset S02", "Afternoon", "RS, RM", "RS");
+                null, null, null, 20, 3, 4, 10, "90", 0, TimeProgressionMode.MULTIPLIER, multiplier, "Preset S02", "Afternoon", "RS, RM", "RS");
 
         // then
         assertThat(result.success()).isTrue();

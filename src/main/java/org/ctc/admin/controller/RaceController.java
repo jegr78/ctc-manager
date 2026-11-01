@@ -200,21 +200,13 @@ public class RaceController {
 
 	@PostMapping("/save")
 	public String save(@ModelAttribute RaceForm form, BindingResult binding,
-                       @RequestParam(required = false) String timeProgressionMode,
                        RedirectAttributes redirectAttributes) {
         if (binding.hasErrors()) {
             redirectAttributes.addFlashAttribute("errorMessage", "Check the time progression mode and numeric settings.");
             redirectAttributes.addFlashAttribute("raceForm", form);
             return "redirect:/admin/races/" + (form.getId() != null ? form.getId() + "/edit" : "new?matchdayId=" + form.getMatchdayId());
         }
-		var result = timeProgressionMode == null ? raceService.saveRace(
-				form.getId(), form.getMatchdayId(), form.getHomeTeamId(), form.getAwayTeamId(),
-				form.getTrackId(), form.getCarId(), form.getDateTime(),
-				form.getNumberOfLaps(), form.getTyreWearMultiplier(),
-				form.getFuelConsumptionMultiplier(), form.getRefuelingSpeed(),
-				form.getInitialFuel(), form.getNumberOfRequiredPitStops(),
-				form.getTimeProgressionMultiplier(), form.getWeather(),
-				form.getTimeOfDay(), form.getAvailableTyres(), form.getMandatoryTyres()) : raceService.saveRace(
+		var result = raceService.saveRace(
 				form.getId(), form.getMatchdayId(), form.getHomeTeamId(), form.getAwayTeamId(),
 				form.getTrackId(), form.getCarId(), form.getDateTime(),
 				form.getNumberOfLaps(), form.getTyreWearMultiplier(),
