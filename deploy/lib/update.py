@@ -24,6 +24,15 @@ def version_key(value):
     return (*map(int, release.split('.')), -1 if separator else 0, int(rc) if separator else 0)
 
 
+def require_source_identity(config):
+    value = config.get('installationId')
+    try:
+        if not isinstance(value, str) or str(uuid.UUID(value)) != value:
+            raise ValueError()
+    except (ValueError, TypeError, AttributeError):
+        raise ValueError('valid canonical installation identity required; establish it with an initial backup') from None
+
+
 class GitHubReleases:
     def retrieve(self, url, limit):
         request = urllib.request.Request(url, headers={'User-Agent': 'ctc-manager-deployment',
@@ -82,6 +91,7 @@ def compatibility(runtime, directory, manifest):
 
 def stage_release(runtime, selected, provider=None):
     version(selected)
+    require_source_identity(runtime.config)
     if version_key(selected) <= version_key(runtime.release['version']):
         raise ValueError('select a newer released version; downgrades and mutable versions are unsupported')
     releases = private_path(runtime.root / 'releases', directory=True)
@@ -160,6 +170,7 @@ def execute_update(runtime, candidate, destination, *, capture_unit=capture, pro
         previous = read_json(private_path(journal))
         if type(previous) is not dict or previous.get('stage') not in ['completed', 'failed-before-activation']:
             raise ValueError('reconcile the unresolved update journal before another update')
+    require_source_identity(runtime.config)
     candidate = private_path(Path(candidate), directory=True)
     releases = private_path(runtime.root / 'releases', directory=True)
     manifest = installed_release(candidate)

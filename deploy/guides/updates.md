@@ -18,6 +18,8 @@ storage. The coordinator never starts the previous application on the possibly c
 
 Run as `ctc-manager` with its private rootless Docker socket and `XDG_RUNTIME_DIR`.
 Choose a newer explicit version supported by its `upgrade.json` minimum source version.
+Create an initial complete backup first. It assigns the installation's canonical UUID if one is
+missing. Update checks reject a missing or malformed identity before staging or downtime.
 
 ```sh
 /srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager update-check --release <version>

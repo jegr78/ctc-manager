@@ -295,6 +295,29 @@ class UpdateTest(unittest.TestCase):
         self.assertEqual([], self.provider.calls)
         self.assert_source_unchanged()
 
+    def test_missing_or_invalid_source_identity_rejects_before_staging_or_downtime(self):
+        for value in [None, 'not-an-installation', 42, self.original['installationId'].upper()]:
+            with self.subTest(identity=value):
+                if value is None:
+                    self.runtime.config.pop('installationId', None)
+                else:
+                    self.runtime.config['installationId'] = value
+                atomic_json(self.root / 'config/installation.json', self.runtime.config)
+                with self.assertRaisesRegex(ValueError, 'identity|initial backup'):
+                    self.stage()
+                self.assertEqual([], self.provider.calls)
+                self.assertNotIn('stop', self.runtime.trace)
+                self.assertTrue(self.runtime.running)
+
+    def test_activation_rechecks_source_identity_after_staging(self):
+        candidate = self.stage()
+        self.runtime.config.pop('installationId')
+        atomic_json(self.root / 'config/installation.json', self.runtime.config)
+        with self.assertRaisesRegex(ValueError, 'identity|initial backup'):
+            self.execute(candidate)
+        self.assertNotIn('stop', self.runtime.trace)
+        self.assertTrue(self.runtime.running)
+
     def test_unsupported_upgrade_contract_rejects(self):
         self.rewrite_asset(lambda content, manifest: content.update({'upgrade.json': json.dumps({
             'format': 1, 'minimumSourceVersion': '9.0.0', 'recoveryCapability': 1,
