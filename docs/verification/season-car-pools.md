@@ -133,3 +133,9 @@ upgrade cases first failed at the accepted-metadata assertion. An independent de
 `68dd8037` reported no findings. All 13 affected runtime guard experiments were repeated after
 the SQL and backup-comment corrections, and nine additional connection/layout guards were
 falsified from the committed checkpoint.
+
+A boundary layout check then reproduced overflow for a valid 120-character label without spaces.
+Both native browser cases failed at the card-width assertion before the fix. The pool editor now
+wraps long labels in cards and preview summaries. Both cases passed afterward, including snapshot
+stability, native error anchors and long team options. The interrupted full build is superseded by
+the final committed-head clean verification.
