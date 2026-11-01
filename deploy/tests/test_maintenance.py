@@ -110,6 +110,15 @@ class MaintenanceTest(unittest.TestCase):
             atomic_json(p,{'AWS_SECRET_ACCESS_KEY':value})
             with self.assertRaisesRegex(ValueError,'environment'):maintenance.load_backup(self.root)
 
+    def test_referenced_google_backup_credentials_must_be_private_inside_installation(self):
+        key=self.root/'secrets/gcs.json';key.write_text('{}');key.chmod(0o644)
+        environment=Path(self.config['environmentFile']);atomic_json(environment,{'GOOGLE_APPLICATION_CREDENTIALS':str(key)})
+        with self.assertRaisesRegex(ValueError,'private'):maintenance.load_backup(self.root)
+        key.chmod(0o600);self.assertEqual(self.config,maintenance.load_backup(self.root))
+        outside=self.root.parent/'gcs.json';outside.write_text('{}');outside.chmod(0o600)
+        atomic_json(environment,{'GOOGLE_APPLICATION_CREDENTIALS':str(outside)})
+        with self.assertRaisesRegex(ValueError,'inside'):maintenance.load_backup(self.root)
+
     def test_retention_keeps_calendar_union_newest_and_unreplicated(self):
         units=[self.make_unit(age) for age in range(0,550,7)]
         state=self.evidence(units);state['replicas'].pop(str(units[-1]))

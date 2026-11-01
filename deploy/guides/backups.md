@@ -48,7 +48,8 @@ restic test only qualifies the interface.
 Supported access environment keys are AWS access/session/region variables, B2 account variables,
 Azure account/key/SAS variables and `GOOGLE_APPLICATION_CREDENTIALS`. Repository/password command
 overrides, loader variables and PATH overrides are rejected. SFTP uses the dedicated user's own
-SSH configuration. Keep SSH private keys and host-key verification in place.
+SSH configuration. Referenced Google credential files must also be private and inside installation
+secrets. Keep SSH private keys and host-key verification in place.
 
 ## run and inspect
 

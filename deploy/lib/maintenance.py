@@ -47,6 +47,10 @@ def load_backup(root):
     if (type(environment) is not dict or set(environment) - ACCESS_ENV
             or any(not isinstance(v, str) or '\x00' in v for v in environment.values())):
         raise ValueError('unsupported restic access environment')
+    if environment.get('GOOGLE_APPLICATION_CREDENTIALS') is not None:
+        google = private_path(environment['GOOGLE_APPLICATION_CREDENTIALS'])
+        if not google.is_relative_to(root / 'secrets'):
+            raise ValueError('Google backup credentials must stay inside private installation secrets')
     if not os.access(config['alertHook'], os.X_OK):
         raise ValueError('private alert hook must be executable')
     return config
