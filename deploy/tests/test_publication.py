@@ -74,6 +74,7 @@ class WorkflowTest(unittest.TestCase):
         self.publisher.github = Mock()
         self.publisher.github.git.return_value = 'f' * 40
         self.publisher.checkout = Path('/fixture')
+        self.publisher.save = Mock()
         self.state = dict(id='30abccf2-0e8d-4f65-bd03-5db05d539b08', headSha='a' * 40,
                           baseSha='b' * 40, branch='site/publish-test', pr=12, stage='checking', siteTree='f' * 40)
         self.pr = dict(head=dict(sha='a' * 40, ref='site/publish-test', repo=dict(full_name=publication.REPOSITORY)),
@@ -280,7 +281,7 @@ class DispatchTest(WorkflowTest):
 
     def test_ambiguous_dispatch_is_not_automatically_repeated(self):
         self.state.update(stage='deploying', mergeSha='d' * 40, needsDispatch=True, dispatchRequested=True)
-        self.publisher.github.api.return_value = dict(workflow_runs=[])
+        self.publisher.github.api.side_effect = [dict(workflow_runs=[]), dict(workflow_run_id=123)]
         with self.assertRaisesRegex(ValueError, 'ambiguous Pages dispatch'):
             self.publisher.deployment(self.state)
         self.assertEqual(self.publisher.github.api.call_count, 1)
