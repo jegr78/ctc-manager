@@ -387,6 +387,12 @@ class RehearsalGuardTest(unittest.TestCase):
         self.probe.cleanup.assert_called_once_with()
         self.assertFalse(list(self.destination.glob('recovery-*')))
 
+    def test_unpaused_target_is_refused_before_any_docker_operation(self):
+        self.runtime.config['outboundPaused'] = False
+        with self.assertRaisesRegex(ValueError, 'integrations paused'):
+            self.execute()
+        self.runtime.docker.assert_not_called()
+
     def test_matching_data_is_sealed_then_proven_without_live_target_mutation(self):
         unit = self.execute()
         self.assertTrue((unit / 'manifest.json').is_file())
@@ -599,3 +605,14 @@ class NativeMaterialGuardTest(NativeSourceFixture):
         credential.symlink_to(preserved)
         with self.assertRaisesRegex(ValueError, 'unsafe native configuration'):
             migration.MacSource(self.root)
+
+    def test_cli_errors_do_not_print_private_parser_or_credential_payloads(self):
+        import contextlib, io
+        from unittest.mock import patch
+        arguments = ['migration.py', 'inventory', '--source-root', str(self.root)]
+        with patch('sys.argv', arguments), patch('sys.platform', 'darwin'), \
+                patch('migration.MacSource', side_effect=ValueError('private-source-secret')), contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(SystemExit) as error:
+                migration.main()
+        self.assertNotIn('private-source-secret', str(error.exception))
+        self.assertIn('refused', str(error.exception))
