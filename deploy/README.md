@@ -75,3 +75,12 @@ separate named volumes; `outboundPaused` must be a JSON boolean.
 Recovery receipts and diagnostics live under private installation state, outside sealed units.
 Automatic full checks reject historical images without the supported recovery policy. These
 commands do not establish that the separate Mac cutover has completed.
+
+## checked updates
+
+[guides/updates.md](guides/updates.md) describes `update-check --release VERSION` and
+`update --release VERSION`. Both commands select exact published deployment material under the
+installation lock. An update preserves the selected volumes and keeps the app stopped from final
+capture through restore proof and activation. A candidate that may have changed the schema never
+triggers an old-image-only rollback. Private `state/update.json` and `state/protected-recovery.json`
+record the recovery path and retain the pre-update unit.

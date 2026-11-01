@@ -42,6 +42,13 @@ def restore(runtime, unit, confirmation):
     import os
     generation = recovery_target(runtime.config, confirmation)
     manifest = validate_unit(unit)
+    release_directory = private_path(runtime.deploy_root, directory=True)
+    if release_directory.parent != runtime.root / 'releases' or release_directory.name != manifest['releaseVersion']:
+        raise ValueError('recovery requires the matching owned installed release directory')
+    current = runtime.root / 'current'
+    if current.exists() and not current.is_symlink():
+        raise ValueError('current must be a deployment symlink')
+    previous_release = str(current.resolve()) if current.is_symlink() else None
     secrets_parent = private_path(runtime.root / 'secrets', directory=True)
     existing = set(runtime.docker(['volume', 'ls', '--quiet']).decode().splitlines())
     targets = {'ctc-manager_' + generation + '_' + role for role in ['database', 'data', 'logs', 'credentials']}
@@ -56,7 +63,8 @@ def restore(runtime, unit, confirmation):
     storage = RecoveryStorage(runtime, unit, manifest, app['Id'], database['Id'], generation=generation)
     keep_volumes = False
     receipt = {'format': 1, 'unitId': manifest['id'], 'target': confirmation, 'stage': 'preparing',
-               'proofRun': proof['run'], 'outboundPaused': True}
+               'proofRun': proof['run'], 'outboundPaused': True, 'releaseDirectory': str(release_directory),
+               'previousReleaseDirectory': previous_release}
     receipt_path = runtime.root / 'state/live-recovery.json'
     atomic_json(receipt_path, receipt)
     try:
@@ -106,6 +114,10 @@ def restore(runtime, unit, confirmation):
         runtime.compose(['stop', 'db'])
         runtime.compose(['rm', '--force', 'app', 'db', 'credentials-init'])
         atomic_json(runtime.root / 'config/installation.json', target)
+        temporary = runtime.root / ('.current-' + uuid.uuid4().hex)
+        temporary.symlink_to(release_directory)
+        os.replace(temporary, current)
+        flush_directory(runtime.root)
         runtime.config = target
         runtime.compose(['up', '-d', '--wait', '--wait-timeout', '180'])
         receipt['stage'] = 'active-integrations-paused'

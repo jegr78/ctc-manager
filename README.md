@@ -151,6 +151,8 @@ Complete recovery units and isolated restore checks are documented in
 [the recovery guide](deploy/guides/recovery.md). Restore probes retain production authentication,
 force integrations off and use independent storage without a host port. Historical images need
 explicit supported recovery capability before automatic full checks.
+Use [the update guide](deploy/guides/updates.md) for exact release selection, pre-update recovery
+proof and failure handling after possible schema migrations.
 
 ### Docker
 

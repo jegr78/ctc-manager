@@ -174,3 +174,14 @@ class BundleTest(unittest.TestCase):
         for name in ['lib/runtime.py', 'lib/release.py', 'lib/recovery.py', 'lib/recovery.sh',
                      'lib/probe.py', 'lib/live.py', 'recovery-manifest.schema.json', 'guides/recovery.md']:
             self.assertIn('ctc-manager-deployment-1.21.0/' + name, names)
+
+    def test_update_tools_and_upgrade_contract_are_packaged(self):
+        self.assertEqual(0, self.create().returncode)
+        with tarfile.open(self.output / 'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
+            prefix = 'ctc-manager-deployment-1.21.0/'
+            names = set(bundle.getnames())
+            for name in ['lib/update.py', 'lib/update.sh', 'upgrade.json', 'guides/updates.md']:
+                self.assertIn(prefix + name, names)
+            contract = json.load(bundle.extractfile(prefix + 'upgrade.json'))
+            self.assertEqual(1, contract['recoveryCapability'])
+            self.assertEqual('guides/updates.md', contract['notes'])

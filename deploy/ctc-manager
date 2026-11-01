@@ -12,7 +12,7 @@ operation=$3
 shift 3
 case "$operation" in
   doctor|status|up|stop) [ "$#" -eq 0 ] || fail 'unexpected operation arguments' ;;
-  backup|restore-check|restore|resume-integrations) ;;
+  backup|restore-check|restore|resume-integrations|update-check|update) ;;
   *) fail 'unknown operation' ;;
 esac
 python3 "$DEPLOY_ROOT/lib/config.py" validate "$installation"
@@ -35,15 +35,22 @@ case "$operation" in
     fi
     write_journal completed
     ;;
-  backup|restore-check|restore|resume-integrations)
-    # shellcheck source=lib/recovery.sh
-    source "$DEPLOY_ROOT/lib/recovery.sh"
+  backup|restore-check|restore|resume-integrations|update-check|update)
+    if [[ "$operation" == update* ]]; then
+      # shellcheck source=lib/update.sh
+      source "$DEPLOY_ROOT/lib/update.sh"
+      runner=run_update
+    else
+      # shellcheck source=lib/recovery.sh
+      source "$DEPLOY_ROOT/lib/recovery.sh"
+      runner=run_recovery
+    fi
     acquire_lock
     trap release_lock EXIT
     trap 'write_journal interrupted; trap - EXIT; exit 143' TERM
     trap 'write_journal interrupted; trap - EXIT; exit 130' INT
     write_journal started
-    if run_recovery "$@"; then
+    if "$runner" "$@"; then
       write_journal completed
     else
       result=$?

@@ -230,6 +230,16 @@ def flush_directory(path):
         os.close(descriptor)
 
 
+def select_recovery_release(installation, expected):
+    from release import version
+    root = private_path(Path(installation), directory=True)
+    releases = private_path(root / 'releases', directory=True)
+    directory = private_path(releases / version(expected['version']), directory=True)
+    if installed_release(directory) != expected:
+        raise ValueError('installed recovery release differs from the sealed source provenance')
+    return directory
+
+
 def capture(runtime, destination, hold_stopped=False):
     import datetime
     import os
@@ -510,9 +520,13 @@ def main():
     resume = commands.add_parser('resume-integrations', allow_abbrev=False)
     resume.add_argument('--confirm', required=True)
     arguments = parser.parse_args()
+    deploy_root = arguments.deploy_root
     if arguments.operation in ['restore-check', 'restore']:
         validate_unit(arguments.recovery)
-    runtime = NativeRuntime(arguments.directory, arguments.deploy_root,
+        installed_release(private_path(Path(deploy_root).resolve(), directory=True))
+        deploy_root = select_recovery_release(arguments.directory,
+                                              read_json(Path(arguments.recovery) / 'release.json'))
+    runtime = NativeRuntime(arguments.directory, deploy_root,
                             require_selected=arguments.operation in ['backup', 'resume-integrations'])
     state = runtime.root / 'state'
     state.mkdir(mode=0o700, exist_ok=True)
