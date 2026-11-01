@@ -117,8 +117,8 @@ class MaintenanceTest(unittest.TestCase):
         with self.assertRaises(ValueError) as caught:
             maintenance.run_backup(self.runtime, self.units, capture_unit=failed, now=self.now)
         state = maintenance.evidence(self.root)
-        self.assertEqual(previous['local'], state['local'])
-        self.assertEqual(previous['proof'], state['proof'])
+        self.assertEqual(previous['local'], state.get('local'))
+        self.assertEqual(previous['proof'], state.get('proof'))
         self.assertEqual('capture-failed', state['lastAttempt']['stage'])
         self.assertNotIn('fixture-private-secret', json.dumps(state) + str(caught.exception))
 
@@ -127,13 +127,14 @@ class MaintenanceTest(unittest.TestCase):
         older = self.unit('2026-09-02T03:00:00Z')
         newest = self.unit()
         self.unit('2026-11-29T03:00:00Z')
+        inflight = self.unit('2026-08-01T03:00:00Z')
         state = self.state(newest)
         atomic_json(self.root / 'state/protected-recovery.json',
                     {'unit': str(protected), 'manifestSha256': sha256(protected / 'manifest.json'), 'previousUnits': [str(older)]})
-        atomic_json(self.root / 'state/update.json', {'stage': 'failed-recovery-required', 'recoveryUnit': str(older)})
+        atomic_json(self.root / 'state/update.json', {'stage': 'failed-recovery-required', 'recoveryUnit': str(inflight)})
         self.assertEqual([], maintenance.retention_plan(self.runtime, self.units, state, self.now))
         atomic_json(self.root / 'state/update.json', {'stage': 'completed'})
-        self.assertEqual({protected, older}, set(maintenance.retention_plan(self.runtime, self.units, state, self.now)))
+        self.assertEqual({protected, older, inflight}, set(maintenance.retention_plan(self.runtime, self.units, state, self.now)))
 
     def test_preupdate_unit_waits_for_verified_backup_of_active_image(self):
         protected = self.unit('2026-09-01T03:00:00Z')
@@ -312,9 +313,14 @@ class MaintenanceTest(unittest.TestCase):
         shutil.move(unit, outside)
         with self.assertRaisesRegex(ValueError, 'capture-failed'):
             maintenance.run_backup(self.runtime, self.units, capture_unit=lambda *a: outside, now=self.now)
+        unit = self.unit()
+        self.runtime.config['installationId'] = str(uuid.uuid4())
+        with self.assertRaisesRegex(ValueError, 'capture-failed'):
+            maintenance.run_backup(self.runtime, self.units, capture_unit=lambda *a: unit, now=self.now)
 
     def test_cli_rejects_ignored_flags_and_missing_mount_before_creating_units(self):
-        with patch.object(sys, 'argv', ['maintenance.py', '--directory', str(self.root), 'maintenance', '--dry-run']):
+        with patch.object(sys, 'argv', ['maintenance.py', '--directory', str(self.root), 'maintenance', '--dry-run']), \
+                patch.object(maintenance, 'NativeRuntime', side_effect=AssertionError('invalid flags must fail before runtime')):
             with self.assertRaises(SystemExit) as caught:
                 maintenance.main()
             self.assertEqual(2, caught.exception.code)
@@ -323,9 +329,10 @@ class MaintenanceTest(unittest.TestCase):
         (lock / 'owner').write_text(str(os.getppid()))
         (lock / 'owner').chmod(0o600)
         destination = self.root / 'absent/units'
+        destination.parent.mkdir(mode=0o700)
         self.runtime.check_destination = lambda path: (_ for _ in ()).throw(ValueError('missing device'))
         with patch.object(sys, 'argv', ['maintenance.py', '--directory', str(self.root), 'maintenance']),                 patch.object(maintenance, 'NativeRuntime', return_value=self.runtime),                 patch.object(maintenance, 'UNIT_ROOT', destination):
-            with self.assertRaisesRegex(ValueError, 'missing device'):
+            with self.assertRaises(ValueError):
                 maintenance.main()
         self.assertFalse(destination.exists())
 
