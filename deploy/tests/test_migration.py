@@ -270,7 +270,7 @@ class CutoverBoundaryTest(unittest.TestCase):
     def test_existing_authority_prevents_a_second_cutover(self):
         from unittest.mock import patch
         self.authority.write_text('{"stage":"authoritative"}')
-        with patch('live.restore') as restore, self.assertRaisesRegex(ValueError, 'authority already recorded'):
+        with patch('live.restore', return_value={'stage': 'active-integrations-paused'}) as restore, self.assertRaisesRegex(ValueError, 'authority already recorded'):
             self.execute()
         restore.assert_not_called()
         self.runtime.preflight.assert_not_called()
@@ -297,7 +297,7 @@ class CutoverBoundaryTest(unittest.TestCase):
     def test_existing_real_target_data_prevents_initial_migration(self):
         from unittest.mock import patch
         self.runtime.database_metadata.return_value['records']['teams'] = 1
-        with patch('live.restore') as restore, self.assertRaisesRegex(ValueError, 'empty paused qualification'):
+        with patch('live.restore', return_value={'stage': 'active-integrations-paused'}) as restore, self.assertRaisesRegex(ValueError, 'empty paused qualification'):
             self.execute()
         restore.assert_not_called()
         self.assertFalse(self.authority.exists())
