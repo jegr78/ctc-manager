@@ -107,7 +107,8 @@ class MacSource:
         source_files(self.root, self.uploads)
         url = urlsplit(database['url'].removeprefix('jdbc:'))
         if (not database['url'].startswith('jdbc:mariadb://') or url.hostname not in ['localhost', '127.0.0.1']
-                or url.path != '/ctcdb' or url.username or url.password or url.fragment):
+                or url.path != '/ctcdb' or url.username or url.password or url.fragment
+                or url.query not in ['', 'rewriteBatchedStatements=true']):
             raise ValueError('supported native loopback database required')
         if settings.get('server', {}).get('port') != 9091:
             raise ValueError('supported native source port required')

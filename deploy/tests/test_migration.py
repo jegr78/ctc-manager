@@ -69,6 +69,7 @@ class SourceContractTest(unittest.TestCase):
             (root / 'data/local/uploads/bad').symlink_to(root / 'outside')
             with self.assertRaisesRegex(ValueError, 'source file'):
                 migration.source_files(root, 'data/local/uploads')
+            (root / 'data/dev/uploads').mkdir(parents=True)
             with self.assertRaisesRegex(ValueError, 'local upload'):
                 migration.source_files(root, 'data/dev/uploads')
 
@@ -376,3 +377,105 @@ class RehearsalGuardTest(unittest.TestCase):
         self.probe.cleanup.assert_called_once_with()
         self.runtime.compose.assert_not_called()
         self.assertTrue(self.runtime.config['outboundPaused'])
+
+
+class NativeInputGuardTest(unittest.TestCase):
+    def setUp(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name).resolve()
+        self.root.chmod(0o700)
+        (self.root / 'data/local/uploads').mkdir(parents=True)
+        (self.root / 'src/main/resources').mkdir(parents=True)
+        self.settings = {'spring': {'datasource': {'url': 'jdbc:mariadb://localhost:3306/ctcdb', 'username': 'fixture', 'password': 'fixture'}},
+                         'app': {'upload-dir': 'data/local/uploads'}, 'server': {'port': 9091}}
+        self.profile = self.root / 'src/main/resources/application-local.yml'
+        (self.root / '.env').write_text('DISCORD_BOT_TOKEN=fixture\n')
+        (self.root / '.env.local').write_text('GOOGLE_CALENDAR_ID=fixture\n')
+        self.credential = {'type': 'service_account', 'client_email': 'fixture@example.invalid', 'private_key': 'not-a-real-key'}
+        self.yaml = patch.dict(sys.modules, {'yaml': SimpleNamespace(safe_load=json.loads)})
+        self.yaml.start(); self.addCleanup(self.yaml.stop)
+
+    def construct(self, **kwargs):
+        self.profile.write_text(json.dumps(self.settings))
+        (self.root / 'google-credentials.json').write_text(json.dumps(self.credential))
+        return migration.MacSource(self.root, **kwargs)
+
+    def test_native_source_requires_explicit_loopback_ctc_database(self):
+        for url in ['jdbc:mysql://localhost/ctcdb', 'jdbc:mariadb://outside.invalid/ctcdb',
+                    'jdbc:mariadb://localhost/other', 'jdbc:mariadb://user:password@localhost/ctcdb',
+                    'jdbc:mariadb://localhost/ctcdb?localSocket=/tmp/other.sock']:
+            self.settings['spring']['datasource']['url'] = url
+            with self.subTest(url=url), self.assertRaisesRegex(ValueError, 'loopback database'):
+                self.construct()
+
+    def test_native_source_port_and_credentials_must_match_supported_layout(self):
+        self.settings['server']['port'] = 9090
+        with self.assertRaisesRegex(ValueError, 'source port'):
+            self.construct()
+        self.settings['server']['port'] = 9091
+        for field in ['username', 'password']:
+            original = self.settings['spring']['datasource'][field]
+            self.settings['spring']['datasource'][field] = ''
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, 'explicit native database credentials'):
+                self.construct()
+            self.settings['spring']['datasource'][field] = original
+
+    def test_google_credential_requires_complete_service_account_material(self):
+        for field in ['type', 'client_email', 'private_key']:
+            original = self.credential[field]
+            self.credential[field] = ''
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, 'incomplete native Google'):
+                self.construct()
+            self.credential[field] = original
+
+    def test_observer_name_is_fixed_native_account_name(self):
+        with self.assertRaisesRegex(ValueError, 'observer name'):
+            self.construct(observer_user='$(not-a-command)')
+
+    def test_source_file_hardlinks_and_wrong_owners_are_refused(self):
+        import os
+        from unittest.mock import patch
+        uploads = self.root / 'data/local/uploads'
+        original = uploads / 'original'; original.write_text('unchanged')
+        link = uploads / 'hardlink'; os.link(original, link)
+        with self.assertRaisesRegex(ValueError, 'hardlink'):
+            migration.source_files(self.root, 'data/local/uploads')
+        link.unlink()
+        with patch('migration.os.getuid', return_value=os.getuid()+1), self.assertRaisesRegex(ValueError, 'owner or type'):
+            migration.source_files(self.root, 'data/local/uploads')
+        self.assertEqual(original.read_text(), 'unchanged')
+
+    def test_absent_upload_root_is_not_a_successful_empty_export(self):
+        (self.root / 'data/local/uploads').rmdir()
+        with self.assertRaisesRegex(ValueError, 'upload directory is missing'):
+            migration.source_files(self.root, 'data/local/uploads')
+
+    def test_native_http_listener_prevents_freeze_before_database_reads(self):
+        source = object.__new__(migration.MacSource)
+        source.subprocess = Mock()
+        source.subprocess.run.return_value.returncode = 0
+        source.query = Mock()
+        with self.assertRaisesRegex(ValueError, 'source writer may still listen'):
+            source.idle()
+        source.query.assert_not_called()
+
+    def test_mutating_cli_needs_its_launcher_parent_lock(self):
+        import contextlib, io, os
+        from unittest.mock import patch
+        (self.root / '.ctc-manager.lock').mkdir(mode=0o700)
+        owner = self.root / '.ctc-manager.lock/owner'
+        owner.write_text(str(os.getppid()+1)); owner.chmod(0o600)
+        unit = self.root / 'unit'; unit.mkdir(mode=0o700)
+        (unit / 'manifest.json').write_text('{}')
+        runtime = Mock(root=self.root)
+        arguments = ['migration.py', 'rehearse', '--directory', str(self.root), '--source-export', str(self.root),
+                     '--source-sha256', 'a'*64, '--destination', str(self.root)]
+        with patch('sys.argv', arguments), patch('recovery.NativeRuntime', return_value=runtime), \
+                patch('migration.rehearse', return_value=unit) as rehearse, contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(SystemExit) as error:
+                migration.main()
+        self.assertIn('refused', str(error.exception))
+        rehearse.assert_not_called()
