@@ -229,7 +229,7 @@ def verify_export(root, expected_sha256):
     from recovery import read_json, sha256, validate_data_archive
     root = private_path(Path(root), directory=True)
     manifest = private_path(root / 'source.json')
-    if not re.fullmatch(r'[a-f0-9]{64}', expected_sha256) or sha256(manifest) != expected_sha256:
+    if sha256(manifest) != expected_sha256:
         raise ValueError('native transfer checksum mismatch')
     source = read_json(manifest)
     source_contract(source)

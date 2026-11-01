@@ -31,7 +31,7 @@ class SourceContractTest(unittest.TestCase):
         self.assertIn('HEX(`id`)', query.call_args.args[0])
 
     def test_projection_rejects_untrusted_sql_identifiers(self):
-        query = Mock()
+        query = Mock(return_value=[])
         for columns in [{'teams; DROP TABLE teams': ['id']}, {'teams': ['id`']}, {'teams': []}]:
             with self.subTest(columns=columns), self.assertRaisesRegex(ValueError, 'source columns'):
                 migration.projection(query, columns)
@@ -52,7 +52,7 @@ class SourceContractTest(unittest.TestCase):
     def test_live_source_writer_blocks_export(self):
         for value in [1, 3]:
             source = Mock()
-            source.query.side_effect = [['1'], [str(value)]]
+            source.query.side_effect = [['1'], [str(value)], ['0']]
             with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'source writer'):
                 migration.assert_source_idle(source.query)
 
@@ -116,7 +116,13 @@ class TransferContractTest(unittest.TestCase):
             (root / 'source.json').chmod(0o600)
             checksum = hashlib.sha256((root / 'source.json').read_bytes()).hexdigest()
             self.assertEqual(migration.verify_export(root, checksum), value)
-            (root / 'google.json').write_text('changed private fixture')
+            with self.assertRaisesRegex(ValueError, 'transfer checksum'):
+                migration.verify_export(root, '0'*64)
+            extra = root / '._metadata'; extra.write_text('unrecognized transfer entry')
+            with self.assertRaisesRegex(ValueError, 'export inventory'):
+                migration.verify_export(root, checksum)
+            extra.unlink()
+            (root / 'google.json').write_text('PRIVATE fixture')
             with self.assertRaisesRegex(ValueError, 'artifact changed'):
                 migration.verify_export(root, checksum)
 
@@ -178,7 +184,7 @@ class TransferContractTest(unittest.TestCase):
         source = object.__new__(migration.MacSource)
         source.subprocess = Mock()
         source.subprocess.run.return_value.returncode = 1
-        source.query = Mock(side_effect=[['3306\t/source\tctcdb'], ['3307\t/other\tctcdb']])
+        source.query = Mock(side_effect=[['3306\t/source\tctcdb'], ['3307\t/other\tctcdb'], ['1'], ['0'], ['0']])
         with self.assertRaisesRegex(ValueError, 'another database instance'):
             source.idle()
 
@@ -271,12 +277,22 @@ class CutoverBoundaryTest(unittest.TestCase):
 
     def test_changed_proof_prevents_target_activation(self):
         from unittest.mock import patch
-        proof = json.loads(self.proof.read_text()); proof['sourceManifestSha256'] = 'b' * 64
-        self.proof.write_text(json.dumps(proof))
-        with patch('live.restore') as restore, self.assertRaisesRegex(ValueError, 'exact source'):
-            self.execute()
-        restore.assert_not_called()
-        self.assertFalse(self.authority.exists())
+        original = json.loads(self.proof.read_text())
+        cases = [('stage', 'failed'), ('sourceManifestSha256', 'b'*64), ('unit', '/other-unit'),
+                 ('manifestSha256', '0'*64), ('releaseVersion', '9.0.0'), ('installationId', 'other-installation')]
+        for field, value in cases:
+            proof = dict(original)
+            self.runtime.release['version'] = '1.26.0'
+            self.manifest['installationId'] = self.identity
+            if field == 'releaseVersion': self.runtime.release['version'] = value
+            elif field == 'installationId': self.manifest['installationId'] = value
+            else: proof[field] = value
+            self.proof.write_text(json.dumps(proof))
+            with self.subTest(field=field), patch('live.restore', return_value={'stage': 'active-integrations-paused'}) as restore:
+                with self.assertRaisesRegex(ValueError, 'exact source'):
+                    self.execute()
+                restore.assert_not_called()
+                self.assertFalse(self.authority.exists())
 
     def test_existing_real_target_data_prevents_initial_migration(self):
         from unittest.mock import patch
@@ -459,7 +475,7 @@ class NativeInputGuardTest(NativeSourceFixture):
         source = object.__new__(migration.MacSource)
         source.subprocess = Mock()
         source.subprocess.run.return_value.returncode = 0
-        source.query = Mock()
+        source.query = Mock(side_effect=[['same-server'], ['same-server'], ['1'], ['0'], ['0']])
         with self.assertRaisesRegex(ValueError, 'source writer may still listen'):
             source.idle()
         source.query.assert_not_called()
@@ -566,3 +582,20 @@ class FrozenCaptureTest(NativeSourceFixture):
         with self.assertRaisesRegex(ValueError, 'source writer returned'):
             self.source.export(self.destination)
         self.assertFalse((self.destination / 'source.json').exists())
+
+    def test_initial_freeze_precedes_any_partial_export(self):
+        self.source.idle.side_effect = ValueError('source writer active')
+        with self.assertRaisesRegex(ValueError, 'source writer active'):
+            self.source.export(self.destination)
+        self.assertFalse(self.destination.exists())
+
+
+class NativeMaterialGuardTest(NativeSourceFixture):
+    def test_linked_native_material_is_refused_even_when_valid_and_readable(self):
+        self.construct()
+        credential = self.root / 'google-credentials.json'
+        preserved = self.root / 'other-google.json'
+        credential.rename(preserved)
+        credential.symlink_to(preserved)
+        with self.assertRaisesRegex(ValueError, 'unsafe native configuration'):
+            migration.MacSource(self.root)
