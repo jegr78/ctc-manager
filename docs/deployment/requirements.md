@@ -188,3 +188,11 @@ The root proof now explicitly uses TCP to avoid Unix-socket authentication subst
 password check. A dedicated bypass-model assertion first failed and passes after forcing TCP.
 Native run08 additionally changes only the synthetic root secret after initialization, requires
 login rejection, restores it and repeats complete recovery. Its result is still pending here.
+Native run08 passed all restored-secret checks, rejected the intentionally wrong root password,
+restored 32 tables/files and generated the domain team card. It also rejected sandbox escapes and
+invalid SQL, cleaned all resources after failed container creation and left production untouched.
+All 57 deployment guard falsifications and 18 Java falsifications reached intended assertions;
+the tree was restored after each. Final targeted suites pass 68 recovery, 24 recipe, 15
+release/publisher and 36 host cases. Independent security review of 6a9422c5 found no material
+findings. The canonical full-build receipt belongs in the PR for the committed final head.
+Post-release capable-image admission/live activation remains #297 acceptance work before closure.
