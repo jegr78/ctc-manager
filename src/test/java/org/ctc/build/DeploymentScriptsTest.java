@@ -11,16 +11,14 @@ class DeploymentScriptsTest {
 
     @Test
     void whenDeploymentScriptsRun_thenRecipeAndReleaseContractsPass() throws Exception {
-        for (String script : new String[]{"recipe.sh", "release-bundle.sh", "host-setup.sh", "recovery.sh", "update.sh", "maintenance.sh", "site-publication.sh"}) {
-            Path output = Files.createTempFile("ctc-deployment-test-", ".log");
-            try {
-                Process process = new ProcessBuilder("bash", "deploy/tests/" + script)
-                        .redirectErrorStream(true).redirectOutput(output.toFile()).start();
-                assertThat(process.waitFor(90, TimeUnit.SECONDS)).as("script %s completed", script).isTrue();
-                assertThat(process.exitValue()).as("%s: %s", script, Files.readString(output)).isZero();
-            } finally {
-                Files.deleteIfExists(output);
-            }
+        Path output = Files.createTempFile("ctc-deployment-test-", ".log");
+        try {
+            Process process = new ProcessBuilder("bash", "deploy/tests/acceptance.sh")
+                    .redirectErrorStream(true).redirectOutput(output.toFile()).start();
+            assertThat(process.waitFor(90, TimeUnit.SECONDS)).as("deployment acceptance completed").isTrue();
+            assertThat(process.exitValue()).as("deployment acceptance: %s", Files.readString(output)).isZero();
+        } finally {
+            Files.deleteIfExists(output);
         }
     }
 }

@@ -296,3 +296,18 @@ Reuse the current Generate workspace, Basic authentication and CSRF. One immutab
 | GitHub publication | Fixed repo, docs/site-only PR and exact-head checks | Merge and correlated successful Pages run, public index hash | Token/API/check/merge/Pages failure remains visible; merge alone is not published |
 
 Use existing styles and native forms, with clear action feedback and keyboard-visible controls. Dev browser output stays under data/dev/publication-uat/site so it cannot contaminate the native source export.
+
+## operational handover
+
+The final work reuses existing deployment commands and fixture suites. It adds no runtime service.
+The Box also supplies Pi-hole DNS for the home LAN. Do not reboot it for a routine CTC check.
+
+| Requirement | Production path | Positive test | Refusal and runtime evidence |
+| --- | --- | --- | --- |
+| Combined deployment verification | Existing fixture suites | acceptance.sh includes recipe, bundle, host, recovery, update, maintenance, migration and publication contracts | Existing ownership, integrity, interruption and outbound refusal cases run together |
+| Startup and coexistence | Dedicated Docker user service, lingering and existing restart policies | Enabled user service and CTC-only restart | Compare shared Serve, courtside, Mailpit and DNS before/after; whole-host boot remains unperformed |
+| Measured recovery | Complete backup and isolated Probe | Real schema, files, credentials, authentication and graphic | Record capture/dump/restore timings and sampled memory without exhausting shared resources |
+| Operational procedures | Existing launcher and local units | operations.md and redacted acceptance.md | Explain incomplete operations, protected units, private keys and full-state recovery |
+
+See [acceptance.md](acceptance.md) for observed evidence and explicitly unperformed checks.
+The live CTC-only daemon restart exposed and reproduced unsafe systemd shutdown ordering. Pin the dedicated rootless unit to notify readiness, allow child notifications, signal the main process first and disable the inherited stop timeout. The repeated live restart passed after correction. Falsify the four unit policy contracts independently before final verification.

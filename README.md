@@ -138,6 +138,10 @@ Private GitHub Pages publication uses the existing Generate Site workspace. Revi
 
 ### Permanent private deployment
 
+Use the [operator runbook](deploy/guides/operations.md) for daily operation, updates and recovery.
+The [acceptance record](docs/deployment/acceptance.md) lists measured evidence and remaining checks.
+Run all deployment fixtures with `bash deploy/tests/acceptance.sh`.
+
 Use [the host setup guide](deploy/guides/host.md) to provision the dedicated CachyOS account,
 rootless startup and private Tailnet HTTPS on 9443. Setup checks existing ownership, subordinate
 IDs, memory support, backup-device identity and port conflicts before changing CTC resources.
@@ -147,8 +151,9 @@ The versioned production recipe in [deploy/README.md](deploy/README.md) runs an 
 CTC app and MariaDB under a dedicated rootless Docker user. It pins images by digest, binds
 only loopback port 9092 and validates private configuration before operating the stack.
 Release assets include a deployment archive and checksum inventory. This recipe is separate
-from the existing local and external-database Compose files. Host provisioning, backup,
-updates and migration follow the deployment issue sequence before production activation.
+from the existing local and external-database Compose files. Host provisioning, backups and
+updates use verified release bundles. The real Mac data has migrated to the Box, which is now
+authoritative. Keep the native Mac app stopped.
 Complete recovery units and isolated restore checks are documented in
 [the recovery guide](deploy/guides/recovery.md). Restore probes retain production authentication,
 force integrations off and use independent storage without a host port. Historical images need
