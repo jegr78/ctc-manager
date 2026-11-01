@@ -5,6 +5,19 @@ on:
     branches: [master]
     paths: ['docs/site/**']
   workflow_dispatch:
+    inputs:
+      commit:
+        description: Approved full commit SHA
+        required: true
+        type: string
+      site_tree:
+        description: Approved docs/site Git tree SHA
+        required: true
+        type: string
+      request_id:
+        description: Owner-approved publication request
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -24,6 +37,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.commit || github.sha }}
+
+      - name: Require the exact approved website tree
+        env:
+          CTC_SITE_TREE: ${{ inputs.site_tree }}
+          CTC_SITE_COMMIT: ${{ inputs.commit }}
+        run: python3 scripts/ci/pages-snapshot.py
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v5

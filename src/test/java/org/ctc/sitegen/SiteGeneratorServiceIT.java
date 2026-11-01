@@ -85,7 +85,7 @@ class SiteGeneratorServiceIT {
                 matchdaysPageGenerator,
                 teamProfilePageGenerator,
                 driverProfilePageGenerator,
-                siteSlugService);
+                siteSlugService, org.mockito.Mockito.mock(org.ctc.sitegen.publication.SitePublicationService.class));
     }
 
     @Test

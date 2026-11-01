@@ -281,4 +281,18 @@ The initial cutover reuses the complete recovery tools and requires the empty pa
 | Supported full recovery | Migrated unit and existing restore-check | Real authentication, credentials and team-card rendering | Exact source/unit proof required; source app version remains unknown when unrecorded |
 | Single writer | Authority receipt and activation boundary in full restore | Paused target with original data, then separate backup and acceptance | Conflicting authority and existing real target refused; before-write failure permits unchanged source, after-write failure requires complete reverse migration |
 
-Actual preparation restored the native data into 31 target tables and independently restored a later synthetic team write back onto the Mac. These isolated checks do not mark the production cutover complete.
+Actual preparation restored the native data into 31 target tables and independently restored a later synthetic team write back onto the Mac. Production cutover then passed with the published 1.26.0 release, all original projections and 715 files, authenticated Tailnet HTTPS, a fresh verified backup and explicit integration resumption. The Box is authoritative; the native Mac app remains stopped.
+
+## private Pages publication
+
+Reuse the current Generate workspace, Basic authentication and CSRF. One immutable snapshot and one publication request use private files outside the public output. The host keeps GitHub credentials and its checkout. Generation never publishes remotely.
+
+| Requirement | Production path | Positive test | Failure/runtime proof |
+|---|---|---|---|
+| Exact snapshot | Capture validated staging under generation coordination | A remains unchanged after B; approval binds UUID/hash | Changed file/hash, private path, link and failed generation cannot become new approved output |
+| Private preview | Authenticated allowlisted resources and opaque sandbox | Relative local assets and navigation work | Traversal, missing assets and parent/admin-origin access fail; direct responses retain CSP |
+| Explicit owner action | Existing CSRF form, prod enable flag and OutboundPolicy | One request for selected A, duplicate click deduplicated | Dev, recovery, disabled operation and mismatched hash refuse; startup suspends pending approval |
+| Host boundary | Current rootless runtime and networkless data helper | Exact snapshot reaches dedicated checkout | Token/socket absent from app; untrusted fields/paths, unknown remote outcome and restore replay refuse |
+| GitHub publication | Fixed repo, docs/site-only PR and exact-head checks | Merge and correlated successful Pages run, public index hash | Token/API/check/merge/Pages failure remains visible; merge alone is not published |
+
+Use existing styles and native forms, with clear action feedback and keyboard-visible controls. Dev browser output stays under data/dev/publication-uat/site so it cannot contaminate the native source export.

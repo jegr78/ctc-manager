@@ -96,3 +96,7 @@ errors remain in its local journal. No replication, alert hook or external servi
 Use [migration.md](guides/migration.md) for source export, isolated rehearsal and the initial real-data cutover.
 `migrate-from-mac.sh` reuses the installation lock and complete recovery tools. It records the point
 before target HTTP exposure after which recovery must preserve new target writes. It adds no service.
+
+## Public website snapshots
+
+See [private Pages publication](guides/pages.md) for the existing single-admin Generate workspace, host-only owner PAT and publisher service/timer. Initial setup does not publish content. The owner must approve a specific snapshot. The Pages workflow checks the complete approved website tree before uploading it.

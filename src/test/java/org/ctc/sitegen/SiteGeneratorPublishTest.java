@@ -47,6 +47,7 @@ class SiteGeneratorPublishTest {
 	private final SiteSlugService siteSlugService = mock(SiteSlugService.class);
 	private SiteGeneratorService service;
 	private Path site;
+	private final org.ctc.sitegen.publication.SitePublicationService publication = mock(org.ctc.sitegen.publication.SitePublicationService.class);
 
 	@BeforeEach
 	void setUp() throws IOException {
@@ -65,7 +66,16 @@ class SiteGeneratorPublishTest {
 				mock(SeasonPhaseService.class), new SiteSlugger(), templateWriter,
 				mock(StandingsPageGenerator.class), mock(DriverRankingPageGenerator.class),
 				mock(MatchdaysPageGenerator.class), mock(TeamProfilePageGenerator.class),
-				mock(DriverProfilePageGenerator.class), siteSlugService);
+				mock(DriverProfilePageGenerator.class), siteSlugService, publication);
+	}
+
+	@Test
+	void givenGeneratedSite_whenSnapshotCaptureFails_thenPreviousOutputStays() throws Exception {
+		writePagesForReal();
+		doThrow(new IOException("snapshot unavailable")).when(publication).capture(any());
+		var result = service.generate();
+		assertThat(result.getErrors()).containsExactly("Generation failed: snapshot unavailable");
+		assertThat(site.resolve("index.html")).hasContent("previous");
 	}
 
 	@Test

@@ -134,6 +134,8 @@ sudo apt-get install -y libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 \
 
 macOS and Windows include these dependencies natively — no extra setup needed.
 
+Private GitHub Pages publication uses the existing Generate Site workspace. Review an immutable snapshot and explicitly approve publication. The host publisher keeps its GitHub token outside the app container. See [Pages setup and recovery](deploy/guides/pages.md).
+
 ### Permanent private deployment
 
 Use [the host setup guide](deploy/guides/host.md) to provision the dedicated CachyOS account,

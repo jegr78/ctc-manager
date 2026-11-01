@@ -17,9 +17,11 @@ LEGACY_MAINTENANCE_FILES = UPDATE_FILES + ['lib/maintenance.py', 'lib/maintenanc
                         'systemd/ctc-manager-backup-alert@.service']
 LOCAL_BACKUP_FILES = UPDATE_FILES + ['lib/maintenance.py', 'lib/maintenance.sh', 'guides/backups.md',
                         'systemd/ctc-manager-backup.service', 'systemd/ctc-manager-backup.timer']
-FILES = LOCAL_BACKUP_FILES + ['migrate-from-mac.sh', 'lib/migration.py', 'guides/migration.md']
+MIGRATION_FILES = LOCAL_BACKUP_FILES + ['migrate-from-mac.sh', 'lib/migration.py', 'guides/migration.md']
+FILES = MIGRATION_FILES + ['lib/publication.py', 'guides/pages.md', 'systemd/ctc-manager-site-publisher.service',
+                           'systemd/ctc-manager-site-publisher.timer']
 SUPPORTED_INVENTORIES = [set(CORE_FILES), set(HOST_FILES), set(RECOVERY_FILES), set(UPDATE_FILES),
-                         set(LEGACY_MAINTENANCE_FILES), set(LOCAL_BACKUP_FILES), set(FILES)]
+                         set(LEGACY_MAINTENANCE_FILES), set(LOCAL_BACKUP_FILES), set(MIGRATION_FILES), set(FILES)]
 EXECUTABLES = {'ctc-manager', 'setup-host.sh', 'migrate-from-mac.sh'}
 MAX_MEMBER = 4 * 1024 * 1024
 MAX_ARCHIVE = 32 * 1024 * 1024

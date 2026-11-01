@@ -25,6 +25,7 @@ import org.ctc.domain.service.PlayoffBracketViewService;
 import org.ctc.domain.service.SeasonPhaseService;
 import org.ctc.domain.service.StandingsService;
 import org.ctc.sitegen.model.SiteSlugs;
+import org.ctc.sitegen.publication.SitePublicationService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.core.io.Resource;
@@ -58,6 +59,7 @@ public class SiteGeneratorService {
     private final TeamProfilePageGenerator teamProfilePageGenerator;
     private final DriverProfilePageGenerator driverProfilePageGenerator;
     private final SiteSlugService siteSlugService;
+    private final SitePublicationService publicationService;
     private static final String STAGING_INFIX = ".generating-";
 
     private final ReentrantLock generationLock = new ReentrantLock();
@@ -140,7 +142,9 @@ public class SiteGeneratorService {
             generateInto(staging, result);
             if (!result.hasErrors()) {
                 validate(staging);
+                var snapshot = publicationService.capture(staging);
                 publish(staging, target);
+                result.snapshot = snapshot;
                 log.info("Site generation complete: {} pages", result.getPagesGenerated());
             }
         } catch (IOException | RuntimeException e) {
@@ -735,6 +739,8 @@ public class SiteGeneratorService {
 
     public static class GenerationResult {
         private int pagesGenerated;
+        private SitePublicationService.Snapshot snapshot;
+        public SitePublicationService.Snapshot getSnapshot() { return snapshot; }
         private final java.util.List<String> errors = new java.util.ArrayList<>();
         private final java.util.List<String> warnings = new java.util.ArrayList<>();
 
