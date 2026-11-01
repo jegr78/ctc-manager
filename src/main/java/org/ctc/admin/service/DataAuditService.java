@@ -3,6 +3,7 @@ package org.ctc.admin.service;
 import org.ctc.domain.model.TimeProgressionMode;
 
 import static org.ctc.admin.dto.DataAuditFinding.Category.PAIRING;
+import static org.ctc.admin.dto.DataAuditFinding.Category.CAR_METADATA;
 import static org.ctc.admin.dto.DataAuditFinding.Category.PHASE_GROUP;
 import static org.ctc.admin.dto.DataAuditFinding.Category.PLAYOFF;
 import static org.ctc.admin.dto.DataAuditFinding.Category.PUBLIC_URL;
@@ -45,6 +46,7 @@ import org.ctc.domain.model.SiteSlug;
 import org.ctc.domain.model.SiteSlugKind;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.DriverRepository;
+import org.ctc.domain.repository.CarRepository;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.PhaseTeamRepository;
@@ -77,6 +79,7 @@ public class DataAuditService {
 	private final SeasonTeamRepository seasonTeamRepository;
 	private final TeamRepository teamRepository;
 	private final DriverRepository driverRepository;
+    private final CarRepository carRepository;
 	private final SiteSlugRepository siteSlugRepository;
 	private final ScoringService scoringService;
 	private final SiteSlugger siteSlugger;
@@ -101,6 +104,7 @@ public class DataAuditService {
 		auditSuccession(seasonTeamRepository.findAllForBackup(), phaseTeams, findings.get(SUCCESSION));
 		auditPlayoffs(matchups, legs, findings.get(PLAYOFF));
 		auditPublicUrls(findings.get(PUBLIC_URL));
+        auditCarMetadata(findings.get(CAR_METADATA));
 
 		List<DataAuditReport.Section> sections = findings.entrySet().stream()
 				.map(entry -> new DataAuditReport.Section(entry.getKey(), List.copyOf(entry.getValue())))
@@ -109,6 +113,24 @@ public class DataAuditService {
 		log.info("Data audit found {} anomalies", report.total());
 		return report;
 	}
+
+    private void auditCarMetadata(List<DataAuditFinding> findings) {
+        for (var car : carRepository.findAll()) {
+            Integer year = car.getModelYear();
+            Integer proposed = car.getProposedModelYear();
+            boolean invalidYear = year != null && (year < 1000 || year > 9999)
+                    || proposed != null && (proposed < 1000 || proposed > 9999);
+            boolean missingEvidence = year != null && (car.getModelYearSource() == null
+                    || car.getModelYearSource().isBlank() || car.getModelYearEvidence() == null
+                    || car.getModelYearEvidence().isBlank());
+            if (invalidYear || missingEvidence) {
+                findings.add(new DataAuditFinding(CAR_METADATA, AMBIGUOUS,
+                        "Car %s · %s".formatted(car.getDisplayName(), car.getId()),
+                        "Accepted year %s, proposed year %s; invalid year or missing review provenance".formatted(year, proposed),
+                        "Review the source evidence and save a four-digit accepted year, or explicitly mark it unknown"));
+            }
+        }
+    }
 
 	/** Every leg grouped by its match and its playoff matchup, with the lineups of every leg. */
 	private record Legs(Map<UUID, List<Race>> byMatch, Map<UUID, List<Race>> byMatchup,

@@ -9,7 +9,9 @@
         var cars = preview.querySelectorAll('[name="selectedCars"]:checked').length;
         var tracks = preview.querySelectorAll('[name="selectedTracks"]:checked').length;
         preview.querySelector('[data-sync-selection]').textContent = cars + ' cars and ' + tracks + ' tracks selected';
-        submit.disabled = cars + tracks === 0;
+        var metadata = preview.querySelectorAll('[name="selectedMetadata"]:checked').length;
+        preview.querySelector('[data-sync-metadata-selection]').textContent = metadata + ' car metadata updates selected';
+        submit.disabled = cars + tracks + metadata === 0;
     }
     if (preview) {
         preview.querySelectorAll('[data-sync-select], [data-sync-clear]').forEach(function (button) {

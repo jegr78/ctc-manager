@@ -8,12 +8,16 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
-public interface CarRepository extends JpaRepository<Car, UUID> {
+public interface CarRepository extends JpaRepository<Car, UUID>, CarLockingRepository {
 	List<Car> findAllByOrderByManufacturerAscNameAsc();
 
 	boolean existsByManufacturerAndName(String manufacturer, String name);
 
 	Optional<Car> findByGt7Id(String gt7Id);
+
+    List<Car> findAllByGt7Id(String gt7Id);
+    List<Car> findAllByManufacturerAndName(String manufacturer, String name);
+
 
 	boolean existsByGt7Id(String gt7Id);
 

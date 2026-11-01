@@ -30,6 +30,9 @@ public class Gt7SyncService {
 	private final CarRepository carRepository;
 	private final TrackRepository trackRepository;
 	private final FileStorageService fileStorageService;
+    private final org.ctc.domain.service.CarMetadataService metadataService;
+    private final GtPlusCarYearSource yearSource;
+    private final Gt7SyncPreviewStore previewStore;
 
 	public Gt7SyncPreview fetchAndPreview() throws IOException {
 		// Fetch cars and tracks in parallel
@@ -40,6 +43,7 @@ public class Gt7SyncService {
 				throw new UncheckedIOException(e);
 			}
 		});
+		var yearsFuture = CompletableFuture.supplyAsync(this::fetchYears);
 		var tracksFuture = CompletableFuture.supplyAsync(() -> {
 			try {
 				return scraperService.scrapeTracks();
@@ -63,12 +67,22 @@ public class Gt7SyncService {
 			throw new IOException("Failed to fetch GT7 data", e.getCause());
 		}
 
-		var carEntries = scrapedCars.stream().map(sc -> {
-			boolean exists = carRepository.existsByGt7Id(sc.gt7Id())
-					|| carRepository.existsByManufacturerAndName(sc.manufacturer(), sc.name());
-			return new CarEntry(sc.gt7Id(), sc.manufacturer(), sc.name(), sc.imageUrl(),
-					exists ? SyncStatus.EXISTS : SyncStatus.NEW);
-		}).sorted(Comparator.comparing(CarEntry::manufacturer).thenComparing(CarEntry::name)).toList();
+        var yearBatch = yearsFuture.join();
+        var hashes = new java.util.LinkedHashMap<String, String>();
+        var duplicateIds = duplicateIds(scrapedCars);
+        var carEntries = scrapedCars.stream().map(sc -> {
+            var match = resolve(sc, false);
+            boolean ambiguous = match.ambiguous() || duplicateIds.contains(sc.gt7Id());
+            var metadata = metadataService.propose(match.car(), sc, yearBatch.candidates().get(sc.gt7Id()));
+            boolean selectable = !ambiguous && match.car() != null && metadataService.changes(match.car(), metadata);
+            var status = ambiguous ? SyncStatus.AMBIGUOUS : match.car() == null ? SyncStatus.NEW
+                    : !metadata.notices().isEmpty() ? SyncStatus.REVIEW : selectable ? SyncStatus.UPDATE : SyncStatus.EXISTS;
+            if (!ambiguous) hashes.put(sc.gt7Id(), metadataService.fingerprint(match.car(), sc, metadata));
+            String message = ambiguous ? "Local or source identity is ambiguous; review the GT7 ID before importing."
+                    : String.join("; ", metadata.notices());
+            return new CarEntry(sc.gt7Id(), sc.manufacturer(), sc.name(), sc.imageUrl(), status, metadata,
+                    match.car() != null ? match.car().getId() : null, selectable, message);
+        }).sorted(Comparator.comparing(CarEntry::manufacturer).thenComparing(CarEntry::name)).toList();
 
 		var trackEntries = scrapedTracks.stream().map(st -> {
 			boolean exists = trackRepository.existsByName(st.name());
@@ -76,38 +90,72 @@ public class Gt7SyncService {
 					exists ? SyncStatus.EXISTS : SyncStatus.NEW);
 		}).sorted(Comparator.comparing(TrackEntry::name)).toList();
 
-		return new Gt7SyncPreview(carEntries, trackEntries);
+		return new Gt7SyncPreview(carEntries, trackEntries, previewStore.capture(hashes), yearBatch.warnings());
 	}
 
 	@Transactional
-	public SyncResult executeSync(List<String> selectedCarGt7Ids, List<String> selectedTrackNames) throws IOException {
+	public SyncResult executeSync(List<String> selectedCarGt7Ids, List<String> selectedTrackNames,
+                                  List<String> selectedMetadata, java.util.UUID previewId) throws IOException {
+        return executeSelection(selectedCarGt7Ids, selectedTrackNames, selectedMetadata, previewId, true);
+    }
+
+    private SyncResult executeSelection(List<String> selectedCarGt7Ids, List<String> selectedTrackNames,
+                                        List<String> selectedMetadata, java.util.UUID previewId,
+                                        boolean previewRequired) throws IOException {
 		long startTime = System.currentTimeMillis();
 		var errors = Collections.synchronizedList(new ArrayList<String>());
 		int carsImported = 0;
+        int carsUpdated = 0;
 		int tracksImported = 0;
 
-		// Step 1: persist all car entities (fast, DB only).
 		var carsToDownload = new ArrayList<CarImageTask>();
-		if (!selectedCarGt7Ids.isEmpty()) {
-			var scrapedCars = scraperService.scrapeCars();
-			var selectedCars = scrapedCars.stream()
-					.filter(sc -> selectedCarGt7Ids.contains(sc.gt7Id()))
-					.toList();
+        var requested = new java.util.HashSet<>(selectedCarGt7Ids);
+        requested.addAll(selectedMetadata);
+        if (!requested.isEmpty()) {
+            var yearsFuture = CompletableFuture.supplyAsync(this::fetchYears);
+            var scrapedCars = scraperService.scrapeCars();
+            var yearBatch = yearsFuture.join();
+            errors.addAll(yearBatch.warnings());
+            var duplicateIds = duplicateIds(scrapedCars);
+            var seen = new java.util.HashSet<String>();
+            for (var sc : scrapedCars.stream().filter(c -> requested.contains(c.gt7Id()))
+                    .sorted(Comparator.comparing(Gt7ScraperService.ScrapedCar::gt7Id)).toList()) {
+                if (!seen.add(sc.gt7Id())) continue;
+                var match = resolve(sc, true);
+                if (match.ambiguous() || duplicateIds.contains(sc.gt7Id())) {
+                    errors.add("Identity requires review for " + sc.gt7Id());
+                    continue;
+                }
+                if (match.car() != null && !selectedMetadata.contains(sc.gt7Id())) continue;
+                if (match.car() == null && !selectedCarGt7Ids.contains(sc.gt7Id())) {
+                    errors.add("Metadata target changed; review " + sc.gt7Id() + " again.");
+                    continue;
+                }
+                var metadata = metadataService.propose(match.car(), sc, yearBatch.candidates().get(sc.gt7Id()));
+                if ((previewRequired || match.car() != null)
+                        && !previewStore.matches(previewId, sc.gt7Id(), metadataService.fingerprint(match.car(), sc, metadata))) {
+                    errors.add("Car data changed or preview expired; review " + sc.gt7Id() + " again.");
+                    continue;
+                }
+                if (match.car() != null) {
+                    if (metadataService.changes(match.car(), metadata)) {
+                        metadataService.applyImported(match.car(), metadata);
+                        carRepository.save(match.car());
+                        carsUpdated++;
+                    }
+                } else {
+                    var car = new Car(sc.manufacturer(), sc.name());
+                    car.setGt7Id(sc.gt7Id());
+                    metadataService.applyImported(car, metadata);
+                    car = carRepository.save(car);
+                    carsToDownload.add(new CarImageTask(car, sc.imageUrl(), sc.gt7Id()));
+                    carsImported++;
+                }
+            }
+            requested.removeAll(seen);
+            requested.forEach(id -> errors.add("Unknown car selection; review " + id + " again."));
+        }
 
-			for (var sc : selectedCars) {
-				if (carRepository.existsByGt7Id(sc.gt7Id())
-						|| carRepository.existsByManufacturerAndName(sc.manufacturer(), sc.name())) {
-					continue;
-				}
-				var car = new Car(sc.manufacturer(), sc.name());
-				car.setGt7Id(sc.gt7Id());
-				car = carRepository.save(car);
-				carsToDownload.add(new CarImageTask(car, sc.imageUrl(), sc.gt7Id()));
-				carsImported++;
-			}
-		}
-
-		// Step 2: persist all track entities (fast, DB only).
 		var tracksToDownload = new ArrayList<TrackImageTask>();
 		if (!selectedTrackNames.isEmpty()) {
 			var scrapedTracks = scraperService.scrapeTracks(true);
@@ -128,7 +176,7 @@ public class Gt7SyncService {
 			}
 		}
 
-		// Step 3: download images in parallel (IO only), then switch back to the main thread for DB writes.
+		// Download images without the persistence context, then update entities on the transaction thread.
 		var carImageResults = Collections.synchronizedList(new ArrayList<ImageResult<CarImageTask>>());
 		var trackImageResults = Collections.synchronizedList(new ArrayList<ImageResult<TrackImageTask>>());
 
@@ -183,8 +231,40 @@ public class Gt7SyncService {
 		log.info("GT7 sync completed in {}s: {} cars, {} tracks, {} errors",
 				durationSeconds, carsImported, tracksImported, errors.size());
 
-		return new SyncResult(carsImported, tracksImported, errors, durationSeconds);
+		return new SyncResult(carsImported, tracksImported, List.copyOf(errors), durationSeconds, carsUpdated);
 	}
+
+    @Transactional
+    public SyncResult executeSync(List<String> selectedCars, List<String> selectedTracks) throws IOException {
+        return executeSelection(selectedCars, selectedTracks, List.of(), null, false);
+    }
+
+    private YearBatch fetchYears() {
+        try {
+            return new YearBatch(java.util.Map.copyOf(yearSource.fetchCandidates()), List.of());
+        } catch (IOException | RuntimeException e) {
+            log.warn("GTPlus model-year enrichment unavailable: {}", e.getClass().getSimpleName());
+            return new YearBatch(java.util.Map.of(), List.of("Model year enrichment unavailable; official metadata can still be imported."));
+        }
+    }
+
+    private CarMatch resolve(Gt7ScraperService.ScrapedCar source, boolean lock) {
+        var byId = lock ? carRepository.findAllByGt7IdForUpdate(source.gt7Id()) : carRepository.findAllByGt7Id(source.gt7Id());
+        if (byId.size() == 1) return new CarMatch(byId.getFirst(), false);
+        if (byId.size() > 1) return new CarMatch(null, true);
+        var byName = carRepository.findAllByManufacturerAndName(source.manufacturer(), source.name());
+        return new CarMatch(byName.size() == 1 ? byName.getFirst() : null, !byName.isEmpty());
+    }
+
+    private java.util.Set<String> duplicateIds(List<Gt7ScraperService.ScrapedCar> cars) {
+        var seen = new java.util.HashSet<String>();
+        var duplicates = new java.util.HashSet<String>();
+        for (var car : cars) if (!seen.add(car.gt7Id())) duplicates.add(car.gt7Id());
+        return duplicates;
+    }
+
+    private record CarMatch(Car car, boolean ambiguous) {}
+    private record YearBatch(java.util.Map<String, GtPlusCarYearSource.YearCandidate> candidates, List<String> warnings) {}
 
 	private record CarImageTask(Car car, String imageUrl, String gt7Id) {
 	}
@@ -195,6 +275,9 @@ public class Gt7SyncService {
 	private record ImageResult<T>(T task, String localPath, Exception error) {
 	}
 
-	public record SyncResult(int carsImported, int tracksImported, List<String> errors, long durationSeconds) {
+	public record SyncResult(int carsImported, int tracksImported, List<String> errors, long durationSeconds, int carsUpdated) {
+        public SyncResult(int carsImported, int tracksImported, List<String> errors, long durationSeconds) {
+            this(carsImported, tracksImported, errors, durationSeconds, 0);
+        }
 	}
 }

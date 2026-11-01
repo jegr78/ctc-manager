@@ -40,6 +40,9 @@ class Gt7SyncServiceTest {
 	TrackRepository trackRepository;
 	@Mock
 	FileStorageService fileStorageService;
+    @Mock GtPlusCarYearSource yearSource;
+    @org.mockito.Spy org.ctc.domain.service.CarMetadataService metadataService = new org.ctc.domain.service.CarMetadataService();
+    @org.mockito.Spy Gt7SyncPreviewStore previewStore = new Gt7SyncPreviewStore();
 	@InjectMocks
 	Gt7SyncService syncService;
 
@@ -50,11 +53,8 @@ class Gt7SyncServiceTest {
 		when(scraperService.scrapeTracks()).thenReturn(SCRAPED_TRACKS);
 
 		// car102 exists by gt7Id, car205 exists by manufacturer+name, car310 is new
-		when(carRepository.existsByGt7Id("car102")).thenReturn(true);
-		when(carRepository.existsByGt7Id("car205")).thenReturn(false);
-		when(carRepository.existsByManufacturerAndName("Toyota", "Sports 800 '65")).thenReturn(true);
-		when(carRepository.existsByGt7Id("car310")).thenReturn(false);
-		when(carRepository.existsByManufacturerAndName("Alfa Romeo", "4C Gr.3")).thenReturn(false);
+        when(carRepository.findAllByGt7Id("car102")).thenReturn(List.of(existing("car102")));
+        when(carRepository.findAllByManufacturerAndName("Toyota", "Sports 800 '65")).thenReturn(List.of(existing("car205")));
 
 		when(trackRepository.existsByName("Deep Forest Raceway")).thenReturn(true);
 		when(trackRepository.existsByName("Nurburgring Nordschleife")).thenReturn(false);
@@ -84,11 +84,7 @@ class Gt7SyncServiceTest {
 		when(scraperService.scrapeTracks()).thenReturn(List.of());
 
 		// car102 exists by gt7Id — should not check manufacturer+name
-		when(carRepository.existsByGt7Id("car102")).thenReturn(true);
-		when(carRepository.existsByGt7Id("car205")).thenReturn(false);
-		when(carRepository.existsByManufacturerAndName("Toyota", "Sports 800 '65")).thenReturn(false);
-		when(carRepository.existsByGt7Id("car310")).thenReturn(false);
-		when(carRepository.existsByManufacturerAndName("Alfa Romeo", "4C Gr.3")).thenReturn(false);
+        when(carRepository.findAllByGt7Id("car102")).thenReturn(List.of(existing("car102")));
 
 		// when
 		Gt7SyncPreview preview = syncService.fetchAndPreview();
@@ -107,8 +103,6 @@ class Gt7SyncServiceTest {
 		// given
 		when(scraperService.scrapeCars()).thenReturn(SCRAPED_CARS);
 
-		when(carRepository.existsByGt7Id(anyString())).thenReturn(false);
-		when(carRepository.existsByManufacturerAndName(anyString(), anyString())).thenReturn(false);
 
 		var savedCar = new Car("Alfa Romeo", "4C Gr.3");
 		savedCar.setGt7Id("car310");
@@ -152,7 +146,7 @@ class Gt7SyncServiceTest {
 	void givenAlreadyExistingCar_whenExecuteSync_thenSkipsImport() throws IOException {
 		// given
 		when(scraperService.scrapeCars()).thenReturn(SCRAPED_CARS);
-		when(carRepository.existsByGt7Id("car102")).thenReturn(true);
+        when(carRepository.findAllByGt7IdForUpdate("car102")).thenReturn(List.of(existing("car102")));
 
 		// when
 		var result = syncService.executeSync(List.of("car102"), List.of());
@@ -167,8 +161,6 @@ class Gt7SyncServiceTest {
 		// given
 		when(scraperService.scrapeCars()).thenReturn(SCRAPED_CARS);
 
-		when(carRepository.existsByGt7Id(anyString())).thenReturn(false);
-		when(carRepository.existsByManufacturerAndName(anyString(), anyString())).thenReturn(false);
 
 		var savedCar = new Car("Alfa Romeo", "4C Gr.3");
 		savedCar.setGt7Id("car310");
@@ -188,4 +180,12 @@ class Gt7SyncServiceTest {
 		// imageUrl was not set because download failed, but no exception was thrown
 		verify(carRepository, atLeastOnce()).save(any(Car.class));
 	}
+    private Car existing(String id) {
+        var source = SCRAPED_CARS.stream().filter(car -> car.gt7Id().equals(id)).findFirst().orElseThrow();
+        var car = new Car(source.manufacturer(), source.name());
+        car.setId(UUID.randomUUID());
+        car.setGt7Id(id);
+        return car;
+    }
+
 }

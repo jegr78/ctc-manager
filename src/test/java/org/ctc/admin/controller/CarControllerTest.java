@@ -205,4 +205,51 @@ class CarControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("test-editor-image.png")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("name-error")));
     }
+    @Test
+    void givenManualMetadataAndClearedYear_whenSaving_thenProvenanceAndExplicitUnknownPersist() throws Exception {
+        mockMvc.perform(post("/admin/cars/save")
+                .param("id", car.getId().toString()).param("manufacturer", "Mazda").param("name", car.getName())
+                .param("metadataSubmitted", "true").param("category", "GR_3").param("drivetrain", "FR")
+                .param("modelYear", "2020").param("modelYearSource", "FORGED"))
+                .andExpect(status().is3xxRedirection()).andExpect(flash().attributeExists("successMessage"));
+        var updated = carRepository.findById(car.getId()).orElseThrow();
+        assertEquals(CarCategory.GR_3, updated.getCategory());
+        assertEquals(Drivetrain.FR, updated.getDrivetrain());
+        assertEquals(2020, updated.getModelYear());
+        assertEquals("MANUAL", updated.getModelYearSource());
+        assertTrue(updated.isModelYearOverride());
+        mockMvc.perform(post("/admin/cars/save")
+                .param("id", car.getId().toString()).param("manufacturer", "Mazda").param("name", car.getName())
+                .param("metadataSubmitted", "true").param("category", "GR_3").param("drivetrain", "FR")
+                .param("modelYear", ""))
+                .andExpect(status().is3xxRedirection()).andExpect(flash().attributeExists("successMessage"));
+        assertNull(updated.getModelYear());
+        assertTrue(updated.isModelYearOverride());
+        assertEquals("Explicitly unknown model year", updated.getModelYearEvidence());
+    }
+
+    @Test
+    void givenInvalidYear_whenSaving_thenSubmittedFieldsAndYearErrorRemain() throws Exception {
+        mockMvc.perform(post("/admin/cars/save")
+                .param("id", car.getId().toString()).param("manufacturer", "Submitted Brand")
+                .param("name", "Submitted Car").param("metadataSubmitted", "true")
+                .param("category", "GR_4").param("modelYear", "99"))
+                .andExpect(status().isOk()).andExpect(view().name("admin/car-form"))
+                .andExpect(model().attributeHasFieldErrors("carForm", "modelYear"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Submitted Car")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("modelYear-error")));
+        assertEquals("Mazda", carRepository.findById(car.getId()).orElseThrow().getManufacturer());
+        assertNull(car.getModelYear());
+    }
+
+    @Test
+    void givenDuplicateName_whenSaving_thenMetadataFormAndDomainErrorRemain() throws Exception {
+        mockMvc.perform(post("/admin/cars/save").param("manufacturer", "Mazda")
+                .param("name", car.getName()).param("metadataSubmitted", "true").param("modelYear", "2020"))
+                .andExpect(status().isOk()).andExpect(view().name("admin/car-form"))
+                .andExpect(model().attributeHasErrors("carForm"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("already exists")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("2020")));
+    }
+
 }

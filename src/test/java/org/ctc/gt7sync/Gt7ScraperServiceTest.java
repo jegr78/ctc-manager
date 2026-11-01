@@ -21,6 +21,42 @@ class Gt7ScraperServiceTest {
 		scraperService = new Gt7ScraperService(org.ctc.TestHelper.enabledOutboundPolicy());
 	}
 
+    @Test
+    void givenMismatchedOrNonCanonicalIds_whenParsing_thenRecordsCannotBeJoinedToOtherCars() {
+        // given / when / then
+        for (String record : java.util.List.of(
+                "car7:{id:`car8`,nameLong:`Test Car`,nameShort:`Car`}",
+                "car0:{id:`car0`,nameLong:`Test Car`,nameShort:`Car`}",
+                "car07:{id:`car07`,nameLong:`Test Car`,nameShort:`Car`}",
+                "car9999999999:{id:`car9999999999`,nameLong:`Test Car`,nameShort:`Car`}")) {
+            assertThat(scraperService.parseCarsJs(record)).isEmpty();
+        }
+    }
+
+    @Test
+    void givenOfficialMetadata_whenParsing_thenClassificationUsesFieldsInsteadOfNames() throws IOException {
+        // given
+        String js = loadFixture("gt7/official-metadata.js");
+        // when
+        var cars = scraperService.parseCarsJs(js);
+        // then
+        var amg = cars.stream().filter(car -> car.gt7Id().equals("car3531")).findFirst().orElseThrow();
+        assertThat(amg.category()).isEqualTo(org.ctc.domain.model.CarCategory.GR_3);
+        assertThat(amg.drivetrain()).isEqualTo(org.ctc.domain.model.Drivetrain.FR);
+        var unknown = scraperService.parseCarsJs("car7:{id:`car7`,nameLong:`Test Gr.3 Road Car`,nameShort:`Gr.3 Road Car`,carClass:`---`,driveTrain:`RR`}").getFirst();
+        assertThat(unknown.category()).isNull();
+        assertThat(unknown.drivetrain()).isEqualTo(org.ctc.domain.model.Drivetrain.RR);
+        assertThat(org.ctc.domain.model.Drivetrain.fromSource("AWD")).isEqualTo(org.ctc.domain.model.Drivetrain.FOUR_WD);
+    }
+
+    @Test
+    void givenEscapedApostrophe_whenParsing_thenNameRemainsIntact() {
+        // given
+        String js = "car7:{id:'car7',nameLong:'Test Driver\\'s Car',nameShort:'Driver\\'s Car'}";
+        // when / then
+        assertThat(scraperService.parseCarsJs(js).getFirst().name()).isEqualTo("Driver's Car");
+    }
+
 	@Test
 	void whenParseTunersJs_thenReturnsManufacturerMap() throws IOException {
 		String tunersJs = loadFixture("gt7/tuners-data.js");

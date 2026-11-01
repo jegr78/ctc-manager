@@ -2358,6 +2358,10 @@ input:not([type='checkbox']):not([type='radio']):not([type='color']), select { b
 .sync-catalog-summary { font-size: 14px; }
 .sync-selection-tools { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
 .sync-catalog .sync-check-column { width: 70px; }
+.car-editor fieldset[id] { scroll-margin-top: 72px; }
+.car-editor .form-check input[type='checkbox'] { width: 18px; height: 18px; min-height: 18px; padding: 0; flex-shrink: 0; }
+.car-editor .form-check label { margin: 0; padding: 12px 0; }
+.sync-catalog th.col-thumb { min-width: 72px; white-space: nowrap; }
 .sync-catalog table th:last-child { width: auto; }
 .sync-catalog input[type='checkbox'] { width: 20px; height: 20px; vertical-align: middle; accent-color: var(--accent); }
 .sync-existing { color: var(--text-dim); font-size: 13px; white-space: nowrap; }

@@ -142,7 +142,9 @@ public class Gt7ScraperService {
 			String nameShort = extractField(block, "nameShort");
 			String manufacturerId = extractField(block, "manufacturerId");
 
-			if (gt7Id == null || nameLong == null || nameShort == null) {
+			if (gt7Id == null || nameLong == null || nameShort == null
+                    || !gt7Id.equals(blockMatcher.group(1)) || !gt7Id.matches("car[1-9]\\d{0,9}")
+                    || Long.parseLong(gt7Id.substring(3)) > Integer.MAX_VALUE) {
 				continue;
 			}
 
@@ -152,7 +154,10 @@ public class Gt7ScraperService {
 			}
 
 			String imageUrl = CAR_IMAGE_BASE + gt7Id + ".png";
-			cars.add(new ScrapedCar(gt7Id, manufacturer, nameShort, imageUrl));
+			String category = extractField(block, "carClass");
+            String drivetrain = extractField(block, "driveTrain");
+            cars.add(new ScrapedCar(gt7Id, manufacturer, nameShort, imageUrl,
+                    org.ctc.domain.model.CarCategory.fromSource(category), org.ctc.domain.model.Drivetrain.fromSource(drivetrain), category, drivetrain));
 		}
 
 		log.info("Parsed {} cars from GT7 data", cars.size());
@@ -186,9 +191,9 @@ public class Gt7ScraperService {
 	}
 
 	private String extractField(String block, String fieldName) {
-        Pattern p = Pattern.compile(Pattern.quote(fieldName) + ":([\"'`])(.*?)\\1");
+        Pattern p = Pattern.compile(Pattern.quote(fieldName) + "\\s*:\\s*([\"'`])((?:\\\\.|(?!\\1).)*)\\1", Pattern.DOTALL);
 		Matcher m = p.matcher(block);
-        return m.find() ? m.group(2) : null;
+        return m.find() ? org.apache.commons.text.StringEscapeUtils.unescapeEcmaScript(m.group(2)) : null;
 	}
 
 	String extractScriptSrc(String html, String pathPrefix) {
@@ -215,14 +220,19 @@ public class Gt7ScraperService {
 
 	private Connection externalConnection(String url) throws IOException {
 		outboundPolicy.requireEnabled();
-		return Jsoup.connect(url);
+		return Jsoup.connect(url).timeout(10_000).maxBodySize(4 * 1024 * 1024);
 	}
 
 	private String fetchText(String url) throws IOException {
 		return externalConnection(url).ignoreContentType(true).execute().body();
 	}
 
-	public record ScrapedCar(String gt7Id, String manufacturer, String name, String imageUrl) {
+	public record ScrapedCar(String gt7Id, String manufacturer, String name, String imageUrl,
+                             org.ctc.domain.model.CarCategory category, org.ctc.domain.model.Drivetrain drivetrain,
+                             String categoryValue, String drivetrainValue) {
+        public ScrapedCar(String gt7Id, String manufacturer, String name, String imageUrl) {
+            this(gt7Id, manufacturer, name, imageUrl, null, null, null, null);
+        }
 	}
 
 	public record ScrapedTrack(String id, String name, String country, String baseId, String imageUrl) {
