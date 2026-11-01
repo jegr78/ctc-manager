@@ -495,7 +495,7 @@ class UpdateTest(unittest.TestCase):
 
 
 class NativeUpdateSafetyTest(unittest.TestCase):
-    def test_optimized_python_still_refuses_real_domain_data_before_native_changes(self):
+    def test_optimized_python_preserves_native_environment_gates_before_changes(self):
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
             for name, value in [('google.json', '{}'), ('db-password', 'fixture'),
@@ -512,23 +512,40 @@ spec=importlib.util.spec_from_file_location('native_update',sys.argv[1])
 module=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 directory=Path(sys.argv[2])
-runtime=SimpleNamespace(root=Path('/srv/ctc-manager'),preflight=lambda:None,
- config={'outboundPaused':True,'googleCredentialsFile':str(directory/'google.json'),
+case=sys.argv[3]
+records={'seasons':4 if case=='real-data' else 0,'teams':0,'drivers':0,'races':0,
+         'ctc_runtime_qualification':0 if case=='marker' else 1}
+if case=='pending-migration': records['ctc_update_native_fixture']=1
+runtime=SimpleNamespace(root=Path('/srv/courtside' if case=='root' else '/srv/ctc-manager'),preflight=lambda:None,
+ config={'outboundPaused':case!='pause','googleCredentialsFile':str(directory/'google.json'),
          'appEnvFile':str(directory/'app.env'),'databasePasswordFile':str(directory/'db-password')},
- database_metadata=lambda:{'records':{'seasons':4,'teams':0,'drivers':0,'races':0,'ctc_runtime_qualification':1}})
+ database_metadata=lambda:{'records':records})
 original=Path.read_text
 def read(path,*args,**kwargs):
- if path.name=='owner': return str(os.getppid())
+ if path.name=='owner': return str(os.getppid()+(1 if case=='lock' else 0))
  return original(path,*args,**kwargs)
 with patch.object(Path,'read_text',read): module.assert_synthetic(runtime)
 print('unsafe acceptance')
 '''
-            result = subprocess.run([sys.executable, '-O', '-c', program,
-                str(ROOT / 'deploy/tests/native_update.py'), str(directory)], capture_output=True, text=True,
-                env={**os.environ, 'PYTHONOPTIMIZE': '1'})
-            self.assertNotEqual(0, result.returncode, 'optimization must never remove the real-data refusal')
-            self.assertIn('never qualify against real domain data', result.stderr)
-            self.assertNotIn('unsafe acceptance', result.stdout)
+            for case, message in [('root', 'only the known host qualification'), ('lock', 'caller must hold'),
+                                  ('pause', 'keep integrations paused'), ('real-data', 'never qualify against real domain data'),
+                                  ('marker', 'require the dedicated qualification marker'),
+                                  ('pending-migration', 'earlier migration fixture'), ('google', 'never use real Google credentials'),
+                                  ('discord', 'no live integration identities'), ('calendar', 'no live integration identities')]:
+                (directory / 'google.json').write_text('{"project_id":"live-fixture"}' if case == 'google' else '{}')
+                environment = 'SPRING_SECURITY_USER_NAME=fixture\nSPRING_SECURITY_USER_PASSWORD=fixture\n'
+                if case == 'discord':
+                    environment += 'DISCORD_BOT_TOKEN=live-fixture\n'
+                if case == 'calendar':
+                    environment += 'GOOGLE_CALENDAR_ID=live-fixture@example.test\n'
+                (directory / 'app.env').write_text(environment)
+                result = subprocess.run([sys.executable, '-O', '-c', program,
+                    str(ROOT / 'deploy/tests/native_update.py'), str(directory), case], capture_output=True, text=True,
+                    env={**os.environ, 'PYTHONOPTIMIZE': '1'})
+                with self.subTest(gate=case):
+                    self.assertNotEqual(0, result.returncode, 'optimization must never remove native admission gates')
+                    self.assertIn(message, result.stderr)
+                    self.assertNotIn('unsafe acceptance', result.stdout)
 
 
 if __name__ == '__main__':
