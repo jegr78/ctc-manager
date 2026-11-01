@@ -38,10 +38,13 @@ class SourceContractTest(unittest.TestCase):
         query.assert_not_called()
 
     def test_environment_overlay_is_literal_and_never_executes_shell(self):
-        actual = migration.environment_values('DISCORD_BOT_TOKEN=first\nGOOGLE_CALENDAR_ID="calendar"\n',
-                                            "DISCORD_BOT_TOKEN='$(touch /tmp/never-run-ctc)'\n")
-        self.assertEqual(actual, {'DISCORD_BOT_TOKEN': '$(touch /tmp/never-run-ctc)', 'GOOGLE_CALENDAR_ID': 'calendar'})
-        self.assertFalse(Path('/tmp/never-run-ctc').exists())
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / 'never-run'
+            literal = '$(touch ' + str(target) + ')'
+            actual = migration.environment_values('DISCORD_BOT_TOKEN=first\nGOOGLE_CALENDAR_ID="calendar"\n',
+                                                 "DISCORD_BOT_TOKEN='" + literal + "'\n")
+            self.assertEqual(actual, {'DISCORD_BOT_TOKEN': literal, 'GOOGLE_CALENDAR_ID': 'calendar'})
+            self.assertFalse(target.exists())
 
     def test_ambiguous_environment_is_refused(self):
         for value in ['DISCORD_BOT_TOKEN=${SECRET}', 'DISCORD_BOT_TOKEN="unterminated',
