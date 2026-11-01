@@ -92,6 +92,18 @@ class RecoveryUnitTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'link'):
             recovery.validate_unit(self.unit)
 
+    def test_same_size_database_change_refuses_checksum(self):
+        original = (self.unit / 'database.sql').read_bytes()
+        self.private_write('database.sql', b'X' + original[1:])
+        with self.assertRaisesRegex(ValueError, 'checksum'):
+            recovery.validate_unit(self.unit)
+
+    def test_artifact_size_metadata_must_match_actual_file(self):
+        self.manifest['files']['database.sql']['bytes'] += 1
+        self.private_write('manifest.json', json.dumps(self.manifest).encode())
+        with self.assertRaisesRegex(ValueError, 'size'):
+            recovery.validate_unit(self.unit)
+
     def test_modified_database_refuses_before_import(self):
         self.private_write('database.sql', b'corrupt')
         with self.assertRaisesRegex(ValueError, 'checksum|size'):
