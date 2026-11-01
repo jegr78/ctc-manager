@@ -233,7 +233,9 @@ class MaintenanceTest(unittest.TestCase):
         state['remote']['completedAt']=self.now+120
         self.assertIn('remote-invalid',maintenance.freshness(state,self.now))
 
-    def test_doctor_returns_failure_for_missing_configuration_or_stale_evidence(self):
+    @patch.object(maintenance,'NativeRuntime')
+    def test_doctor_returns_failure_for_missing_configuration_or_stale_evidence(self, native):
+        native.return_value=self.runtime
         self.evidence([])
         argv=['maintenance.py','--directory',str(self.root),'doctor']
         with patch.object(sys,'argv',argv),patch.object(maintenance.time,'time',return_value=self.now),patch.object(maintenance,'NativeRuntime',return_value=self.runtime):maintenance.main()
