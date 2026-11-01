@@ -109,6 +109,11 @@ class RecoveryUnitTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'checksum|size'):
             recovery.validate_unit(self.unit)
 
+    def test_extra_unit_artifact_refuses_exact_inventory(self):
+        self.private_write('unexpected.sh', b'echo unsafe')
+        with self.assertRaisesRegex(ValueError, 'inventory'):
+            recovery.validate_unit(self.unit)
+
     def test_incomplete_or_extra_unit_refuses(self):
         for change in ['missing', 'extra']:
             with self.subTest(change=change):
