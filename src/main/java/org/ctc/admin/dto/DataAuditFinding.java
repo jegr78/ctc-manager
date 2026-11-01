@@ -10,7 +10,8 @@ public record DataAuditFinding(Category category, Resolution resolution, String 
 		PHASE_GROUP("Phase and group inconsistencies", "#190"),
 		SUCCESSION("Succession collisions and cycles", "#190"),
 		PLAYOFF("Playoff winners and advancement", "#195, #201"),
-		PUBLIC_URL("Ambiguous public URLs", "#210");
+		PUBLIC_URL("Ambiguous public URLs", "#210"),
+        RACE_SETTINGS("Inconsistent race settings", "#280");
 
 		private final String label;
 		private final String relatedIssues;

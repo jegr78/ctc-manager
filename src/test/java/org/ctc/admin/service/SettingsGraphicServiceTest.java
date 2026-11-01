@@ -88,6 +88,31 @@ class SettingsGraphicServiceTest {
 	}
 
 
+    @Test
+    void givenEqualConditionsAndZero_whenGenerating_thenModeAwareValueIsRendered() throws Exception {
+        // given
+        service = spy(service);
+        doNothing().when(service).renderScreenshot(anyString(), any(Path.class));
+        var race = createReadyRace(false);
+        when(standingsService.calculateStandings(any(), any())).thenReturn(List.of());
+        race.getSettings().setTimeProgressionMode(TimeProgressionMode.EQUAL_CONDITIONS);
+        race.getSettings().setTimeProgressionMultiplier(null);
+        // when
+        service.generateSettings(race);
+        race.getSettings().setTimeProgressionMode(TimeProgressionMode.MULTIPLIER);
+        race.getSettings().setTimeProgressionMultiplier(0);
+        service.generateSettings(race);
+        // then
+        var contexts = org.mockito.ArgumentCaptor.forClass(Context.class);
+        verify(templateEngine, times(2)).process(anyString(), contexts.capture());
+        org.assertj.core.api.Assertions.assertThat(contexts.getAllValues().get(0)
+                .getVariable("timeProgressionDisplay")).isEqualTo("Equal Conditions");
+        org.assertj.core.api.Assertions.assertThat(contexts.getAllValues().get(1)
+                .getVariable("timeProgressionDisplay")).isEqualTo("0x");
+        org.assertj.core.api.Assertions.assertThat(contexts.getAllValues().get(1)
+                .getVariable("timeProgressionMultiplier")).isEqualTo(0);
+    }
+
 	private Race createReadyRace(boolean groupAttached) throws IOException {
 		var season = new Season("S", 2026, 1); season.setId(UUID.randomUUID());
 		var home = new Team("H", "H"); home.setId(UUID.randomUUID());

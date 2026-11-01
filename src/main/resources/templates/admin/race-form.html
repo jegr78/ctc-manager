@@ -105,7 +105,13 @@
                     <input type="text" id="timeOfDay" th:field="*{timeOfDay}">
                 </div>
                 <div class="form-group">
+                    <label for="timeProgressionMode">Time Progression</label>
+                    <select id="timeProgressionMode" th:field="*{timeProgressionMode}">
+                        <option value="MULTIPLIER">Multiplier</option>
+                        <option value="EQUAL_CONDITIONS">Equal Conditions</option>
+                    </select>
                     <label for="timeProgressionMultiplier">Time Progression Multiplier</label>
+                    <p>For Equal Conditions, leave the multiplier empty. Numeric 0 means 0x.</p>
                     <input type="number" id="timeProgressionMultiplier" th:field="*{timeProgressionMultiplier}" min="0">
                 </div>
             </div>

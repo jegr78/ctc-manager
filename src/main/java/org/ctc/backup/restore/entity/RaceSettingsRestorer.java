@@ -13,24 +13,6 @@ import org.ctc.backup.restore.EntityRestorer;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-/**
- * Restores rows into the {@code race_settings} table from the
- * {@code data/race-settings.json} array in a backup ZIP.
- *
- * <p>Schema (V1): {@code id UUID PK, race_id UUID NOT NULL UNIQUE, number_of_laps INT NULL,
- * tyre_wear_multiplier INT NULL, fuel_consumption_multiplier INT NULL, refueling_speed INT NULL,
- * initial_fuel VARCHAR NULL, number_of_required_pit_stops INT NULL,
- * time_progression_multiplier INT NULL, weather VARCHAR NULL, time_of_day VARCHAR NULL,
- * available_tyres VARCHAR NULL, mandatory_tyres VARCHAR NULL, created_at TIMESTAMP,
- * updated_at TIMESTAMP}.
- *
- * <p>All non-FK columns are nullable per {@link org.ctc.domain.model.RaceSettings#isComplete()}
- * semantics (incomplete settings are allowed during draft race definition).
- *
- * <p>Auditing bypass: written via {@link JdbcTemplate#batchUpdate} so
- * {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener}
- * does NOT overwrite {@code createdAt}/{@code updatedAt}.
- */
 @Slf4j
 @Component
 public class RaceSettingsRestorer implements EntityRestorer {
@@ -39,8 +21,8 @@ public class RaceSettingsRestorer implements EntityRestorer {
             "INSERT INTO race_settings (id, race_id, number_of_laps, tyre_wear_multiplier, "
           + "fuel_consumption_multiplier, refueling_speed, initial_fuel, "
           + "number_of_required_pit_stops, time_progression_multiplier, weather, "
-          + "time_of_day, available_tyres, mandatory_tyres, created_at, updated_at) "
-          + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+          + "time_of_day, available_tyres, mandatory_tyres, created_at, updated_at, time_progression_mode) "
+          + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     @Override
     public String tableName() {
@@ -49,6 +31,19 @@ public class RaceSettingsRestorer implements EntityRestorer {
 
     @Override
     public void restore(List<JsonNode> rows, JdbcTemplate jdbcTemplate) {
+        for (JsonNode row : rows) {
+            if (row.has("timeProgressionMode")) {
+                JsonNode mode = row.get("timeProgressionMode");
+                JsonNode value = row.get("timeProgressionMultiplier");
+                boolean numeric = "MULTIPLIER".equals(mode.asText());
+                boolean equal = "EQUAL_CONDITIONS".equals(mode.asText());
+                if ((!numeric && !equal) || (equal && value != null && !value.isNull())
+                        || (numeric && value != null && !value.isNull()
+                            && (!value.isIntegralNumber() || !value.canConvertToInt() || value.intValue() < 0))) {
+                    throw new IllegalArgumentException("Invalid time progression mode or multiplier in backup.");
+                }
+            }
+        }
         jdbcTemplate.batchUpdate(INSERT_SQL, rows, 500, (ps, row) -> {
             ps.setObject(1, UUID.fromString(row.get("id").asText()));
             ps.setObject(2, UUID.fromString(row.get("race").asText()));
@@ -65,6 +60,7 @@ public class RaceSettingsRestorer implements EntityRestorer {
             setNullableString(ps, 13, row, "mandatoryTyres");
             ps.setTimestamp(14, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
             ps.setTimestamp(15, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
+            ps.setString(16, row.has("timeProgressionMode") ? row.get("timeProgressionMode").asText() : "MULTIPLIER");
         });
         log.debug("RaceSettingsRestorer: restored {} rows", rows.size());
     }

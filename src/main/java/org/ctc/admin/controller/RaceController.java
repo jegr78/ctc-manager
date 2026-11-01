@@ -1,5 +1,7 @@
 package org.ctc.admin.controller;
 
+import org.springframework.validation.BindingResult;
+
 import static org.springframework.util.StringUtils.hasText;
 
 import java.util.Map;
@@ -159,7 +161,7 @@ public class RaceController {
 	public String create(@RequestParam(required = false) UUID matchdayId, Model model) {
 		var data = raceFormDataService.getNewRaceFormData(matchdayId);
 		model.addAttribute("pageTitle", "New Race");
-		model.addAttribute("raceForm", toRaceForm(data.data()));
+		if (!model.containsAttribute("raceForm")) model.addAttribute("raceForm", toRaceForm(data.data()));
 		model.addAttribute("matchdays", data.matchdays());
 		model.addAttribute("teams", data.teams());
 		model.addAttribute("seasonCars", data.seasonCars());
@@ -175,7 +177,7 @@ public class RaceController {
 	public String edit(@PathVariable UUID id, Model model) {
 		var data = raceFormDataService.getRaceFormData(id);
 		model.addAttribute("pageTitle", "Edit Race");
-		model.addAttribute("raceForm", toRaceForm(data.data()));
+		if (!model.containsAttribute("raceForm")) model.addAttribute("raceForm", toRaceForm(data.data()));
 		model.addAttribute("matchdays", data.matchdays());
 		model.addAttribute("teams", data.teams());
 		model.addAttribute("seasonCars", data.seasonCars());
@@ -197,16 +199,31 @@ public class RaceController {
 	}
 
 	@PostMapping("/save")
-	public String save(@ModelAttribute RaceForm form, RedirectAttributes redirectAttributes) {
-		var result = raceService.saveRace(
+	public String save(@ModelAttribute RaceForm form, BindingResult binding,
+                       @RequestParam(required = false) String timeProgressionMode,
+                       RedirectAttributes redirectAttributes) {
+        if (binding.hasErrors()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Check the time progression mode and numeric settings.");
+            redirectAttributes.addFlashAttribute("raceForm", form);
+            return "redirect:/admin/races/" + (form.getId() != null ? form.getId() + "/edit" : "new?matchdayId=" + form.getMatchdayId());
+        }
+		var result = timeProgressionMode == null ? raceService.saveRace(
 				form.getId(), form.getMatchdayId(), form.getHomeTeamId(), form.getAwayTeamId(),
 				form.getTrackId(), form.getCarId(), form.getDateTime(),
 				form.getNumberOfLaps(), form.getTyreWearMultiplier(),
 				form.getFuelConsumptionMultiplier(), form.getRefuelingSpeed(),
 				form.getInitialFuel(), form.getNumberOfRequiredPitStops(),
 				form.getTimeProgressionMultiplier(), form.getWeather(),
+				form.getTimeOfDay(), form.getAvailableTyres(), form.getMandatoryTyres()) : raceService.saveRace(
+				form.getId(), form.getMatchdayId(), form.getHomeTeamId(), form.getAwayTeamId(),
+				form.getTrackId(), form.getCarId(), form.getDateTime(),
+				form.getNumberOfLaps(), form.getTyreWearMultiplier(),
+				form.getFuelConsumptionMultiplier(), form.getRefuelingSpeed(),
+				form.getInitialFuel(), form.getNumberOfRequiredPitStops(),
+				form.getTimeProgressionMode(), form.getTimeProgressionMultiplier(), form.getWeather(),
 				form.getTimeOfDay(), form.getAvailableTyres(), form.getMandatoryTyres());
 		if (!result.success()) {
+            redirectAttributes.addFlashAttribute("raceForm", form);
 			redirectAttributes.addFlashAttribute("errorMessage", result.message());
 			return "redirect:/admin/races/" + (result.raceId() != null
 					? result.raceId() + "/edit"
@@ -391,6 +408,7 @@ public class RaceController {
 		form.setRefuelingSpeed(data.refuelingSpeed());
 		form.setInitialFuel(data.initialFuel());
 		form.setNumberOfRequiredPitStops(data.numberOfRequiredPitStops());
+		form.setTimeProgressionMode(data.timeProgressionMode());
 		form.setTimeProgressionMultiplier(data.timeProgressionMultiplier());
 		form.setWeather(data.weather());
 		form.setTimeOfDay(data.timeOfDay());

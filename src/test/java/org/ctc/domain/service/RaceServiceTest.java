@@ -39,6 +39,53 @@ class RaceServiceTest {
 
 
     @Test
+    void givenNegativeLegacyMultiplier_whenSaving_thenRejectsBeforeReadingRepositories() {
+        org.assertj.core.api.Assertions.assertThatCode(() -> {
+            // given / when
+            var result = service.saveRace(null, null, null, null, null, null, null,
+                    null, null, null, null, null, null, -1, null, null, null, null);
+            // then
+            assertThat(result.success()).isFalse();
+            assertThat(result.message()).isEqualTo("Time multiplier must be a nonnegative integer.");
+            verifyNoInteractions(raceRepository, matchdayRepository, teamRepository);
+        }).doesNotThrowAnyException();
+    }
+
+    @Test
+    void givenMissingModeOrInvalidNumericValue_whenSaving_thenRejectsBeforeReadingRepositories() {
+        org.assertj.core.api.Assertions.assertThatCode(() -> {
+            // given / when / then
+            for (Integer value : new Integer[]{null, -1}) {
+                var result = service.saveRace(null, null, null, null, null, null, null,
+                        null, null, null, null, null, null, TimeProgressionMode.MULTIPLIER, value,
+                        null, null, null, null);
+                assertThat(result.success()).isFalse();
+                assertThat(result.message()).isEqualTo("Time multiplier must be a nonnegative integer.");
+            }
+            var result = service.saveRace(null, null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, 0, null, null, null, null);
+            assertThat(result.success()).isFalse();
+            assertThat(result.message()).isEqualTo("Choose a time progression mode.");
+            verifyNoInteractions(raceRepository, matchdayRepository, teamRepository);
+        }).doesNotThrowAnyException();
+    }
+
+    @Test
+    void givenInvalidTimeProgression_whenSaving_thenRejectsBeforeAnyMutation() {
+        org.assertj.core.api.Assertions.assertThatCode(() -> {
+            // given / when
+            var result = service.saveRace(null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    org.ctc.domain.model.TimeProgressionMode.EQUAL_CONDITIONS, 0,
+                    null, null, null, null);
+            // then
+            assertThat(result.success()).isFalse();
+            assertThat(result.message()).isEqualTo("Equal Conditions requires an empty time multiplier.");
+            verifyNoInteractions(raceRepository, matchdayRepository, teamRepository);
+        }).doesNotThrowAnyException();
+    }
+
+    @Test
     void givenMatchdayId_whenGetRaceListData_thenReturnsFilteredRaces() {
         // given
         var matchdayId = UUID.randomUUID();

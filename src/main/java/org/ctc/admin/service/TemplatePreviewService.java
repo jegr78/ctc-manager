@@ -105,7 +105,8 @@ public class TemplatePreviewService {
         ctx.setVariable("refuelingSpeed", "Fast");
         ctx.setVariable("initialFuel", "Max");
         ctx.setVariable("numberOfRequiredPitStops", 1);
-        ctx.setVariable("timeProgressionMultiplier", "60x");
+        ctx.setVariable("timeProgressionMultiplier", 60);
+        ctx.setVariable("timeProgressionDisplay", "60x");
         ctx.setVariable("weather", "Clear");
         ctx.setVariable("timeOfDay", "14:00");
         ctx.setVariable("availableTyres", "SS, SM, SH, RH, IM, HW");
@@ -128,6 +129,7 @@ public class TemplatePreviewService {
         v.put("customWeather", "—");
         v.put("timeOfDay", "Afternoon");
         v.put("timeSpeed", "3×");
+        v.put("equalConditionsMode", "Off");
         v.put("tyreWear", "4×");
         v.put("fuelRate", "3×");
         v.put("refuelSpeed", "3 Litre/sec");

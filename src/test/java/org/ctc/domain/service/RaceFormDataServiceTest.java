@@ -104,6 +104,10 @@ class RaceFormDataServiceTest {
         race.setId(UUID.randomUUID());
         race.setMatchday(matchday);
         race.setMatch(match);
+        var settings = new RaceSettings(race);
+        settings.setTimeProgressionMode(TimeProgressionMode.EQUAL_CONDITIONS);
+        settings.setTimeProgressionMultiplier(null);
+        race.setSettings(settings);
 
         when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
         when(matchdayRepository.findAll()).thenReturn(List.of(matchday));
@@ -114,6 +118,8 @@ class RaceFormDataServiceTest {
         var result = service.getRaceFormData(race.getId());
 
         // then
+        assertThat(result.data().timeProgressionMode()).isEqualTo(TimeProgressionMode.EQUAL_CONDITIONS);
+        assertThat(result.data().timeProgressionMultiplier()).isNull();
         assertThat(result.data().id()).isEqualTo(race.getId());
         assertThat(result.data().homeTeamId()).isEqualTo(homeTeam.getId());
         assertThat(result.data().awayTeamId()).isEqualTo(awayTeam.getId());

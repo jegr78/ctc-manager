@@ -41,7 +41,8 @@ public class RaceFormDataService {
         }
 
         var data = new RaceService.RaceData(null, effectiveMatchdayId, null, null, null, null, null,
-                List.of(), null, null, null, null, null, null, null, null, null, null, null);
+                List.of(), null, null, null, null, null, null, null, null, null, null, null,
+                TimeProgressionMode.MULTIPLIER);
 
         return new RaceService.RaceFormData(data, matchdayRepository.findAll(), teamRepository.findAll(),
                 seasonCars, seasonTracks, Set.of(), Set.of(), null, null);
@@ -78,7 +79,7 @@ public class RaceFormDataService {
                     data.numberOfLaps(), data.tyreWearMultiplier(), data.fuelConsumptionMultiplier(),
                     data.refuelingSpeed(), data.initialFuel(), data.numberOfRequiredPitStops(),
                     data.timeProgressionMultiplier(), data.weather(), data.timeOfDay(),
-                    data.availableTyres(), data.mandatoryTyres());
+                    data.availableTyres(), data.mandatoryTyres(), data.timeProgressionMode());
         }
 
         return new RaceService.ResultsFormData(data, race, race.getMatchday().getPhase().getRaceScoring());
@@ -171,6 +172,7 @@ public class RaceFormDataService {
                 settings != null ? settings.getWeather() : null,
                 settings != null ? settings.getTimeOfDay() : null,
                 settings != null ? settings.getAvailableTyres() : null,
-                settings != null ? settings.getMandatoryTyres() : null);
+                settings != null ? settings.getMandatoryTyres() : null,
+                settings != null ? settings.getTimeProgressionMode() : TimeProgressionMode.MULTIPLIER);
     }
 }

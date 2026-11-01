@@ -112,6 +112,8 @@ docker compose -f docker-compose.prod.yml up -d
 
 * **Planning Editors:** Generator previews must use the same PhaseTeam roster as generation, with counts and round recommendations prepared by the service per group. Keep generation inputs after both binding and domain errors. Preserve pairing editor test IDs, ISO date/time values and field errors. Saving pairing metadata and publishing its Discord announcement are separate actions.
 
+* **Time Progression:** `TimeProgressionMode.MULTIPLIER` keeps numeric 0 distinct from `EQUAL_CONDITIONS`, which stores no multiplier. Legacy callers without a mode retain numeric draft semantics; incomplete null values never imply Equal Conditions. Validate explicit mode/value pairs before mutation. Graphics use `timeProgressionDisplay`; retain the numeric template variable for existing custom templates. Backups without the field restore as MULTIPLIER.
+
 ## OSIV (Open Session in View)
 
 Deliberately enabled (`spring.jpa.open-in-view=true`). The Hibernate session remains open until the end of the HTTP request so that Thymeleaf can render lazy-loaded fields. This is appropriate for this admin application using server-side rendering — no lazy-init workarounds in controllers are necessary.

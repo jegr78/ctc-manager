@@ -1,0 +1,1 @@
+ALTER TABLE race_settings ADD COLUMN time_progression_mode VARCHAR(32) NOT NULL DEFAULT 'MULTIPLIER';

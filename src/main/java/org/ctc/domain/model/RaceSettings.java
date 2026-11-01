@@ -29,7 +29,12 @@ public class RaceSettings extends BaseEntity {
 	private Integer refuelingSpeed;
 	private String initialFuel;
 	private Integer numberOfRequiredPitStops;
-	private Integer timeProgressionMultiplier;
+	@Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TimeProgressionMode timeProgressionMode = TimeProgressionMode.MULTIPLIER;
+    private Integer timeProgressionMultiplier;
+
+
 	private String weather;
 	private String timeOfDay;
 	private String availableTyres;
@@ -39,11 +44,23 @@ public class RaceSettings extends BaseEntity {
 		this.race = race;
 	}
 
+    public String getTimeProgressionDisplay() {
+        if (timeProgressionMode == TimeProgressionMode.EQUAL_CONDITIONS) return "Equal Conditions";
+        return timeProgressionMultiplier == null ? "Not set" : timeProgressionMultiplier + "x";
+    }
+
+    public boolean isTimeProgressionComplete() {
+        return timeProgressionMode == TimeProgressionMode.EQUAL_CONDITIONS
+                ? timeProgressionMultiplier == null
+                : timeProgressionMode == TimeProgressionMode.MULTIPLIER
+                    && timeProgressionMultiplier != null && timeProgressionMultiplier >= 0;
+    }
+
 	public boolean isComplete() {
 		return numberOfLaps != null && tyreWearMultiplier != null
 				&& fuelConsumptionMultiplier != null && refuelingSpeed != null
 				&& hasText(initialFuel)
-				&& numberOfRequiredPitStops != null && timeProgressionMultiplier != null
+				&& numberOfRequiredPitStops != null && isTimeProgressionComplete()
 				&& hasText(weather)
 				&& hasText(timeOfDay)
 				&& hasText(availableTyres)

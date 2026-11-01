@@ -103,6 +103,49 @@ class RaceControllerTest {
 		race = raceRepository.save(r);
 	}
 
+    @Test
+    void givenEqualConditions_whenSavingAndReopening_thenModeAndOtherInputsSurvive() throws Exception {
+        // given / when
+        mockMvc.perform(post("/admin/races/save")
+                .param("id", race.getId().toString())
+                .param("matchdayId", matchday.getId().toString())
+                .param("homeTeamId", home.getId().toString())
+                .param("awayTeamId", away.getId().toString())
+                .param("timeProgressionMode", "EQUAL_CONDITIONS")
+                .param("weather", "Test Custom S01 S02"))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attributeExists("successMessage"));
+        var saved = raceRepository.findById(race.getId()).orElseThrow().getSettings();
+        org.assertj.core.api.Assertions.assertThat(saved.getTimeProgressionMode()).isEqualTo(TimeProgressionMode.EQUAL_CONDITIONS);
+        org.assertj.core.api.Assertions.assertThat(saved.getTimeProgressionMultiplier()).isNull();
+        org.assertj.core.api.Assertions.assertThat(saved.getWeather()).isEqualTo("Test Custom S01 S02");
+        mockMvc.perform(get("/admin/races/" + race.getId() + "/edit"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("raceForm", org.hamcrest.Matchers.hasProperty("timeProgressionMode",
+                        org.hamcrest.Matchers.is(TimeProgressionMode.EQUAL_CONDITIONS))));
+    }
+
+    @Test
+    void givenContradictoryOrMalformedMode_whenSaving_thenReturnsActionableErrorAndSubmittedValues() throws Exception {
+        // given / when / then
+        for (String mode : new String[]{"EQUAL_CONDITIONS", "FORGED"}) {
+            mockMvc.perform(post("/admin/races/save")
+                    .param("id", race.getId().toString())
+                    .param("matchdayId", matchday.getId().toString())
+                    .param("homeTeamId", home.getId().toString())
+                    .param("awayTeamId", away.getId().toString())
+                    .param("timeProgressionMode", mode)
+                    .param("timeProgressionMultiplier", "0")
+                    .param("weather", "Retain this input"))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/admin/races/" + race.getId() + "/edit"))
+                    .andExpect(flash().attributeExists("errorMessage"))
+                    .andExpect(flash().attribute("raceForm", org.hamcrest.Matchers.hasProperty("weather",
+                            org.hamcrest.Matchers.is("Retain this input"))));
+        }
+    }
+
 	@Test
 	void whenGetRaces_thenReturnsRacesView() throws Exception {
 		// when

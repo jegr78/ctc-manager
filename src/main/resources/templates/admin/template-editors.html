@@ -240,7 +240,8 @@
                         <tr><td><code>refuelingSpeed</code></td><td>Refueling speed</td></tr>
                         <tr><td><code>initialFuel</code></td><td>Initial fuel setting</td></tr>
                         <tr><td><code>numberOfRequiredPitStops</code></td><td>Required pit stops</td></tr>
-                        <tr><td><code>timeProgressionMultiplier</code></td><td>Time progression multiplier</td></tr>
+                        <tr><td><code>timeProgressionMultiplier</code></td><td>Legacy numeric multiplier, absent for Equal Conditions</td></tr>
+                        <tr><td><code>timeProgressionDisplay</code></td><td>Mode-aware value, e.g. 0x or Equal Conditions, including suffix</td></tr>
                         <tr><td><code>weather</code></td><td>Weather setting</td></tr>
                         <tr><td><code>timeOfDay</code></td><td>Time of day</td></tr>
                         <tr><td><code>availableTyres</code></td><td>Available tyre types</td></tr>
@@ -776,7 +777,8 @@
                         <tr><td><code>v.weather</code></td><td>Preset weather</td></tr>
                         <tr><td><code>v.customWeather</code></td><td>Custom weather sequence</td></tr>
                         <tr><td><code>v.timeOfDay</code></td><td>Time of the day</td></tr>
-                        <tr><td><code>v.timeSpeed</code></td><td>Variable time speed rate</td></tr>
+                        <tr><td><code>v.timeSpeed</code></td><td>Mode-aware time progression, including Equal Conditions</td></tr>
+                        <tr><td><code>v.equalConditionsMode</code></td><td>On for Equal Conditions, Off for a numeric multiplier</td></tr>
                         <tr><td><code>v.tyreWear</code></td><td>Tyre wear rate</td></tr>
                         <tr><td><code>v.fuelRate</code></td><td>Fuel consumption rate</td></tr>
                         <tr><td><code>v.refuelSpeed</code></td><td>Refuelling speed</td></tr>

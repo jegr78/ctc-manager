@@ -111,6 +111,7 @@ public class SettingsGraphicService extends AbstractGraphicService implements Te
 		ctx.setVariable("initialFuel", settings.getInitialFuel());
 		ctx.setVariable("numberOfRequiredPitStops", settings.getNumberOfRequiredPitStops());
 		ctx.setVariable("timeProgressionMultiplier", settings.getTimeProgressionMultiplier());
+        ctx.setVariable("timeProgressionDisplay", settings.getTimeProgressionDisplay());
 		ctx.setVariable("weather", settings.getWeather());
 		ctx.setVariable("timeOfDay", settings.getTimeOfDay());
 		ctx.setVariable("availableTyres", settings.getAvailableTyres());
