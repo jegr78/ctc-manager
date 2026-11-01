@@ -75,3 +75,10 @@ accumulation. It copies only validated scalar fields into a fresh small object, 
 payloads nor the original object's map capacity remain retained. Tests first demonstrated rejection
 was missing, and that the old retained object changed when its caller mutated the payload. The
 bounded copy, immediate duplicate check and row budget now pass those regressions.
+
+
+The native browser error path initially returned to the document top after rejected freeze.
+Both desktop and mobile cases failed the retained-anchor assertion. All pool form actions now
+carry their section fragment, including the entry editor for clause actions. The same two
+no-JavaScript browser cases and nine controller integration tests then passed, with the pool
+section positioned below the mobile menu.

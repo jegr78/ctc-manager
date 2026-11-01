@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 <div th:fragment="editor" class="season-car-pool-editor">
-    <form th:action="@{/admin/seasons/{id}/car-pool/mode(id=${season.id})}" th:object="${poolModeForm}" method="post">
+    <form th:action="@{/admin/seasons/{id}/car-pool/mode(id=${season.id})} + '#carPool'" th:object="${poolModeForm}" method="post">
         <fieldset>
             <legend>Car pool mode</legend>
             <p>Fixed cars keep the existing individual choices. Category pools combine local car metadata into named entries.</p>
@@ -33,7 +33,7 @@
             </ul>
             <div class="inline-form" th:if="${!poolPreview.frozen}">
                 <a class="btn btn-secondary btn-sm" th:href="@{/admin/seasons/{id}/car-pool/entries/{entryId}/edit(id=${season.id},entryId=${entry.id})} + '#pool-entry-editor'">Edit entry</a>
-                <form th:action="@{/admin/seasons/{id}/car-pool/entries/{entryId}/remove(id=${season.id},entryId=${entry.id})}" method="post">
+                <form th:action="@{/admin/seasons/{id}/car-pool/entries/{entryId}/remove(id=${season.id},entryId=${entry.id})} + '#carPool'" method="post">
                     <button type="submit" class="btn btn-danger btn-sm" th:attr="aria-label=${'Remove entry ' + entry.label}">Remove entry</button>
                 </form>
             </div>
@@ -51,7 +51,7 @@
                 <ul><li th:each="notice : ${poolPreview.notices}" th:text="${notice}"></li></ul>
             </details>
         </div>
-        <form th:if="${!poolPreview.frozen}" th:action="@{/admin/seasons/{id}/car-pool/entries/save(id=${season.id})}" th:object="${poolEntryForm}" method="post" class="mt-md" id="pool-entry-editor">
+        <form th:if="${!poolPreview.frozen}" th:action="@{/admin/seasons/{id}/car-pool/entries/save(id=${season.id})} + '#pool-entry-editor'" th:object="${poolEntryForm}" method="post" class="mt-md" id="pool-entry-editor">
             <fieldset>
                 <legend th:text="*{entryId != null ? 'Edit pool entry' : 'Add pool entry'}">Pool entry</legend>
                 <input type="hidden" th:field="*{entryId}">
@@ -93,11 +93,11 @@
                 </div>
             </fieldset>
         </form>
-        <form th:if="${!poolPreview.frozen}" th:action="@{/admin/seasons/{id}/car-pool/freeze(id=${season.id})}" method="post" class="mt-md">
+        <form th:if="${!poolPreview.frozen}" th:action="@{/admin/seasons/{id}/car-pool/freeze(id=${season.id})} + '#carPool'" method="post" class="mt-md">
             <p>Freeze stores the exact eligible car IDs shown above. Empty or overlapping entries cannot be frozen.</p>
             <button type="submit" class="btn btn-primary" id="freeze-pool">Freeze complete pool</button>
         </form>
-        <form th:if="${poolPreview.frozen}" th:action="@{/admin/seasons/{id}/car-pool/reopen(id=${season.id})}" method="post" class="mt-md">
+        <form th:if="${poolPreview.frozen}" th:action="@{/admin/seasons/{id}/car-pool/reopen(id=${season.id})} + '#carPool'" method="post" class="mt-md">
             <button type="submit" class="btn btn-secondary" id="reopen-pool">Reopen unused pool</button>
         </form>
     </div>

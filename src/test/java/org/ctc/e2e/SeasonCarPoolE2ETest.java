@@ -72,6 +72,16 @@ class SeasonCarPoolE2ETest extends PlaywrightConfig {
             page.locator("#reopen-pool").click();
             assertThat(page.locator("#pool-entry-editor")).isVisible();
             assertThat(page.locator("#carPool")).containsText("Draft category pool");
+            // when
+            page.locator("#pool-label").fill("Empty entry");
+            page.locator("#pool-category-0").selectOption("GR_2");
+            page.locator("#pool-year-0").fill("1000");
+            page.locator("button[value='save']").click();
+            page.locator("#freeze-pool").click();
+            // then
+            assertThat(page.locator("#pool-problems")).containsText("Empty entry");
+            assertTrue(page.url().endsWith("#carPool"), "A rejected native submission retains its pool section anchor");
+            assertTrue((Boolean) page.evaluate("(() => { const top=document.querySelector('#carPool').getBoundingClientRect().top; return top >= 60 && top <= 96; })()"));
         } finally {
             tx.executeWithoutResult(status -> {
                 helper.deleteSeasonCascade(seasons.findById(season.getId()).orElseThrow());
