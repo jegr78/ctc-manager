@@ -216,3 +216,24 @@ runtime-version test failed at the intended assertion and the exact snapshot was
 Native Renovate44.198.3 under verified official Node24.22.2 resolves the new property to3.5.11 and
 offers stable4.0.0 as a major update. No upper version constraint or major approval gate was added.
 The updated runtime dependency requires fresh full verification and CI before the PR becomes ready.
+
+
+### published recovery qualification corrections
+
+The first v1.23.0 release attempt exposed an absent Chromium executable in the release runner.
+The offline renderer intentionally disables browser downloads. Release verification now explicitly
+installs Chromium from the selected project's classpath before testing, including resumed builds.
+The corrected workflow published the CI-green master revision without changing its release gates.
+
+The public backup command captured the real empty qualification stack with 32 tables. Its isolated
+check exposed a mode-0700 data root that the initial synthetic archive did not cover. After chown,
+the extraction helper's restricted root user cannot reopen that directory for sync. The final flush
+now uses the application owner on a read-only mount without extra capabilities. Native file checks
+verify the private root, exact inventory, credential reads, actual syncfs I/O failure and owned
+cleanup. The Docker CI job loads its built image and runs those same checks. The full native fixture
+also includes a private archive root.
+
+The patched controller passed the genuine v1.23.0 unit in isolation with credentials verified,
+outbound integration disabled, no host ports and a local Chromium graphic. This was explicitly an
+unreleased host-controller qualification. Public CLI and live-recovery acceptance remain pending
+the corrected released bundle; the original Mac installation remains untouched.
