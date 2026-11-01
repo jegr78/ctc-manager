@@ -379,7 +379,7 @@ class RehearsalGuardTest(unittest.TestCase):
         self.assertTrue(self.runtime.config['outboundPaused'])
 
 
-class NativeInputGuardTest(unittest.TestCase):
+class NativeSourceFixture(unittest.TestCase):
     def setUp(self):
         from types import SimpleNamespace
         from unittest.mock import patch
@@ -403,6 +403,8 @@ class NativeInputGuardTest(unittest.TestCase):
         (self.root / 'google-credentials.json').write_text(json.dumps(self.credential))
         return migration.MacSource(self.root, **kwargs)
 
+
+class NativeInputGuardTest(NativeSourceFixture):
     def test_native_source_requires_explicit_loopback_ctc_database(self):
         for url in ['jdbc:mysql://localhost/ctcdb', 'jdbc:mariadb://outside.invalid/ctcdb',
                     'jdbc:mariadb://localhost/other', 'jdbc:mariadb://user:password@localhost/ctcdb',
@@ -479,3 +481,88 @@ class NativeInputGuardTest(unittest.TestCase):
                 migration.main()
         self.assertIn('refused', str(error.exception))
         rehearse.assert_not_called()
+
+
+class FrozenCaptureTest(NativeSourceFixture):
+    def setUp(self):
+        super().setUp()
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        self.source = self.construct()
+        self.asset = self.root / 'data/local/uploads/asset.bin'
+        self.asset.write_bytes(b'original')
+        self.source.idle = Mock()
+        self.metadata = {'databaseVersion': '13.0.2-MariaDB', 'schemaHistory': [str(i) for i in range(1, 7)], 'records': {'teams': 33}}
+        self.source.metadata = Mock(return_value=self.metadata)
+        def dump(arguments, **kwargs):
+            kwargs['stdout'].write(b'-- private synthetic SQL\n')
+            return SimpleNamespace(returncode=0)
+        self.source.subprocess = SimpleNamespace(run=dump, PIPE=-1)
+        self.destination = self.root / 'export'
+
+    def test_database_drift_never_seals_a_successful_source_export(self):
+        self.source.metadata.side_effect = [self.metadata, {**self.metadata, 'records': {'teams': 34}}]
+        with self.assertRaisesRegex(ValueError, 'source changed during export'):
+            self.source.export(self.destination)
+        self.assertFalse((self.destination / 'source.json').exists())
+        self.assertEqual(self.asset.read_bytes(), b'original')
+
+    def test_changed_archive_bytes_are_refused_even_when_source_is_restored(self):
+        import tarfile
+        from unittest.mock import patch
+        original = tarfile.TarFile.add
+        def changing_add(archive, path, **kwargs):
+            if Path(path) != self.asset:
+                return original(archive, path, **kwargs)
+            self.asset.write_bytes(b'changed during capture')
+            try:
+                return original(archive, path, **kwargs)
+            finally:
+                self.asset.write_bytes(b'original')
+        with patch('tarfile.TarFile.add', changing_add), self.assertRaisesRegex(ValueError, 'files changed while archiving'):
+            self.source.export(self.destination)
+        self.assertFalse((self.destination / 'source.json').exists())
+        self.assertEqual(self.asset.read_bytes(), b'original')
+
+    def test_changed_configuration_copy_is_refused_without_touching_source(self):
+        import shutil
+        from unittest.mock import patch
+        original = shutil.copyfile
+        def corrupt_copy(source, destination):
+            result = original(source, destination)
+            if destination.name == 'google.json':
+                destination.write_text('corrupted copy')
+            return result
+        with patch('shutil.copyfile', corrupt_copy), self.assertRaisesRegex(ValueError, 'configuration changed while copying'):
+            self.source.export(self.destination)
+        self.assertFalse((self.destination / 'source.json').exists())
+        self.assertEqual(self.asset.read_bytes(), b'original')
+
+    def changed_after_copy(self, change):
+        import shutil
+        from unittest.mock import patch
+        original = shutil.copyfile
+        def copy_then_change(source, destination):
+            result = original(source, destination)
+            if destination.name == 'google.json':
+                change()
+            return result
+        return patch('shutil.copyfile', copy_then_change)
+
+    def test_new_source_file_after_archive_prevents_false_freeze(self):
+        with self.changed_after_copy(lambda: (self.asset.parent / 'new-file').write_text('new write')), \
+                self.assertRaisesRegex(ValueError, 'source changed during export'):
+            self.source.export(self.destination)
+        self.assertFalse((self.destination / 'source.json').exists())
+
+    def test_new_source_bytes_after_archive_prevent_false_freeze(self):
+        with self.changed_after_copy(lambda: self.asset.write_bytes(b'new write')), \
+                self.assertRaisesRegex(ValueError, 'source changed during export'):
+            self.source.export(self.destination)
+        self.assertFalse((self.destination / 'source.json').exists())
+
+    def test_reappearing_writer_prevents_sealing_after_dump(self):
+        self.source.idle.side_effect = [None, ValueError('source writer returned')]
+        with self.assertRaisesRegex(ValueError, 'source writer returned'):
+            self.source.export(self.destination)
+        self.assertFalse((self.destination / 'source.json').exists())
