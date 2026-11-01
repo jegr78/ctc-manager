@@ -303,6 +303,7 @@ class MaintenanceTest(unittest.TestCase):
         owner.chmod(0o600)
         argv = ['maintenance.py', '--directory', str(self.root), 'maintenance']
         with patch.object(sys, 'argv', argv), patch.object(maintenance, 'NativeRuntime', return_value=self.runtime),                 patch.object(maintenance, 'UNIT_ROOT', self.units), patch.object(maintenance, 'run_backup') as run:
+            run.return_value = {'lastAttempt': {'stage': 'completed'}, 'local': {'unit': '/fixture'}}
             with self.assertRaisesRegex(ValueError, 'launcher-owned'):
                 maintenance.main()
             run.assert_not_called()
