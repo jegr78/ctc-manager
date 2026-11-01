@@ -130,6 +130,22 @@ jobs:
         if: steps.plan.outputs.publish == 'true' && steps.version.outputs.resume == 'true'
         run: git checkout --quiet "v${{ steps.version.outputs.new_version }}"
 
+      - name: Cache Playwright Chromium
+        if: steps.plan.outputs.publish == 'true' && (steps.version.outputs.resume != 'true' || steps.plan.outputs.github_release == 'true')
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-release-playwright-${{ hashFiles('pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-release-playwright-
+            ${{ runner.os }}-playwright-
+
+      - name: Install Playwright Chromium
+        if: steps.plan.outputs.publish == 'true' && (steps.version.outputs.resume != 'true' || steps.plan.outputs.github_release == 'true')
+        run: |
+          ./mvnw dependency:build-classpath -DincludeScope=test -Dmdep.outputFile=/tmp/ctc-release-classpath.txt -q
+          java -cp "$(cat /tmp/ctc-release-classpath.txt)" com.microsoft.playwright.CLI install --with-deps chromium
+
       - name: Build and verify
         if: steps.plan.outputs.publish == 'true' && (steps.version.outputs.resume != 'true' || steps.plan.outputs.github_release == 'true')
         run: ./mvnw verify -Dspring.profiles.active=dev
