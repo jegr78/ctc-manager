@@ -25,6 +25,7 @@ public class CarService {
 	private final RaceRepository raceRepository;
 	private final SeasonRepository seasonRepository;
 	private final FileStorageService fileStorageService;
+	private final CarMetadataService metadataService;
 
 	@Transactional(readOnly = true)
 	public List<Car> findAllSorted() {
@@ -38,28 +39,41 @@ public class CarService {
 	}
 
 	@Transactional
-	public Car save(UUID id, String manufacturer, String name) {
-		Car car;
-		if (id != null) {
-			car = carRepository.findById(id)
-					.orElseThrow(() -> new EntityNotFoundException("Car", id));
-			car.setManufacturer(manufacturer);
-			car.setName(name);
-		} else {
-			car = new Car(manufacturer, name);
-		}
-		try {
-			car = carRepository.saveAndFlush(car);
-		} catch (DataIntegrityViolationException e) {
-			throw new BusinessRuleException("A car with this manufacturer and name already exists");
-		}
-		log.info("Saved car: {} {}", car.getManufacturer(), car.getName());
-		return car;
-	}
+    public Car save(UUID id, String manufacturer, String name) {
+        return saveCar(id, manufacturer, name, null);
+    }
+
+    @Transactional
+    public Car save(UUID id, String manufacturer, String name, CarMetadataService.ManualMetadata metadata) {
+        CarMetadataService.validateYear(metadata.modelYear());
+        return saveCar(id, manufacturer, name, metadata);
+    }
+
+    private Car saveCar(UUID id, String manufacturer, String name, CarMetadataService.ManualMetadata metadata) {
+        if (carRepository.findAllByManufacturerAndName(manufacturer, name).stream()
+                .anyMatch(existing -> !existing.getId().equals(id))) {
+            throw new BusinessRuleException("A car with this manufacturer and name already exists");
+        }
+        Car car = id == null ? new Car(manufacturer, name) : carRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new EntityNotFoundException("Car", id));
+        car.setManufacturer(manufacturer);
+        car.setName(name);
+        if (metadata != null) {
+            metadataService.applyManual(car, metadata.category(), metadata.drivetrain(), metadata.modelYear(),
+                    metadata.categoryOverride(), metadata.drivetrainOverride(), metadata.modelYearOverride());
+        }
+        try {
+            car = carRepository.saveAndFlush(car);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessRuleException("A car with this manufacturer and name already exists");
+        }
+        log.info("Saved car: {} {}", car.getManufacturer(), car.getName());
+        return car;
+    }
 
 	@Transactional
 	public void delete(UUID id) {
-		var car = carRepository.findById(id)
+		var car = carRepository.findByIdForUpdate(id)
 				.orElseThrow(() -> new EntityNotFoundException("Car", id));
 
 		if (raceRepository.existsByCarId(id)) {
@@ -82,7 +96,7 @@ public class CarService {
 
 	@Transactional
 	public void uploadImage(UUID id, MultipartFile image) {
-		var car = carRepository.findById(id)
+		var car = carRepository.findByIdForUpdate(id)
 				.orElseThrow(() -> new EntityNotFoundException("Car", id));
 		try {
 			if (car.getImageUrl() != null) {

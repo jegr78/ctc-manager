@@ -33,6 +33,29 @@ public class Car extends BaseEntity {
 	@Column(name = "image_url", length = 500)
 	private String imageUrl;
 
+    @Enumerated(EnumType.STRING)
+    private CarCategory category;
+    @Enumerated(EnumType.STRING)
+    private Drivetrain drivetrain;
+    private Integer modelYear;
+    private Integer proposedModelYear;
+    @Column(length = 500)
+    private String categorySource;
+    @Column(length = 500)
+    private String drivetrainSource;
+    @Column(length = 500)
+    private String modelYearSource;
+    @Column(length = 1000)
+    private String modelYearEvidence;
+    @Column(length = 1000)
+    private String proposedModelYearEvidence;
+    @Column(nullable = false)
+    private boolean categoryOverride;
+    @Column(nullable = false)
+    private boolean drivetrainOverride;
+    @Column(nullable = false)
+    private boolean modelYearOverride;
+
 	public Car(String manufacturer, String name) {
 		this.manufacturer = manufacturer;
 		this.name = name;

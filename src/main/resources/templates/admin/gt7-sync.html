@@ -4,10 +4,11 @@
 <body>
 <section class="gt7-sync">
     <div class="toolbar"><h1>GT7 Sync</h1><div class="actions"><a th:href="@{/admin/cars}" class="btn btn-secondary">Cars</a><a th:href="@{/admin/tracks}" class="btn btn-secondary">Tracks</a></div></div>
-    <p class="admin-list-intro text-dim">Add cars and tracks from the official Gran Turismo catalog.</p>
+    <p class="admin-list-intro text-dim">Import new cars and tracks, or review metadata updates for existing cars.</p>
+    <div th:each="warning : ${syncWarnings}" class="alert alert-warning" th:text="${warning}"></div>
     <div class="card sync-intro">
         <h2>Update your race catalog</h2>
-        <ol class="sync-steps"><li><strong>Compare</strong><span>Fetch the latest lists from gran-turismo.com.</span></li><li><strong>Select</strong><span>Review new cars and tracks. Existing entries are marked.</span></li><li><strong>Import</strong><span>Add your selected entries with their images.</span></li></ol>
+        <ol class="sync-steps"><li><strong>Compare</strong><span>Fetch the latest lists from gran-turismo.com.</span></li><li><strong>Select</strong><span>Review new entries and select existing car metadata updates separately.</span></li><li><strong>Import</strong><span>Add your selected entries with their images.</span></li></ol>
         <form th:action="@{/admin/gt7-sync/preview}" method="post" id="fetchForm" data-sync-form data-sync-action="fetch">
             <button type="submit" id="fetchBtn" class="btn btn-primary">Fetch &amp; Compare</button>
             <p class="sync-progress text-dim" data-sync-progress role="status" hidden>Fetching car and track lists. This may take a few seconds.</p>

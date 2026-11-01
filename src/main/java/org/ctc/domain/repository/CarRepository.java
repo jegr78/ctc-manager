@@ -15,6 +15,17 @@ public interface CarRepository extends JpaRepository<Car, UUID> {
 
 	Optional<Car> findByGt7Id(String gt7Id);
 
+    List<Car> findAllByGt7Id(String gt7Id);
+    List<Car> findAllByManufacturerAndName(String manufacturer, String name);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from Car c where c.gt7Id = :gt7Id order by c.id")
+    List<Car> findAllByGt7IdForUpdate(String gt7Id);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from Car c where c.id = :id")
+    Optional<Car> findByIdForUpdate(UUID id);
+
 	boolean existsByGt7Id(String gt7Id);
 
 	/**

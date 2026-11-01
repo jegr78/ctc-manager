@@ -1,0 +1,16 @@
+ALTER TABLE cars ADD COLUMN category VARCHAR(32);
+ALTER TABLE cars ADD COLUMN drivetrain VARCHAR(32);
+ALTER TABLE cars ADD COLUMN model_year INTEGER;
+ALTER TABLE cars ADD COLUMN proposed_model_year INTEGER;
+ALTER TABLE cars ADD COLUMN category_source VARCHAR(500);
+ALTER TABLE cars ADD COLUMN drivetrain_source VARCHAR(500);
+ALTER TABLE cars ADD COLUMN model_year_source VARCHAR(500);
+ALTER TABLE cars ADD COLUMN model_year_evidence VARCHAR(1000);
+ALTER TABLE cars ADD COLUMN proposed_model_year_evidence VARCHAR(1000);
+ALTER TABLE cars ADD COLUMN category_override BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE cars ADD COLUMN drivetrain_override BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE cars ADD COLUMN model_year_override BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE cars ADD CONSTRAINT ck_cars_category CHECK (category IS NULL OR category IN ('GR_1', 'GR_2', 'GR_3', 'GR_4', 'GR_B', 'GR_N', 'GR_X'));
+ALTER TABLE cars ADD CONSTRAINT ck_cars_drivetrain CHECK (drivetrain IS NULL OR drivetrain IN ('FR', 'MR', 'RR', 'FF', 'FOUR_WD'));
+ALTER TABLE cars ADD CONSTRAINT ck_cars_model_year CHECK (model_year IS NULL OR model_year BETWEEN 1000 AND 9999);
+ALTER TABLE cars ADD CONSTRAINT ck_cars_proposed_model_year CHECK (proposed_model_year IS NULL OR proposed_model_year BETWEEN 1000 AND 9999);

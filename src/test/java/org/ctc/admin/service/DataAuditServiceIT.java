@@ -105,6 +105,27 @@ class DataAuditServiceIT {
 	}
 
     @Test
+    void givenAcceptedYearWithoutEvidence_whenAuditing_thenReportsCarAndLeavesItUntouched() {
+        // given
+        var car = new org.ctc.domain.model.Car("Test_Audit_Metadata_" + id, "Unreviewed");
+        car.setModelYear(2020);
+        entityManager.persist(car);
+        entityManager.flush();
+        var before = jdbcTemplate.queryForMap("SELECT * FROM cars WHERE id = ?", car.getId());
+        // when
+        var findings = dataAuditService.audit().sections().stream()
+                .filter(section -> section.category().name().equals("CAR_METADATA"))
+                .flatMap(section -> section.findings().stream()).toList();
+        // then
+        assertThat(findings).anySatisfy(finding -> {
+            assertThat(finding.subject()).contains(car.getId().toString());
+            assertThat(finding.evidence()).contains("2020", "provenance");
+            assertThat(finding.resolution()).isEqualTo(AMBIGUOUS);
+        });
+        assertThat(jdbcTemplate.queryForMap("SELECT * FROM cars WHERE id = ?", car.getId())).isEqualTo(before);
+    }
+
+    @Test
     void givenContradictoryTimeMode_whenAuditing_thenReportsWithoutRepairing() {
         // given
         var fixture = testHelper.createFullSeasonFixture("Test_TimeAudit_" + id);

@@ -16,21 +16,6 @@ import org.springframework.jdbc.core.ParameterizedPreparedStatementSetter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-/**
- * Phase 75 / Plan 05 — Unit test for {@link CarRestorer}.
- *
- * <p>Verifies the {@link org.ctc.backup.restore.EntityRestorer} contract for the {@code cars} leaf
- * entity:
- * <ul>
- *   <li>{@link CarRestorer#tableName()} returns {@code "cars"}.</li>
- *   <li>{@code restore} invokes exactly one {@code batchUpdate} with a hard-coded INSERT.</li>
- *   <li>The setter binds {@code id}, {@code manufacturer}, {@code name}, {@code gt7_id},
- *       {@code image_url}, {@code created_at}, {@code updated_at} (7 columns total per V1
- *       schema) in column order.</li>
- *   <li>Nullable {@code gt7Id} / {@code imageUrl} are handled via {@code setNull} when missing
- *       in the source JSON.</li>
- * </ul>
- */
 class CarRestorerTest {
 
     private final ObjectMapper mapper = new ObjectMapper();
@@ -41,6 +26,37 @@ class CarRestorerTest {
     @BeforeEach
     void setUp() {
         jdbc = mock(JdbcTemplate.class);
+    }
+
+    static java.util.stream.Stream<String> invalidMetadataRows() {
+        return java.util.stream.Stream.of(
+                "{\"modelYear\":\"2020\"}", "{\"proposedModelYear\":2000.5}",
+                "{\"category\":\"BOGUS\"}", "{\"drivetrain\":\"AWD\"}",
+                "{\"modelYear\":2020,\"modelYearSource\":\"\",\"modelYearEvidence\":\"\"}",
+                "{\"modelYearOverride\":\"true\"}", "{\"categorySource\":true}",
+                "{\"modelYearEvidence\":\"" + "x".repeat(1001) + "\"}");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.MethodSource("invalidMetadataRows")
+    void givenInvalidMetadata_whenRestoring_thenRejectsEntireBatchBeforeAnyWrite(String json) throws Exception {
+        // given
+        var valid = mapper.readTree("{\"id\":\"11111111-1111-1111-1111-111111111111\"}");
+        var invalid = mapper.readTree(json);
+        // when / then
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> restorer.restore(List.of(valid, invalid), jdbc))
+                .isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(jdbc);
+    }
+
+    @Test
+    void givenInvalidAcceptedYear_whenRestoring_thenRejectsBeforeAnyWrite() throws Exception {
+        // given
+        var row = mapper.readTree("{\"modelYear\":99}");
+        // when / then
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> restorer.restore(List.of(row), jdbc))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("year");
+        verifyNoInteractions(jdbc);
     }
 
     @Test
@@ -58,6 +74,10 @@ class CarRestorerTest {
                     "manufacturer": "Toyota",
                     "name": "GR Yaris",
                     "gt7Id": "GT7-123",
+                    "category": "GR_3", "drivetrain": "FOUR_WD", "modelYear": 2020, "proposedModelYear": 2025,
+                    "categorySource": "MANUAL", "drivetrainSource": "MANUAL", "modelYearSource": "MANUAL",
+                    "modelYearEvidence": "Administrative model year 2020", "proposedModelYearEvidence": "GTPlus code 3531 year 2025",
+                    "categoryOverride": true, "drivetrainOverride": true, "modelYearOverride": true,
                     "imageUrl": "http://example.com/yaris.png",
                     "createdAt": "2024-01-15T10:30:00",
                     "updatedAt": "2024-02-20T11:45:00"
@@ -83,8 +103,9 @@ class CarRestorerTest {
 
         assertThat(sqlCaptor.getValue())
                 .contains("INSERT INTO cars")
-                .contains("(id, manufacturer, name, gt7_id, image_url, created_at, updated_at)")
-                .contains("VALUES (?, ?, ?, ?, ?, ?, ?)");
+                .contains("id, manufacturer, name, gt7_id, image_url, created_at, updated_at,")
+                .contains("proposed_model_year_evidence, category_override, drivetrain_override, model_year_override")
+                .contains("VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         // verify the setter binds correct values in column order
         PreparedStatement ps = mock(PreparedStatement.class);
@@ -97,6 +118,16 @@ class CarRestorerTest {
         verify(ps).setString(5, "http://example.com/yaris.png");
         verify(ps).setTimestamp(6, Timestamp.valueOf(LocalDateTime.parse("2024-01-15T10:30:00")));
         verify(ps).setTimestamp(7, Timestamp.valueOf(LocalDateTime.parse("2024-02-20T11:45:00")));
+        verify(ps).setString(8, "GR_3");
+        verify(ps).setString(9, "FOUR_WD");
+        verify(ps).setInt(10, 2020);
+        verify(ps).setInt(11, 2025);
+        verify(ps).setString(14, "MANUAL");
+        verify(ps).setString(15, "Administrative model year 2020");
+        verify(ps).setString(16, "GTPlus code 3531 year 2025");
+        verify(ps).setBoolean(17, true);
+        verify(ps).setBoolean(18, true);
+        verify(ps).setBoolean(19, true);
     }
 
     @Test
@@ -128,6 +159,11 @@ class CarRestorerTest {
         // verify nullable fields use setNull (VARCHAR) when JSON value missing / null
         verify(ps).setNull(4, java.sql.Types.VARCHAR);
         verify(ps).setNull(5, java.sql.Types.VARCHAR);
+        verify(ps).setNull(10, java.sql.Types.INTEGER);
+        verify(ps).setNull(11, java.sql.Types.INTEGER);
+        verify(ps).setBoolean(17, false);
+        verify(ps).setBoolean(18, false);
+        verify(ps).setBoolean(19, false);
     }
 
     @Test
@@ -160,6 +196,11 @@ class CarRestorerTest {
 
         verify(ps).setNull(4, java.sql.Types.VARCHAR);
         verify(ps).setNull(5, java.sql.Types.VARCHAR);
+        verify(ps).setNull(10, java.sql.Types.INTEGER);
+        verify(ps).setNull(11, java.sql.Types.INTEGER);
+        verify(ps).setBoolean(17, false);
+        verify(ps).setBoolean(18, false);
+        verify(ps).setBoolean(19, false);
     }
 
     @Test

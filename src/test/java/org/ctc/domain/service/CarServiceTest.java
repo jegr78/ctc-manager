@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.multipart.MultipartFile;
@@ -40,8 +41,21 @@ class CarServiceTest {
 	@Mock
 	private FileStorageService fileStorageService;
 
+	@Spy private CarMetadataService metadataService = new CarMetadataService();
+
 	@InjectMocks
 	private CarService carService;
+
+
+    @Test
+    void givenInvalidManualYear_whenSaving_thenRejectsBeforeAnyRepositoryMutation() {
+        // given
+        var metadata = new CarMetadataService.ManualMetadata(null, null, 99, false, false, false);
+        // when / then
+        assertThatThrownBy(() -> carService.save(UUID.randomUUID(), "Test", "Test Car", metadata))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("four-digit");
+        verifyNoInteractions(carRepository);
+    }
 
 	@Nested
 	class FindAllSortedTest {
@@ -115,7 +129,7 @@ class CarServiceTest {
 			var existing = new Car("Old Manufacturer", "Old Name");
 			existing.setId(id);
 
-			when(carRepository.findById(id)).thenReturn(Optional.of(existing));
+			when(carRepository.findByIdForUpdate(id)).thenReturn(Optional.of(existing));
 			when(carRepository.saveAndFlush(any(Car.class))).thenAnswer(inv -> inv.getArgument(0));
 
 			// when
@@ -148,7 +162,7 @@ class CarServiceTest {
 			var id = UUID.randomUUID();
 			var car = new Car("Honda", "NSX");
 			car.setId(id);
-			when(carRepository.findById(id)).thenReturn(Optional.of(car));
+			when(carRepository.findByIdForUpdate(id)).thenReturn(Optional.of(car));
 			when(raceRepository.existsByCarId(id)).thenReturn(false);
 			when(seasonRepository.findAll()).thenReturn(List.of());
 
@@ -165,7 +179,7 @@ class CarServiceTest {
 			var id = UUID.randomUUID();
 			var car = new Car("Honda", "NSX");
 			car.setId(id);
-			when(carRepository.findById(id)).thenReturn(Optional.of(car));
+			when(carRepository.findByIdForUpdate(id)).thenReturn(Optional.of(car));
 			when(raceRepository.existsByCarId(id)).thenReturn(true);
 
 			// when / then
@@ -180,7 +194,7 @@ class CarServiceTest {
 			var id = UUID.randomUUID();
 			var car = new Car("Honda", "NSX");
 			car.setId(id);
-			when(carRepository.findById(id)).thenReturn(Optional.of(car));
+			when(carRepository.findByIdForUpdate(id)).thenReturn(Optional.of(car));
 			when(raceRepository.existsByCarId(id)).thenReturn(false);
 
 			var season = mock(Season.class);
@@ -200,7 +214,7 @@ class CarServiceTest {
 			var car = new Car("Honda", "NSX");
 			car.setId(id);
 			car.setImageUrl("/uploads/cars/image.png");
-			when(carRepository.findById(id)).thenReturn(Optional.of(car));
+			when(carRepository.findByIdForUpdate(id)).thenReturn(Optional.of(car));
 			when(raceRepository.existsByCarId(id)).thenReturn(false);
 			when(seasonRepository.findAll()).thenReturn(List.of());
 
@@ -224,7 +238,7 @@ class CarServiceTest {
 			car.setId(id);
 			var image = mock(MultipartFile.class);
 
-			when(carRepository.findById(id)).thenReturn(Optional.of(car));
+			when(carRepository.findByIdForUpdate(id)).thenReturn(Optional.of(car));
 			when(fileStorageService.storeImage("cars", id, image)).thenReturn("/uploads/cars/new.png");
 			when(carRepository.save(any(Car.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -245,7 +259,7 @@ class CarServiceTest {
 			car.setImageUrl("/uploads/cars/old.png");
 			var image = mock(MultipartFile.class);
 
-			when(carRepository.findById(id)).thenReturn(Optional.of(car));
+			when(carRepository.findByIdForUpdate(id)).thenReturn(Optional.of(car));
 			when(fileStorageService.storeImage("cars", id, image)).thenReturn("/uploads/cars/new.png");
 			when(carRepository.save(any(Car.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -265,7 +279,7 @@ class CarServiceTest {
 			car.setId(id);
 			var image = mock(MultipartFile.class);
 
-			when(carRepository.findById(id)).thenReturn(Optional.of(car));
+			when(carRepository.findByIdForUpdate(id)).thenReturn(Optional.of(car));
 			when(fileStorageService.storeImage("cars", id, image))
 					.thenThrow(new IOException("Disk full"));
 
@@ -283,7 +297,7 @@ class CarServiceTest {
 			car.setId(id);
 			var image = mock(MultipartFile.class);
 
-			when(carRepository.findById(id)).thenReturn(Optional.of(car));
+			when(carRepository.findByIdForUpdate(id)).thenReturn(Optional.of(car));
 			when(fileStorageService.storeImage("cars", id, image))
 					.thenThrow(new RuntimeException("unexpected error"));
 

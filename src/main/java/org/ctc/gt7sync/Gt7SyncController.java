@@ -1,7 +1,9 @@
 package org.ctc.gt7sync;
 
 import java.io.IOException;
-import java.util.List;
+import org.ctc.admin.dto.Gt7SyncForm;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -9,7 +11,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Slf4j
@@ -39,19 +40,23 @@ public class Gt7SyncController {
 	}
 
 	@PostMapping("/execute")
-	public String execute(@RequestParam(required = false) List<String> selectedCars,
-	                      @RequestParam(required = false) List<String> selectedTracks,
-	                      RedirectAttributes redirectAttributes) {
+	public String execute(@ModelAttribute Gt7SyncForm form, BindingResult bindingResult,
+                          RedirectAttributes redirectAttributes) {
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Invalid sync selection. Fetch and review the catalog again.");
+            return "redirect:/admin/gt7-sync";
+        }
 		try {
 			var result = syncService.executeSync(
-					selectedCars != null ? selectedCars : List.of(),
-					selectedTracks != null ? selectedTracks : List.of());
+					form.getSelectedCars(), form.getSelectedTracks(), form.getSelectedMetadata(), form.getPreviewId());
 
 			String msg = result.carsImported() + " cars and " + result.tracksImported() + " tracks imported in " + result.durationSeconds() + "s";
+			msg += "; " + result.carsUpdated() + " car metadata updates";
 			if (!result.errors().isEmpty()) {
 				msg += " (" + result.errors().size() + " warnings)";
 			}
 			redirectAttributes.addFlashAttribute("successMessage", msg);
+            if (!result.errors().isEmpty()) redirectAttributes.addFlashAttribute("syncWarnings", result.errors());
 		} catch (IOException | RuntimeException e) {
 			log.error("GT7 sync execute failed", e);
 			redirectAttributes.addFlashAttribute("errorMessage", "Import failed: " + e.getMessage());
