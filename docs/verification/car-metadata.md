@@ -34,7 +34,7 @@ Delivery and tracker completion are recorded on [issue #274](https://github.com/
 - [x] Implement bounded source parsing, validation and field-level provenance.
 - [x] Verify identities, manual overrides, selection state and preview consistency end to end.
 - [x] Verify migration/restore and desktop/mobile/native form behavior.
-- [ ] Review code and security, fix findings and falsify new guards individually.
+- [x] Review code and security, fix findings and falsify new guards individually.
 - [ ] Run committed-head `clean verify -Pe2e`, wait for CI and merge.
 - [ ] Reconcile #274 and parent #273, update Wiki and remove the landed branch.
 
@@ -59,3 +59,20 @@ flow saved a manual 2020 year, cleared it with its override retained, then appli
 two existing-car metadata updates with zero new imports. Desktop 1440×1050 and
 mobile 390×844 views were inspected through playwright-cli. Screenshots remain
 in the ignored `.screenshots/` directory.
+
+## Individual guard falsification
+
+35 independent mutations were applied to committed checkpoints, observed red at
+behavioral assertions, and restored byte for byte. They cover field overrides,
+explicit unknown years, accepted-year preservation, century handling, source ID
+joins/types/ranges, candidate integer/range validation, payload/frame bounds,
+preview revalidation and store hash/expiry/capacity, restore value/provenance/flag
+validation, all four database constraints, local/name identity ambiguity, and the
+car lock order. Compilation errors and unprepared mock exceptions did not count
+as evidence. The lock-order mutation reproduced the lost-update assertion with
+two real transactions after the correction had been committed.
+
+The final authoritative run uses `./mvnw clean verify -Pe2e` on the restored,
+committed head. Surefire runs untagged tests; Failsafe runs integration tests and
+the profile's separate Playwright execution. Both Failsafe summaries, coverage,
+SpotBugs and FindSecBugs must pass before the PR is published.
