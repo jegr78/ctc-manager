@@ -235,8 +235,10 @@ also includes a private archive root.
 
 The patched controller passed the genuine v1.23.0 unit in isolation with credentials verified,
 outbound integration disabled, no host ports and a local Chromium graphic. This was explicitly an
-unreleased host-controller qualification. Public CLI and live-recovery acceptance remain pending
-the corrected released bundle; the original Mac installation remains untouched.
+unreleased host-controller qualification. Published v1.23.1 subsequently passed public backup,
+isolated restore, independent-storage live recovery and explicit integration resumption. Final
+checks confirmed exact 32-table metadata, restored secrets, paused integrations and preserved
+previous volumes. The original Mac installation remains untouched.
 
 
 ## exact release updates, issue 298
