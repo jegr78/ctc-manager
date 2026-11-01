@@ -70,7 +70,7 @@ source path, installation/unit tags and sealed manifest checksum. The remote ret
 uses that exact snapshot, validates every artifact and runs the isolated full application proof.
 Its `retrieval` receipt is separate from upload success.
 
-`doctor` includes backup freshness and missing configuration, and exits nonzero while protection
+`doctor` includes backup freshness, configuration and the expected backup mount, and exits nonzero while protection
 is incomplete. `backup-check` exits nonzero when
 any required evidence is absent, older than 30 hours or failed. The hourly timer catches a missed
 daily run even when the last successful backup service status is still green. Check the journal,

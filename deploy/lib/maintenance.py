@@ -319,6 +319,11 @@ def main():
             load_backup(root)
         except (OSError, ValueError, KeyError, TypeError):
             problems.append('backup-configuration-incomplete')
+        try:
+            doctor_runtime = NativeRuntime(root, args.deploy_root or (root/'current').resolve())
+            doctor_runtime.check_destination(UNIT_ROOT)
+        except (OSError, ValueError, KeyError, TypeError):
+            problems.append('backup-mount-unavailable')
         print(json.dumps({'backupStatus': 'incomplete' if problems else 'ready', 'issues': problems}))
         if problems:
             raise ValueError('backup readiness incomplete')

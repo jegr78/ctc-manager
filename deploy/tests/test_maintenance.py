@@ -236,12 +236,18 @@ class MaintenanceTest(unittest.TestCase):
     def test_doctor_returns_failure_for_missing_configuration_or_stale_evidence(self):
         self.evidence([])
         argv=['maintenance.py','--directory',str(self.root),'doctor']
-        with patch.object(sys,'argv',argv),patch.object(maintenance.time,'time',return_value=self.now):maintenance.main()
+        with patch.object(sys,'argv',argv),patch.object(maintenance.time,'time',return_value=self.now),patch.object(maintenance,'NativeRuntime',return_value=self.runtime):maintenance.main()
         (self.root/'config/backup.json').unlink()
         with patch.object(sys,'argv',argv),patch.object(maintenance.time,'time',return_value=self.now),self.assertRaisesRegex(ValueError,'readiness'):maintenance.main()
         atomic_json(self.root/'config/backup.json',self.config)
         state=self.evidence([]);state['local']['completedAt']=0;atomic_json(self.root/'state/backups.json',state)
         with patch.object(sys,'argv',argv),patch.object(maintenance.time,'time',return_value=self.now),self.assertRaisesRegex(ValueError,'readiness'):maintenance.main()
+
+    def test_doctor_refuses_a_missing_backup_mount_even_with_fresh_evidence(self):
+        self.evidence([])
+        self.runtime.check_destination=lambda destination:(_ for _ in ()).throw(ValueError('missing device'))
+        with patch.object(sys,'argv',['maintenance.py','--directory',str(self.root),'doctor']),patch.object(maintenance.time,'time',return_value=self.now),patch.object(maintenance,'NativeRuntime',return_value=self.runtime):
+            with self.assertRaisesRegex(ValueError,'readiness'):maintenance.main()
 
     def test_historical_remote_unit_uses_matching_trusted_installed_release(self):
         unit=self.make_unit();expected=json.loads((unit/'release.json').read_text())
