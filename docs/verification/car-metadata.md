@@ -84,3 +84,19 @@ and 91.94% line coverage. SpotBugs then reported
 component final prevents subclass finalizers from observing partial construction;
 no analysis rule was suppressed. The authoritative build is repeated on this
 corrected committed head before publication.
+
+## Fresh locked state
+
+A further two-transaction regression showed that a pessimistic query can return
+an already managed, stale Car. This is reachable when an earlier lookup has
+populated the persistence context, including an ambiguous-name lookup earlier in
+a sync batch. `CarLockingRepository` now locks and refreshes matching rows before
+any write policy reads them. The tests verify stale-preview rejection and an
+explicit unknown override after a concurrent accepted year, with persisted manual
+fields and images unchanged.
+
+Snapshot hashes cover identity, image, metadata and override values. They exclude
+technical auditing timestamps, whose database precision can change on refresh
+without a business change. A deterministic rounding test also confirms that
+changing an override still invalidates the snapshot. The second full run was
+green before this additional correction; the final full run includes it.

@@ -128,8 +128,9 @@ public class CarMetadataService {
 
     public String fingerprint(Car car, ScrapedCar official, Proposal proposal) {
         try {
+            // Compare business values; a database refresh may round auditing timestamps.
             var state = car == null ? List.of() : Arrays.asList(car.getId(), car.getGt7Id(), car.getManufacturer(), car.getName(), car.getImageUrl(),
-                    metadataValues(car), car.isCategoryOverride(), car.isDrivetrainOverride(), car.isModelYearOverride(), Objects.toString(car.getUpdatedAt(), ""));
+                    metadataValues(car), car.isCategoryOverride(), car.isDrivetrainOverride(), car.isModelYearOverride());
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                     .digest(JSON.writeValueAsString(Arrays.asList(official, proposal, state)).getBytes(StandardCharsets.UTF_8)));
         } catch (JsonProcessingException | NoSuchAlgorithmException e) {

@@ -142,4 +142,20 @@ class CarMetadataServiceTest {
         assertThat(proposal.modelYearEvidence()).isEqualTo("Explicitly unknown model year");
     }
 
+    @Test
+    void givenOnlyTimestampRounding_whenFingerprinting_thenBusinessSnapshotStaysStableAndOverridesStillInvalidateIt() {
+        // given
+        var car = new Car("Test", "Test Car '20");
+        car.setId(java.util.UUID.randomUUID());
+        var source = new ScrapedCar("car1", "Test", "Test Car '20", "");
+        var proposal = service.propose(car, source, new YearCandidate(2020, "GTPlus candidate 2020", null));
+        car.setUpdatedAt(java.time.LocalDateTime.parse("2026-11-01T12:00:00.123456789"));
+        var previewHash = service.fingerprint(car, source, proposal);
+        // when / then
+        car.setUpdatedAt(java.time.LocalDateTime.parse("2026-11-01T12:00:00.123457"));
+        assertThat(service.fingerprint(car, source, proposal)).isEqualTo(previewHash);
+        car.setModelYearOverride(true);
+        assertThat(service.fingerprint(car, source, proposal)).isNotEqualTo(previewHash);
+    }
+
 }
