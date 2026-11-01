@@ -224,6 +224,13 @@ jobs:
         with:
           context: .
           push: false
+          load: true
           tags: ctc-manager:ci-${{ github.sha }}
           cache-from: type=gha,scope=ctc-docker
           cache-to: type=gha,scope=ctc-docker,mode=max
+
+      - name: Verify private recovery storage and flush failures
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          python3 deploy/tests/native_files.py --app-image "ctc-manager:ci-${{ github.sha }}" \
+            --docker-host unix:///var/run/docker.sock --directory "$RUNNER_TEMP/ctc-recovery-files"

@@ -118,9 +118,14 @@ class Probe:
                 '--mount', 'type=volume,src=' + self.volume('data') + ',dst=/restore,volume-nocopy',
                 '--entrypoint', '/bin/sh', self.app_image, '-ec',
                 'umask 077; tar -xf - -C /restore --no-same-owner --no-same-permissions; '
-                'chown -R "$(id -u ctc):$(id -g ctc)" /restore; sync -f /restore']
+                'chown -R "$(id -u ctc):$(id -g ctc)" /restore']
         with (self.unit / 'data.tar').open('rb') as source:
             self.helper('files-restore', args[:1] + ['-i'] + args[1:], stdin=source, timeout=1800)
+        # The restricted root helper cannot reopen a private directory after changing its owner.
+        self.helper('files-sync', ['run', '--rm', '--network', 'none', '--read-only', '--user', 'ctc',
+                     '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
+                     '--mount', 'type=volume,src=' + self.volume('data') + ',dst=/restore,readonly,volume-nocopy',
+                     '--entrypoint', 'sync', self.app_image, '-f', '/restore'])
         self.helper('credentials-restore', ['run', '--rm', '--network', 'none', '--read-only', '--user', '0:0',
                      '--cap-drop', 'ALL', '--cap-add', 'CHOWN', '--security-opt', 'no-new-privileges',
                      '--mount', 'type=bind,src=' + str(self.unit / 'google.json') + ',dst=/source/google.json,readonly',

@@ -231,6 +231,9 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
   sealed units contain no executable recovery tools. Read `deploy/guides/recovery.md` before changing
   capture, probe ownership, storage-generation or integration-resumption semantics. Run
   `bash deploy/tests/recovery.sh` plus native MariaDB qualification for affected runtime paths.
+  `deploy/tests/native_files.py` exercises private mode-0700 directory restoration and actual
+  filesystem-flush failures against the built Docker image. Keep the final data flush under the
+  application owner; the extraction helper retains only `CHOWN` capability.
 * Graphics use preinstalled Playwright browsers. `SandboxedHtmlRenderer` disables automatic browser
   downloads before creating the driver, in addition to its existing page-level network restrictions.
 

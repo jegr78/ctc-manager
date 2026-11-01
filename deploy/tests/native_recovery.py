@@ -42,6 +42,9 @@ def main():
                         'app.env': 'SPRING_SECURITY_USER_NAME=fixture-owner\nSPRING_SECURITY_USER_PASSWORD=' + uuid.uuid4().hex + '\nDISCORD_BOT_TOKEN=fixture-unreleased-token\nGOOGLE_CALENDAR_ID=recovery@example.test\n'}.items():
         (unit / name).write_text(value)
     with tarfile.open(unit / 'data.tar', 'w') as archive:
+        entry = tarfile.TarInfo('.')
+        entry.type, entry.mode = tarfile.DIRTYPE, 0o700
+        archive.addfile(entry)
         for name in ['uploads', 'site']:
             entry = tarfile.TarInfo(name)
             entry.type = tarfile.DIRTYPE

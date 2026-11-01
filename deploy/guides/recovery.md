@@ -49,6 +49,9 @@ That temporary filesystem permits execution because Playwright extracts its bund
 The database client uses MariaDB sandbox mode and the application account. SQL import errors abort
 the check. A client shell escape must not execute. File restoration ignores archived owners and
 sets the target image's application owner inside the rootless namespace.
+The final filesystem flush runs as that application owner, so a private mode-0700 data root stays
+usable without granting the extraction helper permission to bypass filesystem access checks.
+Any flush failure aborts restoration.
 
 The check compares table counts and Flyway history, compares complete file contents and empty
 directories, verifies Google credential bytes as the app user and the restored database root login,
