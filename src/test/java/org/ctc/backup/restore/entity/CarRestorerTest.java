@@ -52,10 +52,10 @@ class CarRestorerTest {
     @Test
     void givenInvalidAcceptedYear_whenRestoring_thenRejectsBeforeAnyWrite() throws Exception {
         // given
-        var row = mapper.readTree("{\"modelYear\":99}");
+        var row = mapper.readTree("{\"modelYear\":99,\"modelYearSource\":\"MANUAL\",\"modelYearEvidence\":\"Review\"}");
         // when / then
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> restorer.restore(List.of(row), jdbc))
-                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("year");
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Invalid car model year");
         verifyNoInteractions(jdbc);
     }
 

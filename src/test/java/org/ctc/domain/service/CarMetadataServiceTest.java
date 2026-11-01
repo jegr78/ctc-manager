@@ -129,4 +129,17 @@ class CarMetadataServiceTest {
         assertThat(proposal.proposedModelYearEvidence()).contains("1999 and 2099", "Conflicting");
     }
 
+    @Test
+    void givenManualUnknownForReviewedId_whenProposing_thenReviewedCorrectionCannotOverrideDecision() {
+        // given
+        var car = new Car("Test", "Reviewed Car '25");
+        service.applyManual(car, null, null, null, false, false, true);
+        // when
+        var proposal = service.propose(car, new ScrapedCar("car3599", "Test", "Reviewed Car '25", ""), null);
+        // then
+        assertThat(proposal.modelYear()).isNull();
+        assertThat(proposal.modelYearSource()).isEqualTo("MANUAL");
+        assertThat(proposal.modelYearEvidence()).isEqualTo("Explicitly unknown model year");
+    }
+
 }

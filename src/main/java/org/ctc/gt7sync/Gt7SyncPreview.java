@@ -15,7 +15,7 @@ public record Gt7SyncPreview(List<CarEntry> cars, List<TrackEntry> tracks, UUID 
     public long getNewTrackCount() { return tracks.stream().filter(t -> t.status() == SyncStatus.NEW).count(); }
     public long getExistingTrackCount() { return tracks.stream().filter(t -> t.status() == SyncStatus.EXISTS).count(); }
     public enum SyncStatus {
-        NEW("New"), EXISTS("Already imported"), UPDATE("Metadata update"), REVIEW("Year review required"), AMBIGUOUS("Identity review required");
+        NEW("New"), EXISTS("Already imported"), UPDATE("Metadata update"), REVIEW("Metadata review required"), AMBIGUOUS("Identity review required");
         private final String label;
         SyncStatus(String label) { this.label = label; }
         public String getLabel() { return label; }

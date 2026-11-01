@@ -14,7 +14,7 @@
                 <div class="toolbar"><h2>Cars</h2><p class="text-dim sync-catalog-summary"><strong th:text="${preview.newCarCount}"></strong> new · <span th:text="${preview.existingCarCount}"></span> existing or requiring review · <span th:text="${preview.metadataUpdateCount}"></span> available metadata updates</p></div>
                 <div class="admin-list-controls" data-list-tools hidden>
                     <label for="carSearch"><span>Search cars</span><input type="search" id="carSearch" data-list-search placeholder="Manufacturer or car name" autocomplete="off"></label>
-                    <label for="carStatus"><span>Status</span><select id="carStatus" data-list-status><option value="all">All entries</option><option value="NEW">New</option><option value="EXISTS">Already imported</option><option value="UPDATE">Metadata update</option><option value="REVIEW">Year review required</option><option value="AMBIGUOUS">Identity review required</option></select></label>
+                    <label for="carStatus"><span>Status</span><select id="carStatus" data-list-status><option value="all">All entries</option><option value="NEW">New</option><option value="EXISTS">Already imported</option><option value="UPDATE">Metadata update</option><option value="REVIEW">Metadata review required</option><option value="AMBIGUOUS">Identity review required</option></select></label>
                     <button type="button" class="btn btn-secondary" data-list-reset disabled>Reset filters</button>
                     <p class="admin-list-count text-dim" data-list-count role="status"></p>
                 </div>
@@ -28,7 +28,7 @@
                             <td class="col-thumb"><img th:if="${car.imageUrl != null and !car.imageUrl.isEmpty()}" th:src="${car.imageUrl}" alt="" class="thumb-sm" loading="lazy"></td>
                             <td><span th:if="${car.status.name() == 'NEW'}" class="badge badge-active">New</span><span th:unless="${car.status.name() == 'NEW'}" class="sync-existing" th:text="${car.status.label}"></span></td>
                             <td th:text="${car.manufacturer}"></td>
-                            <td><strong th:text="${car.name}"></strong><p th:if="${car.message != null and !car.message.isEmpty()}" class="form-hint" th:text="${car.message}"></p><a th:if="${car.existingCarId != null}" th:href="@{/admin/cars/{id}/edit(id=${car.existingCarId})}">Review car</a></td>
+                            <td><strong th:text="${car.name}"></strong><p th:if="${car.message != null and !car.message.isEmpty()}" class="form-hint" th:text="${car.message}"></p><br th:if="${car.existingCarId != null}"><a th:if="${car.existingCarId != null}" th:href="@{/admin/cars/{id}/edit(id=${car.existingCarId})}">Review car</a></td>
                             <td><span th:text="${car.categoryLabel}"></span> · <span th:text="${car.drivetrainLabel}"></span><br>Accepted year: <span th:text="${car.acceptedYearLabel}"></span><br>Proposed year: <span th:text="${car.proposedYearLabel}"></span><details><summary>Source evidence</summary><p class="form-hint" th:text="${car.provenanceLabel}"></p></details></td>
                             <td><input th:if="${car.metadataSelectable}" type="checkbox" name="selectedMetadata" th:value="${car.gt7Id}" th:attr="aria-label=${'Update metadata for ' + car.manufacturer + ' ' + car.name}"><span th:unless="${car.metadataSelectable}" class="text-dim">—</span></td>
                         </tr></tbody>

@@ -50,12 +50,12 @@ public class CarService {
     }
 
     private Car saveCar(UUID id, String manufacturer, String name, CarMetadataService.ManualMetadata metadata) {
+        Car car = id == null ? new Car(manufacturer, name) : carRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new EntityNotFoundException("Car", id));
         if (carRepository.findAllByManufacturerAndName(manufacturer, name).stream()
                 .anyMatch(existing -> !existing.getId().equals(id))) {
             throw new BusinessRuleException("A car with this manufacturer and name already exists");
         }
-        Car car = id == null ? new Car(manufacturer, name) : carRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new EntityNotFoundException("Car", id));
         car.setManufacturer(manufacturer);
         car.setName(name);
         if (metadata != null) {
