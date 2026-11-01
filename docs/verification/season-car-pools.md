@@ -14,7 +14,7 @@ can preserve its race identity. It does not infer entries for historical races.
 | Frozen definitions remain stable | saveEntry/freeze/reopen | Unused explicit reopen | Frozen edit/remove, used reopen and mode switch | Unit tests, persistence IT and browser |
 | Preserve fixed mode | Season defaults and fixed assignment endpoints | Existing fixed pool URLs and draft races | Fixed assignment into category mode, switch with configured race | Existing regression tests and focused tests |
 | Serialize writes | SeasonRepository database lock | Fresh locked season state | Concurrent/stale-context configuration cannot bypass freeze | Transactional persistence IT |
-| Connection-independent SQL checks | V24 constraints | Valid writes after migration connection closes | Invalid modes, states, categories and drivetrains | JDBC migration test and repository slices |
+| Connection-independent SQL checks | V24/V25 constraints | Valid writes after migration connection closes | Invalid modes, states, categories and drivetrains | JDBC migration test, real Flyway upgrade and repository slices |
 | Protect catalog references | CarService delete | Unreferenced car deletion | Snapshot member deletion | Service test and FK IT |
 | Native accessible editor | SeasonController and pool DTOs/template | Add/remove clauses and preview, desktop/mobile/no JS | Binding/domain errors retain submitted values/options | Controller tests, Playwright and visual inspection |
 | Exact backup and legacy defaults | Backup schema, MixIns, restorers and preflight | Exact frozen membership, supported older fixed-only archive | Missing declared files, foreign/duplicate/invalid references | Backup unit and real archive IT |
@@ -119,3 +119,8 @@ select. Scoped width constraints retain the native select within the season work
 1440×1050 and mobile 390×844 screenshots were inspected again; scroll width equals viewport width.
 The focused correction checks passed one migration test, 16 integration tests and six browser
 tests, including the schema-4 import through confirmation and execution.
+
+The same JDBC probe confirmed that the published V23 metadata checks also retained their creator
+connection. Two real Flyway upgrade tests first failed when updating accepted category/drivetrain
+values from a new connection. V25 replaces those checks without editing V23. The tests then passed
+for accepted, unknown and invalid metadata while preserving the legacy car's identity and image.
