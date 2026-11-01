@@ -284,3 +284,95 @@ class CutoverBoundaryTest(unittest.TestCase):
             self.execute()
         restore.assert_not_called()
         self.assertFalse(self.authority.exists())
+
+
+class RehearsalGuardTest(unittest.TestCase):
+    def setUp(self):
+        import uuid
+        from unittest.mock import patch
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name).resolve()
+        self.root.chmod(0o700)
+        (self.root / 'state').mkdir(mode=0o700)
+        self.source = self.root / 'source'; self.source.mkdir(mode=0o700)
+        self.destination = self.root / 'backups'; self.destination.mkdir(mode=0o700)
+        self.release = self.root / 'release'; self.release.mkdir(mode=0o700)
+        (self.release / 'manifest.json').write_text('{}')
+        for name, value in {'database.sql': 'source SQL', 'data.tar': 'source files', 'google.json': '{}',
+                            '.env': 'DISCORD_BOT_TOKEN=fixture\nGOOGLE_CALENDAR_ID=fixture\n', '.env.local': ''}.items():
+            (self.source / name).write_text(value)
+        for name, value in {'db-password': 'fixture', 'db-root-password': 'fixture',
+                            'app.env': 'SPRING_SECURITY_USER_NAME=owner\nSPRING_SECURITY_USER_PASSWORD=fixture\n'}.items():
+            (self.root / name).write_text(value); (self.root / name).chmod(0o600)
+        self.runtime = Mock(root=self.root, deploy_root=self.release)
+        self.runtime.config = {'outboundPaused': True, 'installationId': str(uuid.uuid4()),
+                               'databasePasswordFile': str(self.root / 'db-password'),
+                               'databaseRootPasswordFile': str(self.root / 'db-root-password'),
+                               'appEnvFile': str(self.root / 'app.env')}
+        self.runtime.release = {'version': '1.26.0', 'appImage': 'ghcr.io/jegr78/ctc-manager@sha256:' + 'a' * 64,
+                                'databaseImage': 'mariadb@sha256:' + 'b' * 64}
+        self.runtime.docker.return_value = json.dumps([{'Config': {'Labels': {'org.ctc.recovery.version': '1'}}}]).encode()
+        self.metadata = {'databaseVersion': '13.0.2-MariaDB', 'columns': {'teams': ['id']}, 'projections': {'teams': 'original'}}
+        self.probe = Mock()
+        self.probe.prefix = 'ctc-recovery-fixture'
+        self.version = '13.0.2-MariaDB'
+        self.history = [json.dumps({'rank': i, 'version': str(i), 'checksum': None}) for i in range(1, 22)]
+        def query(sql):
+            if sql == 'SELECT VERSION();': return [self.version]
+            if 'JSON_OBJECT' in sql: return self.history
+            if 'information_schema.TABLES' in sql: return ['teams', 'flyway_schema_history']
+            if 'COUNT(*)' in sql: return ['0']
+            raise AssertionError('unexpected rehearsal SQL')
+        self.probe.query.side_effect = query
+        def docker(arguments, **kwargs):
+            if kwargs.get('stdout'):
+                kwargs['stdout'].write(b'migrated SQL')
+            return b''
+        self.probe.docker.side_effect = docker
+        self.projection = patch('migration.projection', return_value={'teams': 'original'})
+        self.project = self.projection.start(); self.addCleanup(self.projection.stop)
+        patchers = [patch('migration.verify_export', return_value=self.metadata), patch('probe.Probe', return_value=self.probe),
+                    patch('recovery.validate_unit', return_value={}), patch('recovery.restore_check', return_value={'run': 'fixture-proof'})]
+        for patcher in patchers:
+            patcher.start(); self.addCleanup(patcher.stop)
+
+    def execute(self):
+        return migration.rehearse(self.runtime, self.source, 'a' * 64, self.destination)
+
+    def test_import_must_preserve_all_source_column_projections_before_application_start(self):
+        self.project.side_effect = [{'teams': 'changed'}, {'teams': 'original'}]
+        with self.assertRaisesRegex(ValueError, 'import changed source rows'):
+            self.execute()
+        self.probe.app_arguments.assert_not_called()
+        self.probe.cleanup.assert_called_once_with()
+        self.assertFalse(list(self.destination.glob('recovery-*')))
+
+    def test_target_migrations_must_preserve_all_original_columns(self):
+        self.project.side_effect = [{'teams': 'original'}, {'teams': 'changed'}]
+        with self.assertRaisesRegex(ValueError, 'migration changed source rows'):
+            self.execute()
+        self.probe.verify_application.assert_called_once()
+        self.probe.cleanup.assert_called_once_with()
+        self.assertFalse(list(self.destination.glob('recovery-*')))
+
+    def test_incompatible_target_database_fails_before_import(self):
+        self.version = '13.1.0-MariaDB'
+        with self.assertRaisesRegex(ValueError, 'qualified native major'):
+            self.execute()
+        self.probe.import_database.assert_not_called()
+        self.probe.cleanup.assert_called_once_with()
+
+    def test_unknown_target_schema_history_fails_before_unit_publication(self):
+        self.history = self.history[:-1]
+        with self.assertRaisesRegex(ValueError, 'target migration history'):
+            self.execute()
+        self.probe.cleanup.assert_called_once_with()
+        self.assertFalse(list(self.destination.glob('recovery-*')))
+
+    def test_matching_data_is_sealed_then_proven_without_live_target_mutation(self):
+        unit = self.execute()
+        self.assertTrue((unit / 'manifest.json').is_file())
+        self.probe.cleanup.assert_called_once_with()
+        self.runtime.compose.assert_not_called()
+        self.assertTrue(self.runtime.config['outboundPaused'])

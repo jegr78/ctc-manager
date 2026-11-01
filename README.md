@@ -154,6 +154,10 @@ explicit supported recovery capability before automatic full checks.
 Use [the update guide](deploy/guides/updates.md) for exact release selection, pre-update recovery
 proof and failure handling after possible schema migrations.
 
+The [native Mac migration guide](deploy/guides/migration.md) preserves the original export,
+rehearses target schema changes in isolated storage and records the single-writer cutover.
+The private Manager remains a single-admin application.
+
 ### Docker
 
 The Dockerfile installs Chromium with its matching system dependencies and runs a non-root
@@ -241,7 +245,3 @@ of the Spring Boot BOM. A runtime dependency check rejects its known vulnerable 
 
 Scheduled local backups and the two-daily/one-monthly retention are described in the
 [backup runbook](deploy/guides/backups.md). One user timer runs backups; errors stay in the local journal.
-
-The [native Mac migration guide](deploy/guides/migration.md) preserves the original export,
-rehearses target schema changes in isolated storage and records the single-writer cutover.
-The private Manager remains a single-admin application.

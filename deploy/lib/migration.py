@@ -264,8 +264,6 @@ def rehearse(runtime, source_root, source_sha256, destination):
         runtime.docker(['pull', runtime.release[key]], timeout=1800)
     image = json.loads(runtime.docker(['image', 'inspect', runtime.release['appImage']]))[0]
     admit_recovery_image(image)
-    if not source['databaseVersion'].startswith('13.0.') or not runtime.release['databaseImage'].startswith('mariadb@sha256:'):
-        raise ValueError('migration requires the qualified MariaDB 13 route')
     work = Path(tempfile.mkdtemp(prefix='.native-migration-', dir=destination))
     for name in ['database.sql', 'data.tar', 'google.json']:
         shutil.copyfile(source_root / name, work / name)
