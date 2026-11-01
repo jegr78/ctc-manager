@@ -43,7 +43,7 @@ class SeasonCarPoolPersistenceIT {
         var first = car("Original", CarCategory.GR_2, 2016);
         var entryId = pools.saveEntry(season.getId(), null, "2016", List.of(new SeasonCarPoolService.ClauseInput(CarCategory.GR_2, null, 2016)));
         // when
-        pools.freeze(season.getId());
+        assertThatCode(() -> pools.freeze(season.getId())).doesNotThrowAnyException();
         var originalMemberId = entries.findById(entryId).orElseThrow().getMembers().getFirst().getId();
         first.setCategory(CarCategory.GR_4);
         cars.saveAndFlush(first);
@@ -113,6 +113,35 @@ class SeasonCarPoolPersistenceIT {
                 seasons.flush();
                 createdCars.forEach(cars::deleteById);
             });
+        }
+    }
+
+    @Test
+    void givenSeasonLockedByAnotherTransaction_whenSavingEntry_thenDatabaseBlocksTheWriteUntilRelease() {
+        // given
+        var tx = new TransactionTemplate(transactionManager);
+        var writer = new TransactionTemplate(transactionManager);
+        writer.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        UUID id = tx.execute(status -> newSeason().getId());
+        try {
+            // when / then
+            tx.executeWithoutResult(status -> {
+                seasons.findByIdForUpdate(id).orElseThrow();
+                assertThatThrownBy(() -> writer.executeWithoutResult(inner -> {
+                    jdbc.execute("SET LOCK_TIMEOUT 250");
+                    try {
+                        pools.saveEntry(id, null, "Blocked", List.of(new SeasonCarPoolService.ClauseInput(CarCategory.GR_3, null, null)));
+                    } finally {
+                        jdbc.execute("SET LOCK_TIMEOUT 2000");
+                    }
+                })).isInstanceOf(org.springframework.dao.PessimisticLockingFailureException.class);
+                assertThat(seasons.findById(id).orElseThrow().getCarPoolEntries()).isEmpty();
+            });
+            pools.saveEntry(id, null, "After release", List.of(new SeasonCarPoolService.ClauseInput(CarCategory.GR_3, null, null)));
+            tx.executeWithoutResult(status -> assertThat(seasons.findById(id).orElseThrow().getCarPoolEntries())
+                    .extracting(SeasonCarPoolEntry::getLabel).containsExactly("After release"));
+        } finally {
+            tx.executeWithoutResult(status -> seasons.deleteById(id));
         }
     }
 
