@@ -287,6 +287,13 @@ class NativeRuntime:
         mounts = json.loads(result.stdout)['filesystems']
         if len(mounts) != 1 or mounts[0]['target'] != '/mnt/backup' or mounts[0]['uuid'] != expected:
             raise ValueError('backup device does not match host setup')
+        effective = subprocess.run(['findmnt', '--json', '--target', str(destination),
+                                    '--output', 'TARGET,UUID'], capture_output=True)
+        if effective.returncode:
+            raise ValueError('backup destination device cannot be determined')
+        filesystems = json.loads(effective.stdout)['filesystems']
+        if len(filesystems) != 1 or filesystems[0]['uuid'] != expected:
+            raise ValueError('backup destination resolves to another device')
         if shutil.disk_usage(destination).free < 3 * 1024 ** 3:
             raise ValueError('insufficient backup space')
 

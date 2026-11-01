@@ -337,6 +337,63 @@ class BackupDestinationTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'mount'):
                     runtime.check_destination(Path('/mnt/backup/ctc-manager'))
 
+    def test_effective_mount_lookup_failure_refuses_even_with_valid_stdout(self):
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / 'state').mkdir(mode=0o700)
+            receipt = root / 'state/host.json'
+            expected = '31d7af2e-b6de-4680-9dfb-692ffb692fc4'
+            receipt.write_text(json.dumps({'backupUuid': expected}))
+            receipt.chmod(0o600)
+            runtime = recovery.NativeRuntime.__new__(recovery.NativeRuntime)
+            runtime.root = root
+            output = json.dumps({'filesystems': [{'target': '/mnt/backup', 'uuid': expected}]}).encode()
+            with patch('subprocess.run') as command, patch('shutil.disk_usage') as usage:
+                command.side_effect = [SimpleNamespace(returncode=0, stdout=output), SimpleNamespace(returncode=1, stdout=output)]
+                usage.return_value.free = 4 * 1024 ** 3
+                with self.assertRaisesRegex(ValueError, 'destination device cannot'):
+                    runtime.check_destination(Path('/mnt/backup/ctc-manager'))
+
+    def test_destination_outside_ctc_root_refuses_before_mount_lookup(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / 'state').mkdir(mode=0o700)
+            receipt = root / 'state/host.json'
+            expected = '31d7af2e-b6de-4680-9dfb-692ffb692fc4'
+            receipt.write_text(json.dumps({'backupUuid': expected}))
+            receipt.chmod(0o600)
+            runtime = recovery.NativeRuntime.__new__(recovery.NativeRuntime)
+            runtime.root = root
+            with patch('subprocess.run') as command, patch('shutil.disk_usage') as usage:
+                command.return_value.returncode = 0
+                command.return_value.stdout = json.dumps({'filesystems': [{'target': '/mnt/backup', 'uuid': expected}]}).encode()
+                usage.return_value.free = 4 * 1024 ** 3
+                with self.assertRaisesRegex(ValueError, 'inside the CTC backup mount'):
+                    runtime.check_destination(Path('/mnt/backup/courtside'))
+                command.assert_not_called()
+
+    def test_nested_mount_cannot_redirect_backup_to_another_device(self):
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / 'state').mkdir(mode=0o700)
+            receipt = root / 'state/host.json'
+            expected = '31d7af2e-b6de-4680-9dfb-692ffb692fc4'
+            receipt.write_text(json.dumps({'backupUuid': expected}))
+            receipt.chmod(0o600)
+            runtime = recovery.NativeRuntime.__new__(recovery.NativeRuntime)
+            runtime.root = root
+            with patch('subprocess.run') as command, patch('shutil.disk_usage') as usage:
+                command.side_effect = [SimpleNamespace(returncode=0, stdout=json.dumps({'filesystems': [{'target': '/mnt/backup', 'uuid': expected}]}).encode()),
+                                       SimpleNamespace(returncode=0, stdout=json.dumps({'filesystems': [{'target': '/mnt/backup/ctc-manager/nested', 'uuid': 'another-device'}]}).encode())]
+                usage.return_value.free = 4 * 1024 ** 3
+                with self.assertRaisesRegex(ValueError, 'destination.*device'):
+                    runtime.check_destination(Path('/mnt/backup/ctc-manager/nested'))
+
     def test_wrong_device_or_full_mount_refuses(self):
         from unittest.mock import patch
         from collections import namedtuple
@@ -351,7 +408,10 @@ class BackupDestinationTest(unittest.TestCase):
             for device in ['wrong-device', '31d7af2e-b6de-4680-9dfb-692ffb692fc4']:
                 with self.subTest(device=device), patch('subprocess.run') as command, patch('shutil.disk_usage') as usage:
                     command.return_value.returncode = 0
-                    command.return_value.stdout = json.dumps({'filesystems': [{'target': '/mnt/backup', 'uuid': device}]}).encode()
+                    from types import SimpleNamespace
+                    parent = json.dumps({'filesystems': [{'target': '/mnt/backup', 'uuid': device}]}).encode()
+                    actual = json.dumps({'filesystems': [{'target': '/mnt/backup', 'uuid': '31d7af2e-b6de-4680-9dfb-692ffb692fc4'}]}).encode()
+                    command.side_effect = [SimpleNamespace(returncode=0, stdout=parent), SimpleNamespace(returncode=0, stdout=actual)]
                     usage.return_value = namedtuple('Usage', 'total used free')(10 * 1024 ** 3, 1, 1 if device.startswith('31d7') else 4 * 1024 ** 3)
                     with self.assertRaisesRegex(ValueError, 'device|space'):
                         runtime.check_destination(Path('/mnt/backup/ctc-manager'))

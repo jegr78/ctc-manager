@@ -159,3 +159,11 @@ receipts remained failed. The live path now checks an existing running source da
 unexpected writers before probing/activation, including recovery after loss of the app container.
 The recovery suite now has 60 passing cases. Final release-tool qualification and live activation
 against a genuinely published capable image remain post-merge acceptance work for #297.
+All 18 Java guard falsifications reached their intended test assertions. The initial two Google
+mutants removed the only checked-IOException call and therefore failed javac instead; clean
+test-compile reproduced that diagnostic, and valid conditional bypasses then reached the intended
+Google boundary assertions. Those compiler-only attempts are not counted. Every temporary edit
+used a stash snapshot and was restored exactly. Deployment guard falsifications additionally
+cover the expected parent mount and the effective destination filesystem independently, preventing
+nested mounts from redirecting backup writes to another device. The effective destination check
+also passed against the actual Box backup filesystem. The positive recovery suite has 66 cases.
