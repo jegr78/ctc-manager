@@ -13,6 +13,7 @@ import static org.mockito.Mockito.*;
 class RaceSettingsApplicationServiceTest {
     @Test
     void givenCompletePick_whenApplyingSettings_thenCopyEveryFieldWithoutChangingSchedulePairingOrResults() {
+        // given / when / then
         var cars = mock(CarRepository.class);
         var tracks = mock(TrackRepository.class);
         var entries = mock(SeasonCarPoolEntryRepository.class);

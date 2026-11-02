@@ -52,6 +52,7 @@ class PickReviewServiceTest {
 
     @Test
     void givenMissingPickAfterDeadline_whenOpening_thenCreateNoRevisionAndRecordActorReasonTime() {
+        // given / when / then
         service.openMissing(race.getId(), 0, actor, "Late first submission allowed");
         assertThat(pick.isManualOpen()).isTrue();
         assertThat(pick.getLatestRevisionNumber()).isNull();
@@ -61,6 +62,7 @@ class PickReviewServiceTest {
 
     @Test
     void givenSubmittedPickWithoutNewDeadline_whenReturning_thenReopenAndPreserveRevision() {
+        // given / when / then
         pick.submit();
         pick.close();
         service.returnForCorrection(race.getId(), 2, actor, "Please correct the weather slots");
@@ -74,6 +76,7 @@ class PickReviewServiceTest {
 
     @Test
     void givenOpenedPickBeforeDeadline_whenClosing_thenDenyTeamEditingAndRecordDecision() {
+        // given / when / then
         pick.openMissing();
         service.close(race.getId(), 1, actor, "Collection closed for review");
         assertThat(pick.isManualClosed()).isTrue();
@@ -83,6 +86,7 @@ class PickReviewServiceTest {
 
     @Test
     void givenExactLatestRevision_whenApproving_thenApplyPayloadAndMarkApprovalInSameOperation() {
+        // given / when / then
         pick.submit();
         var revision = revision(1, 1);
         when(revisions.findByPickIdAndRevisionNumber(pick.getId(), 1)).thenReturn(Optional.of(revision));
@@ -97,6 +101,7 @@ class PickReviewServiceTest {
 
     @Test
     void givenNewerRevision_whenApprovingStaleRevision_thenDoNotTouchSettingsOrHistory() {
+        // given / when / then
         pick.submit();
         pick.submit();
         assertThatThrownBy(() -> service.approve(race.getId(), 2, 1, actor, "Checked old revision"))
@@ -108,6 +113,7 @@ class PickReviewServiceTest {
 
     @Test
     void givenStaleAggregateVersion_whenReturning_thenDoNotChangeStateOrRecordDecision() {
+        // given / when / then
         pick.submit();
         assertThatThrownBy(() -> service.returnForCorrection(race.getId(), 0, actor, "Please correct"))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("changed");
@@ -117,6 +123,7 @@ class PickReviewServiceTest {
 
     @Test
     void givenFailedSettingsApplication_whenApproving_thenDoNotMarkApprovalOrWriteDecision() {
+        // given / when / then
         pick.submit();
         var revision = revision(1, 1);
         when(revisions.findByPickIdAndRevisionNumber(pick.getId(), 1)).thenReturn(Optional.of(revision));
@@ -131,6 +138,7 @@ class PickReviewServiceTest {
     @ParameterizedTest
     @ValueSource(strings = {"", " ", "\t"})
     void givenMissingReason_whenReturning_thenRejectBeforeChangingAnything(String reason) {
+        // given / when / then
         pick.submit();
         assertThatThrownBy(() -> service.returnForCorrection(race.getId(), 1, actor, reason))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("reason");
@@ -140,6 +148,7 @@ class PickReviewServiceTest {
 
     @Test
     void givenApprovedPick_whenReturning_thenKeepTeamLockedAndDecisionHistoryUnchanged() {
+        // given / when / then
         pick.submit();
         pick.approve(1);
         assertThatThrownBy(() -> service.returnForCorrection(race.getId(), 2, actor, "Reopen"))

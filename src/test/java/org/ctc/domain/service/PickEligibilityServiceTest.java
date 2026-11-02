@@ -48,36 +48,42 @@ class PickEligibilityServiceTest {
 
     @Test
     void givenValidPayload_whenChecking_thenReuseNativeCarSelectionAndAcceptAvailableTrack() {
+        // given / when / then
         assertThatCode(() -> service.validate(race, payload)).doesNotThrowAnyException();
         verify(cars).validate(season.getId(), home.getId(), race.getId(), payload.carPoolEntryId(), payload.carId());
     }
 
     @Test
     void givenSharedCategoryRejection_whenChecking_thenKeepItsReason() {
+        // given / when / then
         when(cars.validate(any(), any(), any(), any(), any())).thenReturn(new RaceCarSelectionService.Validation("Choose a frozen member", null, null));
         assertThatThrownBy(() -> service.validate(race, payload)).isInstanceOf(BusinessRuleException.class).hasMessage("Choose a frozen member");
     }
 
     @Test
     void givenTrackOutsideSeason_whenChecking_thenReject() {
+        // given / when / then
         season.getTracks().clear();
         assertThatThrownBy(() -> service.validate(race, payload)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("season");
     }
 
     @Test
     void givenExistingTrackUsageBySameHome_whenChecking_thenReject() {
+        // given / when / then
         when(races.findBySeasonForSelectionUpdate(season.getId())).thenReturn(List.of(used(home, UUID.randomUUID())));
         assertThatThrownBy(() -> service.validate(race, payload)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("track");
     }
 
     @Test
     void givenCurrentTargetOrOtherHomeTrackUsage_whenChecking_thenExcludeCurrentTargetOnce() {
+        // given / when / then
         when(races.findBySeasonForSelectionUpdate(season.getId())).thenReturn(List.of(used(home, race.getId()), used(other, UUID.randomUUID())));
         assertThatCode(() -> service.validate(race, payload)).doesNotThrowAnyException();
     }
 
     @Test
     void givenPendingTrackReservationBySameHome_whenChecking_thenRejectEvenWithoutSavedRaceTrack() {
+        // given / when / then
         when(reservations.pending(season.getId(), true)).thenReturn(List.of(
                 new PickReservationService.Reservation(UUID.randomUUID(), home.getId(), payload.carId(), null, payload.trackId())));
         assertThatThrownBy(() -> service.validate(race, payload)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("reserved");
@@ -85,6 +91,7 @@ class PickEligibilityServiceTest {
 
     @Test
     void givenOwnPendingReservationAndOtherHomeReservation_whenReplacing_thenExcludeCurrentTargetOnce() {
+        // given / when / then
         when(reservations.pending(season.getId(), true)).thenReturn(List.of(
                 new PickReservationService.Reservation(race.getId(), home.getId(), payload.carId(), null, payload.trackId()),
                 new PickReservationService.Reservation(UUID.randomUUID(), other.getId(), payload.carId(), null, payload.trackId())));

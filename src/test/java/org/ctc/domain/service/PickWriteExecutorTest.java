@@ -16,6 +16,7 @@ import static org.mockito.Mockito.*;
 class PickWriteExecutorTest {
     @Test
     void givenRestoreLock_whenWriting_thenRejectBeforeStartingTransaction() {
+        // given / when / then
         var imports = new ImportLockService(Duration.ofMillis(1));
         var manager = mock(PlatformTransactionManager.class);
         var executor = new PickWriteExecutor(imports, manager);
@@ -31,6 +32,7 @@ class PickWriteExecutorTest {
 
     @Test
     void givenAdmittedWriter_whenCommitting_thenHoldLeaseThroughCommitAndReleaseAfterward() throws Exception {
+        // given / when / then
         var imports = new ImportLockService(Duration.ofMillis(1));
         var manager = new Manager(imports);
         var executor = new PickWriteExecutor(imports, manager);
@@ -63,6 +65,7 @@ class PickWriteExecutorTest {
 
     @Test
     void givenFailedWriter_whenRollingBack_thenKeepLeaseThroughRollbackAndReleaseAfterward() throws Exception {
+        // given / when / then
         var imports = new ImportLockService(Duration.ofMillis(1));
         var manager = new Manager(imports);
         var executor = new PickWriteExecutor(imports, manager);

@@ -66,6 +66,7 @@ class PickSubmissionServiceTest {
 
     @Test
     void givenCompleteConfirmationBeforeDeadline_whenSubmitting_thenPersistImmutableRevisionAndDurableReceipt() {
+        // given / when / then
         var payload = payload();
         var receipt = service.submit(race.getId(), 0, request, actor, payload);
         assertThat(receipt).isEqualTo(new SubmissionReceipt(race.getId(), request, 1, 1, NOW, actor.userId()));
@@ -80,6 +81,7 @@ class PickSubmissionServiceTest {
 
     @Test
     void givenLostReplyAndChangedVersion_whenReplayingSameRequest_thenReturnOriginalReceiptWithoutAnotherWrite() {
+        // given / when / then
         pick.submit();
         var original = new MatchdayPickRevision(pick, 1, payload(), NOW.minusSeconds(60), actor.userId(), request, 1);
         when(revisions.findByRequestId(request)).thenReturn(Optional.of(original));
@@ -94,6 +96,7 @@ class PickSubmissionServiceTest {
 
     @Test
     void givenDistinctStaleEdit_whenConfirming_thenDoNotAddRevisionOrChangeAggregate() {
+        // given / when / then
         pick.submit();
         assertThatThrownBy(() -> service.submit(race.getId(), 0, request, actor, payload()))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("changed");
@@ -103,6 +106,7 @@ class PickSubmissionServiceTest {
 
     @Test
     void givenAnotherSubmittersRequest_whenReplaying_thenDenyReceipt() {
+        // given / when / then
         var original = new MatchdayPickRevision(pick, 1, payload(), NOW, "someone-else", request, 1);
         when(revisions.findByRequestId(request)).thenReturn(Optional.of(original));
         assertThatThrownBy(() -> service.submit(race.getId(), 0, request, actor, payload()))
@@ -114,6 +118,7 @@ class PickSubmissionServiceTest {
     @ParameterizedTest
     @ValueSource(strings = {"at-deadline", "after-deadline", "no-deadline", "closed", "approved", "disabled", "bot-unavailable", "invalid-target"})
     void givenClosedCollection_whenConfirming_thenLeaveHistoryAndAggregateUntouched(String cause) {
+        // given / when / then
         switch (cause) {
             case "at-deadline" -> race.getMatchday().setPickDeadline(LocalDateTime.of(2026, 11, 2, 19, 0));
             case "after-deadline" -> race.getMatchday().setPickDeadline(LocalDateTime.of(2026, 11, 2, 18, 59));
@@ -134,6 +139,7 @@ class PickSubmissionServiceTest {
 
     @Test
     void givenReturnedPickAfterDeadline_whenReplacing_thenKeepOpeningAndImmutableOldRevision() {
+        // given / when / then
         pick.submit();
         var old = new MatchdayPickRevision(pick, 1, payload(), NOW.minusSeconds(120), actor.userId(), UUID.randomUUID(), 1);
         pick.returnForCorrection();
@@ -149,6 +155,7 @@ class PickSubmissionServiceTest {
 
     @Test
     void givenEligibilityRejection_whenConfirming_thenDoNotChangeVersionOrCreateReceipt() {
+        // given / when / then
         doThrow(new BusinessRuleException("Track reserved")).when(eligibility).validate(any(), any());
         assertThatThrownBy(() -> service.submit(race.getId(), 0, request, actor, payload()))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("reserved");

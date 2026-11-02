@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.*;
 class MatchdayPickTest {
     @Test
     void givenLateMissingPick_whenOpening_thenDoNotInventARevision() {
+        // given / when / then
         var pick = pick();
         pick.openMissing();
         assertThat(pick.getState()).isEqualTo(PickState.MISSING);
@@ -19,6 +20,7 @@ class MatchdayPickTest {
 
     @Test
     void givenSubmittedPick_whenReturningAndReplacing_thenPreserveOpeningAndAdvanceRevision() {
+        // given / when / then
         var pick = pick();
         assertThat(pick.submit()).isEqualTo(1);
         pick.returnForCorrection();
@@ -33,6 +35,7 @@ class MatchdayPickTest {
 
     @Test
     void givenManuallyOpenedPick_whenClosing_thenClearOpeningAndRetainRevision() {
+        // given / when / then
         var pick = pick();
         pick.submit();
         pick.returnForCorrection();
@@ -47,6 +50,7 @@ class MatchdayPickTest {
 
     @Test
     void givenManualClose_whenReturningOrOpeningMissing_thenClearClose() {
+        // given / when / then
         var missing = pick();
         missing.close();
         missing.openMissing();
@@ -62,6 +66,7 @@ class MatchdayPickTest {
 
     @Test
     void givenLatestRevision_whenApproving_thenRetainExactPointerAndDenyAllTeamTransitions() {
+        // given / when / then
         var pick = pick();
         pick.submit();
         pick.returnForCorrection();
@@ -80,6 +85,7 @@ class MatchdayPickTest {
 
     @Test
     void givenMissingOrStaleRevision_whenReviewing_thenLeaveAggregateUnchanged() {
+        // given / when / then
         var pick = pick();
         assertThatThrownBy(pick::returnForCorrection).isInstanceOf(BusinessRuleException.class);
         assertThatThrownBy(() -> pick.approve(1)).isInstanceOf(BusinessRuleException.class);
@@ -93,6 +99,7 @@ class MatchdayPickTest {
 
     @Test
     void givenStaleExpectedVersion_whenChecking_thenRejectWithoutChanges() {
+        // given / when / then
         var pick = pick();
         pick.requireVersion(0);
         pick.submit();

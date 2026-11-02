@@ -19,6 +19,7 @@ class PickPayloadTest {
     @ParameterizedTest
     @EnumSource(PickInitialFuel.class)
     void givenEveryInitialFuelOption_whenConfirming_thenRetainTypedChoice(PickInitialFuel fuel) {
+        // given / when / then
         var input = new Input();
         input.initialFuel = fuel;
         assertThat(input.create().initialFuel()).isEqualTo(fuel);
@@ -27,6 +28,7 @@ class PickPayloadTest {
     @ParameterizedTest
     @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6})
     void givenEveryMultiplier_whenConfirming_thenRetainNumericModeIncludingZero(int multiplier) {
+        // given / when / then
         var input = new Input();
         input.timeMultiplier = multiplier;
         assertThat(input.create().timeProgressionMultiplier()).isEqualTo(multiplier);
@@ -35,6 +37,7 @@ class PickPayloadTest {
 
     @Test
     void givenEqualConditions_whenConfirming_thenRetainAbsentMultiplierAndWeatherOrder() {
+        // given / when / then
         var input = new Input();
         input.mode = TimeProgressionMode.EQUAL_CONDITIONS;
         input.timeMultiplier = null;
@@ -47,6 +50,7 @@ class PickPayloadTest {
 
     @Test
     void givenMutableTyreSets_whenConfirming_thenTakeImmutableCopies() {
+        // given / when / then
         var input = new Input();
         input.available = new HashSet<>(Set.of(PickTyre.RS, PickTyre.RM));
         input.mandatory = new HashSet<>(Set.of(PickTyre.RM));
@@ -66,6 +70,7 @@ class PickPayloadTest {
             "weather-null", "weather-blank", "weather-long", "time-null", "time-blank", "time-long", "available-null", "available-empty",
             "mandatory-null", "mandatory-outside-available"})
     void givenInvalidOrIncompletePayload_whenConfirming_thenRejectWithBusinessReason(String invalid) {
+        // given / when / then
         var input = new Input();
         Consumer<Input> change = switch (invalid) {
             case "track" -> i -> i.track = null;
@@ -109,6 +114,7 @@ class PickPayloadTest {
 
     @Test
     void givenMaximumAndMinimumOptions_whenConfirming_thenAcceptAllBoundaries() {
+        // given / when / then
         for (int wear = 1; wear <= 7; wear++) {
             for (int fuel = 1; fuel <= 6; fuel++) {
                 for (int refuel = 1; refuel <= 10; refuel++) {

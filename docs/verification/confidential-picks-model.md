@@ -37,11 +37,13 @@ is the state-machine and initial payload contract; source-form responses are nev
 - [x] Preserve enrollment/history through lifecycle, import and deletion paths.
 - [x] Prove rollback, replay and concurrent operations on H2 and MariaDB.
 - [x] Add migration, matching backup support and full round-trip/preflight coverage together.
-- [ ] Update README, CLAUDE, glossary and user-facing Wiki.
-- [ ] Complete code self-review and independent security review; resolve all findings.
-- [ ] Falsify every new guard from a correct committed checkpoint and restore exact source.
-- [ ] Run authoritative committed-head clean verify -Pe2e -Ddocker.available=true.
-- [ ] Pass matching-head CI/CodeQL, exact-head squash merge, reconcile hierarchy/Wiki and clean topic branch.
+- [x] Update README, CLAUDE and glossary; prepare the Wiki update for post-merge publication.
+- [x] Complete code self-review and independent security review; resolve all findings.
+- [x] Falsify domain, ownership, reservation, restore and SQL guards individually from a correct committed checkpoint and restore exact source.
+The authoritative committed-head clean verify, matching-head CI/CodeQL, squash merge and
+post-merge hierarchy/Wiki/branch reconciliation are tracked in the live delivery checklist on
+[PR #323](https://github.com/jegr78/ctc-manager/pull/323). This document records the pre-verification
+checkpoint so recording the final build result does not change its verified head.
 
 ## Initial integration audit
 
@@ -92,3 +94,81 @@ falsification, review completion and CI evidence are recorded below when finishe
   with a temporary test-only database constraint and verifies the entire original state afterward.
   The restore-drain probe pauses an admitted approval after SQL flush, blocks new submissions and
   proves writer draining waits until the committed approval is visible.
+
+## Review and guard evidence
+
+The independent security pass reviewed production commit `2fd9e285` and its seven-file delta,
+then rechecked the two-assertion test-only delta in `f943a108`. No security findings remain.
+Code review corrected the cutoff/receipt timestamp split, durable replay without retained wizard
+payload, bye-consumption parity and the missing aggregate assertion for manual close.
+
+The correct production baseline is `2fd9e285`; the strengthened aggregate test is committed in
+`f943a108`. Each of the following 57 mutations changed one protection at a time, produced intended
+assertion failures with **zero test errors**, and restored the exact committed source before the
+next mutation. Incidental harness errors were diagnosed separately and are excluded from this
+list. The final clean build discards all compiled mutation artifacts.
+
+<details>
+<summary>Individual guard probes</summary>
+
+| Protection deliberately broken | Witness | Intended assertion failures |
+| --- | --- | ---: |
+| collection admission | `PickDeadlinePolicyTest` | 3 |
+| deadline approved lock | `PickDeadlinePolicyTest` | 1 |
+| manual close priority | `PickDeadlinePolicyTest` | 1 |
+| management opening | `PickDeadlinePolicyTest` | 3 |
+| dst offset | `PickDeadlinePolicyTest` | 2 |
+| strict cutoff | `PickDeadlinePolicyTest` | 5 |
+| aggregate close | `MatchdayPickTest` | 1 |
+| aggregate version | `MatchdayPickTest` | 1 |
+| missing only open | `MatchdayPickTest` | 1 |
+| submitted only return | `MatchdayPickTest` | 1 |
+| exact approved revision | `MatchdayPickTest` | 1 |
+| approved only correction | `MatchdayPickTest` | 1 |
+| aggregate approved lock | `MatchdayPickTest` | 2 |
+| typed complete payload | `PickPayloadTest` | 33 |
+| replay ownership | `PickSubmissionServiceTest` | 1 |
+| deadline before write | `PickSubmissionServiceTest` | 6 |
+| replay before version | `PickSubmissionServiceTest#givenDurableRequestWithoutRetainedWizardPayload_whenReplaying_thenRecoverOriginalReceipt` | 1 |
+| single acceptance instant | `PickSubmissionServiceTest` | 1 |
+| management reason | `PickReviewServiceTest` | 3 |
+| review approved lock | `PickReviewServiceTest` | 1 |
+| review latest revision | `PickReviewServiceTest` | 1 |
+| correction state | `PickReviewServiceTest` | 1 |
+| team target ownership | `PickTargetServiceTest` | 2 |
+| management identity | `PickTargetServiceTest` | 1 |
+| original target frame | `PickTargetServiceTest` | 2 |
+| shared car eligibility | `PickEligibilityServiceTest` | 1 |
+| actual track consumption | `PickEligibilityServiceTest` | 1 |
+| pending track consumption | `PickEligibilityServiceTest` | 1 |
+| bye eligibility | `PickEligibilityServiceTest` | 2 |
+| restore admission before transaction | `PickWriteExecutorTest` | 1 |
+| no outer transaction | `PickWriteExecutorTest` | 1 |
+| lease through transaction | `PickWriteExecutorTest` | 2 |
+| lifecycle deletion | `PickLifecycleGuardTest` | 1 |
+| lifecycle identity | `PickLifecycleGuardTest` | 1 |
+| managed setup review | `PickLifecycleGuardTest` | 1 |
+| backup bye parity | `PickBackupValidatorTest` | 2 |
+| missing deadline | `PickDeadlinePolicyTest` | 1 |
+| channel actor | `PickTargetServiceTest` | 1 |
+| team actor | `PickTargetServiceTest` | 2 |
+| season track membership | `PickEligibilityServiceTest` | 1 |
+| shared pending car reservation | `RaceCarSelectionServiceTest` | 2 |
+| payload integer shape | `PickPayloadReaderTest` | 2 |
+| payload text shape | `PickPayloadReaderTest` | 2 |
+| backup receipt uniqueness | `PickBackupValidatorTest` | 1 |
+| backup original owner | `PickBackupValidatorTest` | 3 |
+| backup replayed state | `PickBackupValidatorTest` | 4 |
+| migration resource checksum | `V26PickModelMigrationTest` | 1 |
+| sql pick uniqueness | `V26PickModelMigrationTest` | 1 |
+| sql nonnegative version | `V26PickModelMigrationTest` | 1 |
+| sql state membership | `V26PickModelMigrationTest` | 1 |
+| sql manual overrides | `V26PickModelMigrationTest` | 1 |
+| sql distinct opponent | `V26PickModelMigrationTest` | 1 |
+| sql approved pointers | `V26PickModelMigrationTest` | 1 |
+| sql original matchday | `V26PickModelMigrationTest` | 1 |
+| collector release gate | `PickCollectionDisabledIT` | 1 |
+| confidentiality release gate | `PickCollectionDisabledIT` | 2 |
+| private archive preflight | `PickCollectionDisabledIT` | 2 |
+
+</details>

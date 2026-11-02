@@ -71,6 +71,7 @@ class PickTargetServiceTest {
 
     @Test
     void givenScheduledExactHomeTargetInInactiveSeason_whenLocking_thenAllowOwnershipWithoutAnActiveSeasonRestriction() {
+        // given / when / then
         assertThat(season.isActive()).isFalse();
         var target = service.lockForTeam(race.getId(), actor);
         assertThat(target).isNotNull();
@@ -82,6 +83,7 @@ class PickTargetServiceTest {
 
     @Test
     void givenReversedLeg_whenCheckingHomeOwnership_thenUseEffectiveHome() {
+        // given / when / then
         race.setHomeTeamOverride(away);
         race.setAwayTeamOverride(home);
         var reversed = new AuthorizedPickActor(race.getId(), season.getId(), away.getId(), "12345");
@@ -92,6 +94,7 @@ class PickTargetServiceTest {
     @ParameterizedTest
     @ValueSource(strings = {"team", "season", "race", "user"})
     void givenForeignOrInvalidActor_whenLocking_thenDenyWithoutReturningPrivatePick(String invalid) {
+        // given / when / then
         var foreign = new AuthorizedPickActor(invalid.equals("race") ? UUID.randomUUID() : race.getId(),
                 invalid.equals("season") ? UUID.randomUUID() : season.getId(),
                 invalid.equals("team") ? away.getId() : home.getId(), invalid.equals("user") ? "" : "12345");
@@ -102,6 +105,7 @@ class PickTargetServiceTest {
     @ParameterizedTest
     @ValueSource(strings = {"unscheduled", "unmanaged", "bye", "no-away", "results", "score", "walkover", "detached"})
     void givenIneligibleTarget_whenAssessing_thenDenyTeamEditing(String invalid) {
+        // given / when / then
         switch (invalid) {
             case "unscheduled" -> race.setDateTime(null);
             case "unmanaged" -> race.setPicksManaged(false);
@@ -138,6 +142,7 @@ class PickTargetServiceTest {
 
     @Test
     void givenManagementActor_whenLocking_thenUseSameSeasonProtocolAndRejectMissingIdentity() {
+        // given / when / then
         assertThat(service.lockForManagement(race.getId(), new ManagementPickActor("test-admin"))).isNotNull();
         assertThatThrownBy(() -> service.lockForManagement(race.getId(), new ManagementPickActor(" ")))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("actor");
