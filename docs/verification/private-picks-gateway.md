@@ -39,10 +39,11 @@ responses; real bot registration, messages and deployment activation are operato
 - [x] Persist bindings with matching migration, backup and audit support.
 - [x] Prove real transaction restore exclusion and permission revocation.
 - [x] Add native binding controls and inspect desktop/mobile behavior.
-- [ ] Update README, CLAUDE, glossary and Wiki draft.
-- [ ] Complete code/security review and individual guard falsification.
-- [ ] Publish a reviewable PR, pass final committed-head clean verify and matching CI.
-- [ ] Confirm merge, reconcile the full hierarchy/Wiki and clean the topic branch.
+- [x] Update README, CLAUDE, glossary and Wiki draft.
+- [x] Complete code/security review and individual guard falsification.
+The remaining delivery checklist lives on [PR #324](https://github.com/jegr78/ctc-manager/pull/324):
+committed-head canonical verification, matching CI, confirmed merge, full tracker/Wiki reconciliation
+and own-branch cleanup. Their measured results and readbacks are recorded there.
 
 ## Implementation references
 
@@ -132,8 +133,8 @@ activated by this checkpoint.
 - Upstream advanced only through automatic release/version commits d11f0f31 and 9bf34039. Final
   verification will use the rebased committed head against that current master.
 
-Final review, individual guard falsification, canonical clean verification and matching CI remain
-pending. No merge or issue completion is claimed by these intermediate witnesses.
+These focused runs preceded final review and guard falsification. The delivery gate and actual
+merge evidence are recorded on PR #324.
 
 - Final focused additions: 26 unit, ten MariaDB real-proxy admission tests and three browser
   tests pass. Desktop/mobile screenshots were refreshed after keeping channel/guild IDs on one
@@ -142,3 +143,107 @@ pending. No merge or issue completion is claimed by these intermediate witnesses
   SDK shutdown exception could be retried. One intended assertion failure, zero errors, proved
   the case; the closed flag now advances after a successful owned shutdown attempt. No new issue
   was needed for this correction in the current adapter.
+
+
+## Final review and guard evidence
+
+The complete independent security pass reviewed `9bf34039..589053ad` and reported no findings.
+Subsequent changes only strengthen test fixtures and record evidence; the production tree and POM
+remain identical to that reviewed snapshot. The SDK shutdown-retry correction was already included
+in the reviewed code. Later fixture checks passed 87 unit tests, and isolated H2 constraints passed
+seven integration cases.
+
+All 71 guards below were broken individually from a correct committed checkpoint. Each qualified
+run reached the intended assertion failure with zero JUnit errors, then restored the exact committed
+source bytes. One initial SDK-intent probe hit Mockito's static-verification wrapper and was excluded;
+a captured-argument assertion fixed that test harness and the repeated probe qualified normally.
+
+Body-only probes used the Maven `test`/`integration-test` lifecycle with changed-source compilation
+via `maven.compiler.useIncrementalCompilation=false`. No signatures or dependency contracts changed
+inside those probes. Logs confirmed the changed file was compiled and the selected assertion ran.
+The final `clean verify -Pe2e -Ddocker.available=true` uses default compiler behavior and the complete
+repository gates. No test, coverage, lint or security gate was skipped or weakened.
+
+| Guard | Assertion witness | Failures |
+| --- | --- | ---: |
+| startup-disabled | [DiscordPicksGatewayTest](../../src/test/java/org/ctc/discord/picks/DiscordPicksGatewayTest.java), `givenDefaultSettings*` | 1 |
+| startup-privacy | [DiscordPicksGatewayTest](../../src/test/java/org/ctc/discord/picks/DiscordPicksGatewayTest.java), `givenExplicitOptIn*` | 1 |
+| startup-identity | [DiscordPicksGatewayTest](../../src/test/java/org/ctc/discord/picks/DiscordPicksGatewayTest.java), `givenIncompleteIdentity*` | 1 |
+| single-consumer | [DiscordPicksGatewayTest](../../src/test/java/org/ctc/discord/picks/DiscordPicksGatewayTest.java), `givenReadyOptIn*` | 1 |
+| guild-scope | [PickGatewayDispatcherTest](../../src/test/java/org/ctc/discord/picks/PickGatewayDispatcherTest.java), `givenOtherGuild*` | 2 |
+| feature-routing | [PickGatewayDispatcherTest](../../src/test/java/org/ctc/discord/picks/PickGatewayDispatcherTest.java), `givenUnrelatedCommand*` | 1 |
+| restore-refusal | [PickGatewayDispatcherTest](../../src/test/java/org/ctc/discord/picks/PickGatewayDispatcherTest.java), `givenRestoreHolding*` | 1 |
+| stopped-refusal | [PickGatewayDispatcherTest](../../src/test/java/org/ctc/discord/picks/PickGatewayDispatcherTest.java), `givenStoppedDispatcher*` | 1 |
+| dispatch-expiry | [PickGatewayDispatcherTest](../../src/test/java/org/ctc/discord/picks/PickGatewayDispatcherTest.java), `givenExpiredInitial*` | 1 |
+| resource-bounds | [PickGatewayDispatcherTest](../../src/test/java/org/ctc/discord/picks/PickGatewayDispatcherTest.java), `givenInvalidResource*` | 3 |
+| initial-window | [PickGatewayReplyTest](../../src/test/java/org/ctc/discord/picks/PickGatewayReplyTest.java), `givenExactlyExpired*` | 1 |
+| single-ack | [PickGatewayReplyTest](../../src/test/java/org/ctc/discord/picks/PickGatewayReplyTest.java), `givenAlreadyDeferred*` | 1 |
+| continuation-expiry | [PickGatewayReplyTest](../../src/test/java/org/ctc/discord/picks/PickGatewayReplyTest.java), `givenAcknowledgedInteraction*` | 1 |
+| generation-invalidation | [PickGatewayReplyTest](../../src/test/java/org/ctc/discord/picks/PickGatewayReplyTest.java), `givenRestoreBeforeAcknowledgement*` | 1 |
+| old-payload-masking | [PickGatewayReplyTest](../../src/test/java/org/ctc/discord/picks/PickGatewayReplyTest.java), `givenRestoreAfterWork*` | 1 |
+| ack-before-work | [PickGatewayReplyTest](../../src/test/java/org/ctc/discord/picks/PickGatewayReplyTest.java), `givenDeferredReply*` | 1 |
+| queue-busy-private | [PickGatewayReplyTest](../../src/test/java/org/ctc/discord/picks/PickGatewayReplyTest.java), `givenFullWorkQueue*` | 1 |
+| generic-failure | [PickGatewayReplyTest](../../src/test/java/org/ctc/discord/picks/PickGatewayReplyTest.java), `givenBusinessFailure*` | 1 |
+| ephemeral-defer | [JdaPickGatewayResponseTest](../../src/test/java/org/ctc/discord/picks/JdaPickGatewayResponseTest.java), `givenDeferredReply*` | 1 |
+| ephemeral-initial | [JdaPickGatewayResponseTest](../../src/test/java/org/ctc/discord/picks/JdaPickGatewayResponseTest.java), `givenImmediatePrivateError*` | 1 |
+| ephemeral-followup | [JdaPickGatewayResponseTest](../../src/test/java/org/ctc/discord/picks/JdaPickGatewayResponseTest.java), `givenDeferredReply*` | 1 |
+| mention-free-followup | [JdaPickGatewayResponseTest](../../src/test/java/org/ctc/discord/picks/JdaPickGatewayResponseTest.java), `givenDeferredReply*` | 1 |
+| mention-free-initial | [JdaPickGatewayResponseTest](../../src/test/java/org/ctc/discord/picks/JdaPickGatewayResponseTest.java), `givenImmediatePrivateError*` | 1 |
+| no-message-content | [JdaPickGatewayTransportTest](../../src/test/java/org/ctc/discord/picks/JdaPickGatewayTransportTest.java), `givenOutgoingSession*` | 1 |
+| sdk-reconnect | [JdaPickGatewayTransportTest](../../src/test/java/org/ctc/discord/picks/JdaPickGatewayTransportTest.java), `givenOutgoingSession*` | 1 |
+| owned-shutdown | [JdaPickGatewayTransportTest](../../src/test/java/org/ctc/discord/picks/JdaPickGatewayTransportTest.java), `givenOutgoingSession*` | 1 |
+| shutdown-retry | [JdaPickGatewayTransportTest](../../src/test/java/org/ctc/discord/picks/JdaPickGatewayTransportTest.java), `givenSdkShutdownFailure*` | 1 |
+| channel-id-syntax | [PickAccessServiceTest](../../src/test/java/org/ctc/domain/service/PickAccessServiceTest.java), `givenUnauthorizedChannel*` | 2 |
+| configured-guild | [PickAccessServiceTest](../../src/test/java/org/ctc/domain/service/PickAccessServiceTest.java), `givenUnauthorizedChannel*` | 1 |
+| shared-match-channel | [PickAccessServiceTest](../../src/test/java/org/ctc/domain/service/PickAccessServiceTest.java), `givenUnauthorizedChannel*` | 1 |
+| unambiguous-scope | [PickAccessServiceTest](../../src/test/java/org/ctc/domain/service/PickAccessServiceTest.java), `givenUnauthorizedChannel*` | 1 |
+| current-private-access | [PickAccessServiceTest](../../src/test/java/org/ctc/domain/service/PickAccessServiceTest.java), `givenUnauthorizedChannel*` | 1 |
+| managed-target | [PickAccessServiceTest](../../src/test/java/org/ctc/domain/service/PickAccessServiceTest.java), `givenStaleOrForeignTarget*` | 1 |
+| target-exact-scope | [PickAccessServiceTest](../../src/test/java/org/ctc/domain/service/PickAccessServiceTest.java), `givenStaleOrForeignTarget*` | 2 |
+| original-target-identity | [PickAccessServiceTest](../../src/test/java/org/ctc/domain/service/PickAccessServiceTest.java), `givenStaleOrForeignTarget*` | 1 |
+| rebuild-forged-scope | [PickAccessServiceTest](../../src/test/java/org/ctc/domain/service/PickAccessServiceTest.java), `givenForgedTeamScope*` | 1 |
+| write-generation | [PickAccessServiceTest](../../src/test/java/org/ctc/domain/service/PickAccessServiceTest.java), `givenRevocationAfterTarget*` | 1 |
+| current-binding-at-write | [PickAccessServiceTest](../../src/test/java/org/ctc/domain/service/PickAccessServiceTest.java), `givenRevocationAfterTarget*` | 1 |
+| chooser-current-authority | [PickTargetServiceTest](../../src/test/java/org/ctc/domain/service/PickTargetServiceTest.java), `givenRevokedChannelActor*` | 1 |
+| under-lock-recheck | [PickTargetServiceTest](../../src/test/java/org/ctc/domain/service/PickTargetServiceTest.java), `givenChannelBoundActor*` | 1 |
+| fresh-facts-guild | [DiscordPickChannelPermissionSourceTest](../../src/test/java/org/ctc/discord/picks/DiscordPickChannelPermissionSourceTest.java), `givenUnavailableOrUnauthorized*` | 1 |
+| fresh-facts-channel-guild | [DiscordPickChannelPermissionSourceTest](../../src/test/java/org/ctc/discord/picks/DiscordPickChannelPermissionSourceTest.java), `givenUnavailableOrUnauthorized*` | 1 |
+| fresh-facts-channel-id | [DiscordPickChannelPermissionSourceTest](../../src/test/java/org/ctc/discord/picks/DiscordPickChannelPermissionSourceTest.java), `givenUnavailableOrUnauthorized*` | 1 |
+| fresh-facts-member-id | [DiscordPickChannelPermissionSourceTest](../../src/test/java/org/ctc/discord/picks/DiscordPickChannelPermissionSourceTest.java), `givenUnavailableOrUnauthorized*` | 1 |
+| guild-text-channel | [DiscordPickChannelPermissionSourceTest](../../src/test/java/org/ctc/discord/picks/DiscordPickChannelPermissionSourceTest.java), `givenUnavailableOrUnauthorized*` | 1 |
+| private-everyone | [DiscordPickChannelPermissionSourceTest](../../src/test/java/org/ctc/discord/picks/DiscordPickChannelPermissionSourceTest.java), `givenUnavailableOrUnauthorized*` | 1 |
+| role-overwrite-deny | [DiscordPickChannelPermissionSourceTest](../../src/test/java/org/ctc/discord/picks/DiscordPickChannelPermissionSourceTest.java), `givenUnavailableOrUnauthorized*` | 1 |
+| member-overwrite-deny | [DiscordPickChannelPermissionSourceTest](../../src/test/java/org/ctc/discord/picks/DiscordPickChannelPermissionSourceTest.java), `givenUnavailableOrUnauthorized*` | 1 |
+| permission-lookup-fail-closed | [DiscordPickChannelPermissionSourceTest](../../src/test/java/org/ctc/discord/picks/DiscordPickChannelPermissionSourceTest.java), `givenUnavailableOrUnauthorized*` | 2 |
+| binding-legacy-schema | [TeamPickBindingBackupValidatorTest](../../src/test/java/org/ctc/backup/schema/TeamPickBindingBackupValidatorTest.java), `givenLegacySchema*` | 5 |
+| binding-season-reference | [TeamPickBindingBackupValidatorTest](../../src/test/java/org/ctc/backup/schema/TeamPickBindingBackupValidatorTest.java), `givenBrokenBinding*` | 1 |
+| binding-team-reference | [TeamPickBindingBackupValidatorTest](../../src/test/java/org/ctc/backup/schema/TeamPickBindingBackupValidatorTest.java), `givenBrokenBinding*` | 1 |
+| binding-numeric-guild | [TeamPickBindingBackupValidatorTest](../../src/test/java/org/ctc/backup/schema/TeamPickBindingBackupValidatorTest.java), `givenBrokenBinding*` | 1 |
+| binding-numeric-channel | [TeamPickBindingBackupValidatorTest](../../src/test/java/org/ctc/backup/schema/TeamPickBindingBackupValidatorTest.java), `givenBrokenBinding*` | 1 |
+| binding-team-unique | [TeamPickBindingBackupValidatorTest](../../src/test/java/org/ctc/backup/schema/TeamPickBindingBackupValidatorTest.java), `givenBrokenBinding*` | 1 |
+| binding-channel-unique | [TeamPickBindingBackupValidatorTest](../../src/test/java/org/ctc/backup/schema/TeamPickBindingBackupValidatorTest.java), `givenBrokenBinding*` | 1 |
+| binding-shared-channel | [TeamPickBindingBackupValidatorTest](../../src/test/java/org/ctc/backup/schema/TeamPickBindingBackupValidatorTest.java), `givenBrokenBinding*` | 1 |
+| admin-binding-input | [PrivatePicksAdminServiceTest](../../src/test/java/org/ctc/admin/service/PrivatePicksAdminServiceTest.java), `givenInvalidOrUnsafeBinding*` | 1 |
+| admin-shared-channel | [PrivatePicksAdminServiceTest](../../src/test/java/org/ctc/admin/service/PrivatePicksAdminServiceTest.java), `givenInvalidOrUnsafeBinding*` | 1 |
+| admin-channel-conflict | [PrivatePicksAdminServiceTest](../../src/test/java/org/ctc/admin/service/PrivatePicksAdminServiceTest.java), `givenInvalidOrUnsafeBinding*` | 1 |
+| admin-current-private-access | [PrivatePicksAdminServiceTest](../../src/test/java/org/ctc/admin/service/PrivatePicksAdminServiceTest.java), `givenInvalidOrUnsafeBinding*` | 1 |
+| admin-season-write-lock | [PrivatePicksAdminServiceTest](../../src/test/java/org/ctc/admin/service/PrivatePicksAdminServiceTest.java), `givenValidPrivateChannel*` | 1 |
+| registration-privacy | [PrivatePicksAdminServiceTest](../../src/test/java/org/ctc/admin/service/PrivatePicksAdminServiceTest.java), `givenUnavailableRegistration*` | 1 |
+| registration-identity | [PrivatePicksAdminServiceTest](../../src/test/java/org/ctc/admin/service/PrivatePicksAdminServiceTest.java), `givenUnavailableRegistration*` | 2 |
+| committed-restore-epoch | [PickBackupRoundTripIT](../../src/test/java/org/ctc/backup/service/PickBackupRoundTripIT.java), `givenApprovedCorrection*` | 1 |
+| db-team-unique | [TeamPickChannelBindingIT](../../src/test/java/org/ctc/domain/service/TeamPickChannelBindingIT.java), `givenConflictingOrMalformedScope*` | 1 |
+| db-channel-unique | [TeamPickChannelBindingIT](../../src/test/java/org/ctc/domain/service/TeamPickChannelBindingIT.java), `givenConflictingOrMalformedScope*` | 1 |
+| db-season-fk | [TeamPickChannelBindingIT](../../src/test/java/org/ctc/domain/service/TeamPickChannelBindingIT.java), `givenConflictingOrMalformedScope*` | 1 |
+| db-team-fk | [TeamPickChannelBindingIT](../../src/test/java/org/ctc/domain/service/TeamPickChannelBindingIT.java), `givenConflictingOrMalformedScope*` | 1 |
+| db-guild-syntax | [TeamPickChannelBindingIT](../../src/test/java/org/ctc/domain/service/TeamPickChannelBindingIT.java), `givenConflictingOrMalformedScope*` | 1 |
+| db-channel-syntax | [TeamPickChannelBindingIT](../../src/test/java/org/ctc/domain/service/TeamPickChannelBindingIT.java), `givenConflictingOrMalformedScope*` | 1 |
+
+
+Canonical command for the final committed head:
+
+```bash
+./mvnw clean verify -Pe2e -Ddocker.available=true
+```
+
+The matching-head unit/integration/E2E totals, JaCoCo ratio, Checkstyle, SpotBugs/find-sec-bugs,
+CodeQL, CI and merge readbacks are maintained in the PR delivery checklist.
