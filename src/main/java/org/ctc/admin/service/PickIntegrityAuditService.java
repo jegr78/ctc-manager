@@ -37,8 +37,8 @@ public class PickIntegrityAuditService {
             return List.of();
         } catch (PickBackupValidator.ValidationException failure) {
             return List.of(new DataAuditFinding(DataAuditFinding.Category.PRIVATE_PICKS,
-                    DataAuditFinding.Resolution.AMBIGUOUS, "Confidential pick history", failure.getMessage(),
-                    "Review the original target and immutable history from authoritative evidence; preserve revisions and receipts."));
+                    DataAuditFinding.Resolution.AMBIGUOUS, "Private picks and channel bindings", failure.getMessage(),
+                    "Review channel bindings, the original target and immutable history against authoritative records; preserve revisions and receipts."));
         }
     }
 }

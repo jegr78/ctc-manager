@@ -46,6 +46,13 @@ public class DiscordRestClient {
 		this.bot = bot;
 	}
 
+    public void registerPicksGuildCommand(String applicationId, String guildId) throws DiscordApiException {
+        execute(() -> bot.post().uri("/applications/{applicationId}/guilds/{guildId}/commands", applicationId, guildId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("type", 1, "name", "picks", "description", "Manage private team picks"))
+                .retrieve().toBodilessEntity());
+    }
+
     public AccessGuild fetchAccessGuild(String guildId) throws DiscordApiException {
         return execute(() -> bot.get().uri("/guilds/{guildId}", guildId).retrieve().body(AccessGuild.class));
     }

@@ -29,8 +29,9 @@ class PickTargetServiceTest {
     final MatchdayPickRepository picks = mock(MatchdayPickRepository.class);
     final EntityManager entityManager = mock(EntityManager.class);
     final PickCollectionStatus collection = mock(PickCollectionStatus.class);
+    final PickAccessService access = mock(PickAccessService.class);
     final PickTargetService service = new PickTargetService(seasons, races, picks, entityManager,
-            new PickDeadlinePolicy(Clock.fixed(PickSubmissionServiceTest.NOW, ZoneOffset.UTC)), collection);
+            new PickDeadlinePolicy(Clock.fixed(PickSubmissionServiceTest.NOW, ZoneOffset.UTC)), collection, access);
     final Season season = new Season("Test_PickTarget");
     final Team home = new Team();
     final Team away = new Team();
@@ -67,6 +68,7 @@ class PickTargetServiceTest {
         when(races.findById(race.getId())).thenReturn(Optional.of(race));
         when(races.findBySeasonForSelectionUpdate(season.getId())).thenReturn(List.of(race));
         when(picks.findByRaceId(race.getId())).thenReturn(Optional.empty());
+        when(access.authorizeChannel("123", "456", "12345")).thenAnswer(invocation -> channel());
     }
 
     @Test
@@ -197,6 +199,29 @@ class PickTargetServiceTest {
     void givenUnauthenticatedChannelActor_whenListing_thenDenyBeforeAnyPrivateRead() {
         // given / when / then
         assertThatThrownBy(() -> service.listHomeRaces(null)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("channel");
+    }
+
+    @Test
+    void givenRevokedChannelActor_whenListingTargets_thenRecheckBeforeAnyPrivateRaceRead() {
+        // given
+        when(access.authorizeChannel("123", "456", "12345")).thenThrow(new BusinessRuleException("Channel access unavailable"));
+        // when / then
+        assertThatThrownBy(() -> service.listHomeRaces(channel())).isInstanceOf(BusinessRuleException.class);
+        verify(races, never()).findByMatchdaySeasonId(any());
+    }
+
+    @Test
+    void givenChannelBoundActor_whenLockingTarget_thenRecheckOnlyAfterAcquiringSeasonAndRaceLocks() {
+        // given
+        var channelActor = new AuthorizedPickActor(race.getId(), season.getId(), home.getId(), "12345",
+                new AuthorizedPickActor.ChannelContext("123", "456", 0));
+        // when
+        service.lockForTeam(race.getId(), channelActor);
+        // then
+        var order = inOrder(seasons, races, access);
+        order.verify(seasons).findByIdForUpdate(season.getId());
+        order.verify(races).findBySeasonForSelectionUpdate(season.getId());
+        order.verify(access).recheck(channelActor);
     }
 
     private ChannelPickActor channel() {

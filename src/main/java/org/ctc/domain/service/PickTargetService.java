@@ -35,6 +35,7 @@ public class PickTargetService {
     private final EntityManager entityManager;
     private final PickDeadlinePolicy deadlines;
     private final PickCollectionStatus collection;
+    private final PickAccessService access;
 
     @Transactional(readOnly = true)
     public List<HomeRaceTarget> listHomeRaces(ChannelPickActor actor) {
@@ -42,6 +43,7 @@ public class PickTargetService {
                 || !snowflake(actor.userId()) || actor.bindings().isEmpty()) {
             throw new BusinessRuleException("An authorized channel actor is required");
         }
+        actor = access.authorizeChannel(actor.guildId(), actor.channelId(), actor.userId());
         var result = new LinkedHashMap<UUID, HomeRaceTarget>();
         for (var binding : actor.bindings()) {
             if (binding.seasonId() == null || binding.teamId() == null) throw unavailable();
@@ -92,6 +94,7 @@ public class PickTargetService {
         if (target.race().getHomeTeam() == null || !actor.teamId().equals(target.race().getHomeTeam().getId())) {
             throw unavailable();
         }
+        if (actor.channel() != null) access.recheck(actor);
         return target;
     }
 

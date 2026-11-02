@@ -47,7 +47,6 @@ public class JdaPickGatewayTransport implements PickGatewayTransport {
             @Override
             public synchronized void close() {
                 if (closed) return;
-                closed = true;
                 client.shutdown();
                 try {
                     if (!client.awaitShutdown(Duration.ofSeconds(5))) client.shutdownNow();
@@ -55,6 +54,7 @@ public class JdaPickGatewayTransport implements PickGatewayTransport {
                     client.shutdownNow();
                     Thread.currentThread().interrupt();
                 }
+                closed = true;
             }
         };
     }

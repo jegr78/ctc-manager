@@ -56,9 +56,11 @@ class PickBackupRoundTripIT {
     @Autowired MatchdayPickRepository picks;
     @Autowired MatchdayPickRevisionRepository revisions;
     @Autowired MatchdayPickDecisionRepository decisions;
+    @Autowired TeamPickChannelBindingRepository bindings;
     @Autowired PickSubmissionService submissions;
     @Autowired PickReviewService reviews;
     @Autowired PickReservationService reservations;
+    @Autowired PickSessionEpoch epoch;
     @Autowired BackupArchiveService archives;
     @MockitoSpyBean BackupImportService imports;
     @MockitoBean PickCollectionStatus collection;
@@ -67,6 +69,7 @@ class PickBackupRoundTripIT {
     List<UUID> carIds;
     List<UUID> trackIds;
     UUID pendingRace;
+    UUID bindingId;
     PickPayload corrected;
     SubmissionReceipt original;
     byte[] legacy;
@@ -96,6 +99,9 @@ class PickBackupRoundTripIT {
             season.setPicksCollectionEnabled(true);
             races.findById(fixture.race().getId()).orElseThrow().setPicksManaged(true);
         });
+        bindingId = tx.execute(status -> bindings.saveAndFlush(new TeamPickChannelBinding(
+                seasons.findById(fixture.season().getId()).orElseThrow(), teams.findById(fixture.homeTeam().getId()).orElseThrow(),
+                "100000000000000001", "200000000000000002")).getId());
         original = submissions.submit(fixture.race().getId(), 0, UUID.randomUUID(), actor(fixture.race().getId()), payload(0, "S01, R03, S02"));
         reviews.returnForCorrection(fixture.race().getId(), 1, manager, "Check weather slot order");
         submissions.submit(fixture.race().getId(), 2, UUID.randomUUID(), actor(fixture.race().getId()), payload(0, "S01, R03, S02"));
@@ -133,6 +139,7 @@ class PickBackupRoundTripIT {
     void givenApprovedCorrectionAndClosedPendingHistory_whenRestoring_thenPreserveExactReceiptStateAndReservations() throws Exception {
         // given
         byte[] archive = export();
+        long generation = epoch.getAsLong();
         reviews.correct(fixture.race().getId(), 5, manager, "After export", payload(1, "Changed after export"));
         reviews.returnForCorrection(pendingRace, 3, manager, "After export opening");
         when(collection.isAvailable()).thenReturn(false);
@@ -140,8 +147,14 @@ class PickBackupRoundTripIT {
         var preview = imports.stage(upload(archive));
         imports.execute(preview.stagingId());
         // then
+        assertThat(epoch.getAsLong()).isEqualTo(generation + 1);
         verify(imports).wipeAllTables(anyMap());
         tx.executeWithoutResult(status -> {
+            var restoredBinding = bindings.findById(bindingId).orElseThrow();
+            assertThat(restoredBinding.getGuildId()).isEqualTo("100000000000000001");
+            assertThat(restoredBinding.getChannelId()).isEqualTo("200000000000000002");
+            assertThat(restoredBinding.getSeason().getId()).isEqualTo(fixture.season().getId());
+            assertThat(restoredBinding.getTeam().getId()).isEqualTo(fixture.homeTeam().getId());
             var approved = picks.findByRaceId(fixture.race().getId()).orElseThrow();
             assertThat(approved.getVersion()).isEqualTo(5);
             assertThat(approved.getState()).isEqualTo(PickState.APPROVED);
@@ -197,6 +210,7 @@ class PickBackupRoundTripIT {
     void givenMalformedPrivateHistory_whenStagingOrExecuting_thenRejectBeforeWipeAndKeepLiveHistory(String kind) throws Exception {
         // given
         byte[] valid = export();
+        long generation = epoch.getAsLong();
         byte[] broken = malformed(valid, kind);
         // when / then
         assertThatThrownBy(() -> imports.stage(upload(broken))).isInstanceOfSatisfying(BackupArchiveException.class, failure -> {
@@ -215,17 +229,19 @@ class PickBackupRoundTripIT {
             assertThat(picks.findByRaceId(pendingRace).orElseThrow().isManualClosed()).isTrue();
             assertThat(revisions.findByRequestId(original.requestId()).orElseThrow().receipt()).isEqualTo(original);
         });
+        assertThat(epoch.getAsLong()).isEqualTo(generation);
         imports.deleteStagingFile(preview.stagingId());
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {1, 2, 3, 4})
+    @ValueSource(ints = {1, 2, 3, 4, 5})
     void givenSupportedOldBackup_whenRestoring_thenDefaultNewFlagsOffAndLeaveHistoryEmpty(int version) throws Exception {
         // given
         var files = unzip(legacy);
         var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
         manifest.put("schema_version", version);
-        var absent = new ArrayList<>(List.of("matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"));
+        var absent = new ArrayList<>(List.of("team_pick_channel_bindings"));
+        if (version < 5) absent.addAll(List.of("matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"));
         if (version <= 3) absent.addAll(List.of("season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members"));
         if (version <= 2) absent.add("site_slugs");
         if (version == 1) absent.addAll(List.of("discord_global_config", "discord_post"));
@@ -233,7 +249,7 @@ class PickBackupRoundTripIT {
             files.remove("data/" + table.replace('_', '-') + ".json");
             ((ObjectNode) manifest.get("table_counts")).remove(table);
         }
-        for (String table : List.of("seasons", "races")) {
+        for (String table : version < 5 ? List.of("seasons", "races") : List.<String>of()) {
             var rows = (ArrayNode) JSON.readTree(files.get("data/" + table + ".json"));
             for (var row : rows) ((ObjectNode) row).remove(table.equals("seasons") ? "picksCollectionEnabled" : "picksManaged");
             files.put("data/" + table + ".json", JSON.writeValueAsBytes(rows));
@@ -247,6 +263,26 @@ class PickBackupRoundTripIT {
             assertThat(seasons.findById(fixture.season().getId()).orElseThrow().isPicksCollectionEnabled()).isFalse();
             assertThat(races.findById(fixture.race().getId()).orElseThrow().isPicksManaged()).isFalse();
             assertThat(picks.findBySeasonId(fixture.season().getId())).isEmpty();
+            assertThat(bindings.findById(bindingId)).isEmpty();
+        });
+    }
+
+    @Test
+    void givenSchemaFiveHistoryWithoutBindings_whenRestoring_thenPreserveReceiptsAndGrantNoChannel() throws Exception {
+        // given
+        var files = unzip(export());
+        var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
+        manifest.put("schema_version", 5);
+        ((ObjectNode) manifest.get("table_counts")).remove("team_pick_channel_bindings");
+        files.remove("data/team-pick-channel-bindings.json");
+        files.put("manifest.json", JSON.writeValueAsBytes(manifest));
+        // when
+        var preview = imports.stage(upload(zip(files)));
+        imports.execute(preview.stagingId());
+        // then
+        tx.executeWithoutResult(status -> {
+            assertThat(bindings.findById(bindingId)).isEmpty();
+            assertThat(revisions.findByRequestId(original.requestId()).orElseThrow().receipt()).isEqualTo(original);
         });
     }
 

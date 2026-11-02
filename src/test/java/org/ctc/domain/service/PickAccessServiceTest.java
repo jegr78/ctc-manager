@@ -28,7 +28,8 @@ class PickAccessServiceTest {
     final MatchRepository matches = mock(MatchRepository.class);
     final RaceRepository races = mock(RaceRepository.class);
     final MatchdayPickRepository picks = mock(MatchdayPickRepository.class);
-    final PickAccessService service = new PickAccessService(bindings, permissions, configs, matches, races, picks);
+    final PickSessionEpoch epoch = new PickSessionEpoch();
+    final PickAccessService service = new PickAccessService(bindings, permissions, configs, matches, races, picks, epoch);
     final Season season = new Season("Test private channel access");
     final Team home = new Team();
     final Team away = new Team();
@@ -107,6 +108,7 @@ class PickAccessServiceTest {
         assertThat(result.get().seasonId()).isEqualTo(season.getId());
         assertThat(result.get().teamId()).isEqualTo(home.getId());
         assertThat(result.get().userId()).isEqualTo(USER);
+        assertThat(result.get().channel()).isEqualTo(new AuthorizedPickActor.ChannelContext(GUILD, CHANNEL, epoch.getAsLong()));
     }
 
     @ParameterizedTest
@@ -145,6 +147,33 @@ class PickAccessServiceTest {
         race.getResults().add(new RaceResult());
         // when / then
         assertThatCode(() -> service.authorizeTarget(channel(), race.getId())).doesNotThrowAnyException();
+    }
+
+    @Test
+    void givenAuthorizedContext_whenRecheckingUnderWriteLock_thenReadCurrentBindingAndPermissionsAgain() {
+        // given
+        var actor = new AuthorizedPickActor(race.getId(), season.getId(), home.getId(), USER,
+                new AuthorizedPickActor.ChannelContext(GUILD, CHANNEL, epoch.getAsLong()));
+        when(bindings.findCurrentForUpdate(season.getId(), home.getId(), GUILD, CHANNEL)).thenReturn(Optional.of(binding));
+        // when
+        service.recheck(actor);
+        // then
+        verify(bindings).findCurrentForUpdate(season.getId(), home.getId(), GUILD, CHANNEL);
+        verify(permissions).hasCurrentPrivateAccess(GUILD, CHANNEL, USER);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"removed-binding", "revoked-permission", "restore-generation"})
+    void givenRevocationAfterTargetSelection_whenConfirming_thenRejectOldAuthority(String invalid) {
+        // given
+        var actor = new AuthorizedPickActor(race.getId(), season.getId(), home.getId(), USER,
+                new AuthorizedPickActor.ChannelContext(GUILD, CHANNEL, epoch.getAsLong()));
+        when(bindings.findCurrentForUpdate(season.getId(), home.getId(), GUILD, CHANNEL)).thenReturn(Optional.of(binding));
+        if (invalid.equals("removed-binding")) when(bindings.findCurrentForUpdate(season.getId(), home.getId(), GUILD, CHANNEL)).thenReturn(Optional.empty());
+        if (invalid.equals("revoked-permission")) when(permissions.hasCurrentPrivateAccess(GUILD, CHANNEL, USER)).thenReturn(false);
+        if (invalid.equals("restore-generation")) epoch.afterRestore(null);
+        // when / then
+        assertThatThrownBy(() -> service.recheck(actor)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("unavailable");
     }
 
     ChannelPickActor channel() {

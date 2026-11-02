@@ -88,6 +88,7 @@ public class BackupExportService {
     private final MatchdayPickRepository picks;
     private final MatchdayPickRevisionRepository pickRevisions;
     private final MatchdayPickDecisionRepository pickDecisions;
+    private final TeamPickChannelBindingRepository pickBindings;
 
 
 	private final String uploadDirRaw;
@@ -130,6 +131,7 @@ public class BackupExportService {
             MatchdayPickRepository picks,
             MatchdayPickRevisionRepository pickRevisions,
             MatchdayPickDecisionRepository pickDecisions,
+            TeamPickChannelBindingRepository pickBindings,
 			@Value("${app.upload-dir:data/dev/uploads}") String uploadDirRaw
 	) {
 		this.backupSchema = backupSchema;
@@ -166,6 +168,7 @@ public class BackupExportService {
         this.picks = picks;
         this.pickRevisions = pickRevisions;
         this.pickDecisions = pickDecisions;
+        this.pickBindings = pickBindings;
 		this.uploadDirRaw = uploadDirRaw;
 	}
 
@@ -206,6 +209,7 @@ public class BackupExportService {
         this.repositoriesByEntityClass.put(MatchdayPick.class, picks);
         this.repositoriesByEntityClass.put(MatchdayPickRevision.class, pickRevisions);
         this.repositoriesByEntityClass.put(MatchdayPickDecision.class, pickDecisions);
+        this.repositoriesByEntityClass.put(TeamPickChannelBinding.class, pickBindings);
 		log.info("BackupExportService initialized: uploadRoot={}, repositoryCount={}",
 				uploadRoot, repositoriesByEntityClass.size());
 	}

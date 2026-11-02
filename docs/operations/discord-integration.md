@@ -747,3 +747,32 @@ the cross-guild restore in § 8.1).
 Forward-compatibility: SCHEMA_VERSION 3+ backups are NOT accepted by v1.13+. Upgrade
 the target environment to a build at or above the source build's SCHEMA_VERSION
 before restoring.
+
+
+## Private team channel setup
+
+Open Discord Config → Private team picks to inspect Gateway health and save an exact binding for
+a season, team and private guild text channel. Saving the same season/team again replaces its
+channel. The bot must currently be able to view it. A shared match channel cannot be bound.
+Saving reads current Discord permissions and stores the association. It creates no channel or message.
+
+Every member with current access to the bound private channel follows that team's workflow.
+Manager roles, parent-team roles and guessed team IDs do not select another team. Channel access
+and the target's effective home ownership are checked again when reading or confirming a target.
+Removing a binding or revoking channel access prevents an old dialog from confirming a pick.
+
+The outgoing consumer defaults off. `DISCORD_PICKS_ENABLED` maps to `app.discord.picks.enabled`;
+worker count defaults to 2 and queue capacity to 32. The existing `DISCORD_BOT_TOKEN`, saved guild
+and application ID are reused. No public interaction endpoint or message-content intent is required.
+The application also requires confidentiality readiness, so enabling the setting alone does not
+activate collection in this foundation release. The submission dialog and confidentiality rollout
+are tracked separately in #283, #285 and #286.
+
+After confidentiality acceptance, use the explicit **Register /picks for this guild** action.
+It upserts only this feature's guild command. Startup and backup restore never register commands.
+Tests use local fakes; this implementation does not register a live command or send a test message.
+
+Backup schema 6 retains channel bindings, including exact IDs. Schemas 1 through 5 remain supported
+and restore without bindings. A committed restore invalidates pending interaction generations.
+Start the interaction again after restore, permission revocation, an expired callback or a busy queue.
+Existing publishing and webhook clients keep their current behavior.

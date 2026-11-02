@@ -82,7 +82,7 @@ class BackupArchiveServiceIT {
 		// given
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		List<EntityRef> exportOrder = backupSchema.getExportOrder();
-		assertThat(exportOrder).as("export order size").hasSize(33);
+		assertThat(exportOrder).as("export order size").hasSize(34);
 
 		// when
 		archiveService.writeZip(out, Instant.now());

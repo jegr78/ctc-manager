@@ -159,6 +159,19 @@ class PickGatewayDispatcherTest {
         assertThat(event.toString()).doesNotContain("Test private weather", "ctc-picks:opaque");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"zero-workers", "too-many-workers", "zero-queue", "too-large-queue"})
+    void givenInvalidResourceBounds_whenStarting_thenRefuseBeforeAllocatingWorkers(String invalid) {
+        // given
+        if (invalid.equals("zero-workers")) settings.setWorkers(0);
+        if (invalid.equals("too-many-workers")) settings.setWorkers(9);
+        if (invalid.equals("zero-queue")) settings.setQueueCapacity(0);
+        if (invalid.equals("too-large-queue")) settings.setQueueCapacity(257);
+        // when / then
+        assertThatThrownBy(dispatcher::start).isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(handler);
+    }
+
     PickGatewayInteraction event(String guild, PickGatewayInteraction.Kind kind, String action) {
         return new PickGatewayInteraction("opaque-event", guild, "200000000000000002", "300000000000000003", kind,
                 action, Map.of("weather", List.of("Test private weather")), PickGatewayReplyTest.NOW, response);

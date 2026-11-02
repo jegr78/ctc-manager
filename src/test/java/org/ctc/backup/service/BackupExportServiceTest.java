@@ -74,7 +74,7 @@ class BackupExportServiceTest {
 				discordGlobalConfigRepository, discordPostRepository, siteSlugRepository,
                 mock(SeasonCarPoolEntryRepository.class), mock(SeasonCarPoolClauseRepository.class),
                 mock(SeasonCarPoolMemberRepository.class), mock(MatchdayPickRepository.class),
-                mock(MatchdayPickRevisionRepository.class), mock(MatchdayPickDecisionRepository.class),
+                mock(MatchdayPickRevisionRepository.class), mock(MatchdayPickDecisionRepository.class), mock(TeamPickChannelBindingRepository.class),
 				tempDir.toString()
 		);
 		ReflectionTestUtils.invokeMethod(service, "initialize");

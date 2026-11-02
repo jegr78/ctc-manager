@@ -5,11 +5,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 import org.ctc.discord.DiscordRestClient;
 import org.ctc.discord.dto.PermissionOverwrite;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.domain.picks.PickChannelPermissionSource;
 
+@Component
 @RequiredArgsConstructor
 public class DiscordPickChannelPermissionSource implements PickChannelPermissionSource {
     private final DiscordRestClient discord;

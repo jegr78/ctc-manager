@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Private team picks', ~{::section})}">
+<body>
+<section class="entity-editor discord-config-workspace private-picks-workspace">
+    <h1>Private team picks</h1>
+    <p class="text-dim mb-md">Bind each team's private Discord channel to its season. Members with current access to that channel can use the team's workflow.</p>
+    <p class="mb-md"><a th:href="@{/admin/discord-config}">Back to Discord configuration</a></p>
+    <div class="card">
+        <h2>Connection status</h2>
+        <dl>
+            <dt>Gateway</dt>
+            <dd data-testid="picks-gateway-health" th:text="${setup.health}">Disabled</dd>
+            <dt>Saved guild</dt>
+            <dd th:text="${#strings.isEmpty(setup.guildId) ? 'Not configured' : setup.guildId}"></dd>
+        </dl>
+        <p class="text-dim">The outgoing connection is disabled by default. Collection remains unavailable until confidentiality acceptance is complete.</p>
+    </div>
+    <form th:action="@{/admin/discord-config/picks/bindings/save}" method="post" th:object="${form}" class="card entity-editor-form">
+        <fieldset>
+            <legend>Save a team channel</legend>
+            <p class="text-dim mb-md" id="private-binding-help">Saving the same season and team again replaces its channel. Saving checks the bot's current access and stores the binding. Shared match channels cannot be used.</p>
+            <div th:if="${#fields.hasGlobalErrors()}" class="field-error" role="alert">
+                <p th:each="error : ${#fields.globalErrors()}" th:text="${error}"></p>
+            </div>
+            <div class="form-group">
+                <label for="private-pick-season">Season</label>
+                <select id="private-pick-season" th:field="*{seasonId}" required>
+                    <option value="">Choose a season</option>
+                    <option th:each="choice : ${setup.seasons}" th:value="${choice.id}" th:text="${choice.label}"></option>
+                </select>
+                <span th:errors="*{seasonId}" class="field-error" role="alert"></span>
+            </div>
+            <div class="form-group">
+                <label for="private-pick-team">Team</label>
+                <select id="private-pick-team" th:field="*{teamId}" required>
+                    <option value="">Choose a team</option>
+                    <option th:each="choice : ${setup.teams}" th:value="${choice.id}" th:text="${choice.label}"></option>
+                </select>
+                <span th:errors="*{teamId}" class="field-error" role="alert"></span>
+            </div>
+            <div class="form-group">
+                <label for="private-pick-channel">Private text channel ID</label>
+                <input id="private-pick-channel" type="text" th:field="*{channelId}" inputmode="numeric" pattern="[0-9]{1,32}" maxlength="32" required aria-describedby="private-binding-help">
+                <span th:errors="*{channelId}" class="field-error" role="alert"></span>
+            </div>
+        </fieldset>
+        <button type="submit" class="btn btn-primary" th:disabled="${#strings.isEmpty(setup.guildId)}">Save binding</button>
+        <p class="text-dim mt-md" th:if="${#strings.isEmpty(setup.guildId)}">Save the Guild ID in Discord configuration first.</p>
+    </form>
+    <div class="card">
+        <h2>Saved bindings</h2>
+        <p th:if="${setup.bindings.isEmpty()}" class="text-dim">No private team channels are bound.</p>
+        <div th:unless="${setup.bindings.isEmpty()}" class="table-scroll" tabindex="0" role="region" aria-label="Saved private team channel bindings">
+            <table>
+                <thead><tr><th scope="col">Season</th><th scope="col">Team</th><th scope="col">Guild</th><th scope="col">Channel</th><th scope="col">Action</th></tr></thead>
+                <tbody>
+                <tr th:each="binding : ${setup.bindings}">
+                    <td th:text="${binding.season}"></td><td th:text="${binding.team}"></td>
+                    <td th:text="${binding.guildId}"></td><td th:text="${binding.channelId}"></td>
+                    <td><form th:action="@{/admin/discord-config/picks/bindings/{id}/delete(id=${binding.id})}" method="post">
+                        <button type="submit" class="btn btn-secondary" th:attr="aria-label=${'Remove binding for ' + binding.team + ' in ' + binding.season}">Remove</button>
+                    </form></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card">
+        <h2>Register the Discord command</h2>
+        <p class="text-dim mb-md">Register /picks for the saved guild after the bot and server are configured and confidentiality acceptance is complete.</p>
+        <form th:action="@{/admin/discord-config/picks/register-command}" method="post">
+            <button type="submit" class="btn btn-secondary" th:disabled="${!setup.registrationReady}">Register /picks for this guild</button>
+        </form>
+    </div>
+</section>
+</body>
+</html>

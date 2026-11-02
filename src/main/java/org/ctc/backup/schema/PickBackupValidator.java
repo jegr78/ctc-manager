@@ -16,7 +16,8 @@ public final class PickBackupValidator {
             Map.entry("seasons", Set.of("id", "picksCollectionEnabled", "carPoolMode", "carPoolState", "cars", "tracks")),
             Map.entry("teams", Set.of("id")), Map.entry("cars", Set.of("id")), Map.entry("tracks", Set.of("id")),
             Map.entry("season_phases", Set.of("id", "season")), Map.entry("matchdays", Set.of("id", "phase")),
-            Map.entry("matches", Set.of("id", "homeTeam", "awayTeam", "bye")),
+            Map.entry("matches", Set.of("id", "homeTeam", "awayTeam", "bye", "discordChannelId")),
+            Map.entry("team_pick_channel_bindings", Set.of("id", "season", "team", "guildId", "channelId", "createdAt", "updatedAt")),
             Map.entry("playoff_matchups", Set.of("id", "team1", "team2", "bye")),
             Map.entry("races", Set.of("id", "matchday", "match", "playoffMatchup", "homeTeamOverride", "awayTeamOverride", "car", "track", "carPoolEntry", "picksManaged")),
             Map.entry("season_car_pool_entries", Set.of("id", "season")), Map.entry("season_car_pool_members", Set.of("id", "entry", "car")),
@@ -34,6 +35,7 @@ public final class PickBackupValidator {
     public void accept(String table, JsonNode row) {
         if (!FIELDS.containsKey(table)) return;
         try {
+            if (version < 6 && table.equals("team_pick_channel_bindings")) fail("Channel bindings require schema version 6");
             String flag = table.equals("seasons") ? "picksCollectionEnabled" : table.equals("races") ? "picksManaged" : null;
             if (flag != null) {
                 if (version >= 5 || row.has(flag)) bool(row, flag);
@@ -45,7 +47,7 @@ public final class PickBackupValidator {
                 return;
             }
             if (!row.isObject()) fail("A retained row must be an object");
-            if (table.startsWith("matchday_pick")) {
+            if (table.startsWith("matchday_pick") || table.equals("team_pick_channel_bindings")) {
                 row.fieldNames().forEachRemaining(field -> { if (!FIELDS.get(table).contains(field)) fail("Unknown history field " + field); });
                 for (String field : List.of("createdAt", "updatedAt")) {
                     if (row.hasNonNull(field)) validYear(LocalDateTime.parse(text(row, field, 40)));
@@ -81,6 +83,7 @@ public final class PickBackupValidator {
     public void validate() {
         if (version < 5) return;
         try {
+            validateBindings();
             var events = new HashMap<String, SortedMap<Long, Event>>();
             var requestIds = new HashSet<String>();
             for (var revision : index("matchday_pick_revisions").values()) {
@@ -243,6 +246,25 @@ public final class PickBackupValidator {
     private static void event(Map<String, SortedMap<Long, Event>> events, String owner, long version, Event event) {
         if (version < 1 || events.computeIfAbsent(owner, ignored -> new TreeMap<>()).putIfAbsent(version, event) != null) fail("Duplicate or invalid history version");
     }
+    private void validateBindings() {
+        var teamScopes = new HashSet<List<String>>();
+        var channelScopes = new HashSet<List<String>>();
+        var sharedChannels = new HashSet<String>();
+        for (var match : index("matches").values()) {
+            if (match.hasNonNull("discordChannelId")) sharedChannels.add(match.get("discordChannelId").asText());
+        }
+        for (var binding : index("team_pick_channel_bindings").values()) {
+            var season = reference(binding, "season", "seasons");
+            var team = reference(binding, "team", "teams");
+            var guild = text(binding, "guildId", 32);
+            var channel = text(binding, "channelId", 32);
+            if (!guild.matches("[0-9]{1,32}") || !channel.matches("[0-9]{1,32}") || sharedChannels.contains(channel)
+                    || !teamScopes.add(List.of(guild, season, team)) || !channelScopes.add(List.of(guild, season, channel))) {
+                fail("Invalid or conflicting private team channel binding");
+            }
+        }
+    }
+
     private Map<String, JsonNode> index(String table) { return rows.getOrDefault(table, Map.of()); }
     private String reference(JsonNode row, String field, String table) {
         String id = uuid(row, field);

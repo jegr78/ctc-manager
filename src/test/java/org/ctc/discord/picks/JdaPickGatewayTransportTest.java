@@ -59,6 +59,23 @@ class JdaPickGatewayTransportTest {
         }
     }
 
+    @Test
+    void givenSdkShutdownFailure_whenRetryingOwnedClose_thenRetryInsteadOfTreatingClientAsClosed() throws Exception {
+        // given
+        when(builder.build()).thenReturn(jda);
+        when(jda.awaitShutdown(Duration.ofSeconds(5))).thenReturn(true);
+        doThrow(new IllegalStateException("Test shutdown failed")).doNothing().when(jda).shutdown();
+        try (var factory = mockStatic(JDABuilder.class)) {
+            factory.when(() -> JDABuilder.createLight(anyString(), any(java.util.Collection.class))).thenReturn(builder);
+            var session = transport.connect("test-token", "100", receiver);
+            // when / then
+            assertThatThrownBy(session::close).isInstanceOf(IllegalStateException.class);
+            session.close();
+            verify(jda, times(2)).shutdown();
+            verify(jda).awaitShutdown(Duration.ofSeconds(5));
+        }
+    }
+
     @ParameterizedTest
     @CsvSource({"CONNECTED,CONNECTED", "WAITING_TO_RECONNECT,RECONNECTING", "ATTEMPTING_TO_RECONNECT,RECONNECTING",
             "SHUTDOWN,STOPPED", "FAILED_TO_LOGIN,STOPPED", "CONNECTING_TO_WEBSOCKET,CONNECTING"})

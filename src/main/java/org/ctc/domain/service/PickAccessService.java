@@ -4,11 +4,16 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 import org.ctc.discord.repository.DiscordGlobalConfigRepository;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.picks.*;
 import org.ctc.domain.repository.*;
 
+@Service
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class PickAccessService {
     private final TeamPickChannelBindingRepository bindings;
@@ -17,6 +22,7 @@ public class PickAccessService {
     private final MatchRepository matches;
     private final RaceRepository races;
     private final MatchdayPickRepository picks;
+    private final PickSessionEpoch epoch;
 
     public ChannelPickActor authorizeChannel(String guildId, String channelId, String userId) {
         if (!snowflake(guildId) || !snowflake(channelId) || !snowflake(userId)) throw unavailable();
@@ -47,6 +53,7 @@ public class PickAccessService {
 
     public AuthorizedPickActor authorizeTarget(ChannelPickActor channel, UUID raceId) {
         if (channel == null || raceId == null) throw unavailable();
+        long generation = epoch.getAsLong();
         var current = authorizeChannel(channel.guildId(), channel.channelId(), channel.userId());
         var race = races.findById(raceId).orElseThrow(PickAccessService::unavailable);
         if (!race.isPicksManaged() || race.getMatchday() == null || race.getMatchday().getSeason() == null
@@ -57,7 +64,21 @@ public class PickAccessService {
                 || !current.bindings().contains(new ChannelPickActor.Binding(seasonId, teamId))) throw unavailable();
         var pick = picks.findSnapshotByRaceId(raceId).orElse(null);
         if (pick != null && !pick.matchesTarget(race)) throw unavailable();
-        return new AuthorizedPickActor(raceId, seasonId, teamId, current.userId());
+        if (generation != epoch.getAsLong()) throw unavailable();
+        return new AuthorizedPickActor(raceId, seasonId, teamId, current.userId(),
+                new AuthorizedPickActor.ChannelContext(current.guildId(), current.channelId(), generation));
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void recheck(AuthorizedPickActor actor) {
+        var channel = actor.channel();
+        if (channel == null || channel.generation() != epoch.getAsLong()
+                || bindings.findCurrentForUpdate(actor.seasonId(), actor.teamId(), channel.guildId(), channel.channelId()).isEmpty()) {
+            throw unavailable();
+        }
+        var current = authorizeChannel(channel.guildId(), channel.channelId(), actor.userId());
+        if (!current.bindings().contains(new ChannelPickActor.Binding(actor.seasonId(), actor.teamId()))
+                || channel.generation() != epoch.getAsLong()) throw unavailable();
     }
 
     private static boolean snowflake(String value) { return value != null && value.matches("[0-9]{1,32}"); }

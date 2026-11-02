@@ -35,10 +35,10 @@ responses; real bot registration, messages and deployment activation are operato
 - [x] Recheck live issues, dependencies, hierarchy, milestone and parallel occupancy.
 - [x] Create the behavior branch and record requirements before production changes.
 - [x] Write and observe behavioral assertion-red Gateway and access tests.
-- [ ] Implement bounded transport and exact current permission checks.
-- [ ] Persist bindings with matching migration, backup and audit support.
-- [ ] Prove real transaction restore exclusion and permission revocation.
-- [ ] Add native binding controls and inspect desktop/mobile behavior.
+- [x] Implement bounded transport and exact current permission checks.
+- [x] Persist bindings with matching migration, backup and audit support.
+- [x] Prove real transaction restore exclusion and permission revocation.
+- [x] Add native binding controls and inspect desktop/mobile behavior.
 - [ ] Update README, CLAUDE, glossary and Wiki draft.
 - [ ] Complete code/security review and individual guard falsification.
 - [ ] Publish a reviewable PR, pass final committed-head clean verify and matching CI.
@@ -92,3 +92,53 @@ activated by this checkpoint.
 - Combined focused checkpoint: 86 tests, zero failures/errors, on Java 25. These are intermediate
   unit witnesses, not the final clean-verify or merge evidence. Spring binding/configuration wiring,
   durable binding recovery, real-proxy admission/revocation and the native setup UI remain pending.
+
+
+## Persistence and transaction integration
+
+- Binding preflight: 14 intended assertion failures, zero errors, then green. Current schema is 6
+  with 34 exported entities. Schema versions 1 through 5 may omit bindings and gain no channel grant.
+- H2 migration constraints: seven intended assertion failures, zero errors, then seven green.
+  The same seven cases pass against isolated MariaDB. Exact scopes persist; duplicate team/channel
+  grants, missing references and malformed Discord IDs fail at the database boundary.
+- Focused storage run: 52 unit and 30 integration tests pass. Expanded recovery/audit run: 14 unit
+  and 51 integration tests pass, including complete H2/MariaDB history/binding round trips, schema-5
+  private history without bindings, legacy schemas 1–5 and read-only shared-channel conflict audit.
+- Confirmation/read recheck: seven intended assertion failures, zero errors, then 46 unit tests
+  green. Gateway actor provenance retains exact channel identity and the current restore generation.
+  The real write path takes season/target locks before current binding and permission rechecks.
+- GatewayRestoreAdmissionIT passes ten real-proxy integration cases. Permission/binding/guild changes
+  and stale generations reject previously selected actors. An admitted write blocks restore drain
+  through commit; later interactions refuse privately. SQL flushed before a forced commit failure
+  rolls back without a saved receipt. Shutdown interrupts active work and releases admission.
+- Actual backup imports increment the generation after commit; rejected or rolled-back imports
+  preserve it. Tests use the existing transaction-owning writer helper and never add an outer
+  transaction around Gateway submission.
+
+## Native management interface
+
+- Administration and single-command registration: 18 intended assertion failures, zero errors,
+  then 18 green. Controller behavior: eight intended assertion failures, zero errors, then green.
+  A test generic-type compilation error was diagnosed through clean test-compile and corrected
+  before the behavioral red run; it is not counted as intended red evidence.
+- Full focused composition run: 152 unit, 20 integration and three Playwright tests pass.
+  Productive authentication and CSRF protect all mutation routes. The real management service
+  refuses registration before confidentiality acceptance. View/health reads do not heal configuration
+  or perform external calls. Saving checks current bot access without channel creation or posting.
+- Desktop 1440×1000 and mobile 390×844 save/remove flows work with JavaScript disabled. Failure
+  retains season, team and channel inputs. Registration remains disabled. Screenshots under ignored
+  `.screenshots/private-picks-{desktop,mobile}.png` were inspected; only the local test server and
+  mocked Discord facts were used.
+- Upstream advanced only through automatic release/version commits d11f0f31 and 9bf34039. Final
+  verification will use the rebased committed head against that current master.
+
+Final review, individual guard falsification, canonical clean verification and matching CI remain
+pending. No merge or issue completion is claimed by these intermediate witnesses.
+
+- Final focused additions: 26 unit, ten MariaDB real-proxy admission tests and three browser
+  tests pass. Desktop/mobile screenshots were refreshed after keeping channel/guild IDs on one
+  line inside the existing horizontal table region. Four worker/queue-bound cases are covered.
+- Self-review found an SDK-owned shutdown retry bug: the session was marked closed before an
+  SDK shutdown exception could be retried. One intended assertion failure, zero errors, proved
+  the case; the closed flag now advances after a successful owned shutdown attempt. No new issue
+  was needed for this correction in the current adapter.
