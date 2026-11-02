@@ -3,8 +3,6 @@ package org.ctc.discord.picks;
 import java.time.Clock;
 import org.ctc.backup.lock.ImportLockService;
 import org.ctc.discord.repository.DiscordGlobalConfigRepository;
-import org.ctc.domain.exception.BusinessRuleException;
-import org.ctc.domain.service.PickAccessService;
 import org.ctc.domain.service.PickCollectionStatus;
 import org.ctc.domain.service.PickSessionEpoch;
 import org.ctc.integration.OutboundPolicy;
@@ -22,15 +20,8 @@ public class PickGatewayConfiguration {
     }
 
     @Bean
-    public PickGatewayInteractionHandler pickGatewayInteractionHandler(PickAccessService access) {
-        return (interaction, reply) -> reply.deferPrivate(continuation -> {
-            try {
-                access.authorizeChannel(interaction.guildId(), interaction.channelId(), interaction.userId());
-                continuation.replyPrivate("Private picks are not available yet.");
-            } catch (BusinessRuleException denied) {
-                continuation.replyPrivate("Picks are unavailable in this channel.");
-            }
-        });
+    public PickDraftSessionStore pickDraftSessionStore(Clock clock, PickSessionEpoch epoch) {
+        return new PickDraftSessionStore(clock, epoch, 512);
     }
 
     @Bean

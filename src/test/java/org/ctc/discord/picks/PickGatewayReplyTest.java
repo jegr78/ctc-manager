@@ -25,6 +25,22 @@ class PickGatewayReplyTest {
     final PickGatewayReply reply = new PickGatewayReply(raw, clock, NOW, epoch::get, Runnable::run);
 
     @Test
+    void givenInteractiveContinuation_whenLiveThenExpiredOrReset_thenForwardOnlyLivePrivateComponents() {
+        // given
+        when(raw.deferPrivate()).thenReturn(acknowledged);
+        var saved = new AtomicReference<PickGatewayResponse.Continuation>();
+        reply.deferPrivate(saved::set); acknowledged.complete(continuation);
+        var message = new PickGatewayMessage("Test private chooser", List.of(new PickGatewayMessage.Button("opaque", "Choose")), null);
+        // when / then
+        saved.get().replyPrivate(message); verify(continuation).replyPrivate(message);
+        clearInvocations(continuation);
+        clock.now = NOW.plusSeconds(900); saved.get().replyPrivate(message); verifyNoInteractions(continuation);
+        clock.now = NOW.plusSeconds(1); epoch.incrementAndGet(); saved.get().replyPrivate(message);
+        verify(continuation).replyPrivate("This interaction was reset. Start again.");
+        verify(continuation, never()).replyPrivate(message);
+    }
+
+    @Test
     void givenDeferredReply_whenAcknowledgementArrives_thenOnlyThenRunPrivateWork() {
         // given
         when(raw.deferPrivate()).thenReturn(acknowledged);

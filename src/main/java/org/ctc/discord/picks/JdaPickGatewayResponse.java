@@ -5,6 +5,9 @@ import java.util.concurrent.CompletionStage;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import net.dv8tion.jda.api.components.label.Label;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.buttons.Button;
+import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
@@ -20,10 +23,25 @@ public class JdaPickGatewayResponse implements PickGatewayResponse {
         var result = new CompletableFuture<Continuation>();
         callback.deferReply(true).queue(hook -> {
             hook.setEphemeral(true);
-            result.complete(message -> hook.sendMessage(message).setEphemeral(true).setAllowedMentions(List.of())
-                    .queue(sent -> { }, failure -> { }));
+            result.complete(new Continuation() {
+                @Override public void replyPrivate(String message) {
+                    hook.sendMessage(message).setEphemeral(true).setAllowedMentions(List.of()).queue(sent -> { }, failure -> { });
+                }
+                @Override public void replyPrivate(PickGatewayMessage message) { sendInteractive(hook, message); }
+            });
         }, failure -> result.completeExceptionally(new IllegalStateException("Private acknowledgement failed")));
         return result;
+    }
+
+    private static void sendInteractive(InteractionHook hook, PickGatewayMessage message) {
+        var rows = new java.util.ArrayList<ActionRow>();
+        if (message.selection() != null) {
+            var select = StringSelectMenu.create(message.selection().id()).setPlaceholder(message.selection().placeholder()).setRequiredRange(1, 1);
+            for (var option : message.selection().options()) select.addOption(option.label(), option.value());
+            rows.add(ActionRow.of(select.build()));
+        }
+        if (!message.buttons().isEmpty()) rows.add(ActionRow.of(message.buttons().stream().map(button -> Button.secondary(button.id(), button.label())).toList()));
+        hook.sendMessage(message.content()).setEphemeral(true).setAllowedMentions(List.of()).setComponents(rows).queue(sent -> { }, failure -> { });
     }
 
     @Override

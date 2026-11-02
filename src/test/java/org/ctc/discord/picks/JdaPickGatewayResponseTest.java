@@ -11,6 +11,8 @@ import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction;
 import net.dv8tion.jda.api.requests.restaction.interactions.ModalCallbackAction;
 import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
 import static org.assertj.core.api.Assertions.*;
@@ -22,6 +24,49 @@ class JdaPickGatewayResponseTest {
     final ReplyCallbackAction initial = mock(ReplyCallbackAction.class, RETURNS_SELF);
     final InteractionHook hook = mock(InteractionHook.class);
     final JdaPickGatewayResponse response = new JdaPickGatewayResponse(event);
+
+    @ParameterizedTest
+    @ValueSource(strings = {"rules", "fuel", "time", "search-car", "search-track"})
+    void givenWizardStage_whenBuildingProductionModal_thenHonorSdkLimitsAndSerializeActualFieldTypes(String stage) {
+        // given
+        var action = mock(ModalCallbackAction.class); when(event.replyModal(any())).thenReturn(action);
+        // when
+        response.openModal(PickInteractionViews.modal("ctc-picks:opaque", stage));
+        // then
+        var captured = ArgumentCaptor.forClass(Modal.class); verify(event).replyModal(captured.capture());
+        assertThat(captured.getValue().getComponents().size()).isBetween(1, 5);
+        String json = captured.getValue().toData().toString();
+        assertThat(json).contains("ctc-picks:opaque");
+        if (stage.equals("fuel")) assertThat(json).contains("DEFAULT", "None", "max_values", "mandatory");
+        if (stage.equals("time")) assertThat(json).contains("Equal Conditions", "0x", "weather", "daytime");
+        verify(event, never()).deferReply(anyBoolean());
+    }
+
+    @Test
+    void givenPrivateInteractiveReply_whenSending_thenSerializeBoundedButtonsAndMenusWithExplicitPrivacy() {
+        // given
+        when(event.deferReply(true)).thenReturn(initial);
+        var followup = mock(WebhookMessageCreateAction.class, RETURNS_SELF);
+        when(hook.sendMessage("Test private chooser")).thenReturn(followup);
+        var future = response.deferPrivate().toCompletableFuture();
+        var acknowledged = ArgumentCaptor.forClass(Consumer.class);
+        verify(initial).queue(acknowledged.capture(), any());
+        acknowledged.getValue().accept(hook);
+        // when
+        future.join().replyPrivate(new PickGatewayMessage("Test private chooser",
+                List.of(new PickGatewayMessage.Button("ctc-picks:opaque-button", "Search")),
+                new PickGatewayMessage.Selection("ctc-picks:opaque-select", "Choose track",
+                        List.of(new PickGatewayModal.Option("Test track", "opaque-choice")))));
+        // then
+        var rows = ArgumentCaptor.forClass(java.util.Collection.class);
+        verify(followup).setComponents(rows.capture());
+        assertThat(rows.getValue()).hasSize(2);
+        var payload = new net.dv8tion.jda.api.utils.messages.MessageCreateBuilder().setContent("Test private chooser")
+                .setComponents(rows.getValue()).build().toData().toString();
+        assertThat(payload).contains("ctc-picks:opaque-button", "ctc-picks:opaque-select", "opaque-choice", "Test track");
+        verify(followup).setEphemeral(true); verify(followup).setAllowedMentions(List.of());
+        verify(followup).queue(any(), any());
+    }
 
     @Test
     void givenDeferredReply_whenSdkAcknowledges_thenOnlyPrivateMentionFreeFollowupsAreAvailable() {

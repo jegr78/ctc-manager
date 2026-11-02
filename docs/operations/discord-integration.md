@@ -42,9 +42,9 @@ to your test guild.
    issue a new one; the previous token is invalidated immediately.
 
 **Privileged Gateway Intents:** leave **all three** OFF (Presence Intent, Server
-Members Intent, Message Content Intent). CTC Manager uses REST only — no
-Gateway/WebSocket — so none of these intents are needed. Enabling them adds
-review overhead with no functional benefit.
+Members Intent, Message Content Intent). Publishing uses REST. The optional private-picks
+consumer uses an outgoing Gateway connection without privileged intents and obtains current
+authorization facts through REST.
 
 ### 1.3. Bot Permissions — OAuth2 URL Generator
 
@@ -765,8 +765,7 @@ The outgoing consumer defaults off. `DISCORD_PICKS_ENABLED` maps to `app.discord
 worker count defaults to 2 and queue capacity to 32. The existing `DISCORD_BOT_TOKEN`, saved guild
 and application ID are reused. No public interaction endpoint or message-content intent is required.
 The application also requires confidentiality readiness, so enabling the setting alone does not
-activate collection in this foundation release. The submission dialog and confidentiality rollout
-are tracked separately in #283, #285 and #286.
+activate collection. Confidentiality and rollout acceptance remain in #285 and #286.
 
 After confidentiality acceptance, use the explicit **Register /picks for this guild** action.
 It upserts only this feature's guild command. Startup and backup restore never register commands.
@@ -776,3 +775,26 @@ Backup schema 6 retains channel bindings, including exact IDs. Schemas 1 through
 and restore without bindings. A committed restore invalidates pending interaction generations.
 Start the interaction again after restore, permission revocation, an expired callback or a busy queue.
 Existing publishing and webhook clients keep their current behavior.
+
+### Private entry and recovery
+
+Run `/picks` in the bound team channel. Choose the exact home race using its season, matchday,
+opponent and leg. The private view shows the latest confirmed revision, author, server timestamp,
+deadline with Europe/Berlin offset, return reason and independent management-opening/closure flags.
+An approved or closed target offers viewing without team editing.
+
+Start a new entry or replacement and choose a track and car from the target season. Search or
+page through large catalogs. Category seasons use the existing frozen entry/member policy.
+Complete the race-values, fuel/tyres and time/weather forms, opening each from its private button.
+Equal Conditions is distinct from 0x; Default fuel and None mandatory tyres are explicit choices.
+Review all 13 values, then select **Confirm submission**. Only a committed transaction produces
+a saved receipt. A newer team revision rejects an older draft instead of overwriting it.
+
+An unfinished draft belongs to its invoking user and channel and expires 30 minutes after entry.
+Restart and restore discard it. Draft expiry does not extend the race deadline. Other authorized
+members retrieve the latest confirmed submission, never another member's unfinished draft.
+After a lost reply, use `/picks` to check that saved state before starting another entry.
+Repeated delivery of the same confirmation returns its original durable receipt.
+
+Tests exercise this flow offline. Live test-guild UAT needs separate operator authorization and
+synthetic fixtures. Do not enable production collection before confidentiality and rollout checks.
