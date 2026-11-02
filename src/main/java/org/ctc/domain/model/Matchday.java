@@ -44,10 +44,11 @@ public class Matchday extends BaseEntity {
 	@Column(name = "scheduled_weekend", length = 64)
 	private String scheduledWeekend;
 
-	@OneToMany(mappedBy = "matchday", cascade = CascadeType.ALL, orphanRemoval = true)
+	// Refresh children explicitly before refreshing the aggregate during a locked deletion.
+	@OneToMany(mappedBy = "matchday", cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE, CascadeType.DETACH}, orphanRemoval = true)
 	private List<Match> matches = new ArrayList<>();
 
-	@OneToMany(mappedBy = "matchday", cascade = CascadeType.ALL, orphanRemoval = true)
+	@OneToMany(mappedBy = "matchday", cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE, CascadeType.DETACH}, orphanRemoval = true)
 	private List<Race> races = new ArrayList<>();
 
 	public Matchday(SeasonPhase phase, String label, int sortIndex) {

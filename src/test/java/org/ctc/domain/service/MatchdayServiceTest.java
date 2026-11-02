@@ -33,6 +33,7 @@ class MatchdayServiceTest {
     @Mock private RaceLineupRepository raceLineupRepository;
     @Mock private SeasonPhaseService seasonPhaseService;
     @Mock private RaceRepository raceRepository;
+    @Mock private jakarta.persistence.EntityManager entityManager;
 
     @InjectMocks
     private MatchdayService service;

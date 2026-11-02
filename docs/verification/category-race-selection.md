@@ -33,7 +33,7 @@ Before implementation, audit every Race save/delete, team/parent reassignment, f
 - [x] Implement native entry/member selection and latest-response handling.
 - [x] Verify H2/MariaDB concurrency, rollback, backup and read-only audit.
 - [x] Inspect desktop/mobile/native browser behavior.
-- [x] Complete code review and independent security review; fix every finding.
+- [ ] Complete code review and independent security review; fix every finding.
 - [ ] Falsify newly introduced guards and restore committed bytes.
 - [ ] Run authoritative clean verify -Pe2e on the committed reviewed head.
 - [ ] Verify matching-head CI, squash merge, Wiki/tracker reconciliation and branch cleanup.
@@ -109,6 +109,13 @@ not counted as behavior failures.
 - Schema-4 round trip uses the native save path and preserves exact entry/car/member IDs and
   settings. Bad selections reject before replacement. Audit reports historical duplicate,
   bye and missing-home selections without changing data.
+
+A later stale-aggregate test exposed a destructive matchday deletion after a committed move:
+its cached children were still removed from the target. Deletion now refreshes cached child
+ownership, rejects a moved child with a domain reload message, and refreshes current aggregate
+membership before cascading. Matchday persist/merge/remove/detach remain; refresh does not
+cascade back through loaded child graphs. Nine move/aggregate cases and eleven H2 selection
+transaction cases pass, including separately cached match/race lists and newly committed children.
 
 ## Visual inspection
 

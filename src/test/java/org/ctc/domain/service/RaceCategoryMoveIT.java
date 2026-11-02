@@ -27,6 +27,9 @@ class RaceCategoryMoveIT {
     @Autowired MatchRepository matches;
     @Autowired SeasonCarPoolService pools;
     @Autowired RaceService raceService;
+    @Autowired MatchService matchService;
+    @Autowired MatchdayRepository matchdays;
+    @Autowired MatchdayService matchdayService;
     @Autowired RaceCarSelectionService selections;
     TestHelper.SeasonFixture source;
     TestHelper.SeasonFixture target;
@@ -154,6 +157,88 @@ class RaceCategoryMoveIT {
             assertThat(current.getMatchday().getId()).isEqualTo(target.matchday().getId());
             assertThat(current.getCarPoolEntry().getId()).isEqualTo(targetEntry);
             assertThat(current.getSettings().getNumberOfLaps()).isEqualTo(20);
+        });
+    }
+
+    @Test
+    void givenCachedPairingAndCommittedMove_whenDeletingUnderOldSeason_thenRejectBeforeDeletingTargetSelection() {
+        // given
+        var writer = new TransactionTemplate(tx.getTransactionManager());
+        writer.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        // when / then
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> tx.executeWithoutResult(status -> {
+            var cached = matches.findById(source.match().getId()).orElseThrow();
+            assertThat(cached.getMatchday().getId()).isEqualTo(source.matchday().getId());
+            writer.executeWithoutResult(inner -> assertThat(save(source.race().getId(), target.matchday().getId(),
+                    source.homeTeam().getId(), source.awayTeam().getId(), targetEntry, mr, 20).success()).isTrue());
+            assertThat(cached.getMatchday().getId()).isEqualTo(source.matchday().getId());
+            matchService.deleteMatch(source.match().getId());
+        })).isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class).hasMessageContaining("pairing moved while deleting");
+        tx.executeWithoutResult(status -> {
+            assertThat(matches.existsById(source.match().getId())).isTrue();
+            var current = races.findById(source.race().getId()).orElseThrow();
+            assertThat(current.getMatchday().getId()).isEqualTo(target.matchday().getId());
+            assertThat(current.getCarPoolEntry().getId()).isEqualTo(targetEntry);
+            assertThat(current.getSettings().getNumberOfLaps()).isEqualTo(20);
+        });
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"matches", "races"})
+    void givenCachedSourceAggregateAndCommittedMove_whenDeletingMatchday_thenPreserveMovedTargetRaces(String loadedChildren) {
+        // given
+        var writer = new TransactionTemplate(tx.getTransactionManager());
+        writer.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        // when
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> tx.executeWithoutResult(status -> {
+            var cached = matchdays.findById(source.matchday().getId()).orElseThrow();
+            if (loadedChildren.equals("matches")) assertThat(cached.getMatches()).hasSize(1);
+            else assertThat(cached.getRaces()).hasSize(2);
+            writer.executeWithoutResult(inner -> assertThat(save(source.race().getId(), target.matchday().getId(),
+                    source.homeTeam().getId(), source.awayTeam().getId(), targetEntry, mr, 20).success()).isTrue());
+            matchdayService.deleteMatchday(cached.getId());
+        })).isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class).hasMessageContaining("moved while deleting");
+        // then
+        tx.executeWithoutResult(status -> assertThat(matchdays.existsById(source.matchday().getId())).isTrue());
+        assertThat(matchdayService.deleteMatchday(source.matchday().getId())).isEqualTo(source.season().getId());
+        tx.executeWithoutResult(status -> {
+            assertThat(matchdays.existsById(source.matchday().getId())).isFalse();
+            assertThat(matches.existsById(source.match().getId())).as("the moved pairing belongs to the target").isTrue();
+            assertThat(races.findById(source.race().getId())).as("the moved selection survives source deletion").isPresent();
+            var current = races.findById(source.race().getId()).orElseThrow();
+            assertThat(current.getMatchday().getId()).isEqualTo(target.matchday().getId());
+            assertThat(current.getCarPoolEntry().getId()).isEqualTo(targetEntry);
+            assertThat(current.getSettings().getNumberOfLaps()).isEqualTo(20);
+            assertThat(races.existsById(returnLeg)).isTrue();
+        });
+    }
+
+    @Test
+    void givenCachedEmptyMatchdayAndCommittedNewPairing_whenDeleting_thenRefreshAndDeleteTheCurrentAggregate() {
+        // given
+        UUID emptyMatchday = tx.execute(status -> helper.createMatchdayInRegularPhase(
+                seasons.findById(source.season().getId()).orElseThrow(), "Test current deletion", 3).getId());
+        var writer = new TransactionTemplate(tx.getTransactionManager());
+        writer.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        var created = new UUID[2];
+        // when
+        org.assertj.core.api.Assertions.assertThatCode(() -> tx.executeWithoutResult(status -> {
+            var cached = matchdays.findById(emptyMatchday).orElseThrow();
+            assertThat(cached.getMatches()).isEmpty();
+            assertThat(cached.getRaces()).isEmpty();
+            writer.executeWithoutResult(inner -> {
+                var match = matchService.createMatch(emptyMatchday, source.homeTeam().getId(), source.awayTeam().getId(), false);
+                created[0] = match.getId();
+                created[1] = races.findByMatchId(match.getId()).getFirst().getId();
+            });
+            matchdayService.deleteMatchday(emptyMatchday);
+        })).as("deletion uses current children rather than cached empty collections").doesNotThrowAnyException();
+        // then
+        tx.executeWithoutResult(status -> {
+            assertThat(matchdays.existsById(emptyMatchday)).isFalse();
+            assertThat(matches.existsById(created[0])).isFalse();
+            assertThat(races.existsById(created[1])).isFalse();
+            assertThat(races.existsById(source.race().getId())).isTrue();
         });
     }
 
