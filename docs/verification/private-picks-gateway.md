@@ -153,7 +153,7 @@ remain identical to that reviewed snapshot. The SDK shutdown-retry correction wa
 in the reviewed code. Later fixture checks passed 87 unit tests, and isolated H2 constraints passed
 seven integration cases.
 
-All 71 guards below were broken individually from a correct committed checkpoint. Each qualified
+All 72 guards below were broken individually from a correct committed checkpoint. Each qualified
 run reached the intended assertion failure with zero JUnit errors, then restored the exact committed
 source bytes. One initial SDK-intent probe hit Mockito's static-verification wrapper and was excluded;
 a captured-argument assertion fixed that test harness and the repeated probe qualified normally.
@@ -238,6 +238,14 @@ repository gates. No test, coverage, lint or security gate was skipped or weaken
 | db-guild-syntax | [TeamPickChannelBindingIT](../../src/test/java/org/ctc/domain/service/TeamPickChannelBindingIT.java), `givenConflictingOrMalformedScope*` | 1 |
 | db-channel-syntax | [TeamPickChannelBindingIT](../../src/test/java/org/ctc/domain/service/TeamPickChannelBindingIT.java), `givenConflictingOrMalformedScope*` | 1 |
 
+| production-json-owner-id | [DiscordPickAccessRestContractTest](../../src/test/java/org/ctc/discord/DiscordPickAccessRestContractTest.java), `givenProductionDiscordJson*` | 1 |
+
+The production HTTP contract also checks all four exact Discord GET paths, bot authorization and
+literal guild/channel/member/role JSON, then repeats the complete fetch after permission revocation.
+It passes with the real REST client and permission decoder against a local fake HTTP transport.
+An incorrect `owner_id` mapping produces the intended assertion failure with zero errors. The first
+canonical run was stopped to add this required wire-format witness; it is not counted as completed
+verification. Production code remains unchanged from the independently reviewed snapshot.
 
 Canonical command for the final committed head:
 
