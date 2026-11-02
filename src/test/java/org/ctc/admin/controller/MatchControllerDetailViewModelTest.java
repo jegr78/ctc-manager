@@ -64,7 +64,7 @@ class MatchControllerDetailViewModelTest {
 				discordPostRepository,
 				discordGlobalConfigService,
 				mock(ApplicationEventPublisher.class),
-				Clock.systemUTC());
+				Clock.systemUTC(), mock(org.ctc.domain.repository.SeasonRepository.class), mock(jakarta.persistence.EntityManager.class));
 
 		UUID matchId = UUID.randomUUID();
 		Match match = new Match();
@@ -125,7 +125,7 @@ class MatchControllerDetailViewModelTest {
 				discordPostRepository,
 				discordGlobalConfigService,
 				mock(ApplicationEventPublisher.class),
-				Clock.systemUTC());
+				Clock.systemUTC(), mock(org.ctc.domain.repository.SeasonRepository.class), mock(jakarta.persistence.EntityManager.class));
 
 		UUID matchId = UUID.randomUUID();
 		Match match = new Match();

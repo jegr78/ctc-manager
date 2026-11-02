@@ -109,6 +109,8 @@
             inputs.forEach(function(input) {
                 if (!input.value) return;
                 var localDate = new Date(input.value);
+                // Keep rejected text intact so the server can report it without inventing a date.
+                if (Number.isNaN(localDate.getTime())) return;
                 input.value = dateToLondon(localDate);
             });
         });

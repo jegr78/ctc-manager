@@ -26,6 +26,7 @@ class RaceCalendarServiceTest {
 	private RaceRepository raceRepository;
 	@Mock
 	private GoogleCalendarService googleCalendarService;
+    @Mock private RaceCalendarPersistenceService calendarPersistence;
 
 	@InjectMocks
 	private RaceCalendarService service;
@@ -51,7 +52,6 @@ class RaceCalendarServiceTest {
 		when(googleCalendarService.createEvent(eq("MD 3 - DTR vs. MRL"),
 				eq(LocalDateTime.of(2026, 5, 1, 19, 30)), eq(90)))
 				.thenReturn("new-event-id");
-		when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
 		// when
 		service.createOrUpdateCalendarEvent(race.getId());
@@ -59,7 +59,7 @@ class RaceCalendarServiceTest {
 		// then
 		verify(googleCalendarService).createEvent("MD 3 - DTR vs. MRL",
 				LocalDateTime.of(2026, 5, 1, 19, 30), 90);
-		verify(raceRepository).save(argThat(r -> "new-event-id".equals(r.getCalendarEventId())));
+		verify(calendarPersistence).saveCreatedEvent(race.getId(), "new-event-id");
 	}
 
 	@Test

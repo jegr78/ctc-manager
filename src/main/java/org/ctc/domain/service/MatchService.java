@@ -2,6 +2,8 @@ package org.ctc.domain.service;
 
 import static org.springframework.util.StringUtils.hasText;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -34,6 +36,7 @@ import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.RaceRepository;
+import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -55,6 +58,8 @@ public class MatchService {
 	private final DiscordGlobalConfigService discordGlobalConfigService;
 	private final ApplicationEventPublisher eventPublisher;
 	private final Clock clock;
+    private final SeasonRepository seasonRepository;
+    private final EntityManager entityManager;
 
 	public Match getMatch(UUID matchId) {
 		return matchRepository.findById(matchId)
@@ -348,6 +353,13 @@ public class MatchService {
 	public UUID deleteMatch(UUID matchId) {
 		var match = matchRepository.findById(matchId)
 				.orElseThrow(() -> new EntityNotFoundException("Match", matchId));
+        UUID seasonId = match.getMatchday().getSeason().getId();
+        seasonRepository.findByIdForUpdate(seasonId).orElseThrow();
+        raceRepository.findBySeasonForSelectionUpdate(seasonId);
+        entityManager.refresh(match, LockModeType.PESSIMISTIC_WRITE);
+        if (!seasonId.equals(match.getMatchday().getSeason().getId())) {
+            throw new BusinessRuleException("The pairing moved while deleting. Reload it and try again.");
+        }
 		var matchdayId = match.getMatchday().getId();
 		match.getRaces().forEach(PlayoffDecisionGuard::requireOpen);
 		matchRepository.delete(match);

@@ -9,6 +9,13 @@
     <div class="card">
         <form class="entity-editor-form" th:action="@{/admin/races/save}" th:object="${raceForm}" method="post">
             <input type="hidden" th:field="*{id}">
+            <input type="hidden" name="!carPoolEntryId" th:value="*{carPoolEntryId}" th:disabled="${!carSelection.category}" data-entry-default>
+            <input type="hidden" name="!carId" th:value="*{carId}" data-car-default>
+            <input type="hidden" name="!trackId" th:value="*{trackId}" data-track-default>
+            <div class="form-validation-errors" th:if="${#fields.hasAnyErrors()}" role="alert">
+                <p>Check the submitted fields before saving.</p>
+                <ul><li th:each="error : ${#fields.allErrors()}" th:text="${error}"></li></ul>
+            </div>
             <fieldset id="race-pairing"><legend>Pairing</legend>
             <div class="form-group">
                 <label for="matchdayId">Matchday</label>
@@ -37,14 +44,27 @@
             </div>
             </fieldset>
             <fieldset id="race-catalog"><legend>Car &amp; track</legend>
-            <p class="text-dim setup-hint">Choose from this season's catalog. Entries already used by the home team are unavailable.</p>
+            <p class="text-dim setup-hint" data-car-choice-hint th:text="${carSelection.hint}"></p>
+            <div class="form-group" data-category-pool-field th:hidden="${!carSelection.category}">
+                <label for="carPoolEntryId">Pool entry</label>
+                <select id="carPoolEntryId" th:field="*{carPoolEntryId}" th:disabled="${!carSelection.category}" aria-describedby="entry-pool-hint">
+                    <option value="">Select pool entry</option>
+                    <option th:if="${carSelection.unavailableEntry != null}" th:value="${carSelection.unavailableEntry.id}"
+                            th:text="${carSelection.unavailableEntry.label}"></option>
+                    <option th:each="entry : ${carSelection.entries}" th:value="${entry.id}"
+                            th:disabled="${entry.consumed || !carSelection.frozen}"
+                            th:text="${entry.label + (entry.consumed ? ' (already used)' : (!carSelection.frozen ? ' (not frozen)' : ''))}"></option>
+                </select>
+                <p id="entry-pool-hint" class="text-dim form-hint--sm">Each home team can use an entry once per season. Choose an entry and refresh to load its cars.</p>
+            </div>
+            <button type="submit" th:formaction="@{/admin/races/refresh-choices}" formnovalidate class="btn btn-secondary btn-sm refresh-choices">Refresh choices</button>
             <div class="form-row">
                 <div class="form-group">
                     <label for="trackId">Track</label>
-                    <select id="trackId" th:field="*{trackId}" th:attr="aria-describedby=${outOfPoolTrack != null ? 'track-pool-hint' : null}">
+                    <select id="trackId" th:field="*{trackId}" th:attr="aria-describedby=${unavailableTrack != null ? 'track-pool-hint' : null}">
                         <option value="">Select track</option>
-                        <option th:if="${outOfPoolTrack != null}" th:value="${outOfPoolTrack.id}"
-                                th:text="${outOfPoolTrack.name + ' (not in season pool)'}"></option>
+                        <option th:if="${unavailableTrack != null}" th:value="${unavailableTrack.id}"
+                                th:text="${unavailableTrack.label}"></option>
                         <option th:each="t : ${seasonTracks}" th:value="${t.id}"
                                 th:disabled="${usedTrackIds.contains(t.id)}"
                                 th:text="${t.name + (t.country != null ? ' (' + t.country + ')' : '') + (usedTrackIds.contains(t.id) ? ' (already used)' : '')}"></option>
@@ -56,14 +76,16 @@
                     <label for="carId">Car</label>
                     <select id="carId" th:field="*{carId}" th:attr="aria-describedby=${outOfPoolCar != null ? 'car-pool-hint' : null}">
                         <option value="">Select car</option>
-                        <option th:if="${outOfPoolCar != null}" th:value="${outOfPoolCar.id}"
-                                th:text="${outOfPoolCar.displayName + ' (not in season pool)'}"></option>
+                        <option th:if="${carSelection.unavailableCar != null}" th:value="${carSelection.unavailableCar.id}"
+                                th:text="${carSelection.unavailableCar.label}"></option>
+                        <option th:each="car : ${carSelection.cars}" th:value="${car.id}"
+                                th:disabled="${carSelection.consumed || usedCarIds.contains(car.id)}" th:text="${car.label}"></option>
                         <option th:each="c : ${seasonCars}" th:value="${c.id}"
                                 th:disabled="${usedCarIds.contains(c.id)}"
                                 th:text="${c.displayName + (usedCarIds.contains(c.id) ? ' (already used)' : '')}"></option>
                     </select>
                     <p id="car-pool-hint" th:if="${outOfPoolCar != null}" class="text-dim form-hint--sm">The saved car is no longer in this season's pool. Add it back to the pool, choose another car, or explicitly clear the selection before saving.</p>
-                    <p th:if="${seasonCars.isEmpty()}" class="text-dim form-hint--sm">No cars assigned to this season yet.</p>
+                    <p th:if="${!carSelection.category &amp;&amp; seasonCars.isEmpty()}" class="text-dim form-hint--sm">No cars assigned to this season yet.</p>
                 </div>
             </div>
             <p class="text-dim form-hint--sm" data-used-selection-status role="status"></p>
@@ -72,21 +94,25 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="numberOfLaps">Number of Laps</label>
-                    <input type="number" id="numberOfLaps" th:field="*{numberOfLaps}" min="0">
+                    <input th:type="${#fields.hasErrors('numberOfLaps') ? 'text' : 'number'}" inputmode="numeric" id="numberOfLaps" th:field="*{numberOfLaps}" min="0" th:errorclass="input-error">
+                    <p class="field-error" th:if="${#fields.hasErrors('numberOfLaps')}" th:errors="*{numberOfLaps}"></p>
                 </div>
                 <div class="form-group">
                     <label for="numberOfRequiredPitStops">Required Pit Stops</label>
-                    <input type="number" id="numberOfRequiredPitStops" th:field="*{numberOfRequiredPitStops}" min="0">
+                    <input th:type="${#fields.hasErrors('numberOfRequiredPitStops') ? 'text' : 'number'}" inputmode="numeric" id="numberOfRequiredPitStops" th:field="*{numberOfRequiredPitStops}" min="0" th:errorclass="input-error">
+                    <p class="field-error" th:if="${#fields.hasErrors('numberOfRequiredPitStops')}" th:errors="*{numberOfRequiredPitStops}"></p>
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
                     <label for="tyreWearMultiplier">Tyre Wear Multiplier</label>
-                    <input type="number" id="tyreWearMultiplier" th:field="*{tyreWearMultiplier}" min="0">
+                    <input th:type="${#fields.hasErrors('tyreWearMultiplier') ? 'text' : 'number'}" inputmode="numeric" id="tyreWearMultiplier" th:field="*{tyreWearMultiplier}" min="0" th:errorclass="input-error">
+                    <p class="field-error" th:if="${#fields.hasErrors('tyreWearMultiplier')}" th:errors="*{tyreWearMultiplier}"></p>
                 </div>
                 <div class="form-group">
                     <label for="fuelConsumptionMultiplier">Fuel Consumption Multiplier</label>
-                    <input type="number" id="fuelConsumptionMultiplier" th:field="*{fuelConsumptionMultiplier}" min="0">
+                    <input th:type="${#fields.hasErrors('fuelConsumptionMultiplier') ? 'text' : 'number'}" inputmode="numeric" id="fuelConsumptionMultiplier" th:field="*{fuelConsumptionMultiplier}" min="0" th:errorclass="input-error">
+                    <p class="field-error" th:if="${#fields.hasErrors('fuelConsumptionMultiplier')}" th:errors="*{fuelConsumptionMultiplier}"></p>
                 </div>
             </div>
             <div class="form-row">
@@ -96,7 +122,8 @@
                 </div>
                 <div class="form-group">
                     <label for="refuelingSpeed">Refueling Speed</label>
-                    <input type="number" id="refuelingSpeed" th:field="*{refuelingSpeed}" min="0">
+                    <input th:type="${#fields.hasErrors('refuelingSpeed') ? 'text' : 'number'}" inputmode="numeric" id="refuelingSpeed" th:field="*{refuelingSpeed}" min="0" th:errorclass="input-error">
+                    <p class="field-error" th:if="${#fields.hasErrors('refuelingSpeed')}" th:errors="*{refuelingSpeed}"></p>
                 </div>
             </div>
             <div class="form-row">
@@ -112,7 +139,8 @@
                     </select>
                     <label for="timeProgressionMultiplier">Time Progression Multiplier</label>
                     <p>For Equal Conditions, leave the multiplier empty. Numeric 0 means 0x.</p>
-                    <input type="number" id="timeProgressionMultiplier" th:field="*{timeProgressionMultiplier}" min="0">
+                    <input th:type="${#fields.hasErrors('timeProgressionMultiplier') ? 'text' : 'number'}" inputmode="numeric" id="timeProgressionMultiplier" th:field="*{timeProgressionMultiplier}" min="0" th:errorclass="input-error">
+                    <p class="field-error" th:if="${#fields.hasErrors('timeProgressionMultiplier')}" th:errors="*{timeProgressionMultiplier}"></p>
                 </div>
             </div>
             <div class="form-group">
@@ -134,9 +162,12 @@
             <fieldset id="race-schedule"><legend>Schedule</legend>
             <div class="form-group">
                 <label for="dateTime">Date &amp; Time</label>
-                <input type="datetime-local" id="dateTime" name="dateTime" class="london-time-input"
+                <input th:if="${!#fields.hasErrors('dateTime')}" type="datetime-local" id="dateTime" name="dateTime" class="london-time-input"
                        th:data-london-time="${raceForm.dateTime != null ? raceForm.dateTime.toString().substring(0, 16) : ''}"
                        th:value="${raceForm.dateTime != null ? raceForm.dateTime.toString().substring(0, 16) : ''}">
+                <input th:if="${#fields.hasErrors('dateTime')}" type="text" id="dateTime" th:field="*{dateTime}"
+                       class="london-time-input input-error" aria-invalid="true" aria-describedby="dateTime-error">
+                <p id="dateTime-error" class="field-error" th:if="${#fields.hasErrors('dateTime')}" th:errors="*{dateTime}"></p>
                 <small class="text-dim">Stored as London time, displayed in your local timezone</small>
             </div>
             </fieldset>

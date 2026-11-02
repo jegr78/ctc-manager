@@ -16,10 +16,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.dataimport.exception.ImportRejectedException;
 import org.ctc.domain.exception.ValidationException;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.ctc.domain.service.PlayoffDecisionGuard;
 import org.ctc.domain.service.ScoringService;
+import org.ctc.domain.service.RaceSelectionConcurrency;
 import org.ctc.domain.service.SeasonPhaseService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -133,8 +135,20 @@ public class CsvImportService {
 		rejectInvalidPreviews(previews);
 
 		var metadata = previews.get(0).getMetadata();
-		var season = seasonRepository.findById(metadata.seasonId()).orElseThrow(
-				() -> new ValidationException("Season not found in CSV import: " + metadata.seasonId()));
+        Season season;
+        try {
+            season = seasonRepository.findByIdForUpdate(metadata.seasonId()).orElseThrow(
+                    () -> new ValidationException("Season not found in CSV import: " + metadata.seasonId()));
+            raceRepository.findBySeasonForSelectionUpdate(season.getId());
+        } catch (RuntimeException ex) {
+            var translated = RaceSelectionConcurrency.translate(ex);
+            if (translated instanceof BusinessRuleException) {
+                var failure = new ImportRejectedException(List.of(translated.getMessage()));
+                failure.initCause(translated);
+                throw failure;
+            }
+            throw translated;
+        }
 		rejectInvalidTarget(season, metadata, previews);
 
 		// Resolve or create matchday
@@ -146,8 +160,7 @@ public class CsvImportService {
 
 		// Group all rows from all previews by team pair
 		var seasonTeams = season.getTeams();
-		Map<String, List<ImportRow>> byTeamPair = new HashMap<>();
-		Map<String, Map<Integer, List<ImportRow>>> byTeamPairAndRaceIndex = new HashMap<>();
+		Map<String, Map<Integer, List<ImportRow>>> byTeamPairAndRaceIndex = new LinkedHashMap<>();
 
 		for (int raceIndex = 0; raceIndex < previews.size(); raceIndex++) {
 			var preview = previews.get(raceIndex);
@@ -161,76 +174,40 @@ public class CsvImportService {
 				byTeamPairAndRaceIndex.computeIfAbsent(teamPair, k -> new HashMap<>())
 						.put(raceIndex, rows);
 
-				// Also add to flat list for compatibility
-				byTeamPair.computeIfAbsent(teamPair, k -> new ArrayList<>()).addAll(rows);
 			}
 		}
 
-		// Process each team pairing once, but handle multiple races
-		for (var entry : byTeamPairAndRaceIndex.entrySet()) {
-			// The first leg's block order orients a new pairing; later legs may list the teams reversed.
-			var firstLegRows = entry.getValue().get(Collections.min(entry.getValue().keySet()));
-			var teamNames = firstLegRows.isEmpty() ? List.of(entry.getKey()) : pairingTeams(firstLegRows, seasonTeams);
-			var homeTeam = findTeamFlexible(teamNames.getFirst(), seasonTeams);
-			var awayTeam = teamNames.size() > 1 ? findTeamFlexible(teamNames.get(1), seasonTeams) : null;
-
-			if (homeTeam == null) {
-				result.addError("Team not found: " + teamNames.getFirst());
-				continue;
-			}
-			if (awayTeam == null && teamNames.size() > 1) {
-				result.addError("Team not found: " + teamNames.get(1));
-				continue;
-			}
-
-			var effectiveAwayTeam = awayTeam != null ? awayTeam : homeTeam;
-
-			// Duplicate check: the same pairing on this matchday, in either orientation
-			var existingMatch = findPairing(matchday, homeTeam, effectiveAwayTeam);
-
-			Match match;
-			if (existingMatch.isPresent()) {
-				if (overwriteExisting) {
-					match = existingMatch.get();
-					// Delete existing races (cascades to results)
-					var racesToDelete = raceRepository.findByMatchId(match.getId());
-                    if (racesToDelete.stream().anyMatch(race -> race.getCarPoolEntry() != null)) {
-                        throw new ImportRejectedException(List.of("Cannot overwrite a saved category pool selection without preserving its race identity."));
-                    }
-					if (racesToDelete.stream().anyMatch(race -> race.getPlayoffMatchup() != null
-							&& race.getPlayoffMatchup().isComplete())) {
-						throw new ImportRejectedException(List.of(PlayoffDecisionGuard.DECIDED));
-					}
-					if (racesToDelete.stream().anyMatch(race -> race.getPlayoffMatchup() != null
-							&& !race.getPlayoffMatchup().getId().equals(metadata.playoffMatchupId()))) {
-						throw new ImportRejectedException(List.of("The pairing's legs belong to another playoff matchup"));
-					}
-					for (var race : racesToDelete) {
-						raceLineupRepository.deleteAll(raceLineupRepository.findByRaceId(race.getId()));
-						match.getRaces().remove(race);
-						raceRepository.delete(race);
-					}
-					raceRepository.flush();
-					log.info("Overwriting existing match: {} vs {} on {}",
-							sanitize(homeTeam.getShortName()), sanitize(effectiveAwayTeam.getShortName()), sanitize(matchday.getLabel()));
-				} else {
-					result.addError("Match already exists: " + homeTeam.getShortName() +
-							" vs " + effectiveAwayTeam.getShortName() + " on " + matchday.getLabel());
-					continue;
-				}
-			} else {
-				match = new Match(matchday, homeTeam, effectiveAwayTeam);
-				match = matchRepository.save(match);
-			}
+        var plans = preflightPairings(season, matchday, metadata, byTeamPairAndRaceIndex, overwriteExisting);
+        for (var plan : plans) {
+            var homeTeam = plan.home();
+            var awayTeam = plan.away();
+            var effectiveAwayTeam = awayTeam != null ? awayTeam : homeTeam;
+            var match = plan.match();
+            if (match == null) {
+                match = matchRepository.save(new Match(matchday, homeTeam, effectiveAwayTeam));
+            } else if (plan.reused().isEmpty()) {
+                for (var race : plan.replaced()) {
+                    raceLineupRepository.deleteAll(raceLineupRepository.findByRaceId(race.getId()));
+                    match.getRaces().remove(race);
+                    raceRepository.delete(race);
+                }
+                raceRepository.flush();
+            }
 
 			// Now create a race for each preview (leg)
 			for (int raceIndex = 0; raceIndex < previews.size(); raceIndex++) {
-				var raceRows = entry.getValue().get(raceIndex);
+				var raceRows = plan.rows().get(raceIndex);
 				if (raceRows == null || raceRows.isEmpty()) {
 					continue; // This team pair doesn't appear in this race
 				}
 
-				var race = new Race();
+                Race race = plan.reused().get(raceIndex);
+                if (race != null) {
+                    raceLineupRepository.deleteAll(raceLineupRepository.findByRaceId(race.getId()));
+                    race.getResults().clear();
+                    raceRepository.saveAndFlush(race);
+                } else {
+                    race = new Race();
 				race.setMatchday(matchday);
 				race.setMatch(match);
 				var legHome = findTeamFlexible(raceRows.getFirst().teamShortName(), seasonTeams);
@@ -247,6 +224,8 @@ public class CsvImportService {
 									"Playoff matchup not found in CSV import: " + metadata.playoffMatchupId()));
 					race.setPlayoffMatchup(matchup);
 				}
+
+                }
 
 				// Save race early to get ID for RaceLineup references
 				race = raceRepository.save(race);
@@ -290,6 +269,85 @@ public class CsvImportService {
 				result.getImportedRaces().size(), result.getNewDriversCreated());
 		return result;
 	}
+
+    /** Completes every ownership and leg-mapping decision before any race or driver mutation. */
+    private List<PairingPlan> preflightPairings(Season season, Matchday matchday, ImportMetadata metadata,
+                                              Map<String, Map<Integer, List<ImportRow>>> groups, boolean overwrite) {
+        var plans = new ArrayList<PairingPlan>();
+        var errors = new ArrayList<String>();
+        for (var group : groups.entrySet()) {
+            var rows = group.getValue();
+            var firstRows = rows.get(Collections.min(rows.keySet()));
+            var names = firstRows.isEmpty() ? List.of(group.getKey()) : pairingTeams(firstRows, season.getTeams());
+            var home = findTeamFlexible(names.getFirst(), season.getTeams());
+            var away = names.size() > 1 ? findTeamFlexible(names.get(1), season.getTeams()) : null;
+            if (home == null || away == null && names.size() > 1) {
+                errors.add("Team not found: " + (home == null ? names.getFirst() : names.get(1)));
+                continue;
+            }
+            var match = findPairing(matchday, home, away != null ? away : home).orElse(null);
+            if (match != null && !overwrite) {
+                errors.add("Match already exists: " + home.getShortName() + " vs "
+                        + (away != null ? away : home).getShortName() + " on " + matchday.getLabel());
+                continue;
+            }
+            var previous = match == null ? List.<Race>of() : raceRepository.findByMatchId(match.getId());
+            rejectOverwriteTarget(previous, metadata);
+            var reused = mapConfiguredCategoryLegs(season, matchday, previous, rows);
+            plans.add(new PairingPlan(match, home, away, rows, reused, reused.isEmpty() ? previous : List.of()));
+        }
+        rejectIfAny(errors);
+        return plans;
+    }
+
+    private void rejectOverwriteTarget(List<Race> previous, ImportMetadata metadata) {
+        if (previous.stream().anyMatch(race -> race.getPlayoffMatchup() != null && race.getPlayoffMatchup().isComplete())) {
+            throw new ImportRejectedException(List.of(PlayoffDecisionGuard.DECIDED));
+        }
+        if (previous.stream().anyMatch(race -> race.getPlayoffMatchup() != null
+                && !race.getPlayoffMatchup().getId().equals(metadata.playoffMatchupId()))) {
+            throw new ImportRejectedException(List.of("The pairing's legs belong to another playoff matchup"));
+        }
+    }
+
+    private Map<Integer, Race> mapConfiguredCategoryLegs(Season season, Matchday matchday, List<Race> previous,
+                                                        Map<Integer, List<ImportRow>> incoming) {
+        boolean configured = previous.stream().anyMatch(race -> race.getCarPoolEntry() != null
+                || season.getCarPoolMode() == CarPoolMode.CATEGORY_POOL && race.getCar() != null);
+        if (!configured) return Map.of();
+        if (season.getCarPoolMode() != CarPoolMode.CATEGORY_POOL || previous.stream()
+                .anyMatch(race -> (race.getCar() == null) != (race.getCarPoolEntry() == null))) {
+            throw new ImportRejectedException(List.of("Cannot overwrite an incomplete category pool selection. Configure or clear it in race setup first."));
+        }
+        var ids = new HashSet<UUID>();
+        if (previous.size() != incoming.size() || previous.stream().anyMatch(race -> race.getId() == null
+                || !ids.add(race.getId()) || race.getMatchday() == null || !race.getMatchday().getId().equals(matchday.getId())
+                || race.getHomeTeam() == null)) {
+            throw ambiguousCategoryOverwrite();
+        }
+        if (previous.size() == 1) return Map.of(incoming.keySet().iterator().next(), previous.getFirst());
+        var byHome = new HashMap<UUID, Race>();
+        for (var race : previous) {
+            if (byHome.putIfAbsent(race.getHomeTeam().getId(), race) != null) throw ambiguousCategoryOverwrite();
+        }
+        var reused = new HashMap<Integer, Race>();
+        var matchedHomes = new HashSet<UUID>();
+        for (var leg : incoming.entrySet()) {
+            var home = leg.getValue().isEmpty() ? null : findTeamFlexible(leg.getValue().getFirst().teamShortName(), season.getTeams());
+            if (home == null || !matchedHomes.add(home.getId()) || !byHome.containsKey(home.getId())) {
+                throw ambiguousCategoryOverwrite();
+            }
+            reused.put(leg.getKey(), byHome.get(home.getId()));
+        }
+        return reused;
+    }
+
+    private static ImportRejectedException ambiguousCategoryOverwrite() {
+        return new ImportRejectedException(List.of("The category pool selection overwrite is ambiguous. Match each leg to a distinct home team or edit its results individually."));
+    }
+
+    private record PairingPlan(Match match, Team home, Team away, Map<Integer, List<ImportRow>> rows,
+                               Map<Integer, Race> reused, List<Race> replaced) {}
 
 	private static void rejectInvalidPreviews(List<ImportPreview> previews) {
 		if (previews.isEmpty()) {

@@ -12,6 +12,7 @@ import lombok.ToString;
 
 @Entity
 @Table(name = "playoff_matchups")
+@org.hibernate.annotations.DynamicUpdate
 @Getter
 @Setter
 @NoArgsConstructor

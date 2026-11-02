@@ -9,6 +9,7 @@ import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
+import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,8 @@ class MatchdayServiceTest {
     @Mock private SeasonRepository seasonRepository;
     @Mock private RaceLineupRepository raceLineupRepository;
     @Mock private SeasonPhaseService seasonPhaseService;
+    @Mock private RaceRepository raceRepository;
+    @Mock private jakarta.persistence.EntityManager entityManager;
 
     @InjectMocks
     private MatchdayService service;
@@ -155,6 +158,7 @@ class MatchdayServiceTest {
         // matchday.getSeason() derives from phase; wire a phase so deleteMatchday can read seasonId.
         matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
 
+        when(seasonRepository.findByIdForUpdate(seasonId)).thenReturn(Optional.of(season));
         when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
 
         // when

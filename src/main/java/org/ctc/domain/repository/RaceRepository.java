@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
-public interface RaceRepository extends JpaRepository<Race, UUID> {
+public interface RaceRepository extends JpaRepository<Race, UUID>, RaceSelectionLockingRepository {
 
 	@EntityGraph(attributePaths = {"matchday", "match", "track", "car"})
 	List<Race> findByMatchdayId(UUID matchdayId);

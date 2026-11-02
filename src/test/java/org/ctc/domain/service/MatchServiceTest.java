@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -9,6 +10,7 @@ import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.repository.SeasonRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -32,6 +34,9 @@ class MatchServiceTest {
 	private TeamRepository teamRepository;
 	@Mock
 	private RaceRepository raceRepository;
+
+	@Mock private SeasonRepository seasonRepository;
+    @Mock private EntityManager entityManager;
 
 	@InjectMocks
 	private MatchService service;
@@ -386,6 +391,8 @@ class MatchServiceTest {
 		var matchdayId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
+        season.setId(UUID.randomUUID());
+        when(seasonRepository.findByIdForUpdate(season.getId())).thenReturn(Optional.of(season));
 		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
 

@@ -64,6 +64,7 @@ class CsvImportServiceTest {
 
 	@BeforeEach
 	void setUp() {
+        lenient().when(seasonRepository.findByIdForUpdate(any())).thenAnswer(inv -> seasonRepository.findById(inv.getArgument(0)));
 		season = new Season();
 		season.setId(UUID.randomUUID());
 		season.setName("Season 1");
@@ -313,6 +314,154 @@ class CsvImportServiceTest {
 		assertThat(result.hasErrors()).isFalse();
 		assertThat(result.getNewDriversCreated()).isEqualTo(1);
 	}
+
+    @Test
+    void givenSingleConfiguredCategoryLeg_whenOverwritingReversedScorecard_thenPreserveIdentityConfigurationAndHome() {
+        // given
+        var old = categoryRace(false);
+        setupCategoryOverwrite(old);
+        var car = old.getCar();
+        var entry = old.getCarPoolEntry();
+        old.setSettings(new RaceSettings(old));
+        old.getSettings().setNumberOfLaps(17);
+        old.setDateTime(java.time.LocalDateTime.of(2031, 2, 3, 20, 0));
+        // when
+        var result = org.junit.jupiter.api.Assertions.assertDoesNotThrow(() ->
+                csvImportService.executeImport(categoryPreview(true), Map.of(), Set.of(), true));
+        // then
+        assertThat(result.getImportedRaces()).hasSize(1);
+        verify(raceRepository, never()).delete(any());
+        verify(raceRepository).saveAndFlush(old);
+        assertThat(old.getCar()).isSameAs(car);
+        assertThat(old.getCarPoolEntry()).isSameAs(entry);
+        assertThat(old.getHomeTeam()).isSameAs(standaloneTeam1);
+        assertThat(old.getSettings().getNumberOfLaps()).isEqualTo(17);
+        assertThat(old.getDateTime()).isEqualTo(java.time.LocalDateTime.of(2031, 2, 3, 20, 0));
+        assertThat(old.getResults()).hasSize(2);
+    }
+
+    @Test
+    void givenDistinctEffectiveHomesAndUnorderedSavedLegs_whenImportingReturnFirst_thenMapByHomeAndKeepBothSelections() {
+        // given
+        var first = categoryRace(false);
+        var reverse = categoryRace(true);
+        reverse.setMatch(first.getMatch());
+        reverse.setCarPoolEntry(first.getCarPoolEntry());
+        setupCategoryOverwrite(reverse, first);
+        // when
+        var result = org.junit.jupiter.api.Assertions.assertDoesNotThrow(() ->
+                csvImportService.executeMultiRaceImport(List.of(categoryPreview(true), categoryPreview(false)),
+                        Map.of(), Set.of(), true));
+        // then
+        assertThat(result.getImportedRaces()).hasSize(2);
+        verify(raceRepository, never()).delete(any());
+        verify(raceRepository).saveAndFlush(reverse);
+        verify(raceRepository).saveAndFlush(first);
+        assertThat(reverse.getHomeTeam()).isSameAs(standaloneTeam2);
+        assertThat(first.getHomeTeam()).isSameAs(standaloneTeam1);
+        assertThat(first.getCarPoolEntry()).isSameAs(reverse.getCarPoolEntry());
+        assertThat(first.getCar()).isNotSameAs(reverse.getCar());
+        assertThat(first.getResults()).hasSize(2);
+        assertThat(reverse.getResults()).hasSize(2);
+    }
+
+    @Test
+    void givenRepeatedHomeLegs_whenOverwriteCannotIdentifyEachLeg_thenRejectBeforeDeletingOrCreatingDrivers() {
+        // given
+        var first = categoryRace(false);
+        var second = categoryRace(false);
+        second.setMatch(first.getMatch());
+        first.getResults().add(new RaceResult(first, driver1, 1, 1, false));
+        second.getResults().add(new RaceResult(second, driver2, 1, 1, false));
+        setupCategoryOverwrite(first, second);
+        // when / then
+        assertThatThrownBy(() -> csvImportService.executeMultiRaceImport(List.of(categoryPreview(false), categoryPreview(false)),
+                Map.of(), Set.of(), true)).isInstanceOf(ImportRejectedException.class).hasMessageContaining("ambiguous");
+        assertThat(first.getResults()).hasSize(1);
+        assertThat(second.getResults()).hasSize(1);
+        verify(raceRepository, never()).delete(any());
+        verify(raceRepository, never()).save(any());
+        verify(raceLineupRepository, never()).deleteAll(any());
+        verify(driverRepository, never()).save(any());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"fixed-entry", "car-only", "count-mismatch", "repeated-incoming-home", "foreign-matchday"})
+    void givenIncompleteOrUnidentifiableConfiguredHistory_whenOverwriting_thenRejectWholeImportBeforeMutation(String kind) {
+        // given
+        var first = categoryRace(false);
+        var reverse = categoryRace(true);
+        reverse.setMatch(first.getMatch());
+        setupCategoryOverwrite(first, reverse);
+        var incoming = List.of(categoryPreview(false), categoryPreview(true));
+        switch (kind) {
+            case "fixed-entry" -> season.setCarPoolMode(CarPoolMode.FIXED_CARS);
+            case "car-only" -> first.setCarPoolEntry(null);
+            case "count-mismatch" -> incoming = List.of(categoryPreview(false));
+            case "repeated-incoming-home" -> incoming = List.of(categoryPreview(false), categoryPreview(false));
+            case "foreign-matchday" -> {
+                var elsewhere = new Matchday(matchday.getPhase(), "Test foreign saved leg", 2);
+                elsewhere.setId(UUID.randomUUID());
+                first.setMatchday(elsewhere);
+            }
+            default -> throw new IllegalArgumentException(kind);
+        }
+        final var previews = incoming;
+        // when / then
+        assertThatThrownBy(() -> csvImportService.executeMultiRaceImport(previews, Map.of(), Set.of(), true))
+                .isInstanceOf(ImportRejectedException.class)
+                .hasMessageContaining(kind.equals("fixed-entry") || kind.equals("car-only") ? "category pool selection" : "ambiguous");
+        verify(raceRepository, never()).delete(any());
+        verify(raceRepository, never()).save(any());
+        verify(raceRepository, never()).saveAndFlush(any());
+        verify(raceLineupRepository, never()).deleteAll(any());
+        verify(driverRepository, never()).save(any());
+    }
+
+    private Race categoryRace(boolean reverse) {
+        var match = new Match(matchday, standaloneTeam1, standaloneTeam2);
+        match.setId(UUID.randomUUID());
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(match);
+        if (reverse) {
+            race.setHomeTeamOverride(standaloneTeam2);
+            race.setAwayTeamOverride(standaloneTeam1);
+        }
+        var car = new Car("Test category overwrite", reverse ? "RR" : "MR");
+        car.setId(UUID.randomUUID());
+        race.setCar(car);
+        var entry = new SeasonCarPoolEntry();
+        entry.setId(UUID.randomUUID());
+        entry.setSeason(season);
+        entry.setLabel("Test saved entry");
+        race.setCarPoolEntry(entry);
+        return race;
+    }
+
+    private void setupCategoryOverwrite(Race... old) {
+        season.setCarPoolMode(CarPoolMode.CATEGORY_POOL);
+        season.setCarPoolState(CarPoolState.FROZEN);
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
+        when(matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any()))
+                .thenReturn(Optional.of(old[0].getMatch()));
+        when(raceRepository.findByMatchId(old[0].getMatch().getId())).thenReturn(List.of(old));
+        lenient().when(raceRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(seasonDriverRepository.findBySeasonIdAndDriverId(any(), any())).thenReturn(Optional.empty());
+        lenient().when(raceLineupRepository.findByRaceIdAndDriverId(any(), any())).thenReturn(Optional.empty());
+    }
+
+    private CsvImportService.ImportPreview categoryPreview(boolean reverse) {
+        var metadata = new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId());
+        var preview = new CsvImportService.ImportPreview(metadata);
+        preview.addRow(new CsvImportService.ImportRow(reverse ? "CRL" : "BRV", "driver1_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("driver1_psn", driver1)));
+        preview.addRow(new CsvImportService.ImportRow(reverse ? "BRV" : "CRL", "driver2_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver2_psn", driver2)));
+        return preview;
+    }
 
 	@Test
     void givenSavedPoolEntry_whenOverwriteWouldDeleteSelection_thenRejectBeforeDeletingRace() {

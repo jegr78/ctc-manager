@@ -2,6 +2,8 @@ package org.ctc.domain.service;
 
 import static org.ctc.util.LogSanitizer.sanitize;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +18,7 @@ import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
+import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +32,8 @@ public class MatchdayService {
     private final SeasonRepository seasonRepository;
     private final RaceLineupRepository raceLineupRepository;
     private final SeasonPhaseService seasonPhaseService;
+    private final RaceRepository raceRepository;
+    private final EntityManager entityManager;
 
     public record MatchdayData(UUID id, String label, int sortIndex) {}
 
@@ -127,6 +132,21 @@ public class MatchdayService {
         var matchday = matchdayRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Matchday", id));
         var seasonId = matchday.getSeason().getId();
+        seasonRepository.findByIdForUpdate(seasonId).orElseThrow();
+        raceRepository.findBySeasonForSelectionUpdate(seasonId);
+        for (var match : matchday.getMatches()) {
+            entityManager.refresh(match, LockModeType.PESSIMISTIC_WRITE);
+            if (!id.equals(match.getMatchday().getId())) {
+                throw new BusinessRuleException("Pairings moved while deleting. Reload the matchday and try again.");
+            }
+        }
+        for (var race : matchday.getRaces()) {
+            var current = raceRepository.findByIdForSelectionUpdate(race.getId()).orElseThrow();
+            if (!id.equals(current.getMatchday().getId())) {
+                throw new BusinessRuleException("Races moved while deleting. Reload the matchday and try again.");
+            }
+        }
+        entityManager.refresh(matchday, LockModeType.PESSIMISTIC_WRITE);
         matchday.getRaces().forEach(PlayoffDecisionGuard::requireOpen);
         matchdayRepository.delete(matchday);
         log.info("Deleted matchday: {}", matchday.getLabel());

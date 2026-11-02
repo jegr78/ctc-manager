@@ -45,6 +45,7 @@ public class PlayoffService {
 	private final PlayoffBracketViewService playoffBracketViewService;
 	private final SeasonPhaseService seasonPhaseService;
 	private final RaceLineupRepository raceLineupRepository;
+    private final PlayoffCarSelectionService carSelections;
 
 	static final int MAX_REASON_LENGTH = 500;
 	private static final Pattern CONTROL_CHARACTERS = Pattern.compile("\\p{Cntrl}|[\\u2028\\u2029]");
@@ -169,6 +170,9 @@ public class PlayoffService {
 		}
 
 		int[] totals = totals(matchup, legs);
+        if (totals[0] != totals[1]) {
+            validateAdvancement(matchup, totals[0] > totals[1] ? matchup.getTeam1() : matchup.getTeam2());
+        }
 		matchup.setHomeScore(totals[0]);
 		matchup.setAwayScore(totals[1]);
 
@@ -210,6 +214,7 @@ public class PlayoffService {
 			throw new IllegalStateException("A winner that is not the points leader of all scheduled legs needs a reason");
 		}
 
+        validateAdvancement(matchup, winner);
 		decide(matchup, winner, decisionReason);
 		log.info("Matchup winner set manually: {}", winner.getShortName());
 	}
@@ -236,6 +241,13 @@ public class PlayoffService {
 			}
 		}
 
+        var next = matchup.getNextMatchup();
+        if (next != null) {
+            Team advanced = feedsFirstSlot(matchup) ? next.getTeam1() : next.getTeam2();
+            if (advanced != null && advanced.getId().equals(previousWinner.getId())) {
+                validateAdvancement(matchup, null);
+            }
+        }
 		appendHistory(matchup, "REOPENED", previousWinner, reopenReason);
 		matchup.setWinner(null);
 		matchup.setDecisionReason(null);
@@ -259,6 +271,7 @@ public class PlayoffService {
 			throw new IllegalStateException(rejection);
 		}
 		Team team = matchup.getTeam1() != null ? matchup.getTeam1() : matchup.getTeam2();
+        validateAdvancement(matchup, team);
 		matchup.setBye(true);
 		decide(matchup, team, null, "BYE");
 		log.info("Matchup {} decided as a bye for {}", matchupId, team.getShortName());
@@ -279,6 +292,7 @@ public class PlayoffService {
 		}
 		Team forfeiter = team1Forfeits ? matchup.getTeam1() : matchup.getTeam2();
 		Team winner = team1Forfeits ? matchup.getTeam2() : matchup.getTeam1();
+        validateAdvancement(matchup, winner);
 		matchup.setWalkoverTeam(forfeiter);
 		decide(matchup, winner, normalizedReason(reason), "WALKOVER");
 		log.info("Matchup {} decided by walkover, {} forfeits", matchupId, forfeiter.getShortName());
@@ -307,9 +321,11 @@ public class PlayoffService {
 	}
 
 	private PlayoffMatchup findMatchup(UUID matchupId) {
-		return playoffMatchupRepository.findById(matchupId)
-				.orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", matchupId));
-	}
+        var matchup = playoffMatchupRepository.findById(matchupId)
+                .orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", matchupId));
+        carSelections.lock(matchup.getRound().getPlayoff());
+        return matchup;
+    }
 
 	private static void requireUndecided(PlayoffMatchup matchup) {
 		if (matchup.isComplete()) {
@@ -350,6 +366,15 @@ public class PlayoffService {
 		}
 		return stripped;
 	}
+
+    private void validateAdvancement(PlayoffMatchup matchup, Team winner) {
+        var next = matchup.getNextMatchup();
+        if (next == null) return;
+        carSelections.requireValid(matchup.getRound().getPlayoff(), List.of(
+                new PlayoffCarSelectionService.Participants(next,
+                        feedsFirstSlot(matchup) ? winner : next.getTeam1(),
+                        feedsFirstSlot(matchup) ? next.getTeam2() : winner)));
+    }
 
 	private void decide(PlayoffMatchup matchup, Team winner, String reason) {
 		decide(matchup, winner, reason, "DECIDED");

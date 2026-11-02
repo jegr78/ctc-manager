@@ -29,20 +29,22 @@ public class PlayoffSeedingService {
 	private final StandingsService standingsService;
 	private final PhaseTeamRepository phaseTeamRepository;
 	private final RaceRepository raceRepository;
+    private final PlayoffCarSelectionService carSelections;
 
 	@Transactional
 	public void seedTeam(UUID matchupId, UUID teamId, int slot) {
 		PlayoffMatchup matchup = playoffMatchupRepository.findById(matchupId)
 				.orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", matchupId));
-		requireSeedingOpen(matchup.getRound().getPlayoff().getId());
-
-		if (slot == 1) {
-			matchup.setTeam1(teamId != null ? findTeam(teamId) : null);
-		} else if (slot == 2) {
-			matchup.setTeam2(teamId != null ? findTeam(teamId) : null);
-		} else {
-			throw new IllegalArgumentException("Slot must be 1 or 2, got: " + slot);
-		}
+        var playoff = matchup.getRound().getPlayoff();
+        carSelections.lock(playoff);
+        requireSeedingOpen(playoff.getId());
+        if (slot != 1 && slot != 2) throw new IllegalArgumentException("Slot must be 1 or 2, got: " + slot);
+        var team = teamId == null ? null : findTeam(teamId);
+        var change = new PlayoffCarSelectionService.Participants(matchup,
+                slot == 1 ? team : matchup.getTeam1(), slot == 2 ? team : matchup.getTeam2());
+        carSelections.requireValid(playoff, List.of(change));
+        matchup.setTeam1(change.team1());
+        matchup.setTeam2(change.team2());
 		playoffMatchupRepository.save(matchup);
 	}
 
@@ -88,15 +90,30 @@ public class PlayoffSeedingService {
 	 */
 	@Transactional
 	public void saveSeed(UUID playoffId, List<SeedEntry> seeds) {
-		requireSeedingOpen(playoffId);
-		for (var entry : seeds) {
-			var matchup = entry.matchupId() == null ? null : playoffMatchupRepository.findById(entry.matchupId()).orElse(null);
-			if (matchup == null || !matchup.getRound().getPlayoff().getId().equals(playoffId)
-					|| matchup.getRound().getRoundIndex() != 0) {
-				throw new IllegalArgumentException("The seeding slot does not belong to this playoff");
-			}
-			seedTeam(entry.matchupId(), entry.teamId(), entry.slot());
-		}
+        var playoff = playoffRepository.findById(playoffId)
+                .orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
+        carSelections.lock(playoff);
+        requireSeedingOpen(playoffId);
+        var planned = new LinkedHashMap<UUID, PlayoffCarSelectionService.Participants>();
+        for (var entry : seeds) {
+            var matchup = entry.matchupId() == null ? null : playoffMatchupRepository.findById(entry.matchupId()).orElse(null);
+            if (matchup == null || !matchup.getRound().getPlayoff().getId().equals(playoffId)
+                    || matchup.getRound().getRoundIndex() != 0) {
+                throw new IllegalArgumentException("The seeding slot does not belong to this playoff");
+            }
+            if (entry.slot() != 1 && entry.slot() != 2) throw new IllegalArgumentException("Slot must be 1 or 2, got: " + entry.slot());
+            var previous = planned.getOrDefault(matchup.getId(),
+                    new PlayoffCarSelectionService.Participants(matchup, matchup.getTeam1(), matchup.getTeam2()));
+            var team = entry.teamId() == null ? null : findTeam(entry.teamId());
+            planned.put(matchup.getId(), new PlayoffCarSelectionService.Participants(matchup,
+                    entry.slot() == 1 ? team : previous.team1(), entry.slot() == 2 ? team : previous.team2()));
+        }
+        carSelections.requireValid(playoff, List.copyOf(planned.values()));
+        for (var change : planned.values()) {
+            change.matchup().setTeam1(change.team1());
+            change.matchup().setTeam2(change.team2());
+            playoffMatchupRepository.save(change.matchup());
+        }
 
 		Map<UUID, Integer> teamSeeds = new LinkedHashMap<>();
 		for (var entry : seeds) {
@@ -140,6 +157,7 @@ public class PlayoffSeedingService {
 	 */
 	@Transactional
 	public void autoSeedBracket(UUID playoffId) {
+        playoffRepository.findById(playoffId).ifPresent(carSelections::lock);
 		requireSeedingOpen(playoffId);
 		var seeds = playoffSeedRepository.findByPlayoffId(playoffId);
 
@@ -190,25 +208,23 @@ public class PlayoffSeedingService {
 			throw new IllegalStateException("Auto-seeding needs seed numbers for all %d teams, found %d"
 					.formatted(matchups.size() * 2, seededTeamCount));
 		}
-		for (int i = 0; i < matchups.size() && i < matchupOrder.length; i++) {
-			int seedIdx = matchupOrder[i];
-			var matchup = matchups.get(i);
-			matchup.setTeam1(sortedTeams.get(seedIdx));
-			matchup.setTeam2(sortedTeams.get(seededTeamCount - 1 - seedIdx));
-			playoffMatchupRepository.save(matchup);
-		}
+        var planned = new ArrayList<PlayoffCarSelectionService.Participants>();
+        for (int i = 0; i < matchups.size() && i < matchupOrder.length; i++) {
+            int seedIdx = matchupOrder[i];
+            planned.add(new PlayoffCarSelectionService.Participants(matchups.get(i), sortedTeams.get(seedIdx),
+                    sortedTeams.get(seededTeamCount - 1 - seedIdx)));
+        }
+        carSelections.requireValid(playoff, planned);
+        if (seeds.isEmpty()) persistDerivedSeeds(playoff, sortedTeams);
+        for (var change : planned) {
+            change.matchup().setTeam1(change.team1());
+            change.matchup().setTeam2(change.team2());
+            playoffMatchupRepository.save(change.matchup());
+        }
 		log.info("Auto-seeded bracket for playoff {} ({} teams)", playoffId, seededTeamCount);
 	}
 
-	/**
-	 * Pulls Top-N teams from the REGULAR phase standings when available.
-	 * Returns {@code null} when no REGULAR phase exists or standings are insufficient — caller
-	 * falls back to manual seeds. On a successful pull:
-	 * <ul>
-	 *   <li>Replaces any existing {@link PlayoffSeed} rows with the Top-N seeding (1..N).</li>
-	 *   <li>Adds each seeded team as a {@link PhaseTeam} on the PLAYOFF phase if not already present.</li>
-	 * </ul>
-	 */
+    /** Reads Top-N regular standings without changing seeds, rosters or participants. */
 	private List<Team> tryLoadFromRegularStandings(Playoff playoff, int totalTeams) {
 		UUID seasonId = playoff.getSeason().getId();
 		var regularPhaseOpt = seasonPhaseService.findByType(seasonId, PhaseType.REGULAR);
@@ -227,6 +243,10 @@ public class PlayoffSeedingService {
 				.limit(totalTeams)
 				.toList();
 
+        return topTeams;
+    }
+
+    private void persistDerivedSeeds(Playoff playoff, List<Team> topTeams) {
 		// Persist Top-N as PlayoffSeed rows (replacing any prior seeds) so getSeedingData and
 		// the PlayoffController seed UI stay coherent.
 		playoffSeedRepository.deleteByPlayoffId(playoff.getId());
@@ -246,11 +266,7 @@ public class PlayoffSeedingService {
 				}
 			}
 		}
-
-		log.debug("Pulled Top-{} from REGULAR phase {} for playoff {}",
-				totalTeams, regularPhase.getId(), playoff.getId());
-		return topTeams;
-	}
+    }
 
 	private int[] buildBracketOrder(int matchCount) {
 		return switch (matchCount) {

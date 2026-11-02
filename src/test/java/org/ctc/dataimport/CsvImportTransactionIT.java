@@ -1,17 +1,16 @@
 package org.ctc.dataimport;
 
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Set;
 import java.util.List;
 import java.util.UUID;
 import org.ctc.TestHelper;
 import org.ctc.TestHelper.SeasonFixture;
-import org.ctc.domain.model.Driver;
-import org.ctc.domain.model.Race;
-import org.ctc.domain.model.RaceResult;
-import org.ctc.domain.repository.DriverRepository;
-import org.ctc.domain.repository.MatchdayRepository;
-import org.ctc.domain.repository.RaceRepository;
-import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.model.*;
+import org.ctc.domain.repository.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -22,9 +21,18 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.ctc.dataimport.exception.ImportRejectedException;
+import org.ctc.domain.service.RaceService;
+import org.ctc.domain.service.SeasonCarPoolService;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -47,10 +55,10 @@ class CsvImportTransactionIT {
 	@Autowired
 	TestHelper testHelper;
 
-	@Autowired
+	@MockitoSpyBean
 	RaceRepository raceRepository;
 
-	@Autowired
+	@MockitoSpyBean
 	DriverRepository driverRepository;
 
 	@Autowired
@@ -61,6 +69,17 @@ class CsvImportTransactionIT {
 
 	@Autowired
 	JdbcTemplate jdbcTemplate;
+
+    @Autowired SeasonRepository seasons;
+    @Autowired CarRepository cars;
+    @Autowired TransactionTemplate tx;
+    @Autowired SeasonCarPoolService pools;
+    @Autowired RaceService raceService;
+    @Autowired CsvImportService imports;
+    List<UUID> categoryCars = new ArrayList<>();
+    List<Team> additionalTeams = new ArrayList<>();
+    UUID categoryEntry;
+    UUID alternativeEntry;
 
 	private final String id = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
 	private SeasonFixture fixture;
@@ -80,6 +99,8 @@ class CsvImportTransactionIT {
 	@AfterEach
 	void removeFixture() {
 		testHelper.deleteSeasonCascade(fixture.season());
+        cars.deleteAllById(categoryCars);
+        teamRepository.deleteAll(additionalTeams);
 		teamRepository.deleteAll(List.of(fixture.homeTeam(), fixture.awayTeam()));
 		driverRepository.findAll().stream()
 				.filter(d -> d.getPsnId().contains(id))
@@ -142,6 +163,153 @@ class CsvImportTransactionIT {
 				.extracting(Race::getId).isNotEqualTo(fixture.race().getId());
 		assertThat(resultCount(races.getFirst().getId())).isEqualTo(2);
 	}
+
+    @Test
+    void givenConfiguredCategoryRace_whenOverwritingSingleReversedScorecard_thenKeepIdSettingsAndOwnership() throws Exception {
+        // given
+        prepareCategoryPool(false);
+        configureCategory(fixture.race().getId(), categoryEntry, categoryCars.get(0));
+        String csv = scorecard(away(), fuzzyDriver.getPsnId(), home(), existingDriver.getPsnId());
+        // when
+        mockMvc.perform(multipart("/admin/import/execute").file(csvFile(csv))
+                        .param("seasonId", fixture.season().getId().toString())
+                        .param("matchdayId", fixture.matchday().getId().toString()).param("overwrite", "true"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("successMessage", containsString("Import successful: 1 races")));
+        // then
+        assertConfigured(fixture.race().getId(), fixture.homeTeam().getId(), categoryEntry, categoryCars.get(0));
+        assertThat(resultCount(fixture.race().getId())).isEqualTo(2);
+    }
+
+    @Test
+    void givenConfiguredHomeAndReturnLeg_whenImportingReturnFirst_thenPreserveEachStableRaceAndSelection() throws Exception {
+        // given
+        prepareCategoryPool(false);
+        configureCategory(fixture.race().getId(), categoryEntry, categoryCars.get(0));
+        UUID reverse = createAdditionalLeg(true);
+        configureCategory(reverse, categoryEntry, categoryCars.get(1));
+        var returning = preview(scorecard(away(), fuzzyDriver.getPsnId(), home(), existingDriver.getPsnId()));
+        var outbound = preview(scorecard(home(), existingDriver.getPsnId(), away(), fuzzyDriver.getPsnId()));
+        // when
+        var result = imports.executeMultiRaceImport(List.of(returning, outbound), Map.of(), Set.of(), true);
+        // then
+        assertThat(result.getImportedRaces()).hasSize(2);
+        assertThat(raceRepository.findByMatchId(fixture.match().getId())).extracting(Race::getId)
+                .containsExactlyInAnyOrder(fixture.race().getId(), reverse);
+        assertConfigured(fixture.race().getId(), fixture.homeTeam().getId(), categoryEntry, categoryCars.get(0));
+        assertConfigured(reverse, fixture.awayTeam().getId(), categoryEntry, categoryCars.get(1));
+        assertThat(resultCount(fixture.race().getId())).isEqualTo(2);
+        assertThat(resultCount(reverse)).isEqualTo(2);
+    }
+
+    @Test
+    void givenEarlierBlankPairingAndAmbiguousConfiguredLegs_whenImportingAll_thenPreflightBeforeAnyDeletionOrDriverCreation() throws Exception {
+        // given
+        prepareCategoryPool(true);
+        configureCategory(fixture.race().getId(), categoryEntry, categoryCars.get(0));
+        UUID ambiguous = createAdditionalLeg(false);
+        configureCategory(ambiguous, alternativeEntry, categoryCars.get(2));
+        UUID blank = tx.execute(status -> {
+            var season = seasons.findById(fixture.season().getId()).orElseThrow();
+            var c = testHelper.createTeam("Test CsvTx C " + id, "TC" + id);
+            var d = testHelper.createTeam("Test CsvTx D " + id, "TD" + id);
+            additionalTeams.addAll(List.of(c, d));
+            season.addTeam(c);
+            season.addTeam(d);
+            var md = matchdayRepository.findById(fixture.matchday().getId()).orElseThrow();
+            var match = testHelper.createMatch(md, c, d);
+            return testHelper.createRace(md, match).getId();
+        });
+        String newPsn = "zz" + id + "PreflightOnly";
+        var earlier = preview(scorecard(additionalTeams.get(0).getShortName(), newPsn,
+                additionalTeams.get(1).getShortName(), fuzzyDriver.getPsnId()));
+        var repeated = preview(scorecard(home(), existingDriver.getPsnId(), away(), fuzzyDriver.getPsnId()));
+        // when / then
+        assertThatThrownBy(() -> imports.executeMultiRaceImport(List.of(earlier, repeated, repeated), Map.of(), Set.of(), true))
+                .isInstanceOf(ImportRejectedException.class).hasMessageContaining("ambiguous");
+        verify(raceRepository, never()).delete(argThat(race -> blank.equals(race.getId())));
+        verify(driverRepository, never()).save(argThat(driver -> newPsn.equals(driver.getPsnId())));
+        assertThat(driverRepository.findByPsnId(newPsn)).isEmpty();
+        assertThat(raceRepository.findByMatchId(fixture.match().getId())).extracting(Race::getId)
+                .containsExactlyInAnyOrder(fixture.race().getId(), ambiguous);
+        assertThat(resultCount(fixture.race().getId())).isEqualTo(1);
+        assertThat(resultCount(ambiguous)).isEqualTo(1);
+        assertConfigured(fixture.race().getId(), fixture.homeTeam().getId(), categoryEntry, categoryCars.get(0));
+        assertConfigured(ambiguous, fixture.homeTeam().getId(), alternativeEntry, categoryCars.get(2));
+    }
+
+    private void prepareCategoryPool(boolean withAlternative) {
+        tx.executeWithoutResult(status -> {
+            var season = seasons.findById(fixture.season().getId()).orElseThrow();
+            for (String name : withAlternative ? List.of("MR", "RR", "FR") : List.of("MR", "RR")) {
+                var car = new Car("Test CSV category " + id, name);
+                car.setCategory(CarCategory.GR_3);
+                car.setDrivetrain(Drivetrain.valueOf(name));
+                car.setModelYear(9897);
+                car.setModelYearOverride(true);
+                car.setModelYearSource("Test fixture");
+                car.setModelYearEvidence("Test accepted local year");
+                categoryCars.add(cars.saveAndFlush(car).getId());
+            }
+            pools.changeMode(season.getId(), CarPoolMode.CATEGORY_POOL);
+            categoryEntry = pools.saveEntry(season.getId(), null, "Test CSV MR/RR", List.of(
+                    new SeasonCarPoolService.ClauseInput(CarCategory.GR_3, Drivetrain.MR, 9897),
+                    new SeasonCarPoolService.ClauseInput(CarCategory.GR_3, Drivetrain.RR, 9897)));
+            if (withAlternative) alternativeEntry = pools.saveEntry(season.getId(), null, "Test CSV FR", List.of(
+                    new SeasonCarPoolService.ClauseInput(CarCategory.GR_3, Drivetrain.FR, 9897)));
+            pools.freeze(season.getId());
+        });
+    }
+
+    private void configureCategory(UUID raceId, UUID entry, UUID car) {
+        var context = tx.execute(status -> {
+            var race = raceRepository.findById(raceId).orElseThrow();
+            return List.of(race.getHomeTeam().getId(), race.getAwayTeam().getId());
+        });
+        assertThat(raceService.saveRace(raceId, fixture.matchday().getId(), context.get(0), context.get(1), null, car, null,
+                17, null, null, null, null, null, TimeProgressionMode.MULTIPLIER, 0, null, null, null, null, entry).success()).isTrue();
+    }
+
+    private UUID createAdditionalLeg(boolean reverse) {
+        return tx.execute(status -> {
+            var original = raceRepository.findById(fixture.race().getId()).orElseThrow();
+            var race = new Race();
+            race.setMatch(original.getMatch());
+            race.setMatchday(original.getMatchday());
+            if (reverse) {
+                race.setHomeTeamOverride(original.getAwayTeam());
+                race.setAwayTeamOverride(original.getHomeTeam());
+            }
+            race.getResults().add(new RaceResult(race, existingDriver, 1, 1, false));
+            return raceRepository.saveAndFlush(race).getId();
+        });
+    }
+
+    private CsvImportService.ImportPreview preview(String csv) throws Exception {
+        return tx.execute(status -> {
+            try {
+                return imports.parseAndPreview(new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8)),
+                        new CsvImportService.ImportMetadata(fixture.season().getId(), null, null, null, null, fixture.matchday().getId()));
+            } catch (java.io.IOException ex) {
+                throw new java.io.UncheckedIOException(ex);
+            }
+        });
+    }
+
+    private static String scorecard(String firstTeam, String firstDriver, String secondTeam, String secondDriver) {
+        return "Team,PSN ID,Position,Quali,FL\n%s,%s,1,1,true\n%s,%s,2,2,false\n"
+                .formatted(firstTeam, firstDriver, secondTeam, secondDriver);
+    }
+
+    private void assertConfigured(UUID raceId, UUID home, UUID entry, UUID car) {
+        tx.executeWithoutResult(status -> {
+            var saved = raceRepository.findById(raceId).orElseThrow();
+            assertThat(saved.getHomeTeam().getId()).isEqualTo(home);
+            assertThat(saved.getCarPoolEntry().getId()).isEqualTo(entry);
+            assertThat(saved.getCar().getId()).isEqualTo(car);
+            assertThat(saved.getSettings().getNumberOfLaps()).isEqualTo(17);
+        });
+    }
 
 	@Test
 	void givenMalformedRows_whenImportExecuted_thenEveryRowErrorIsReportedAndNothingIsCreated() throws Exception {
