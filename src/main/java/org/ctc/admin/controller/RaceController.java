@@ -5,7 +5,6 @@ import org.springframework.validation.BindingResult;
 import static org.springframework.util.StringUtils.hasText;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -157,37 +156,42 @@ public class RaceController {
 		ra.addFlashAttribute("errorCategory", "data-incomplete");
 	}
 
-	@GetMapping("/new")
-	public String create(@RequestParam(required = false) UUID matchdayId, Model model) {
-		var data = raceFormDataService.getNewRaceFormData(matchdayId);
-		model.addAttribute("pageTitle", "New Race");
-		if (!model.containsAttribute("raceForm")) model.addAttribute("raceForm", toRaceForm(data.data()));
-		model.addAttribute("matchdays", data.matchdays());
-		model.addAttribute("teams", data.teams());
-		model.addAttribute("seasonCars", data.seasonCars());
-		model.addAttribute("seasonTracks", data.seasonTracks());
-		model.addAttribute("usedCarIds", data.usedCarIds());
-		model.addAttribute("usedTrackIds", data.usedTrackIds());
-		model.addAttribute("outOfPoolCar", data.outOfPoolCar());
-		model.addAttribute("outOfPoolTrack", data.outOfPoolTrack());
-		return "admin/race-form";
-	}
+    @GetMapping("/new")
+    public String create(@RequestParam(required = false) UUID matchdayId, Model model) {
+        var submitted = (RaceForm) model.asMap().get("raceForm");
+        var data = submitted == null ? raceFormDataService.getNewRaceFormData(matchdayId) : submittedChoices(submitted);
+        model.addAttribute("pageTitle", "New Race");
+        populateForm(model, data);
+        return "admin/race-form";
+    }
 
-	@GetMapping("/{id}/edit")
-	public String edit(@PathVariable UUID id, Model model) {
-		var data = raceFormDataService.getRaceFormData(id);
-		model.addAttribute("pageTitle", "Edit Race");
-		if (!model.containsAttribute("raceForm")) model.addAttribute("raceForm", toRaceForm(data.data()));
-		model.addAttribute("matchdays", data.matchdays());
-		model.addAttribute("teams", data.teams());
-		model.addAttribute("seasonCars", data.seasonCars());
-		model.addAttribute("seasonTracks", data.seasonTracks());
-		model.addAttribute("usedCarIds", data.usedCarIds());
-		model.addAttribute("usedTrackIds", data.usedTrackIds());
-		model.addAttribute("outOfPoolCar", data.outOfPoolCar());
-		model.addAttribute("outOfPoolTrack", data.outOfPoolTrack());
-		return "admin/race-form";
-	}
+    @GetMapping("/{id}/edit")
+    public String edit(@PathVariable UUID id, Model model) {
+        var submitted = (RaceForm) model.asMap().get("raceForm");
+        var data = submitted == null ? raceFormDataService.getRaceFormData(id) : submittedChoices(submitted);
+        model.addAttribute("pageTitle", "Edit Race");
+        populateForm(model, data);
+        return "admin/race-form";
+    }
+
+    private RaceService.RaceFormData submittedChoices(RaceForm form) {
+        return raceFormDataService.getSubmittedRaceFormData(form.getMatchdayId(), form.getHomeTeamId(), form.getId(),
+                form.getCarPoolEntryId(), form.getCarId(), form.getTrackId());
+    }
+
+    private void populateForm(Model model, RaceService.RaceFormData data) {
+        if (!model.containsAttribute("raceForm")) model.addAttribute("raceForm", toRaceForm(data.data()));
+        model.addAttribute("matchdays", data.matchdays());
+        model.addAttribute("teams", data.teams());
+        model.addAttribute("seasonCars", data.seasonCars());
+        model.addAttribute("seasonTracks", data.seasonTracks());
+        model.addAttribute("usedCarIds", data.usedCarIds());
+        model.addAttribute("usedTrackIds", data.usedTrackIds());
+        model.addAttribute("outOfPoolCar", data.outOfPoolCar());
+        model.addAttribute("outOfPoolTrack", data.outOfPoolTrack());
+        model.addAttribute("unavailableTrack", data.unavailableTrack());
+        model.addAttribute("carSelection", data.carSelection());
+    }
 
 	@GetMapping("/{id}/results")
 	public String results(@PathVariable UUID id, Model model) {
@@ -198,32 +202,47 @@ public class RaceController {
 		return "admin/race-results";
 	}
 
-	@PostMapping("/save")
-	public String save(@ModelAttribute RaceForm form, BindingResult binding,
-                       RedirectAttributes redirectAttributes) {
-        if (binding.hasErrors()) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Check the time progression mode and numeric settings.");
-            redirectAttributes.addFlashAttribute("raceForm", form);
-            return "redirect:/admin/races/" + (form.getId() != null ? form.getId() + "/edit" : "new?matchdayId=" + form.getMatchdayId());
+    @PostMapping("/save")
+    public String save(@ModelAttribute RaceForm form, BindingResult binding, RedirectAttributes redirectAttributes) {
+        if (binding.hasErrors()) return rejectedForm(form, binding, "Check the highlighted fields.", redirectAttributes);
+        try {
+            var result = raceService.saveRace(form.getId(), form.getMatchdayId(), form.getHomeTeamId(), form.getAwayTeamId(),
+                    form.getTrackId(), form.getCarId(), form.getDateTime(), form.getNumberOfLaps(), form.getTyreWearMultiplier(),
+                    form.getFuelConsumptionMultiplier(), form.getRefuelingSpeed(), form.getInitialFuel(), form.getNumberOfRequiredPitStops(),
+                    form.getTimeProgressionMode(), form.getTimeProgressionMultiplier(), form.getWeather(),
+                    form.getTimeOfDay(), form.getAvailableTyres(), form.getMandatoryTyres(), form.getCarPoolEntryId());
+            if (!result.success()) return rejectedForm(form, binding, result.message(), redirectAttributes);
+            redirectAttributes.addFlashAttribute("successMessage", result.message());
+            return "redirect:/admin/races?matchdayId=" + result.matchdayId();
+        } catch (BusinessRuleException ex) {
+            return rejectedForm(form, binding, ex.getMessage(), redirectAttributes);
         }
-		var result = raceService.saveRace(
-				form.getId(), form.getMatchdayId(), form.getHomeTeamId(), form.getAwayTeamId(),
-				form.getTrackId(), form.getCarId(), form.getDateTime(),
-				form.getNumberOfLaps(), form.getTyreWearMultiplier(),
-				form.getFuelConsumptionMultiplier(), form.getRefuelingSpeed(),
-				form.getInitialFuel(), form.getNumberOfRequiredPitStops(),
-				form.getTimeProgressionMode(), form.getTimeProgressionMultiplier(), form.getWeather(),
-				form.getTimeOfDay(), form.getAvailableTyres(), form.getMandatoryTyres());
-		if (!result.success()) {
-            redirectAttributes.addFlashAttribute("raceForm", form);
-			redirectAttributes.addFlashAttribute("errorMessage", result.message());
-			return "redirect:/admin/races/" + (result.raceId() != null
-					? result.raceId() + "/edit"
-					: "new?matchdayId=" + result.matchdayId());
-		}
-		redirectAttributes.addFlashAttribute("successMessage", result.message());
-		return "redirect:/admin/races?matchdayId=" + result.matchdayId();
-	}
+    }
+
+    @PostMapping("/refresh-choices")
+    public String refreshChoices(@ModelAttribute RaceForm form, BindingResult binding, RedirectAttributes redirectAttributes) {
+        preserveForm(form, binding, redirectAttributes);
+        if (binding.hasErrors()) redirectAttributes.addFlashAttribute("errorMessage", "Check the highlighted fields.");
+        else redirectAttributes.addFlashAttribute("successMessage", "Choices refreshed. Save the race when ready.");
+        return formRedirect(form);
+    }
+
+    private String rejectedForm(RaceForm form, BindingResult binding, String message, RedirectAttributes redirectAttributes) {
+        if (!binding.hasErrors()) binding.reject("race.selection", message);
+        preserveForm(form, binding, redirectAttributes);
+        redirectAttributes.addFlashAttribute("errorMessage", message);
+        return formRedirect(form);
+    }
+
+    private void preserveForm(RaceForm form, BindingResult binding, RedirectAttributes redirectAttributes) {
+        redirectAttributes.addFlashAttribute("raceForm", form);
+        redirectAttributes.addFlashAttribute(BindingResult.MODEL_KEY_PREFIX + "raceForm", binding);
+    }
+
+    private String formRedirect(RaceForm form) {
+        return "redirect:/admin/races/" + (form.getId() != null ? form.getId() + "/edit"
+                : form.getMatchdayId() != null ? "new?matchdayId=" + form.getMatchdayId() : "new");
+    }
 
 	@PostMapping("/{id}/results")
 	public String saveResults(@PathVariable UUID id, @ModelAttribute RaceForm form,
@@ -378,9 +397,9 @@ public class RaceController {
 
 	@GetMapping("/used-selections")
 	@ResponseBody
-	public Map<String, Set<UUID>> usedSelections(
+	public Map<String, Object> usedSelections(
 			@RequestParam UUID seasonId,
-			@RequestParam UUID homeTeamId,
+			@RequestParam(required = false) UUID homeTeamId,
 			@RequestParam(required = false) UUID excludeRaceId) {
 		return raceFormDataService.getUsedSelections(seasonId, homeTeamId, excludeRaceId);
 	}
@@ -393,6 +412,7 @@ public class RaceController {
 		form.setAwayTeamId(data.awayTeamId());
 		form.setTrackId(data.trackId());
 		form.setCarId(data.carId());
+        form.setCarPoolEntryId(data.carPoolEntryId());
 		form.setDateTime(data.dateTime());
 		form.setNumberOfLaps(data.numberOfLaps());
 		form.setTyreWearMultiplier(data.tyreWearMultiplier());

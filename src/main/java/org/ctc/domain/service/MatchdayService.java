@@ -16,6 +16,7 @@ import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
+import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ public class MatchdayService {
     private final SeasonRepository seasonRepository;
     private final RaceLineupRepository raceLineupRepository;
     private final SeasonPhaseService seasonPhaseService;
+    private final RaceRepository raceRepository;
 
     public record MatchdayData(UUID id, String label, int sortIndex) {}
 
@@ -127,6 +129,8 @@ public class MatchdayService {
         var matchday = matchdayRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Matchday", id));
         var seasonId = matchday.getSeason().getId();
+        seasonRepository.findByIdForUpdate(seasonId).orElseThrow();
+        raceRepository.findBySeasonForSelectionUpdate(seasonId);
         matchday.getRaces().forEach(PlayoffDecisionGuard::requireOpen);
         matchdayRepository.delete(matchday);
         log.info("Deleted matchday: {}", matchday.getLabel());

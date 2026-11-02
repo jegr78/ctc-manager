@@ -43,6 +43,8 @@ class PlayoffSeedingServiceTest {
 	@Mock
 	private PhaseTeamRepository phaseTeamRepository;
 
+    @Mock private PlayoffCarSelectionService carSelections;
+
 	@InjectMocks
 	private PlayoffSeedingService playoffSeedingService;
 

@@ -25,40 +25,62 @@ public class RaceFormDataService {
     private final TrackRepository trackRepository;
     private final SeasonDriverRepository seasonDriverRepository;
     private final RaceLineupRepository raceLineupRepository;
+    private final RaceCarSelectionService carSelections;
+    private final SeasonRepository seasonRepository;
+
+    public RaceService.RaceFormData getSubmittedRaceFormData(UUID matchdayId, UUID homeTeamId, UUID raceId,
+                                                           UUID entryId, UUID carId, UUID trackId) {
+        var data = new RaceService.RaceData(raceId, matchdayId, homeTeamId, null, trackId, carId, null,
+                List.of(), null, null, null, null, null, null, null, null, null, null, null,
+                TimeProgressionMode.MULTIPLIER, entryId);
+        var season = matchdayId == null ? null : matchdayRepository.findById(matchdayId).map(Matchday::getSeason).orElse(null);
+        return assemble(data, season);
+    }
 
     public RaceService.RaceFormData getNewRaceFormData(UUID matchdayId) {
-        UUID effectiveMatchdayId = matchdayId;
-        List<Car> seasonCars = List.of();
-        List<Track> seasonTracks = List.of();
-
-        if (matchdayId != null) {
-            var md = matchdayRepository.findById(matchdayId).orElse(null);
-            if (md != null) {
-                var season = md.getSeason();
-                seasonCars = season.getCars();
-                seasonTracks = season.getTracks();
-            }
-        }
-
-        var data = new RaceService.RaceData(null, effectiveMatchdayId, null, null, null, null, null,
-                List.of(), null, null, null, null, null, null, null, null, null, null, null,
-                TimeProgressionMode.MULTIPLIER);
-
-        return new RaceService.RaceFormData(data, matchdayRepository.findAll(), teamRepository.findAll(),
-                seasonCars, seasonTracks, Set.of(), Set.of(), null, null);
+        return getSubmittedRaceFormData(matchdayId, null, null, null, null, null);
     }
 
     public RaceService.RaceFormData getRaceFormData(UUID raceId) {
         var race = raceRepository.findById(raceId).orElseThrow();
-        var data = toRaceData(race);
-        var season = race.getMatchday().getSeason();
+        return assemble(toRaceData(race), race.getMatchday().getSeason());
+    }
 
-        return new RaceService.RaceFormData(data, matchdayRepository.findAll(), teamRepository.findAll(),
-                season.getCars(), season.getTracks(),
-                race.getHomeTeam() != null ? getUsedCarIds(season.getId(), race.getHomeTeam().getId(), race.getId()) : Set.of(),
-                race.getHomeTeam() != null ? getUsedTrackIds(season.getId(), race.getHomeTeam().getId(), race.getId()) : Set.of(),
-                race.getCar() != null && !season.getCars().contains(race.getCar()) ? race.getCar() : null,
-                race.getTrack() != null && !season.getTracks().contains(race.getTrack()) ? race.getTrack() : null);
+    private RaceService.RaceFormData assemble(RaceService.RaceData data, Season season) {
+        var teams = teamRepository.findAll();
+        if (season == null) {
+            return new RaceService.RaceFormData(data, matchdayRepository.findAll(), teams,
+                    List.of(), List.of(), Set.of(), Set.of(), null, null);
+        }
+        UUID knownHome = teams.stream().anyMatch(team -> team.getId().equals(data.homeTeamId())) ? data.homeTeamId() : null;
+        var available = carSelections.availability(season.getId(), knownHome, data.id());
+        boolean category = available.poolMode() == CarPoolMode.CATEGORY_POOL;
+        var selected = available.entries().stream().filter(entry -> entry.id().equals(data.carPoolEntryId())).findFirst().orElse(null);
+        var memberCars = selected == null ? List.<RaceCarSelectionService.CarChoice>of() : selected.cars();
+        var selectedCar = data.carId() == null ? null : carRepository.findById(data.carId()).orElse(null);
+        boolean carInPool = data.carId() == null || (category
+                ? memberCars.stream().anyMatch(car -> car.id().equals(data.carId()))
+                : season.getCars().stream().anyMatch(car -> car.getId().equals(data.carId())));
+        var unavailableCar = carInPool ? null : new RaceCarSelectionService.CarChoice(data.carId(),
+                selectedCar == null ? "Unavailable submitted car" : selectedCar.getDisplayName() + (category ? " (not in frozen entry)" : " (not in season pool)"));
+        var unavailableEntry = data.carPoolEntryId() != null && selected == null
+                ? new RaceCarSelectionService.CarChoice(data.carPoolEntryId(), "Unavailable submitted entry") : null;
+        String hint = !category ? "Choose from this season's catalog. Previously used choices are unavailable."
+                : available.poolState() != CarPoolState.FROZEN ? "Freeze this season's category pool before choosing a car."
+                : selected != null && selected.reason() != null ? selected.reason()
+                : "Choose one entry, then one concrete car. Saving consumes the whole entry for this home team.";
+        var track = data.trackId() == null ? null : trackRepository.findById(data.trackId()).orElse(null);
+        boolean trackInPool = data.trackId() == null || season.getTracks().stream()
+                .anyMatch(candidate -> candidate.getId().equals(data.trackId()));
+        var unavailableTrack = trackInPool ? null : new TrackChoice(data.trackId(),
+                track == null ? "Unavailable submitted track" : track.getName() + " (not in season pool)");
+        return new RaceService.RaceFormData(data, matchdayRepository.findAll(), teams,
+                category ? List.of() : season.getCars(), season.getTracks(), available.usedCarIds(),
+                getUsedTrackIds(season.getId(), knownHome, data.id()), carInPool ? null : selectedCar,
+                track != null && season.getTracks().stream().noneMatch(t -> t.getId().equals(track.getId())) ? track : null,
+                new RaceService.CarSelectionForm(category, available.poolState() == CarPoolState.FROZEN,
+                        available.entries(), memberCars, unavailableEntry, unavailableCar, hint, selected != null && selected.consumed()),
+                unavailableTrack);
     }
 
     public RaceService.ResultsFormData getResultsFormData(UUID raceId) {
@@ -79,32 +101,34 @@ public class RaceFormDataService {
                     data.numberOfLaps(), data.tyreWearMultiplier(), data.fuelConsumptionMultiplier(),
                     data.refuelingSpeed(), data.initialFuel(), data.numberOfRequiredPitStops(),
                     data.timeProgressionMultiplier(), data.weather(), data.timeOfDay(),
-                    data.availableTyres(), data.mandatoryTyres(), data.timeProgressionMode());
+                    data.availableTyres(), data.mandatoryTyres(), data.timeProgressionMode(), data.carPoolEntryId());
         }
 
         return new RaceService.ResultsFormData(data, race, race.getMatchday().getPhase().getRaceScoring());
     }
 
-    public Map<String, Set<UUID>> getUsedSelections(UUID seasonId, UUID homeTeamId, UUID excludeRaceId) {
-        return Map.of(
-                "usedCarIds", getUsedCarIds(seasonId, homeTeamId, excludeRaceId),
-                "usedTrackIds", getUsedTrackIds(seasonId, homeTeamId, excludeRaceId));
+    public Map<String, Object> getUsedSelections(UUID seasonId, UUID homeTeamId, UUID excludeRaceId) {
+        var available = carSelections.availability(seasonId, homeTeamId, excludeRaceId);
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new org.ctc.domain.exception.EntityNotFoundException("Season", seasonId));
+        return Map.of("usedCarIds", available.usedCarIds(),
+                "usedTrackIds", getUsedTrackIds(seasonId, homeTeamId, excludeRaceId),
+                "entries", available.entries(), "consumedEntryIds", available.consumedEntryIds(),
+                "carPoolMode", available.poolMode(), "carPoolState", available.poolState(),
+                "fixedCars", season.getCars().stream()
+                        .map(car -> new RaceCarSelectionService.CarChoice(car.getId(), car.getDisplayName())).toList(),
+                "tracks", season.getTracks().stream().map(track -> new TrackChoice(track.getId(),
+                        track.getName() + (track.getCountry() == null ? "" : " (" + track.getCountry() + ")"))).toList());
     }
 
-    private Set<UUID> getUsedCarIds(UUID seasonId, UUID homeTeamId, UUID excludeRaceId) {
-        return raceRepository.findByMatchdaySeasonId(seasonId).stream()
-                .filter(r -> !r.isBye())
-                .filter(r -> r.getHomeTeam().getId().equals(homeTeamId))
-                .filter(r -> excludeRaceId == null || !r.getId().equals(excludeRaceId))
-                .filter(r -> r.getCar() != null)
-                .map(r -> r.getCar().getId())
-                .collect(Collectors.toSet());
-    }
+    public record TrackChoice(UUID id, String label) {}
 
     private Set<UUID> getUsedTrackIds(UUID seasonId, UUID homeTeamId, UUID excludeRaceId) {
+        if (homeTeamId == null) return Set.of();
         return raceRepository.findByMatchdaySeasonId(seasonId).stream()
                 .filter(r -> !r.isBye())
-                .filter(r -> r.getHomeTeam().getId().equals(homeTeamId))
+                .filter(r -> r.getPlayoffMatchup() == null || !r.getPlayoffMatchup().isBye())
+                .filter(r -> r.getHomeTeam() != null && r.getHomeTeam().getId().equals(homeTeamId))
                 .filter(r -> excludeRaceId == null || !r.getId().equals(excludeRaceId))
                 .filter(r -> r.getTrack() != null)
                 .map(r -> r.getTrack().getId())
@@ -173,6 +197,7 @@ public class RaceFormDataService {
                 settings != null ? settings.getTimeOfDay() : null,
                 settings != null ? settings.getAvailableTyres() : null,
                 settings != null ? settings.getMandatoryTyres() : null,
-                settings != null ? settings.getTimeProgressionMode() : TimeProgressionMode.MULTIPLIER);
+                settings != null ? settings.getTimeProgressionMode() : TimeProgressionMode.MULTIPLIER,
+                race.getCarPoolEntry() == null ? null : race.getCarPoolEntry().getId());
     }
 }

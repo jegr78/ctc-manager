@@ -21,6 +21,7 @@ public class RaceForm {
 	private UUID awayTeamId;
 	private UUID trackId;
 	private UUID carId;
+    private UUID carPoolEntryId;
 	private LocalDateTime dateTime;
 	private List<RaceResultForm> results = new ArrayList<>();
 

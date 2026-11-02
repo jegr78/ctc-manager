@@ -21,12 +21,13 @@ public class RaceCalendarService {
 
 	private final RaceRepository raceRepository;
 	private final GoogleCalendarService googleCalendarService;
+    private final RaceCalendarPersistenceService calendarPersistence;
 
 	public boolean isCalendarAvailable() {
 		return googleCalendarService.isAvailable();
 	}
 
-	@Transactional
+	@Transactional(readOnly = true)
 	public void createOrUpdateCalendarEvent(UUID raceId) throws GoogleApiException {
 		var race = raceRepository.findById(raceId).orElseThrow();
 
@@ -54,8 +55,7 @@ public class RaceCalendarService {
 			log.info("Updated calendar event for race {}: {}", raceId, sanitize(title));
 		} else {
 			String eventId = googleCalendarService.createEvent(title, race.getDateTime(), durationMinutes);
-			race.setCalendarEventId(eventId);
-			raceRepository.save(race);
+            calendarPersistence.saveCreatedEvent(raceId, eventId);
 			log.info("Created calendar event for race {}: {} (eventId: {})", raceId, sanitize(title),
 					sanitize(eventId));
 		}

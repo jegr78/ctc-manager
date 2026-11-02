@@ -2396,6 +2396,9 @@ input:not([type='checkbox']):not([type='radio']):not([type='color']), select { b
 
 .race-setup-editor .setup-hint { margin-bottom: 20px; max-width: 70ch; }
 .race-setup-editor [data-used-selection-status]:empty { display: none; }
+.race-setup-editor fieldset[id] { scroll-margin-top: 72px; }
+.race-setup-editor .refresh-choices { margin-bottom: 20px; }
+.race-setup-editor .form-validation-errors { overflow-wrap: anywhere; margin-bottom: 20px; }
 .entity-editor .form-hint--sm { margin-top: 8px; line-height: 1.5; }
 
 .event-detail [id] { scroll-margin-top: 20px; }

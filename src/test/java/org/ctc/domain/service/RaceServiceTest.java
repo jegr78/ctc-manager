@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -37,6 +38,14 @@ class RaceServiceTest {
     @InjectMocks
     private RaceService service;
 
+
+    @BeforeEach
+    void setUpSelectionPolicy() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "carSelections",
+                new RaceCarSelectionService(seasonRepository, teamRepository, raceRepository));
+        lenient().when(raceRepository.findByIdForSelectionUpdate(any())).thenAnswer(inv -> raceRepository.findById(inv.getArgument(0)));
+        lenient().when(raceRepository.findBySeasonForSelectionUpdate(any())).thenAnswer(inv -> raceRepository.findByMatchdaySeasonId(inv.getArgument(0)));
+    }
 
     @Test
     void givenCategorySeasonWithoutSelection_whenSaving_thenDraftSettingsRemainSavable() {
@@ -344,7 +353,7 @@ class RaceServiceTest {
         var raceId = UUID.randomUUID();
         var matchdayId = UUID.randomUUID();
 
-        var matchday = new Matchday();
+        var matchday = createMatchday();
         matchday.setId(matchdayId);
 
         var homeTeam = createTeam("HOM", "Home");
@@ -700,8 +709,7 @@ class RaceServiceTest {
     private Race createRaceWithScore(int homeScore, int awayScore) {
         var homeTeam = createTeam("HOM", "Home");
         var awayTeam = createTeam("AWY", "Away");
-        var matchday = new Matchday();
-        matchday.setId(UUID.randomUUID());
+        var matchday = createMatchday();
         var match = new Match(matchday, homeTeam, awayTeam);
         match.setHomeScore(homeScore);
         match.setAwayScore(awayScore);
@@ -757,6 +765,7 @@ class RaceServiceTest {
     private Team createTeam(String shortName, String name) {
         var team = new Team(name, shortName);
         team.setId(UUID.randomUUID());
+        lenient().when(teamRepository.findById(team.getId())).thenReturn(Optional.of(team));
         return team;
     }
 }

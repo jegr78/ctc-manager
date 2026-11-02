@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -27,9 +28,18 @@ class RaceFormDataServiceTest {
     @Mock private SeasonDriverRepository seasonDriverRepository;
     @Mock private RaceLineupRepository raceLineupRepository;
 
+    @Mock private RaceCarSelectionService carSelections;
+    @Mock private SeasonRepository seasonRepository;
+
     @InjectMocks
     private RaceFormDataService service;
 
+
+    @BeforeEach
+    void setUpSelectionDefaults() {
+        lenient().when(carSelections.availability(any(), any(), any())).thenReturn(
+                new RaceCarSelectionService.Availability(CarPoolMode.FIXED_CARS, CarPoolState.DRAFT, List.of(), java.util.Set.of(), java.util.Set.of()));
+    }
 
     @Test
     void givenMatchdayId_whenGetNewRaceFormData_thenReturnsPopulatedFormDataWithSeasonPools() {

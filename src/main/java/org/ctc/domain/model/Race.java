@@ -12,6 +12,7 @@ import lombok.*;
 
 @Entity
 @Table(name = "races")
+@org.hibernate.annotations.DynamicUpdate
 @Getter
 @Setter
 @NoArgsConstructor
@@ -86,6 +87,12 @@ public class Race extends BaseEntity {
 		}
 		return null;
 	}
+
+    /** Projects a playoff participant edit while retaining explicit and regular-match ownership. */
+    public Team projectPlayoffHome(Team proposedHome) {
+        if (homeTeamOverride != null) return homeTeamOverride;
+        return match != null ? match.getHomeTeam() : proposedHome;
+    }
 
 	public Team getAwayTeam() {
 		if (awayTeamOverride != null) {

@@ -141,12 +141,15 @@ public class DataAuditService {
             var entry = race.getCarPoolEntry();
             var car = race.getCar();
             var problems = new ArrayList<String>();
+            boolean bye = race.isBye() || race.getPlayoffMatchup() != null && race.getPlayoffMatchup().isBye();
+            boolean selected = entry != null || car != null;
+            if (selected && bye) problems.add("A bye cannot select a car or consume a pool entry.");
+            if (selected && race.getHomeTeam() == null) problems.add("Configured race has no effective home team.");
             if (entry != null) {
                 if (season.getCarPoolMode() != CarPoolMode.CATEGORY_POOL || season.getCarPoolState() != CarPoolState.FROZEN) problems.add("Race references an entry outside a frozen category pool.");
                 if (!entry.getSeason().getId().equals(season.getId())) problems.add("Race entry belongs to a different season.");
                 if (car == null || entry.getMembers().stream().noneMatch(member -> member.getCar().getId().equals(car.getId()))) problems.add("Race car is not a frozen entry member.");
-                if (race.isBye()) problems.add("A bye cannot consume a pool entry.");
-                else if (race.getHomeTeam() != null) {
+                if (!bye && race.getHomeTeam() != null) {
                     String key = season.getId() + "/" + race.getHomeTeam().getId() + "/" + entry.getId();
                     var previous = usage.putIfAbsent(key, race.getId());
                     if (previous != null) problems.add("Duplicate entry consumption with race " + previous);

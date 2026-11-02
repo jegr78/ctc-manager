@@ -72,6 +72,8 @@ class BackupSeasonCarPoolRoundTripIT {
     @Autowired private org.ctc.domain.service.SeasonCarPoolService pools;
     @Autowired private org.ctc.TestHelper helper;
     @Autowired private org.ctc.domain.repository.RaceRepository races;
+    @Autowired private org.ctc.domain.service.RaceService raceService;
+    @Autowired private org.ctc.domain.repository.TeamRepository teams;
     @org.springframework.beans.factory.annotation.Value("${app.backup.staging-dir}") private String stagingDir;
 
     @Test
@@ -91,14 +93,15 @@ class BackupSeasonCarPoolRoundTripIT {
             // when
             pools.freeze(fixture.season().getId());
             var entry = entries.findById(entryId).orElseThrow();
-            fixture.race().setCar(car);
-            fixture.race().setCarPoolEntry(entry);
-            races.saveAndFlush(fixture.race());
+            assertThat(raceService.saveRace(fixture.race().getId(), fixture.matchday().getId(),
+                    fixture.homeTeam().getId(), fixture.awayTeam().getId(), null, car.getId(), null,
+                    5, null, null, null, null, null, org.ctc.domain.model.TimeProgressionMode.MULTIPLIER, 0,
+                    null, null, null, null, entryId).success()).isTrue();
             var memberId = entry.getMembers().getFirst().getId();
             var clauseId = entry.getClauses().getFirst().getId();
             car.setCategory(org.ctc.domain.model.CarCategory.GR_4);
             carRepository.saveAndFlush(car);
-            return new UUID[]{fixture.season().getId(), entryId, car.getId(), fixture.race().getId(), memberId, clauseId};
+            return new UUID[]{fixture.season().getId(), entryId, car.getId(), fixture.race().getId(), memberId, clauseId, fixture.homeTeam().getId(), fixture.awayTeam().getId()};
         });
         byte[] validArchive = exportArchive();
         byte[] brokenArchive = removeEntryReference(validArchive, ids[3]);
@@ -135,10 +138,16 @@ class BackupSeasonCarPoolRoundTripIT {
                 assertThat(clause.getModelYear()).isEqualTo(9876);
                 assertThat(clause.getDrivetrain()).isNull();
             });
-            assertThat(races.findById(ids[3]).orElseThrow().getCarPoolEntry().getId()).isEqualTo(ids[1]);
+            var restoredRace = races.findById(ids[3]).orElseThrow();
+            assertThat(restoredRace.getCarPoolEntry().getId()).isEqualTo(ids[1]);
+            assertThat(restoredRace.getCar().getId()).isEqualTo(ids[2]);
+            assertThat(restoredRace.getSettings().getNumberOfLaps()).isEqualTo(5);
+            assertThat(restoredRace.getSettings().getTimeProgressionMode()).isEqualTo(org.ctc.domain.model.TimeProgressionMode.MULTIPLIER);
+            assertThat(restoredRace.getSettings().getTimeProgressionMultiplier()).isZero();
             assertThat(pools.preview(ids[0]).entries().getFirst().carIds()).containsExactly(ids[2]);
             helper.deleteSeasonCascade(season);
             carRepository.deleteById(ids[2]);
+            teams.deleteAllById(java.util.List.of(ids[6], ids[7]));
         });
     }
 

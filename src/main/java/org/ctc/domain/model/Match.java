@@ -13,6 +13,7 @@ import lombok.ToString;
 
 @Entity
 @Table(name = "matches")
+@org.hibernate.annotations.DynamicUpdate
 @Getter
 @Setter
 @NoArgsConstructor
@@ -48,7 +49,8 @@ public class Match extends BaseEntity {
 	@Column(nullable = false)
 	private boolean bye;
 
-	@OneToMany(mappedBy = "match", cascade = CascadeType.ALL, orphanRemoval = true)
+	// Selection writes refresh each race separately before refreshing pairing ownership.
+	@OneToMany(mappedBy = "match", cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE, CascadeType.DETACH}, orphanRemoval = true)
 	@OrderBy("dateTime ASC NULLS LAST")
 	private List<Race> races = new ArrayList<>();
 
