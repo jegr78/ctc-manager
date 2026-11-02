@@ -44,6 +44,10 @@ public class Race extends BaseEntity {
 	@JoinColumn(name = "car_id")
 	private Car car;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "car_pool_entry_id")
+    private SeasonCarPoolEntry carPoolEntry;
+
 	@OneToOne(mappedBy = "race", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
 	private RaceSettings settings;
 

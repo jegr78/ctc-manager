@@ -37,7 +37,8 @@
 - **Team Cards** — Generate 1080x1920 team card PNGs with colors, logo, rating and standings
 - **Race Attachments** — Upload files or link external resources to races
 - **Docker** — Local development and production deployment with MariaDB
-- **Backup & Restore** — Export a full ZIP backup of all 27 entity tables (24 league entities, the 2 Discord-state entities `discord_global_config` and `discord_post`, and the public URL slugs in `site_slugs`); restore via a preview-and-confirm import flow that accepts schema versions 1, 2 and 3, so older backups remain restorable
+- **Season car pools** — Keep fixed car choices or build named category entries from local metadata. Combine alternative category/drivetrain/year clauses, preview eligible cars and overlaps, then freeze exact membership. Catalog changes preserve frozen choices; used pools cannot be reopened. Race entry selection follows in the next implementation step.
+- **Backup & Restore** — Export a full ZIP backup of all 30 entity tables, including exact seasonal pool snapshots, Discord state and public URL slugs; restore via a preview-and-confirm import flow that accepts schema versions 1, 2, 3 and 4, so older backups remain restorable
 - **Channel Archive Dialog** — Labeled destination categories with channel counts, disabled full categories, keyboard focus and Escape/cancel support. A native inline form remains available without JavaScript.
 - **Backup Workspace** — Separate export and restore panels, labeled current and backup row counts, a neutral archive preview and a clear replacement confirmation.
 - **Data Audit** — Read-only check at `/admin/data-audit` that lists inconsistent historical records (stale aggregates, duplicate pairings, phase and group mismatches, succession problems, playoff decisions, ambiguous public URLs) with evidence and a proposed correction. See the [Data Audit wiki page](../../wiki/Data-Audit).
@@ -60,7 +61,7 @@ v1.10 introduces a full database backup/restore feature accessible via `/admin/b
 
 1. Navigate to `/admin/backup` in the admin sidebar.
 2. Click **Export Backup** — a ZIP file (`ctc-backup-<ISO-instant>.zip`) downloads immediately.
-3. Store the ZIP in a safe location. Each export captures all 27 entity tables (including Discord global config, idempotency tracking and public URL slugs).
+3. Store the ZIP in a safe location. Each export captures all 30 entity tables (including Discord global config, idempotency tracking and public URL slugs).
 
 ### Import
 
@@ -68,8 +69,8 @@ v1.10 introduces a full database backup/restore feature accessible via `/admin/b
 2. Review the preview: per-table row counts (current vs. backup) and schema-version match indicator.
 3. Check the **I understand** confirmation and click **Execute Import**. The database is replaced atomically.
 
-> **Schema-Version lock:** The import rejects a backup whose schema version is not 1, 2 or 3 before it
-> writes anything.
+> **Schema-Version lock:** The import rejects a backup whose schema version is not 1, 2, 3 or 4 before it
+> writes anything. Schema 4 also validates pool references and limits preflight to 100,000 retained reference rows.
 
 ### Recovery
 

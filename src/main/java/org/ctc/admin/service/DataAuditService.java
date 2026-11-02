@@ -4,6 +4,7 @@ import org.ctc.domain.model.TimeProgressionMode;
 
 import static org.ctc.admin.dto.DataAuditFinding.Category.PAIRING;
 import static org.ctc.admin.dto.DataAuditFinding.Category.CAR_METADATA;
+import static org.ctc.admin.dto.DataAuditFinding.Category.CAR_POOL;
 import static org.ctc.admin.dto.DataAuditFinding.Category.PHASE_GROUP;
 import static org.ctc.admin.dto.DataAuditFinding.Category.PLAYOFF;
 import static org.ctc.admin.dto.DataAuditFinding.Category.PUBLIC_URL;
@@ -45,6 +46,8 @@ import org.ctc.domain.model.SeasonTeam;
 import org.ctc.domain.model.SiteSlug;
 import org.ctc.domain.model.SiteSlugKind;
 import org.ctc.domain.model.Team;
+import org.ctc.domain.model.CarPoolMode;
+import org.ctc.domain.model.CarPoolState;
 import org.ctc.domain.repository.DriverRepository;
 import org.ctc.domain.repository.CarRepository;
 import org.ctc.domain.repository.MatchRepository;
@@ -56,7 +59,9 @@ import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonTeamRepository;
 import org.ctc.domain.repository.SiteSlugRepository;
 import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.service.ScoringService;
+import org.ctc.domain.service.SeasonCarPoolService;
 import org.ctc.sitegen.SiteSlugger;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -83,6 +88,8 @@ public class DataAuditService {
 	private final SiteSlugRepository siteSlugRepository;
 	private final ScoringService scoringService;
 	private final SiteSlugger siteSlugger;
+    private final SeasonRepository seasonRepository;
+    private final SeasonCarPoolService carPoolService;
 
 	@Transactional(readOnly = true)
 	public DataAuditReport audit() {
@@ -105,6 +112,7 @@ public class DataAuditService {
 		auditPlayoffs(matchups, legs, findings.get(PLAYOFF));
 		auditPublicUrls(findings.get(PUBLIC_URL));
         auditCarMetadata(findings.get(CAR_METADATA));
+        auditCarPools(races, findings.get(CAR_POOL));
 
 		List<DataAuditReport.Section> sections = findings.entrySet().stream()
 				.map(entry -> new DataAuditReport.Section(entry.getKey(), List.copyOf(entry.getValue())))
@@ -113,6 +121,43 @@ public class DataAuditService {
 		log.info("Data audit found {} anomalies", report.total());
 		return report;
 	}
+
+    private void auditCarPools(List<Race> races, List<DataAuditFinding> findings) {
+        for (var season : seasonRepository.findAll()) {
+            var problems = new ArrayList<String>();
+            boolean frozen = season.getCarPoolState() == CarPoolState.FROZEN;
+            if (frozen || !season.getCarPoolEntries().isEmpty()) problems.addAll(carPoolService.preview(season.getId()).problems());
+            if (frozen && season.getCarPoolMode() != CarPoolMode.CATEGORY_POOL) problems.add("Fixed mode has a frozen category pool.");
+            for (var entry : season.getCarPoolEntries()) {
+                if (!frozen && !entry.getMembers().isEmpty()) problems.add("Draft entry '" + entry.getLabel() + "' has snapshot members.");
+            }
+            if (!problems.isEmpty()) findings.add(new DataAuditFinding(CAR_POOL, AMBIGUOUS,
+                    "Season " + season.getDisplayLabel() + " · " + season.getId(), String.join("; ", problems),
+                    "Review the pool definitions and saved references. Never recompute a used snapshot."));
+        }
+        var usage = new HashMap<String, UUID>();
+        for (var race : races) {
+            var season = race.getMatchday().getSeason();
+            var entry = race.getCarPoolEntry();
+            var car = race.getCar();
+            var problems = new ArrayList<String>();
+            if (entry != null) {
+                if (season.getCarPoolMode() != CarPoolMode.CATEGORY_POOL || season.getCarPoolState() != CarPoolState.FROZEN) problems.add("Race references an entry outside a frozen category pool.");
+                if (!entry.getSeason().getId().equals(season.getId())) problems.add("Race entry belongs to a different season.");
+                if (car == null || entry.getMembers().stream().noneMatch(member -> member.getCar().getId().equals(car.getId()))) problems.add("Race car is not a frozen entry member.");
+                if (race.isBye()) problems.add("A bye cannot consume a pool entry.");
+                else if (race.getHomeTeam() != null) {
+                    String key = season.getId() + "/" + race.getHomeTeam().getId() + "/" + entry.getId();
+                    var previous = usage.putIfAbsent(key, race.getId());
+                    if (previous != null) problems.add("Duplicate entry consumption with race " + previous);
+                }
+            } else if (season.getCarPoolMode() == CarPoolMode.CATEGORY_POOL && car != null) {
+                problems.add("Category race has a car without a pool entry.");
+            }
+            if (!problems.isEmpty()) findings.add(new DataAuditFinding(CAR_POOL, AMBIGUOUS,
+                    "Race " + race.getId(), String.join("; ", problems), "Review the saved selection and its original frozen pool. Do not infer an entry."));
+        }
+    }
 
     private void auditCarMetadata(List<DataAuditFinding> findings) {
         for (var car : carRepository.findAll()) {

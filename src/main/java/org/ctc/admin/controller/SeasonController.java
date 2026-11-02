@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchdayGeneratorForm;
 import org.ctc.admin.dto.PostStandingsForm;
 import org.ctc.admin.dto.SeasonForm;
+import org.ctc.admin.dto.SeasonPoolEntryForm;
+import org.ctc.admin.dto.SeasonPoolModeForm;
 import org.ctc.admin.service.DiscordSeasonViewService;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
@@ -19,6 +21,9 @@ import org.ctc.discord.service.DiscordPostService;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.PhaseLayout;
+import org.ctc.domain.model.CarCategory;
+import org.ctc.domain.model.Drivetrain;
+import org.ctc.domain.service.SeasonCarPoolService;
 import org.ctc.domain.service.MatchdayGeneratorService;
 import org.ctc.domain.service.SeasonManagementService;
 import org.ctc.domain.service.SeasonPhaseService;
@@ -45,6 +50,8 @@ public class SeasonController {
 	private final MatchdayGeneratorService matchdayGeneratorService;
 	private final DiscordPostService discordPostService;
 	private final DiscordSeasonViewService discordSeasonViewService;
+    private final SeasonCarPoolService carPoolService;
+    private final jakarta.validation.Validator validator;
 
 	@GetMapping("/{id}")
 	public String detail(@PathVariable UUID id, Model model) {
@@ -98,12 +105,14 @@ public class SeasonController {
 		form.setNumber(season.getNumber());
 		form.setDescription(season.getDescription());
 		form.setActive(season.isActive());
+        form.setCarPoolMode(season.getCarPoolMode());
 		model.addAttribute("seasonForm", form);
 		model.addAttribute("season", season);
 		model.addAttribute("allTeams", data.allTeams());
 		model.addAttribute("allCars", data.allCars());
 		model.addAttribute("allTracks", data.allTracks());
 		model.addAllAttributes(discordSeasonViewService.buildDiscordIntegrationModel(season.getId()));
+        preparePoolModels(season.getId(), model);
 		return "admin/season-form";
 	}
 
@@ -202,6 +211,7 @@ public class SeasonController {
                 model.addAttribute("allCars", data.allCars());
                 model.addAttribute("allTracks", data.allTracks());
                 model.addAllAttributes(discordSeasonViewService.buildDiscordIntegrationModel(form.getId()));
+                preparePoolModels(form.getId(), model);
             }
 			return "admin/season-form";
 		}
@@ -264,6 +274,125 @@ public class SeasonController {
 		}
 		return "redirect:/admin/seasons/" + id;
 	}
+
+    private void preparePoolModels(UUID id, Model model) {
+        model.addAttribute("poolPreview", carPoolService.preview(id));
+        model.addAttribute("poolCategories", CarCategory.values());
+        model.addAttribute("poolDrivetrains", Drivetrain.values());
+        if (!model.containsAttribute("poolEntryForm")) model.addAttribute("poolEntryForm", new SeasonPoolEntryForm());
+        if (!model.containsAttribute("poolModeForm")) {
+            var mode = new SeasonPoolModeForm();
+            mode.setCarPoolMode(seasonManagementService.findById(id).getCarPoolMode());
+            model.addAttribute("poolModeForm", mode);
+        }
+    }
+
+    @InitBinder("poolEntryForm")
+    void bindPoolEntry(org.springframework.web.bind.WebDataBinder binder, jakarta.servlet.http.HttpServletRequest request) {
+        for (String field : request.getParameterMap().keySet()) {
+            if (!field.startsWith("clauses[")) continue;
+            try {
+                int end = field.indexOf(']');
+                int index = Integer.parseInt(field.substring("clauses[".length(), end));
+                if (index < 0 || index >= SeasonCarPoolService.MAX_CLAUSES) throw new NumberFormatException();
+            } catch (IndexOutOfBoundsException | NumberFormatException e) {
+                throw new org.ctc.domain.exception.ValidationException("A pool entry supports at most 32 clauses.");
+            }
+        }
+        binder.setAllowedFields("entryId", "label", "clauses[*].category", "clauses[*].drivetrain", "clauses[*].modelYear");
+        binder.setAutoGrowCollectionLimit(32);
+    }
+
+    @GetMapping("/{id}/car-pool/entries/{entryId}/edit")
+    public String editPoolEntry(@PathVariable UUID id, @PathVariable UUID entryId, Model model) {
+        var season = seasonManagementService.findById(id);
+        var entry = season.getCarPoolEntries().stream().filter(item -> item.getId().equals(entryId)).findFirst()
+                .orElseThrow(() -> new BusinessRuleException("Pool entry does not belong to this season."));
+        model.addAttribute("poolEntryForm", SeasonPoolEntryForm.from(entry));
+        return edit(id, model);
+    }
+
+    @PostMapping("/{id}/car-pool/entries/save")
+    public String savePoolEntry(@PathVariable UUID id, @ModelAttribute("poolEntryForm") SeasonPoolEntryForm form,
+                               BindingResult result, @RequestParam(defaultValue = "save") String action,
+                               Model model, RedirectAttributes redirect) {
+        if (action.equals("add-clause")) {
+            if (form.getClauses().size() < SeasonCarPoolService.MAX_CLAUSES) form.getClauses().add(new SeasonPoolEntryForm.ClauseForm());
+            else result.reject("pool", "An entry supports at most 32 clauses.");
+            return edit(id, model);
+        }
+        if (action.startsWith("remove-clause:")) {
+            try {
+                int index = Integer.parseInt(action.substring("remove-clause:".length()));
+                if (index < 0 || index >= form.getClauses().size()) throw new NumberFormatException();
+                form.getClauses().remove(index);
+                reindexClauseErrors(form, result, index, model);
+            } catch (NumberFormatException e) { result.reject("pool", "Choose an existing clause to remove."); }
+            return edit(id, model);
+        }
+        if (!action.equals("save")) result.reject("pool", "Unknown pool action.");
+        validator.validate(form).forEach(violation -> result.rejectValue(violation.getPropertyPath().toString(), "pool", violation.getMessage()));
+        if (!result.hasErrors()) {
+            try { carPoolService.saveEntry(id, form.getEntryId(), form.getLabel(), form.toInputs()); }
+            catch (BusinessRuleException e) { result.reject("pool", e.getMessage()); }
+        }
+        if (result.hasErrors()) return edit(id, model);
+        redirect.addFlashAttribute("successMessage", "Pool entry saved. Review the preview before freezing.");
+        return poolRedirect(id);
+    }
+
+    private static void reindexClauseErrors(SeasonPoolEntryForm form, BindingResult original, int removed, Model model) {
+        var updated = new org.springframework.validation.BeanPropertyBindingResult(form, "poolEntryForm");
+        for (var error : original.getAllErrors()) {
+            if (error instanceof org.springframework.validation.FieldError fieldError && fieldError.getField().startsWith("clauses[")) {
+                int end = fieldError.getField().indexOf(']');
+                int index = Integer.parseInt(fieldError.getField().substring("clauses[".length(), end));
+                if (index == removed) continue;
+                String field = "clauses[" + (index > removed ? index - 1 : index) + fieldError.getField().substring(end);
+                updated.addError(new org.springframework.validation.FieldError("poolEntryForm", field, fieldError.getRejectedValue(),
+                        fieldError.isBindingFailure(), fieldError.getCodes(), fieldError.getArguments(), fieldError.getDefaultMessage()));
+            } else updated.addError(error);
+        }
+        model.addAttribute(BindingResult.MODEL_KEY_PREFIX + "poolEntryForm", updated);
+    }
+
+    @PostMapping("/{id}/car-pool/mode")
+    public String savePoolMode(@PathVariable UUID id, @Valid @ModelAttribute("poolModeForm") SeasonPoolModeForm form,
+                              BindingResult result, Model model, RedirectAttributes redirect) {
+        if (!result.hasErrors()) {
+            try { carPoolService.changeMode(id, form.getCarPoolMode()); }
+            catch (BusinessRuleException e) { result.reject("pool", e.getMessage()); }
+        }
+        if (result.hasErrors()) return edit(id, model);
+        redirect.addFlashAttribute("successMessage", "Car pool mode saved.");
+        return poolRedirect(id);
+    }
+
+    @PostMapping("/{id}/car-pool/entries/{entryId}/remove")
+    public String removePoolEntry(@PathVariable UUID id, @PathVariable UUID entryId, Model model, RedirectAttributes redirect) {
+        try { carPoolService.removeEntry(id, entryId); }
+        catch (BusinessRuleException e) { model.addAttribute("errorMessage", e.getMessage()); return edit(id, model); }
+        redirect.addFlashAttribute("successMessage", "Pool entry removed.");
+        return poolRedirect(id);
+    }
+
+    @PostMapping("/{id}/car-pool/freeze")
+    public String freezePool(@PathVariable UUID id, Model model, RedirectAttributes redirect) {
+        try { carPoolService.freeze(id); }
+        catch (BusinessRuleException e) { model.addAttribute("errorMessage", e.getMessage()); return edit(id, model); }
+        redirect.addFlashAttribute("successMessage", "Pool frozen. Membership and definitions are now fixed.");
+        return poolRedirect(id);
+    }
+
+    @PostMapping("/{id}/car-pool/reopen")
+    public String reopenPool(@PathVariable UUID id, Model model, RedirectAttributes redirect) {
+        try { carPoolService.reopen(id); }
+        catch (BusinessRuleException e) { model.addAttribute("errorMessage", e.getMessage()); return edit(id, model); }
+        redirect.addFlashAttribute("successMessage", "Pool reopened as a draft. Preview before freezing again.");
+        return poolRedirect(id);
+    }
+
+    private static String poolRedirect(UUID id) { return "redirect:/admin/seasons/" + id + "/edit#carPool"; }
 
 	@PostMapping("/{id}/cars/add")
 	public String addCars(@PathVariable UUID id, @RequestParam List<UUID> carIds,

@@ -38,6 +38,8 @@ class CarServiceTest {
 	@Mock
 	private SeasonRepository seasonRepository;
 
+    @Mock private org.ctc.domain.repository.SeasonCarPoolMemberRepository poolMembers;
+
 	@Mock
 	private FileStorageService fileStorageService;
 
@@ -46,6 +48,21 @@ class CarServiceTest {
 	@InjectMocks
 	private CarService carService;
 
+
+    @Test
+    void givenFrozenSnapshotMember_whenDeletingCar_thenRejectBeforeDeletingImageOrCar() {
+        // given
+        var car = new Car("Fixture", "Member");
+        car.setId(UUID.randomUUID());
+        car.setImageUrl("/uploads/member.png");
+        when(carRepository.findByIdForUpdate(car.getId())).thenReturn(Optional.of(car));
+        when(poolMembers.existsByCarId(car.getId())).thenReturn(true);
+        // when / then
+        assertThatThrownBy(() -> carService.delete(car.getId())).isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("snapshot");
+        verify(carRepository, never()).delete(any());
+        verifyNoInteractions(fileStorageService);
+    }
 
     @Test
     void givenInvalidManualYear_whenSaving_thenRejectsBeforeAnyRepositoryMutation() {

@@ -11,10 +11,11 @@ import lombok.ToString;
 
 @Entity
 @Table(name = "seasons")
+@org.hibernate.annotations.DynamicUpdate
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = {"phases", "seasonDrivers", "seasonTeams", "cars", "tracks"})
+@ToString(exclude = {"phases", "seasonDrivers", "seasonTeams", "cars", "tracks", "carPoolEntries"})
 public class Season extends BaseEntity {
 
 	@Id
@@ -35,6 +36,18 @@ public class Season extends BaseEntity {
 
 	@Column(nullable = false)
 	private boolean active;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "car_pool_mode", nullable = false, length = 24)
+    private CarPoolMode carPoolMode = CarPoolMode.FIXED_CARS;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "car_pool_state", nullable = false, length = 16)
+    private CarPoolState carPoolState = CarPoolState.DRAFT;
+
+    @OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortIndex ASC")
+    private List<SeasonCarPoolEntry> carPoolEntries = new ArrayList<>();
 
 	@Column(name = "discord_race_results_thread_id", length = 32)
 	private String discordRaceResultsThreadId;

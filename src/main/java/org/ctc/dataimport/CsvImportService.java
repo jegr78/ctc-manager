@@ -194,6 +194,9 @@ public class CsvImportService {
 					match = existingMatch.get();
 					// Delete existing races (cascades to results)
 					var racesToDelete = raceRepository.findByMatchId(match.getId());
+                    if (racesToDelete.stream().anyMatch(race -> race.getCarPoolEntry() != null)) {
+                        throw new ImportRejectedException(List.of("Cannot overwrite a saved category pool selection without preserving its race identity."));
+                    }
 					if (racesToDelete.stream().anyMatch(race -> race.getPlayoffMatchup() != null
 							&& race.getPlayoffMatchup().isComplete())) {
 						throw new ImportRejectedException(List.of(PlayoffDecisionGuard.DECIDED));

@@ -21,21 +21,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * Phase 73-03 — Mockito unit test for {@link BackupExportService}.
- *
- * <p>Stubs all 27 repositories, drives the three public methods, and asserts:
- * <ul>
- *   <li>{@code countRowsPerTable()} returns a {@link LinkedHashMap} keyed by
- *       {@link EntityRef#tableName()} in the order of {@link BackupSchema#getExportOrder()}.</li>
- *   <li>{@code fetchAllForBackup(Team.class)} dispatches to {@code TeamRepository.findAllForBackup()}.</li>
- *   <li>{@code fetchAllForBackup(Unknown.class)} throws {@link IllegalArgumentException}.</li>
- *   <li>{@code enumerateReferencedUploads()} deduplicates references that resolve
- *       to the same on-disk path and skips orphan paths.</li>
- * </ul>
- */
 @ExtendWith(MockitoExtension.class)
 class BackupExportServiceTest {
 
@@ -84,6 +72,8 @@ class BackupExportServiceTest {
 				matchdayRepository, matchRepository, raceRepository, raceLineupRepository,
 				raceResultRepository, raceSettingsRepository, raceAttachmentRepository,
 				discordGlobalConfigRepository, discordPostRepository, siteSlugRepository,
+                mock(SeasonCarPoolEntryRepository.class), mock(SeasonCarPoolClauseRepository.class),
+                mock(SeasonCarPoolMemberRepository.class),
 				tempDir.toString()
 		);
 		ReflectionTestUtils.invokeMethod(service, "initialize");

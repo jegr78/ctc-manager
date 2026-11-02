@@ -82,6 +82,10 @@ public class BackupExportService {
 	private final DiscordGlobalConfigRepository discordGlobalConfigRepository;
 	private final DiscordPostRepository discordPostRepository;
 	private final SiteSlugRepository siteSlugRepository;
+    private final SeasonCarPoolEntryRepository poolEntries;
+    private final SeasonCarPoolClauseRepository poolClauses;
+    private final SeasonCarPoolMemberRepository poolMembers;
+
 
 	private final String uploadDirRaw;
 
@@ -117,6 +121,9 @@ public class BackupExportService {
 			DiscordGlobalConfigRepository discordGlobalConfigRepository,
 			DiscordPostRepository discordPostRepository,
 			SiteSlugRepository siteSlugRepository,
+            SeasonCarPoolEntryRepository poolEntries,
+            SeasonCarPoolClauseRepository poolClauses,
+            SeasonCarPoolMemberRepository poolMembers,
 			@Value("${app.upload-dir:data/dev/uploads}") String uploadDirRaw
 	) {
 		this.backupSchema = backupSchema;
@@ -147,6 +154,9 @@ public class BackupExportService {
 		this.discordGlobalConfigRepository = discordGlobalConfigRepository;
 		this.discordPostRepository = discordPostRepository;
 		this.siteSlugRepository = siteSlugRepository;
+        this.poolEntries = poolEntries;
+        this.poolClauses = poolClauses;
+        this.poolMembers = poolMembers;
 		this.uploadDirRaw = uploadDirRaw;
 	}
 
@@ -181,6 +191,9 @@ public class BackupExportService {
 		this.repositoriesByEntityClass.put(DiscordGlobalConfig.class, discordGlobalConfigRepository);
 		this.repositoriesByEntityClass.put(DiscordPost.class, discordPostRepository);
 		this.repositoriesByEntityClass.put(SiteSlug.class, siteSlugRepository);
+        this.repositoriesByEntityClass.put(SeasonCarPoolEntry.class, poolEntries);
+        this.repositoriesByEntityClass.put(SeasonCarPoolClause.class, poolClauses);
+        this.repositoriesByEntityClass.put(SeasonCarPoolMember.class, poolMembers);
 		log.info("BackupExportService initialized: uploadRoot={}, repositoryCount={}",
 				uploadRoot, repositoriesByEntityClass.size());
 	}

@@ -6,11 +6,6 @@ import org.ctc.discord.model.DiscordPost;
 import org.ctc.domain.model.*;
 import org.springframework.stereotype.Component;
 
-/**
- * Jackson {@link com.fasterxml.jackson.databind.Module} that registers all 26 per-entity MixIns
- * on the {@code backupObjectMapper} bean via Spring DI. Keeping all mappings in one file makes
- * the entity-to-MixIn mapping reviewable at a glance.
- */
 @Component
 public class BackupSerializationModule extends SimpleModule {
 
@@ -24,6 +19,9 @@ public class BackupSerializationModule extends SimpleModule {
         setMixInAnnotation(PsnAlias.class, PsnAliasMixIn.class);
         setMixInAnnotation(Team.class, TeamMixIn.class);
         setMixInAnnotation(Season.class, SeasonMixIn.class);
+        setMixInAnnotation(SeasonCarPoolEntry.class, SeasonCarPoolEntryMixIn.class);
+        setMixInAnnotation(SeasonCarPoolClause.class, SeasonCarPoolClauseMixIn.class);
+        setMixInAnnotation(SeasonCarPoolMember.class, SeasonCarPoolMemberMixIn.class);
         setMixInAnnotation(SeasonPhase.class, SeasonPhaseMixIn.class);
         setMixInAnnotation(SeasonPhaseGroup.class, SeasonPhaseGroupMixIn.class);
         setMixInAnnotation(PhaseTeam.class, PhaseTeamMixIn.class);

@@ -127,19 +127,21 @@ public class BackupImportService {
      * {@code DiscordPost} entries are absent and stay empty after import — the
      * {@code DiscordGlobalConfigService.getOrInitialize()} fallback self-heals on first
      * page-load). v1 and v2 backups carry no {@code site_slugs}; the site generation stores
-     * fresh slugs after import. v4+ backups are refused with {@link Reason#SCHEMA_MISMATCH}.
+     * fresh slugs after import. Versions 1 through 3 may omit pool tables. Versions outside
+     * the supported set are refused with {@link Reason#SCHEMA_MISMATCH}.
      *
      * <p>Declared as a {@link java.util.LinkedHashSet} so the iteration order is stable
      * (ascending integer order) — used directly inside the error message via
      * {@code SUPPORTED_SCHEMA_VERSIONS.toString()}, where {@code Set.of(1, 2)} produces
      * a hash-randomised order that breaks message-matching assertions.
      */
-    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3));
+    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4));
 
     /** Tables an older schema version never exported; they may be absent when the manifest announces no rows. */
     static final Map<Integer, Set<String>> TABLES_ABSENT_IN_SCHEMA = Map.of(
-            1, Set.of("discord_global_config", "discord_post", "site_slugs"),
-            2, Set.of("site_slugs"));
+            1, Set.of("discord_global_config", "discord_post", "site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members"),
+            2, Set.of("site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members"),
+            3, Set.of("season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members"));
 
     /** Batch size for the JSON-stream-to-batchUpdate accumulator. */
     private static final int RESTORE_BATCH_SIZE = 500;
@@ -755,7 +757,8 @@ public class BackupImportService {
      * Counts the rows {@link #restoreAll} would restore, through the same entry lookup and parse loop,
      * so the manifest check cannot pass on bytes the restore never reads.
      */
-    private Map<String, Long> countRestorableRows(Path staged) throws BackupArchiveException {
+    private Map<String, Long> countRestorableRows(Path staged, int version) throws BackupArchiveException {
+        var poolValidator = new org.ctc.backup.schema.CarPoolBackupValidator(version);
         Map<String, Long> counts = new LinkedHashMap<>();
         long[] inflatedBytes = {0L};
         try (ZipFile zf = new ZipFile(staged.toFile())) {
@@ -763,11 +766,14 @@ public class BackupImportService {
                 // CodeQL FP: java/path-injection — assertEntrySafe + PathTraversalGuard.assertWithin defense not traceable; see docs/security/sast-acceptance.md
                 ZipEntry entry = zf.getEntry(ref.fileName());
                 if (entry != null) {
-                    counts.put(ref.tableName(), readRows(zf, entry, inflatedBytes, row -> { }));
+                    counts.put(ref.tableName(), readRows(zf, entry, inflatedBytes, row -> poolValidator.accept(ref.tableName(), row)));
                 }
             }
+            poolValidator.validate();
         } catch (BackupArchiveException ex) {
             throw ex;
+        } catch (IllegalArgumentException ex) {
+            throw new BackupArchiveException(Reason.DATA_MISMATCH, "Invalid category pool data: " + ex.getMessage(), ex);
         } catch (IOException ex) {
             throw new BackupArchiveException(Reason.MANIFEST_INVALID, "ZIP read failure", ex);
         }
@@ -970,7 +976,11 @@ public class BackupImportService {
      * so a stripped or tampered backup never reaches the wipe.
      */
     private void assertDataMatchesManifest(Path staged, BackupManifest manifest) throws BackupArchiveException {
-        Map<String, Long> actualCounts = countRestorableRows(staged);
+        if (!SUPPORTED_SCHEMA_VERSIONS.contains(manifest.schemaVersion())) {
+            throw new BackupArchiveException(Reason.SCHEMA_MISMATCH,
+                    "Schema version " + manifest.schemaVersion() + " not supported (accepted: " + SUPPORTED_SCHEMA_VERSIONS + "). Cannot import.");
+        }
+        Map<String, Long> actualCounts = countRestorableRows(staged, manifest.schemaVersion());
         Set<String> absentInSchema = TABLES_ABSENT_IN_SCHEMA.getOrDefault(manifest.schemaVersion(), Set.of());
         List<String> problems = new ArrayList<>();
         for (EntityRef ref : backupSchema.getExportOrder()) {

@@ -11,6 +11,7 @@ import org.ctc.domain.model.Car;
 import org.ctc.domain.repository.CarRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.SeasonCarPoolMemberRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ public class CarService {
 	private final CarRepository carRepository;
 	private final RaceRepository raceRepository;
 	private final SeasonRepository seasonRepository;
+    private final SeasonCarPoolMemberRepository poolMembers;
 	private final FileStorageService fileStorageService;
 	private final CarMetadataService metadataService;
 
@@ -79,6 +81,10 @@ public class CarService {
 		if (raceRepository.existsByCarId(id)) {
 			throw new BusinessRuleException("Cannot delete: car is used in a race");
 		}
+
+        if (poolMembers.existsByCarId(id)) {
+            throw new BusinessRuleException("Cannot delete: car belongs to a frozen pool snapshot");
+        }
 
 		boolean usedInPool = seasonRepository.findAll().stream()
 				.anyMatch(s -> s.getCars().contains(car));

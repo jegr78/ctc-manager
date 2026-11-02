@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="editor" class="season-car-pool-editor">
+    <form th:action="@{/admin/seasons/{id}/car-pool/mode(id=${season.id})} + '#carPool'" th:object="${poolModeForm}" method="post">
+        <fieldset>
+            <legend>Car pool mode</legend>
+            <p>Fixed cars keep the existing individual choices. Category pools combine local car metadata into named entries.</p>
+            <div class="form-group">
+                <label for="carPoolMode">Mode</label>
+                <select id="carPoolMode" th:field="*{carPoolMode}" required>
+                    <option value="FIXED_CARS">Fixed cars</option>
+                    <option value="CATEGORY_POOL">Category pool</option>
+                </select>
+            </div>
+            <div class="field-error" th:if="${#fields.hasAnyErrors()}">
+                <p th:each="error : ${#fields.allErrors()}" th:text="${error}"></p>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">Save pool mode</button>
+        </fieldset>
+    </form>
+    <div th:if="${season.carPoolMode.name() == 'CATEGORY_POOL'}">
+        <h3 th:text="${poolPreview.frozen ? 'Frozen category pool' : 'Draft category pool'}">Category pool</h3>
+        <p th:if="${!poolPreview.frozen}">Conditions within a clause must all match. A car may match any clause in an entry. Review the local preview, then freeze the complete pool.</p>
+        <p th:if="${poolPreview.frozen}">Membership, labels and clauses are frozen. Later catalog changes do not change this snapshot. Reopening is allowed only before any race uses an entry.</p>
+        <ul class="field-error" th:if="${!poolPreview.problems.isEmpty()}" id="pool-problems">
+            <li th:each="problem : ${poolPreview.problems}" th:text="${problem}"></li>
+        </ul>
+        <div th:each="entry : ${season.carPoolEntries}" class="card mt-md pool-entry">
+            <h4 th:text="${entry.label}"></h4>
+            <ul>
+                <li th:each="clause : ${entry.clauses}" th:text="${clause.category.label + (clause.drivetrain != null ? ' · ' + clause.drivetrain.label : ' · any drivetrain') + (clause.modelYear != null ? ' · ' + clause.modelYear : ' · any year')}"></li>
+            </ul>
+            <div class="inline-form" th:if="${!poolPreview.frozen}">
+                <a class="btn btn-secondary btn-sm" th:href="@{/admin/seasons/{id}/car-pool/entries/{entryId}/edit(id=${season.id},entryId=${entry.id})} + '#pool-entry-editor'">Edit entry</a>
+                <form th:action="@{/admin/seasons/{id}/car-pool/entries/{entryId}/remove(id=${season.id},entryId=${entry.id})} + '#carPool'" method="post">
+                    <button type="submit" class="btn btn-danger btn-sm" th:attr="aria-label=${'Remove entry ' + entry.label}">Remove entry</button>
+                </form>
+            </div>
+        </div>
+        <div class="mt-md" id="pool-preview">
+            <h3 th:text="${poolPreview.frozen ? 'Frozen membership' : 'Local eligibility preview'}">Preview</h3>
+            <details th:each="entry : ${poolPreview.entries}">
+                <summary th:text="${entry.label + ' · ' + entry.cars.size() + ' eligible car(s)'}"></summary>
+                <ul>
+                    <li th:each="car : ${entry.cars}"><a th:href="@{/admin/cars/{id}/edit(id=${car.id})}" th:text="${car.label}"></a></li>
+                </ul>
+            </details>
+            <details th:if="${!poolPreview.notices.isEmpty()}" class="mt-md">
+                <summary th:text="${'Unknown local metadata · ' + poolPreview.notices.size() + ' car(s)'}"></summary>
+                <ul><li th:each="notice : ${poolPreview.notices}" th:text="${notice}"></li></ul>
+            </details>
+        </div>
+        <form th:if="${!poolPreview.frozen}" th:action="@{/admin/seasons/{id}/car-pool/entries/save(id=${season.id})} + '#pool-entry-editor'" th:object="${poolEntryForm}" method="post" class="mt-md" id="pool-entry-editor">
+            <fieldset>
+                <legend th:text="*{entryId != null ? 'Edit pool entry' : 'Add pool entry'}">Pool entry</legend>
+                <input type="hidden" th:field="*{entryId}">
+                <div class="field-error" th:if="${#fields.hasAnyErrors()}" id="pool-entry-errors" role="alert">
+                    <p th:each="error : ${#fields.allErrors()}" th:text="${error}"></p>
+                </div>
+                <div class="form-group">
+                    <label for="pool-label">Entry label</label>
+                    <input id="pool-label" type="text" th:field="*{label}" required maxlength="120">
+                </div>
+                <fieldset th:each="clause, row : *{clauses}" class="pool-clause">
+                    <legend th:text="${'Alternative clause ' + (row.index + 1)}">Clause</legend>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label th:for="${'pool-category-' + row.index}">Required category</label>
+                            <select th:id="${'pool-category-' + row.index}" th:field="*{clauses[__${row.index}__].category}" required>
+                                <option value="">Choose category</option>
+                                <option th:each="category : ${poolCategories}" th:value="${category}" th:text="${category.label}"></option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label th:for="${'pool-drive-' + row.index}">Drivetrain</label>
+                            <select th:id="${'pool-drive-' + row.index}" th:field="*{clauses[__${row.index}__].drivetrain}">
+                                <option value="">Any drivetrain</option>
+                                <option th:each="drive : ${poolDrivetrains}" th:value="${drive}" th:text="${drive.label}"></option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label th:for="${'pool-year-' + row.index}">Exact model year</label>
+                            <input th:id="${'pool-year-' + row.index}" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="Any year" th:field="*{clauses[__${row.index}__].modelYear}">
+                        </div>
+                    </div>
+                    <button type="submit" name="action" th:value="${'remove-clause:' + row.index}" class="btn btn-danger btn-sm" formnovalidate th:attr="aria-label=${'Remove clause ' + (row.index + 1)}">Remove clause</button>
+                </fieldset>
+                <div class="inline-form mt-md">
+                    <button type="submit" name="action" value="add-clause" class="btn btn-secondary btn-sm" formnovalidate>Add alternative clause</button>
+                    <button type="submit" name="action" value="save" class="btn btn-primary btn-sm">Save entry</button>
+                    <a th:if="*{entryId != null}" class="btn btn-secondary btn-sm" th:href="@{/admin/seasons/{id}/edit(id=${season.id})} + '#pool-entry-editor'">New entry</a>
+                </div>
+            </fieldset>
+        </form>
+        <form th:if="${!poolPreview.frozen}" th:action="@{/admin/seasons/{id}/car-pool/freeze(id=${season.id})} + '#carPool'" method="post" class="mt-md">
+            <p>Freeze stores the exact eligible car IDs shown above. Empty or overlapping entries cannot be frozen.</p>
+            <button type="submit" class="btn btn-primary" id="freeze-pool">Freeze complete pool</button>
+        </form>
+        <form th:if="${poolPreview.frozen}" th:action="@{/admin/seasons/{id}/car-pool/reopen(id=${season.id})} + '#carPool'" method="post" class="mt-md">
+            <button type="submit" class="btn btn-secondary" id="reopen-pool">Reopen unused pool</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>

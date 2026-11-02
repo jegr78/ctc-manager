@@ -112,7 +112,7 @@ class BackupImportE2ETest extends PlaywrightConfig {
 
         // schema-match pill — locked UI-SPEC string (IMPORT-02)
         assertThat(page.locator(".alert.alert-success").first())
-                .containsText("Schema version 3 matches.");
+                .containsText("Schema version 4 matches.");
 
         // header card — file metadata visible
         assertThat(page.locator(".card").first()).containsText("File:");
@@ -121,7 +121,7 @@ class BackupImportE2ETest extends PlaywrightConfig {
         assertThat(page.locator(".card").first()).containsText("Total imported rows:");
 
         // one card per exported entity
-        assertThat(page.locator(".card-grid > .card")).hasCount(27);
+        assertThat(page.locator(".card-grid > .card")).hasCount(30);
 
         // staging UUID must be present (D-18 stateless staging)
         String stagingUuid = page.locator("input[name='stagingId']").first().getAttribute("value");
