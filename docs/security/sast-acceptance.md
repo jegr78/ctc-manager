@@ -55,3 +55,9 @@ Every finding was triaged by hand. Two led to source changes; the rest are struc
 | NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE | `BackupStagingCleanup.sweepStagingDir` | 1 | suppressed | `getFileName()` on `Files.list()` entries — a directory listing never yields a root path |
 
 **Re-evaluating the CRLF suppression:** it is detector-wide, so a genuinely unsafe new log statement will not be caught by SpotBugs. CodeQL's `java/log-injection` remains the gate for CWE-117, and `LogSanitizer.sanitize()` remains mandatory for user-controlled values in new code. If CodeQL coverage is ever dropped, this suppression must be replaced by per-site entries.
+
+## Packaged migration SQL, 2026-11-02
+
+| Rule | Location | Count | Bucket | Rationale |
+|------|----------|-------|--------|-----------|
+| SQL_INJECTION_JDBC | `db.migration.V26__AddConfidentialPicks.migrate` | 1 | suppressed | Method-scoped `@SuppressFBWarnings` for execution of the fixed, bundled `/db/schema/confidential_picks.sql` resource. The MariaDB branch only replaces fixed `TIMESTAMP(6)` tokens with `DATETIME(6)`; no request, uploaded archive or database value enters the SQL text. Migration checksum/resource-drift tests and H2/MariaDB restore tests cover the packaged DDL. Reevaluate if the resource path, SQL source or rewrite becomes input-controlled. All other SQL-injection detection remains enabled. |

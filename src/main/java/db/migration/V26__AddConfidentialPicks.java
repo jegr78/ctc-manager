@@ -1,5 +1,6 @@
 package db.migration;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -18,6 +19,9 @@ public class V26__AddConfidentialPicks extends BaseJavaMigration {
     }
 
     @Override
+    @SuppressFBWarnings(value = "SQL_INJECTION_JDBC", justification =
+            "Executes only bundled /db/schema/confidential_picks.sql DDL with a fixed timestamp-token rewrite; "
+                    + "no request, archive or database values enter SQL text. See docs/security/sast-acceptance.md.")
     public void migrate(Context context) throws Exception {
         var connection = context.getConnection();
         // UTC values use a timezone-free column and must remain writable beyond MariaDB's TIMESTAMP range.

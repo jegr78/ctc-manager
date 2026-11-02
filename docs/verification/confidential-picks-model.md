@@ -186,3 +186,10 @@ current schema version and the actual export-order cardinality; the separate sch
 pins version 5 and all 33 entity types. Its four browser tests and four archive unit tests pass.
 The second local full run was stopped before executing that obsolete browser assertion. These
 fixture corrections introduce no production change; finalization requires a new full run and CI.
+
+The complete run on `66b876a2` passed 2,465 unit, 982 integration and 216 browser tests, with
+92.58964% line coverage. FindSecBugs then reported SQL_INJECTION_JDBC for the fixed packaged
+Flyway DDL resource. A method-scoped annotation documents that SQL text comes only from that
+bundled resource and a fixed timestamp-token rewrite; the acceptance log records the trust
+boundary. No runtime behavior or other detector is changed. The final head requires fresh full
+verification, including an active FindSecBugs detector pack and zero remaining findings.
