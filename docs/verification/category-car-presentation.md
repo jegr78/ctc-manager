@@ -21,7 +21,7 @@ GitHub is the tracker; the shipped local GSD milestone is historical.
 - [x] Implement the shared projection and conditional secondary display.
 - [x] Verify fixed, missing-car, long-label and HTML-sensitive behavior.
 - [x] Inspect admin/public/native desktop/mobile flows and actual settings graphics with playwright-cli.
-- [ ] Complete code review and independent security review; fix all findings.
+- [x] Complete code review and independent security review; fix all findings.
 - [ ] Falsify new logical guards from a correct committed checkpoint and restore exact bytes.
 - [ ] Run authoritative clean verify -Pe2e on the reviewed committed head.
 - [ ] Pass matching-head CI, squash merge, reconcile Wiki/tracker and clean the own branch.
@@ -79,3 +79,17 @@ from 0 to 40 pixels. A locator property assertion verifies that browser state wi
 timeout. The final focused run passed 9 settings tests and all 3 browser cases.
 
 No publication was triggered and no production service or database was used.
+
+## Review
+
+Self-review covered the full changed read-model paths, all six admin layouts, generated public
+pages, custom/default settings templates, caller compatibility and resource cleanup. No production
+code finding remained. The review added explicit single/multiple-leg HTTP witnesses and stronger
+fixed-output and bundled/legacy-template escaping assertions. All 28 focused settings/generator
+tests and 13 native HTTP cases then passed.
+
+An independent read-only security pass reviewed production head
+`75e5ffa09a231f07f6b909804631408d83f33f95` against
+`8f01037ad160b16459e120ec15f55518e3a7de55` and reported no findings. Subsequent changes add tests and
+verification evidence only. Escaped saved text, concrete-car completeness and the existing local
+renderer/publication boundaries are preserved.

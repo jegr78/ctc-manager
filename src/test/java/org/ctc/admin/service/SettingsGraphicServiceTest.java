@@ -139,6 +139,12 @@ class SettingsGraphicServiceTest {
                 .isEqualTo("Test Honda — NSX Gr.3 MR");
         org.assertj.core.api.Assertions.assertThat(context.getValue().getVariable("poolEntryLabel"))
                 .isEqualTo(category ? "Gr.3 MR + Gr.3 RR" : null);
+        String label = "Gr.3 MR + RR <img src=x onerror='window.injected=1'>";
+        context.getValue().setVariable("poolEntryLabel", category ? label : null);
+        var document = org.jsoup.Jsoup.parse(service.processStringTemplate(service.loadDefaultTemplate(), context.getValue()));
+        if (category) org.assertj.core.api.Assertions.assertThat(document.select(".pool-entry-label").text()).contains(label);
+        else org.assertj.core.api.Assertions.assertThat(document.select(".pool-entry-label")).isEmpty();
+        org.assertj.core.api.Assertions.assertThat(document.select("img[src=x], [onerror]")).isEmpty();
     }
 
     @Test

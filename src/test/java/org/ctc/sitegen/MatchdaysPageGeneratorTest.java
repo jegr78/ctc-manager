@@ -348,15 +348,16 @@ class MatchdaysPageGeneratorTest {
     @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
     void givenOptionalCategoryContext_whenRenderingLegacyMatchCard_thenKeepCarAndOnlyShowPresentPoolLabel(boolean category) {
         // given
+        String label = "Gr.3 MR + Gr.3 RR <img src=x onerror='window.injected=1'>";
         var race = new org.ctc.sitegen.model.RaceView("Test home", "Test away", "Test track", "Test Honda MR", 0, 0,
-                false, false, false, List.of(), category ? "Gr.3 MR + Gr.3 RR" : null);
+                false, false, false, List.of(), category ? label : null);
         var context = new Context();
         context.setVariable("race", race);
         // when
         var document = Jsoup.parse(templateEngine.process("site/fragments/match-card", context));
         // then
         assertThat(document.text()).contains("Test Honda MR");
-        if (category) assertThat(document.select(".pool-entry-label").text()).isEqualTo("Gr.3 MR + Gr.3 RR");
+        if (category) assertThat(document.select(".pool-entry-label").text()).isEqualTo(label);
         else assertThat(document.select(".pool-entry-label")).isEmpty();
     }
 

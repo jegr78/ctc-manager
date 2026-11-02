@@ -68,10 +68,11 @@ class CategoryCarPresentationIT {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"detail", "list", "results", "match", "matchday"})
+    @ValueSource(strings = {"detail", "list", "results", "match", "matchday", "matchday-multi"})
     void givenSavedCategoryCar_whenViewingSetup_thenShowConcreteCarAndConsumedEntry(String view) throws Exception {
         // given
         configure(true, LABEL);
+        selectLegLayout(view);
         // when
         var response = mvc.perform(get(url(view))).andExpect(status().isOk()).andReturn();
         // then
@@ -81,15 +82,16 @@ class CategoryCarPresentationIT {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"detail", "list", "results", "match", "matchday"})
+    @ValueSource(strings = {"detail", "list", "results", "match", "matchday", "matchday-multi"})
     void givenFixedCar_whenViewingSetup_thenKeepConcreteNameWithoutPoolPlaceholder(String view) throws Exception {
         // given
         configure(false, LABEL);
+        selectLegLayout(view);
         // when
         var response = mvc.perform(get(url(view))).andExpect(status().isOk()).andReturn();
         // then
         var document = Jsoup.parse(response.getResponse().getContentAsString());
-        assertThat(document.text()).contains("Test presentation", "MR").doesNotContain(LABEL);
+        assertThat(document.text()).contains("Test presentation", "MR").doesNotContain(LABEL, "Pool entry");
         assertThat(document.select(".pool-entry-label")).isEmpty();
     }
 
@@ -98,8 +100,9 @@ class CategoryCarPresentationIT {
         // given
         String label = "Gr.3 MR + RR <img src=x onerror='window.injected=1'> & \"choice\"";
         configure(true, label);
-        for (var view : List.of("detail", "list", "results", "match", "matchday")) {
+        for (var view : List.of("detail", "list", "results", "match", "matchday", "matchday-multi")) {
             // when
+            selectLegLayout(view);
             var response = mvc.perform(get(url(view))).andExpect(status().isOk()).andReturn();
             // then
             var document = Jsoup.parse(response.getResponse().getContentAsString());
@@ -125,13 +128,18 @@ class CategoryCarPresentationIT {
                 TimeProgressionMode.MULTIPLIER, 0, "Clear", "Day", "RS, RM", "RM", entry).success()).isTrue();
     }
 
+    private void selectLegLayout(String view) {
+        tx.executeWithoutResult(status -> seasons.findById(fixture.season().getId()).orElseThrow()
+                .getPhases().getFirst().setLegs(view.equals("matchday-multi") ? 2 : 1));
+    }
+
     private String url(String view) {
         return switch (view) {
             case "detail" -> "/admin/races/" + fixture.race().getId();
             case "list" -> "/admin/races?seasonId=" + fixture.season().getId();
             case "results" -> "/admin/races/" + fixture.race().getId() + "/results";
             case "match" -> "/admin/matches/" + fixture.match().getId();
-            case "matchday" -> "/admin/matchdays/" + fixture.matchday().getId();
+            case "matchday", "matchday-multi" -> "/admin/matchdays/" + fixture.matchday().getId();
             default -> throw new IllegalArgumentException(view);
         };
     }
