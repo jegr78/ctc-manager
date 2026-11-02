@@ -17,6 +17,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SeasonCarPoolServiceTest {
+    @Mock private PickHistoryReferences pickHistory;
     @Mock SeasonRepository seasons;
     @Mock CarRepository cars;
     @Mock SeasonCarPoolEntryRepository entries;

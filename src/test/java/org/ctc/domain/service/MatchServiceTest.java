@@ -25,6 +25,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class MatchServiceTest {
+    @Mock private PickLifecycleGuard pickGuard;
 
 	@Mock
 	private MatchRepository matchRepository;

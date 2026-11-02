@@ -54,6 +54,7 @@ class MatchControllerDetailViewModelTest {
 		DiscordGlobalConfigService discordGlobalConfigService = mock(DiscordGlobalConfigService.class);
 
 		MatchService service = new MatchService(
+                org.mockito.Mockito.mock(org.ctc.domain.service.PickLifecycleGuard.class),
 				matchRepository,
 				mock(MatchdayRepository.class),
 				mock(TeamRepository.class),
@@ -115,6 +116,7 @@ class MatchControllerDetailViewModelTest {
 		DiscordGlobalConfigService discordGlobalConfigService = mock(DiscordGlobalConfigService.class);
 
 		MatchService service = new MatchService(
+                org.mockito.Mockito.mock(org.ctc.domain.service.PickLifecycleGuard.class),
 				matchRepository,
 				mock(MatchdayRepository.class),
 				mock(TeamRepository.class),

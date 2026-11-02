@@ -13,7 +13,8 @@ public record DataAuditFinding(Category category, Resolution resolution, String 
         RACE_SETTINGS("Inconsistent race settings", "#280"),
         CAR_METADATA("Car metadata without valid review evidence", "#274"),
         CAR_ELIGIBILITY("Car eligibility information", "#278"),
-        CAR_POOL("Inconsistent seasonal car pools", "#275, #276, #278");
+        CAR_POOL("Inconsistent seasonal car pools", "#275, #276, #278"),
+        PRIVATE_PICKS("Inconsistent confidential pick history", "#281");
 
 		private final String label;
 		private final String relatedIssues;

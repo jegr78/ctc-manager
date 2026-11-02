@@ -293,7 +293,7 @@ public class CsvImportService {
             }
             var previous = match == null ? List.<Race>of() : raceRepository.findByMatchId(match.getId());
             rejectOverwriteTarget(previous, metadata);
-            var reused = mapConfiguredCategoryLegs(season, matchday, previous, rows);
+            var reused = mapProtectedLegs(season, matchday, previous, rows);
             plans.add(new PairingPlan(match, home, away, rows, reused, reused.isEmpty() ? previous : List.of()));
         }
         rejectIfAny(errors);
@@ -310,13 +310,14 @@ public class CsvImportService {
         }
     }
 
-    private Map<Integer, Race> mapConfiguredCategoryLegs(Season season, Matchday matchday, List<Race> previous,
+    private Map<Integer, Race> mapProtectedLegs(Season season, Matchday matchday, List<Race> previous,
                                                         Map<Integer, List<ImportRow>> incoming) {
         boolean configured = previous.stream().anyMatch(race -> race.getCarPoolEntry() != null
                 || season.getCarPoolMode() == CarPoolMode.CATEGORY_POOL && race.getCar() != null);
-        if (!configured) return Map.of();
-        if (season.getCarPoolMode() != CarPoolMode.CATEGORY_POOL || previous.stream()
-                .anyMatch(race -> (race.getCar() == null) != (race.getCarPoolEntry() == null))) {
+        boolean managed = previous.stream().anyMatch(Race::isPicksManaged);
+        if (!configured && !managed) return Map.of();
+        if (configured && (season.getCarPoolMode() != CarPoolMode.CATEGORY_POOL || previous.stream()
+                .anyMatch(race -> (race.getCar() == null) != (race.getCarPoolEntry() == null)))) {
             throw new ImportRejectedException(List.of("Cannot overwrite an incomplete category pool selection. Configure or clear it in race setup first."));
         }
         var ids = new HashSet<UUID>();
@@ -343,7 +344,7 @@ public class CsvImportService {
     }
 
     private static ImportRejectedException ambiguousCategoryOverwrite() {
-        return new ImportRejectedException(List.of("The category pool selection overwrite is ambiguous. Match each leg to a distinct home team or edit its results individually."));
+        return new ImportRejectedException(List.of("The category pool selection overwrite is ambiguous. For protected selections and private picks, match each leg to a distinct home team or edit its results individually."));
     }
 
     private record PairingPlan(Match match, Team home, Team away, Map<Integer, List<ImportRow>> rows,

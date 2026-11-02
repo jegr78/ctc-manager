@@ -21,17 +21,16 @@ public class RaceCarSelectionService {
     private final SeasonRepository seasons;
     private final TeamRepository teams;
     private final RaceRepository races;
+    private final PickReservationService reservations;
 
     public Availability availability(UUID seasonId, UUID homeTeamId, UUID excludeRaceId) {
         var season = seasons.findById(seasonId).orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         if (homeTeamId != null && teams.findById(homeTeamId).isEmpty()) {
             throw new EntityNotFoundException("Team", homeTeamId);
         }
-        var used = usage(races.findByMatchdaySeasonId(seasonId), homeTeamId, excludeRaceId);
-        var consumed = used.stream().filter(r -> r.getCarPoolEntry() != null)
-                .map(r -> r.getCarPoolEntry().getId()).collect(Collectors.toSet());
-        var usedCars = used.stream().filter(r -> r.getCar() != null)
-                .map(r -> r.getCar().getId()).collect(Collectors.toSet());
+        var used = selectionUsage(seasonId, races.findByMatchdaySeasonId(seasonId), homeTeamId, excludeRaceId, false);
+        var consumed = used.stream().map(SelectionUsage::entryId).filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+        var usedCars = used.stream().map(SelectionUsage::carId).filter(java.util.Objects::nonNull).collect(Collectors.toSet());
         if (season.getCarPoolMode() == CarPoolMode.FIXED_CARS) {
             return new Availability(season.getCarPoolMode(), season.getCarPoolState(), List.of(), Set.of(), usedCars);
         }
@@ -58,13 +57,13 @@ public class RaceCarSelectionService {
                     race.getId().equals(excludeRaceId) && isBye(race))) {
                 return rejected("A bye cannot select a car or pool entry.");
             }
-            return validateSelection(season, homeTeamId, entryId, carId, usage(rows, homeTeamId, excludeRaceId));
+            return validateSelection(season, homeTeamId, entryId, carId, selectionUsage(seasonId, rows, homeTeamId, excludeRaceId, true));
         } catch (RuntimeException ex) {
             throw RaceSelectionConcurrency.translate(ex);
         }
     }
 
-    private Validation validateSelection(Season season, UUID homeTeamId, UUID entryId, UUID carId, List<Race> used) {
+    private Validation validateSelection(Season season, UUID homeTeamId, UUID entryId, UUID carId, List<SelectionUsage> used) {
         if (entryId == null && carId == null) return new Validation(null, null, null);
         if (homeTeamId == null || teams.findById(homeTeamId).isEmpty()) {
             return rejected("Choose an existing home team for this selection.");
@@ -73,7 +72,7 @@ public class RaceCarSelectionService {
             if (entryId != null) return rejected("Fixed-car seasons cannot select a category pool entry.");
             var car = season.getCars().stream().filter(c -> c.getId().equals(carId)).findFirst().orElse(null);
             if (car == null) return rejected("Car is not in this season's pool");
-            if (used.stream().anyMatch(r -> r.getCar() != null && carId.equals(r.getCar().getId()))) {
+            if (used.stream().anyMatch(r -> carId.equals(r.carId()))) {
                 var home = teams.findById(homeTeamId).orElseThrow();
                 return rejected(home.getShortName() + " has already used " + car.getDisplayName() + " this season");
             }
@@ -87,7 +86,7 @@ public class RaceCarSelectionService {
         var car = entry.getMembers().stream().map(SeasonCarPoolMember::getCar)
                 .filter(c -> carId.equals(c.getId())).findFirst().orElse(null);
         if (car == null) return rejected("Choose a frozen member car of this pool entry.");
-        if (used.stream().anyMatch(r -> r.getCarPoolEntry() != null && entryId.equals(r.getCarPoolEntry().getId()))) {
+        if (used.stream().anyMatch(r -> entryId.equals(r.entryId()))) {
             return rejected("This home team has already used " + entry.getLabel() + " this season.");
         }
         return new Validation(null, entry, car);
@@ -112,7 +111,7 @@ public class RaceCarSelectionService {
                     return rejected("A bye cannot select a car or pool entry.");
                 }
                 var result = validateSelection(season, assignment.homeTeamId(), assignment.entryId(), assignment.carId(),
-                        usage(retained, assignment.homeTeamId(), null));
+                        selectionUsage(seasonId, retained, assignment.homeTeamId(), assignment.raceId(), true));
                 if (!result.valid()) return result;
                 if (assignment.carId() != null && proposed.stream().anyMatch(other ->
                         assignment.homeTeamId().equals(other.homeTeamId())
@@ -130,12 +129,27 @@ public class RaceCarSelectionService {
 
     public record Assignment(UUID raceId, UUID homeTeamId, boolean bye, UUID entryId, UUID carId) {}
 
-    private static List<Race> usage(List<Race> candidates, UUID homeTeamId, UUID excludeRaceId) {
+    private static List<SelectionUsage> raceUsage(List<Race> candidates, UUID homeTeamId, UUID excludeRaceId) {
         if (homeTeamId == null) return List.of();
         return candidates.stream().filter(r -> !isBye(r))
                 .filter(r -> r.getHomeTeam() != null && homeTeamId.equals(r.getHomeTeam().getId()))
-                .filter(r -> excludeRaceId == null || !excludeRaceId.equals(r.getId())).toList();
+                .filter(r -> excludeRaceId == null || !excludeRaceId.equals(r.getId()))
+                .map(r -> new SelectionUsage(r.getCar() == null ? null : r.getCar().getId(),
+                        r.getCarPoolEntry() == null ? null : r.getCarPoolEntry().getId())).toList();
     }
+
+    private List<SelectionUsage> selectionUsage(UUID seasonId, List<Race> candidates, UUID homeTeamId,
+                                               UUID excludeRaceId, boolean currentRead) {
+        var used = new ArrayList<>(raceUsage(candidates, homeTeamId, excludeRaceId));
+        for (var pending : reservations.pending(seasonId, currentRead)) {
+            if (pending.teamId().equals(homeTeamId) && !pending.raceId().equals(excludeRaceId)) {
+                used.add(new SelectionUsage(pending.carId(), pending.entryId()));
+            }
+        }
+        return used;
+    }
+
+    private record SelectionUsage(UUID carId, UUID entryId) { }
 
     private static boolean isBye(Race race) {
         return race.isBye() || race.getPlayoffMatchup() != null && race.getPlayoffMatchup().isBye();

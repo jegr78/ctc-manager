@@ -135,13 +135,14 @@ public class BackupImportService {
      * {@code SUPPORTED_SCHEMA_VERSIONS.toString()}, where {@code Set.of(1, 2)} produces
      * a hash-randomised order that breaks message-matching assertions.
      */
-    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4));
+    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4, 5));
 
     /** Tables an older schema version never exported; they may be absent when the manifest announces no rows. */
     static final Map<Integer, Set<String>> TABLES_ABSENT_IN_SCHEMA = Map.of(
-            1, Set.of("discord_global_config", "discord_post", "site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members"),
-            2, Set.of("site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members"),
-            3, Set.of("season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members"));
+            1, Set.of("discord_global_config", "discord_post", "site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
+            2, Set.of("site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
+            3, Set.of("season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
+            4, Set.of("matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"));
 
     /** Batch size for the JSON-stream-to-batchUpdate accumulator. */
     private static final int RESTORE_BATCH_SIZE = 500;
@@ -172,6 +173,7 @@ public class BackupImportService {
     private final Path stagingDir;
     private final Path importBackupsDir;
     private final Clock clock;
+    private final org.ctc.domain.service.PickCollectionStatus pickCollection;
     private final Path uploadsTargetDir;
 
     @PersistenceContext
@@ -206,6 +208,7 @@ public class BackupImportService {
             ApplicationEventPublisher eventPublisher,
             BackupExecutedByResolver executedByResolver,
             UploadsSwapPreflight uploadsSwapPreflight,
+            org.ctc.domain.service.PickCollectionStatus pickCollection,
             Clock clock,
             @Value("${app.backup.staging-dir}") String stagingDirRaw,
             @Value("${app.backup.import-backups-dir}") String importBackupsDirRaw,
@@ -223,6 +226,7 @@ public class BackupImportService {
         this.executedByResolver = executedByResolver;
         this.uploadsSwapPreflight = uploadsSwapPreflight;
         this.clock = clock;
+        this.pickCollection = pickCollection;
         this.stagingDir = Paths.get(stagingDirRaw).toAbsolutePath().normalize();
         this.importBackupsDir = Paths.get(importBackupsDirRaw).toAbsolutePath().normalize();
         this.uploadsTargetDir = Paths.get(uploadDirRaw).toAbsolutePath().normalize();
@@ -759,6 +763,7 @@ public class BackupImportService {
      */
     private Map<String, Long> countRestorableRows(Path staged, int version) throws BackupArchiveException {
         var poolValidator = new org.ctc.backup.schema.CarPoolBackupValidator(version);
+        var pickValidator = new org.ctc.backup.schema.PickBackupValidator(version);
         Map<String, Long> counts = new LinkedHashMap<>();
         long[] inflatedBytes = {0L};
         try (ZipFile zf = new ZipFile(staged.toFile())) {
@@ -766,12 +771,22 @@ public class BackupImportService {
                 // CodeQL FP: java/path-injection — assertEntrySafe + PathTraversalGuard.assertWithin defense not traceable; see docs/security/sast-acceptance.md
                 ZipEntry entry = zf.getEntry(ref.fileName());
                 if (entry != null) {
-                    counts.put(ref.tableName(), readRows(zf, entry, inflatedBytes, row -> poolValidator.accept(ref.tableName(), row)));
+                    counts.put(ref.tableName(), readRows(zf, entry, inflatedBytes, row -> {
+                        poolValidator.accept(ref.tableName(), row);
+                        pickValidator.accept(ref.tableName(), row);
+                    }));
                 }
             }
             poolValidator.validate();
+            pickValidator.validate();
+            if (pickValidator.hasConfidentialContent() && !pickCollection.isConfidentialityReady()) {
+                throw new BackupArchiveException(Reason.SCHEMA_MISMATCH,
+                        "This archive requires a release with confidential pick disclosure support; confidentiality is not available yet.");
+            }
         } catch (BackupArchiveException ex) {
             throw ex;
+        } catch (org.ctc.backup.schema.PickBackupValidator.ValidationException ex) {
+            throw new BackupArchiveException(Reason.DATA_MISMATCH, ex.getMessage(), ex);
         } catch (IllegalArgumentException ex) {
             throw new BackupArchiveException(Reason.DATA_MISMATCH, "Invalid category pool data: " + ex.getMessage(), ex);
         } catch (IOException ex) {

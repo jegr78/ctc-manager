@@ -38,12 +38,13 @@
 - **Race Attachments** — Upload files or link external resources to races
 - **Docker** — Local development and production deployment with MariaDB
 - **Season car pools** — Keep fixed car choices or build named category entries from local metadata. Combine alternative category/drivetrain/year clauses, preview eligible cars and overlaps, then freeze exact membership. Catalog changes preserve frozen choices; used pools cannot be reopened. Race setup selects an entry and one concrete frozen member. Saving consumes the whole entry for the effective home team that season. Native forms retain invalid inputs, concurrent selections serialize through the season, and unambiguous CSV/Sheets overwrites preserve configured race identities. Admin race summaries, public matchdays and settings graphics show the concrete car with its saved pool-entry label. Custom settings templates keep `carName` and can use optional `poolEntryLabel`.
-- **Backup & Restore** — Export a full ZIP backup of all 30 entity tables, including exact seasonal pool snapshots, Discord state and public URL slugs; restore via a preview-and-confirm import flow that accepts schema versions 1, 2, 3 and 4, so older backups remain restorable
+- **Backup & Restore** — Export a full ZIP backup of all 33 entity tables, including exact seasonal pool snapshots, Discord state and public URL slugs; restore via a preview-and-confirm import flow that accepts schema versions 1 through 5, so older backups remain restorable
 - **Channel Archive Dialog** — Labeled destination categories with channel counts, disabled full categories, keyboard focus and Escape/cancel support. A native inline form remains available without JavaScript.
 - **Backup Workspace** — Separate export and restore panels, labeled current and backup row counts, a neutral archive preview and a clear replacement confirmation.
 - **Data Audit** — Read-only check at `/admin/data-audit` for historical aggregates, pairings, phases, succession, playoffs, public URLs, race settings and seasonal pool references. Separate eligibility information explains unknown car metadata and exact-year exclusions. Unknown years remain valid; opening the audit changes no record. See the [Data Audit wiki page](../../wiki/Data-Audit).
 - **Audit and Generation Workspaces** — Neutral audit summaries, category navigation and keyboard-accessible evidence tables; CTC-styled website generation with a review and publishing guide.
 - **Race settings** — Time progression supports an explicit Equal Conditions mode, distinct from numeric 0x. The mode survives editing and backup/restore and appears in settings and lobby graphics. Custom settings templates can use `timeProgressionDisplay`.
+- **Confidential picks foundation** — The internal model retains complete immutable submissions, original receipts, deadline exceptions and management decisions. Collection remains disabled until the Discord and confidentiality follow-ups are delivered; this release adds no collection portal or command. Backup schema 5 includes the new history tables and defaults older archives to collection off. Restoring an archive with private enrollment or history is blocked until confidentiality support is complete.
 - **Discord Integration** — Per-match Discord channels with 11 structured posts (team cards, settings, lineups, schedule, results, match preview, matchday overview, power rankings, standings), forum-thread linking for race-results + standings, auto-edit on schedule/preview changes, pre-flight gates and stale-detection signals. See [Discord Integration wiki page](../../wiki/Discord-Integration) and [`docs/operations/discord-integration.md`](docs/operations/discord-integration.md).
 - **Discord Role Selection** — A labeled native selection works without JavaScript. Optional search filters roles by name or ID, preserves the selected role and retains saved IDs missing from the cache.
 - **Discord Workspaces** — Sectioned configuration with saved-setting test guidance, neutral missing-field hints and explained connection/cache actions. Recorded posts have native season, match and type filters, readable timestamps and keyboard-accessible tables.
@@ -61,7 +62,7 @@ v1.10 introduces a full database backup/restore feature accessible via `/admin/b
 
 1. Navigate to `/admin/backup` in the admin sidebar.
 2. Click **Export Backup** — a ZIP file (`ctc-backup-<ISO-instant>.zip`) downloads immediately.
-3. Store the ZIP in a safe location. Each export captures all 30 entity tables (including Discord global config, idempotency tracking and public URL slugs).
+3. Store the ZIP in a safe location. Each export captures all 33 entity tables (including Discord global config, idempotency tracking and public URL slugs).
 
 ### Import
 
@@ -69,7 +70,7 @@ v1.10 introduces a full database backup/restore feature accessible via `/admin/b
 2. Review the preview: per-table row counts (current vs. backup) and schema-version match indicator.
 3. Check the **I understand** confirmation and click **Execute Import**. The database is replaced atomically.
 
-> **Schema-Version lock:** The import rejects a backup whose schema version is not 1, 2, 3 or 4 before it
+> **Schema-Version lock:** The import rejects a backup whose schema version is outside versions 1 through 5 before it
 > writes anything. Schema 4 also validates pool references and limits preflight to 100,000 retained reference rows.
 
 ### Recovery

@@ -26,6 +26,7 @@ public class RaceFormDataService {
     private final SeasonDriverRepository seasonDriverRepository;
     private final RaceLineupRepository raceLineupRepository;
     private final RaceCarSelectionService carSelections;
+    private final PickReservationService reservations;
     private final SeasonRepository seasonRepository;
 
     public RaceService.RaceFormData getSubmittedRaceFormData(UUID matchdayId, UUID homeTeamId, UUID raceId,
@@ -126,7 +127,7 @@ public class RaceFormDataService {
 
     private Set<UUID> getUsedTrackIds(UUID seasonId, UUID homeTeamId, UUID excludeRaceId) {
         if (homeTeamId == null) return Set.of();
-        return raceRepository.findByMatchdaySeasonId(seasonId).stream()
+        var used = raceRepository.findByMatchdaySeasonId(seasonId).stream()
                 .filter(r -> !r.isBye())
                 .filter(r -> r.getPlayoffMatchup() == null || !r.getPlayoffMatchup().isBye())
                 .filter(r -> r.getHomeTeam() != null && r.getHomeTeam().getId().equals(homeTeamId))
@@ -134,6 +135,10 @@ public class RaceFormDataService {
                 .filter(r -> r.getTrack() != null)
                 .map(r -> r.getTrack().getId())
                 .collect(Collectors.toSet());
+        reservations.pending(seasonId, false).stream()
+                .filter(pending -> homeTeamId.equals(pending.teamId()) && !pending.raceId().equals(excludeRaceId))
+                .forEach(pending -> used.add(pending.trackId()));
+        return used;
     }
 
     private void populateDrivers(List<RaceService.RaceResultData> results, UUID raceId, UUID seasonId, Team team) {
