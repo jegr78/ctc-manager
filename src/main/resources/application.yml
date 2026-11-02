@@ -12,6 +12,10 @@ app:
   # rate-limit.jitter-ms: range "min-max" parsed by DiscordRateLimitInterceptor.
   # rate-limit.max-retry-after-ms: a longer Retry-After fails the call, since callers may hold a match row lock.
   discord:
+    picks:
+      enabled: ${DISCORD_PICKS_ENABLED:false}
+      workers: 2
+      queue-capacity: 32
     bot-token: ${DISCORD_BOT_TOKEN:}
     allowed-hosts: discord.com
     base-url: https://discord.com/api/v10

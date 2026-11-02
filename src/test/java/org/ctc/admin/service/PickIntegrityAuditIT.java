@@ -27,6 +27,7 @@ class PickIntegrityAuditIT {
     @Autowired MatchdayPickRepository picks;
     @Autowired MatchdayPickRevisionRepository revisions;
     @Autowired EntityManager em;
+    @Autowired TeamPickChannelBindingRepository bindings;
     TestHelper.SeasonFixture fixture;
     PickPayload payload;
 
@@ -102,6 +103,18 @@ class PickIntegrityAuditIT {
             assertThat(finding.toString()).doesNotContain(payload.weather());
         });
         assertThat(revisions.count()).isEqualTo(count);
+    }
+
+    @Test
+    void givenBindingReusedAsSharedMatchChannel_whenAuditing_thenReportConflictWithoutRepairOrExternalLookup() {
+        // given
+        var binding = bindings.save(new TeamPickChannelBinding(fixture.season(), fixture.homeTeam(), "100", "200"));
+        fixture.match().setDiscordChannelId("200");
+        em.flush();
+        // when / then
+        assertThat(findings()).anySatisfy(finding -> assertThat(finding.evidence()).contains("channel binding"));
+        assertThat(bindings.findById(binding.getId())).isPresent();
+        assertThat(fixture.match().getDiscordChannelId()).isEqualTo("200");
     }
 
     private void persistHistory(Race race) {

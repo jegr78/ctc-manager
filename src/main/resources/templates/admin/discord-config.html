@@ -12,6 +12,7 @@
         <a href="#discord-forums">Results and standings forums</a>
         <a href="#discord-pairings">Pairings message</a>
         <a href="#discord-tests">Connection tests</a>
+        <a th:href="@{/admin/discord-config/picks}">Private team picks</a>
     </nav>
     <form th:action="@{/admin/discord-config/save}" method="post" th:object="${form}" class="card entity-editor-form">
         <fieldset id="discord-server">

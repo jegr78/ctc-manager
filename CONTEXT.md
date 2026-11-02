@@ -74,3 +74,9 @@ _Avoid_: Currently enabled collector
 **Submission receipt**:
 The durable confirmation of a particular completed submission that its team can recover after a lost reply.
 _Avoid_: Unfinished wizard response
+
+
+**Private team channel binding**:
+Management's explicit association between a team's private Discord channel and that team in a
+particular season. Current channel access authorizes its members to use that scope.
+_Avoid_: Shared match channel, inherited team role

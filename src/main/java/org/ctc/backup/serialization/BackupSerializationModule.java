@@ -11,6 +11,7 @@ public class BackupSerializationModule extends SimpleModule {
 
     public BackupSerializationModule() {
         super("BackupSerializationModule");
+        setMixInAnnotation(TeamPickChannelBinding.class, TeamPickChannelBindingMixIn.class);
         setMixInAnnotation(MatchdayPick.class, MatchdayPickMixIn.class);
         setMixInAnnotation(MatchdayPickRevision.class, MatchdayPickRevisionMixIn.class);
         setMixInAnnotation(MatchdayPickDecision.class, MatchdayPickDecisionMixIn.class);
