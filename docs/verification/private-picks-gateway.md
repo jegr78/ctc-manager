@@ -34,7 +34,7 @@ responses; real bot registration, messages and deployment activation are operato
 
 - [x] Recheck live issues, dependencies, hierarchy, milestone and parallel occupancy.
 - [x] Create the behavior branch and record requirements before production changes.
-- [ ] Write and observe behavioral assertion-red Gateway and access tests.
+- [x] Write and observe behavioral assertion-red Gateway and access tests.
 - [ ] Implement bounded transport and exact current permission checks.
 - [ ] Persist bindings with matching migration, backup and audit support.
 - [ ] Prove real transaction restore exclusion and permission revocation.
@@ -79,3 +79,16 @@ The first code checkpoint provides the independently testable access policies an
 The binding model/repository and access classes are deliberately not registered with JPA/Spring
 until migration and backup support are added together. No Gateway session or collection path is
 activated by this checkpoint.
+
+- Gateway lifecycle/private-response/dispatcher contracts: intended assertion-red runs with zero
+  errors, then green together. The dispatcher uses bounded Spring workers and only routes picks
+  interactions from the configured guild. Restore-held requests and queue saturation stay private.
+- SDK response adapter: five intended assertion failures, zero errors, then green. JDA callbacks
+  explicitly start ephemeral, suppress mentions and never fall back to ordinary channel messages.
+  Modal text and string-select components use immediate supported replies.
+- SDK transport: nine intended assertion failures, zero errors, then green. Uses JDA 6.7.0 light
+  configuration without message-content intent, automatic reconnect, owned-session shutdown and
+  the existing outbound policy. Recorded command/button/select/modal fixtures never read raw tokens.
+- Combined focused checkpoint: 86 tests, zero failures/errors, on Java 25. These are intermediate
+  unit witnesses, not the final clean-verify or merge evidence. Spring binding/configuration wiring,
+  durable binding recovery, real-proxy admission/revocation and the native setup UI remain pending.
