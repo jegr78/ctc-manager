@@ -153,3 +153,7 @@ five existing skips. SpotBugs found one inefficient map iteration in backup vali
 entries directly removes the repeated lookup and preserves the validation rules. A focused verify
 passed 26 validator tests and 12 import integration tests, SpotBugs with zero findings, and the
 active FindSecBugs detector guard. The final clean build repeats the complete verification.
+
+The map-iteration correction received an independent No findings delta review on `60f0fadf`.
+All 37 validator guard experiments were repeated on that source. The 108 evidence records again
+match the restored production file hashes; no validation rule or static-analysis gate was weakened.
