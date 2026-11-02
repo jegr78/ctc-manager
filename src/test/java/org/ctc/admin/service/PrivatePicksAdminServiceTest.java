@@ -45,6 +45,7 @@ class PrivatePicksAdminServiceTest {
         config.setGuildId("100"); config.setBotApplicationId("900");
         when(configs.findFirstByOrderByIdAsc()).thenReturn(config);
         when(seasons.findByIdForUpdate(season.getId())).thenReturn(Optional.of(season));
+        when(seasons.findById(season.getId())).thenReturn(Optional.of(season));
         when(teams.findById(team.getId())).thenReturn(Optional.of(team));
         when(discord.fetchBotUser()).thenReturn(new DiscordRestClient.BotUser("900", "Test bot", "0"));
         when(permissions.hasCurrentPrivateAccess("100", "200", "900")).thenReturn(true);
@@ -91,7 +92,10 @@ class PrivatePicksAdminServiceTest {
         switch (invalid) {
             case "missing-season" -> when(seasons.findByIdForUpdate(season.getId())).thenReturn(Optional.empty());
             case "missing-team" -> when(teams.findById(team.getId())).thenReturn(Optional.empty());
-            case "malformed-channel" -> form.setChannelId("invalid");
+            case "malformed-channel" -> {
+                form.setChannelId("invalid");
+                when(permissions.hasCurrentPrivateAccess("100", "invalid", "900")).thenReturn(true);
+            }
             case "missing-guild" -> config.setGuildId("");
             case "shared-channel" -> when(matches.existsByDiscordChannelId("200")).thenReturn(true);
             case "public-or-no-access" -> when(permissions.hasCurrentPrivateAccess("100", "200", "900")).thenReturn(false);

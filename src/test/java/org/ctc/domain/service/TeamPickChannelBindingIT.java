@@ -48,9 +48,9 @@ class TeamPickChannelBindingIT {
                 .doesNotThrowAnyException();
         var season = invalid.equals("foreign-season") ? UUID.randomUUID() : fixture.season().getId();
         var team = invalid.equals("foreign-team") ? UUID.randomUUID()
-                : invalid.equals("duplicate-channel") ? fixture.awayTeam().getId() : fixture.homeTeam().getId();
+                : (invalid.equals("duplicate-channel") || invalid.equals("invalid-channel")) ? fixture.awayTeam().getId() : fixture.homeTeam().getId();
         var guild = invalid.equals("invalid-guild") ? "malformed" : "100";
-        var channel = invalid.equals("duplicate-team") ? "201" : invalid.equals("invalid-channel") ? "invalid" : "200";
+        var channel = (invalid.equals("duplicate-team") || invalid.equals("foreign-team")) ? "201" : invalid.equals("invalid-channel") ? "invalid" : "200";
         // when / then
         assertThatThrownBy(() -> insert(season, team, guild, channel)).isInstanceOf(DataIntegrityViolationException.class);
     }

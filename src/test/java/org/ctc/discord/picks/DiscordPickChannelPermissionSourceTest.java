@@ -64,21 +64,25 @@ class DiscordPickChannelPermissionSourceTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"public", "parent-role-only", "role-deny", "member-deny", "unknown-role", "unknown-permission", "missing-overwrites",
-            "wrong-guild", "wrong-channel", "wrong-member", "not-a-text-channel", "missing-member", "missing-guild", "lookup-failed", "ambiguous-role"})
+            "wrong-guild", "wrong-guild-facts", "wrong-channel", "wrong-member", "not-a-text-channel", "missing-member", "missing-guild", "lookup-failed", "ambiguous-role"})
     void givenUnavailableOrUnauthorizedChannelFacts_whenChecking_thenDenyWithoutRoleInference(String scenario) throws Exception {
         // given
         switch (scenario) {
             case "public" -> when(discord.fetchAccessChannel(CHANNEL)).thenReturn(channel(List.of()));
             case "parent-role-only" -> when(discord.fetchAccessMember(GUILD, USER)).thenReturn(member(List.of(PARENT_ROLE)));
-            case "role-deny" -> when(discord.fetchAccessChannel(CHANNEL)).thenReturn(channel(List.of(overwrite(GUILD, 0, "0", VIEW), overwrite(TEAM_ROLE, 0, "0", VIEW))));
+            case "role-deny" -> {
+                when(discord.fetchPermissionRoles(GUILD)).thenReturn(List.of(new PermissionRole(GUILD, "0"), new PermissionRole(TEAM_ROLE, VIEW)));
+                when(discord.fetchAccessChannel(CHANNEL)).thenReturn(channel(List.of(overwrite(TEAM_ROLE, 0, "0", VIEW))));
+            }
             case "member-deny" -> when(discord.fetchAccessChannel(CHANNEL)).thenReturn(channel(List.of(overwrite(GUILD, 0, "0", VIEW), overwrite(TEAM_ROLE, 0, VIEW, "0"), overwrite(USER, 1, "0", VIEW))));
             case "unknown-role" -> when(discord.fetchAccessMember(GUILD, USER)).thenReturn(member(List.of("600000000000000006")));
             case "unknown-permission" -> when(discord.fetchPermissionRoles(GUILD)).thenReturn(List.of(new PermissionRole(GUILD, VIEW), new PermissionRole(TEAM_ROLE, "unknown")));
             case "missing-overwrites" -> when(discord.fetchAccessChannel(CHANNEL)).thenReturn(channel(null));
-            case "wrong-guild" -> when(discord.fetchAccessChannel(CHANNEL)).thenReturn(new AccessChannel(CHANNEL, "999", 0, channel(List.of()).permissionOverwrites()));
-            case "wrong-channel" -> when(discord.fetchAccessChannel(CHANNEL)).thenReturn(new AccessChannel("999", GUILD, 0, List.of()));
+            case "wrong-guild-facts" -> when(discord.fetchAccessGuild(GUILD)).thenReturn(new AccessGuild("999", "900000000000000009"));
+            case "wrong-guild" -> when(discord.fetchAccessChannel(CHANNEL)).thenReturn(new AccessChannel(CHANNEL, "999", 0, List.of(overwrite(GUILD, 0, "0", VIEW), overwrite(TEAM_ROLE, 0, VIEW, "0"))));
+            case "wrong-channel" -> when(discord.fetchAccessChannel(CHANNEL)).thenReturn(new AccessChannel("999", GUILD, 0, List.of(overwrite(GUILD, 0, "0", VIEW), overwrite(TEAM_ROLE, 0, VIEW, "0"))));
             case "wrong-member" -> when(discord.fetchAccessMember(GUILD, USER)).thenReturn(new AccessMember(new BotUser("999", "Test other", "0"), List.of(TEAM_ROLE)));
-            case "not-a-text-channel" -> when(discord.fetchAccessChannel(CHANNEL)).thenReturn(new AccessChannel(CHANNEL, GUILD, 1, List.of()));
+            case "not-a-text-channel" -> when(discord.fetchAccessChannel(CHANNEL)).thenReturn(new AccessChannel(CHANNEL, GUILD, 1, List.of(overwrite(GUILD, 0, "0", VIEW), overwrite(TEAM_ROLE, 0, VIEW, "0"))));
             case "missing-member" -> when(discord.fetchAccessMember(GUILD, USER)).thenReturn(null);
             case "missing-guild" -> when(discord.fetchAccessGuild(GUILD)).thenReturn(null);
             case "lookup-failed" -> when(discord.fetchAccessMember(GUILD, USER)).thenThrow(mock(DiscordNotFoundException.class));

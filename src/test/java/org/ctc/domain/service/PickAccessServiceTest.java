@@ -84,6 +84,11 @@ class PickAccessServiceTest {
     @ValueSource(strings = {"dm", "other-guild", "invalid-user", "unbound", "shared-match", "revoked", "lookup-failed", "ambiguous"})
     void givenUnauthorizedChannelContext_whenAuthorizing_thenDenyWithoutAnyPrivateTargetRead(String cause) {
         // given
+        if (cause.equals("other-guild")) {
+            when(bindings.findByGuildIdAndChannelId("999", CHANNEL)).thenReturn(List.of(new TeamPickChannelBinding(season, home, "999", CHANNEL)));
+            when(permissions.hasCurrentPrivateAccess("999", CHANNEL, USER)).thenReturn(true);
+        }
+        if (cause.equals("invalid-user")) when(permissions.hasCurrentPrivateAccess(GUILD, CHANNEL, "spoofed")).thenReturn(true);
         if (cause.equals("unbound")) when(bindings.findByGuildIdAndChannelId(GUILD, CHANNEL)).thenReturn(List.of());
         if (cause.equals("shared-match")) when(matches.existsByDiscordChannelId(CHANNEL)).thenReturn(true);
         if (cause.equals("revoked")) when(permissions.hasCurrentPrivateAccess(GUILD, CHANNEL, USER)).thenReturn(false);

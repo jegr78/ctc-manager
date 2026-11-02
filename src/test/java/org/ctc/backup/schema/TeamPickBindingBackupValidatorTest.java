@@ -33,7 +33,7 @@ class TeamPickBindingBackupValidatorTest {
         switch (invalid) {
             case "season", "team" -> row.put(invalid, UUID.randomUUID().toString());
             case "guild" -> row.put("guildId", "not-a-snowflake");
-            case "channel" -> row.put("channelId", " ");
+            case "channel" -> row.put("channelId", "not-a-channel");
             case "unknown-field" -> row.put("untrustedTeamRole", "admin");
             case "duplicate-team" -> {
                 var duplicate = binding(); duplicate.put("channelId", "201");

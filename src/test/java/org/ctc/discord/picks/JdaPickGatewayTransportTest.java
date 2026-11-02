@@ -42,7 +42,7 @@ class JdaPickGatewayTransportTest {
         when(builder.build()).thenReturn(jda);
         when(jda.awaitShutdown(Duration.ofSeconds(5))).thenReturn(true);
         try (var factory = mockStatic(JDABuilder.class)) {
-            factory.when(() -> JDABuilder.createLight("test-token", EnumSet.noneOf(GatewayIntent.class))).thenReturn(builder);
+            factory.when(() -> JDABuilder.createLight(anyString(), any(java.util.Collection.class))).thenReturn(builder);
             // when
             var session = transport.connect("test-token", "100", receiver);
             // then
