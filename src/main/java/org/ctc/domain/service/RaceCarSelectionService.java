@@ -72,9 +72,10 @@ public class RaceCarSelectionService {
         if (season.getCarPoolMode() == CarPoolMode.FIXED_CARS) {
             if (entryId != null) return rejected("Fixed-car seasons cannot select a category pool entry.");
             var car = season.getCars().stream().filter(c -> c.getId().equals(carId)).findFirst().orElse(null);
-            if (car == null) return rejected("Car is not in this season's pool.");
+            if (car == null) return rejected("Car is not in this season's pool");
             if (used.stream().anyMatch(r -> r.getCar() != null && carId.equals(r.getCar().getId()))) {
-                return rejected("This home team has already used " + car.getDisplayName() + " this season.");
+                var home = teams.findById(homeTeamId).orElseThrow();
+                return rejected(home.getShortName() + " has already used " + car.getDisplayName() + " this season");
             }
             return new Validation(null, null, car);
         }

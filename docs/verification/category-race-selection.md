@@ -34,7 +34,7 @@ Before implementation, audit every Race save/delete, team/parent reassignment, f
 - [x] Verify H2/MariaDB concurrency, rollback, backup and read-only audit.
 - [x] Inspect desktop/mobile/native browser behavior.
 - [ ] Complete code review and independent security review; fix every finding.
-- [ ] Falsify newly introduced guards and restore committed bytes.
+- [x] Falsify newly introduced guards and restore committed bytes.
 - [ ] Run authoritative clean verify -Pe2e on the committed reviewed head.
 - [ ] Verify matching-head CI, squash merge, Wiki/tracker reconciliation and branch cleanup.
 
@@ -116,6 +116,17 @@ ownership, rejects a moved child with a domain reload message, and refreshes cur
 membership before cascading. Matchday persist/merge/remove/detach remain; refresh does not
 cascade back through loaded child graphs. Nine move/aggregate cases and eleven H2 selection
 transaction cases pass, including separately cached match/race lists and newly committed children.
+
+The guard ledger contains 68 individually falsified logical protections. Retained evidence has
+assertion failures at the intended property and zero test errors. Earlier lint-only and incidental
+exception attempts were excluded and replaced with appropriate witnesses. Sources were restored
+byte-for-byte from the correct commits after each mutation. The covered paths include policy,
+writer hooks, database/current-state reads, indirect playoffs, imports, audit, native defaults,
+late browser responses, calendar transaction boundaries and stale aggregate deletion.
+
+Existing controller contracts exposed two fixed-mode message regressions. Their original text
+and home-team short name are restored; all 90 focused policy/service/controller tests and six
+persistent rejection cases pass without weakening assertions.
 
 ## Visual inspection
 
