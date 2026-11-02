@@ -22,7 +22,7 @@ GitHub is the tracker; the shipped local GSD milestone is historical.
 - [x] Verify fixed, missing-car, long-label and HTML-sensitive behavior.
 - [x] Inspect admin/public/native desktop/mobile flows and actual settings graphics with playwright-cli.
 - [x] Complete code review and independent security review; fix all findings.
-- [ ] Falsify new logical guards from a correct committed checkpoint and restore exact bytes.
+- [x] Falsify new logical guards from a correct committed checkpoint and restore exact bytes.
 - [ ] Run authoritative clean verify -Pe2e on the reviewed committed head.
 - [ ] Pass matching-head CI, squash merge, reconcile Wiki/tracker and clean the own branch.
 
@@ -93,3 +93,26 @@ An independent read-only security pass reviewed production head
 `8f01037ad160b16459e120ec15f55518e3a7de55` and reported no findings. Subsequent changes add tests and
 verification evidence only. Escaped saved text, concrete-car completeness and the existing local
 renderer/publication boundaries are preserved.
+
+## Guard falsification
+
+Correct checkpoint `85b00d63976b1bdd752ece42282411fe5c4be3a4` was committed before mutation.
+All 24 independent mutations failed at the intended assertions, with zero test errors. The harness
+restored each changed file byte for byte from that commit in a finally block; the final worktree
+was clean. Initial selector/wait harness errors from implementation are not included.
+
+| Guard group | Independently broken conditions | Assertion witness |
+| --- | --- | --- |
+| Saved projection | Missing entry and missing concrete car remain null | Prepared settings model and generated empty draft card |
+| Settings template | Optional label and escaped label text | Bundled default template, fixed/category fixtures |
+| Admin detail | Independent label/value presence and escaped value | Fixed-output absence and HTML-sensitive native HTTP response |
+| Admin list/results/match | Presence and escaping in each consumer | Fixed-output absence and HTML-sensitive native HTTP responses |
+| Admin matchday | Presence and escaping separately for single/multiple-leg layout | Both native layouts, fixed/category fixtures |
+| Generated public matchday | Presence and escaping | Fixed HTML and both browser JavaScript modes |
+| Legacy match card | Presence and escaping | Exact text and absent placeholder |
+| Layout | Native label wrapping, readable table widths, graphic label wrapping | Browser width/line bounds and real settings PNG |
+
+The falsification ledger is retained locally as `category-presentation-falsification.json`, with
+per-case logs under `logs/presentation-guard-*.log`. Layout mutations restore the corresponding
+complete rule group. Existing public metadata wrapping remains unchanged; no new business or
+selection validation rule was added.
