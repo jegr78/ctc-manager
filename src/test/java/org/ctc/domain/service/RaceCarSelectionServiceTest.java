@@ -21,6 +21,7 @@ class RaceCarSelectionServiceTest {
     @Mock SeasonRepository seasons;
     @Mock TeamRepository teams;
     @Mock RaceRepository races;
+    @Mock PickReservationService reservations;
     @InjectMocks RaceCarSelectionService service;
     Season season;
     Team home;
@@ -49,6 +50,32 @@ class RaceCarSelectionServiceTest {
         lenient().when(teams.findById(home.getId())).thenReturn(Optional.of(home));
         lenient().when(teams.findById(other.getId())).thenReturn(Optional.of(other));
         usage();
+    }
+
+    @Test
+    void givenPendingCombinedEntry_whenChoosingAnotherMember_thenReserveWholeEntryForExactHome() {
+        // given
+        var pendingRace = UUID.randomUUID();
+        when(reservations.pending(season.getId(), true)).thenReturn(List.of(
+                new PickReservationService.Reservation(pendingRace, home.getId(), mr.getId(), combined.getId(), UUID.randomUUID())));
+        // when / then
+        assertThat(service.validate(season.getId(), home.getId(), null, combined.getId(), rr.getId()).valid()).isFalse();
+        assertThat(service.validate(season.getId(), home.getId(), pendingRace, combined.getId(), rr.getId()).valid()).isTrue();
+        assertThat(service.validate(season.getId(), other.getId(), null, combined.getId(), rr.getId()).valid()).isTrue();
+    }
+
+    @Test
+    void givenPendingFixedCar_whenChoosingCar_thenReserveOnlyThatCarForExactHome() {
+        // given
+        season.setCarPoolMode(CarPoolMode.FIXED_CARS);
+        season.getCars().addAll(List.of(mr, rr));
+        var pendingRace = UUID.randomUUID();
+        when(reservations.pending(season.getId(), true)).thenReturn(List.of(
+                new PickReservationService.Reservation(pendingRace, home.getId(), mr.getId(), null, UUID.randomUUID())));
+        // when / then
+        assertThat(service.validate(season.getId(), home.getId(), null, null, mr.getId()).valid()).isFalse();
+        assertThat(service.validate(season.getId(), home.getId(), null, null, rr.getId()).valid()).isTrue();
+        assertThat(service.validate(season.getId(), other.getId(), null, null, mr.getId()).valid()).isTrue();
     }
 
     @Test

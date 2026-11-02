@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class SeasonManagementService {
 
     private final SeasonRepository seasonRepository;
+    private final PickHistoryReferences pickHistory;
     private final TeamRepository teamRepository;
     private final CarRepository carRepository;
     private final TrackRepository trackRepository;
@@ -521,6 +522,7 @@ public class SeasonManagementService {
         var season = seasonRepository.findByIdForUpdate(seasonId)
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         requireFixedCarPool(season);
+        pickHistory.requireCarsRetained(seasonId, carIds);
         season.getCars().removeIf(c -> carIds.contains(c.getId()));
         seasonRepository.save(season);
         return carIds.size();
@@ -558,8 +560,9 @@ public class SeasonManagementService {
      */
     @Transactional
     public int removeTracksFromSeason(UUID seasonId, List<UUID> trackIds) {
-        var season = seasonRepository.findById(seasonId)
+        var season = seasonRepository.findByIdForUpdate(seasonId)
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        pickHistory.requireTracksRetained(seasonId, trackIds);
         season.getTracks().removeIf(t -> trackIds.contains(t.getId()));
         seasonRepository.save(season);
         return trackIds.size();

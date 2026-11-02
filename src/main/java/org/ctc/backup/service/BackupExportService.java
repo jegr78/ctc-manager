@@ -85,6 +85,9 @@ public class BackupExportService {
     private final SeasonCarPoolEntryRepository poolEntries;
     private final SeasonCarPoolClauseRepository poolClauses;
     private final SeasonCarPoolMemberRepository poolMembers;
+    private final MatchdayPickRepository picks;
+    private final MatchdayPickRevisionRepository pickRevisions;
+    private final MatchdayPickDecisionRepository pickDecisions;
 
 
 	private final String uploadDirRaw;
@@ -124,6 +127,9 @@ public class BackupExportService {
             SeasonCarPoolEntryRepository poolEntries,
             SeasonCarPoolClauseRepository poolClauses,
             SeasonCarPoolMemberRepository poolMembers,
+            MatchdayPickRepository picks,
+            MatchdayPickRevisionRepository pickRevisions,
+            MatchdayPickDecisionRepository pickDecisions,
 			@Value("${app.upload-dir:data/dev/uploads}") String uploadDirRaw
 	) {
 		this.backupSchema = backupSchema;
@@ -157,6 +163,9 @@ public class BackupExportService {
         this.poolEntries = poolEntries;
         this.poolClauses = poolClauses;
         this.poolMembers = poolMembers;
+        this.picks = picks;
+        this.pickRevisions = pickRevisions;
+        this.pickDecisions = pickDecisions;
 		this.uploadDirRaw = uploadDirRaw;
 	}
 
@@ -194,6 +203,9 @@ public class BackupExportService {
         this.repositoriesByEntityClass.put(SeasonCarPoolEntry.class, poolEntries);
         this.repositoriesByEntityClass.put(SeasonCarPoolClause.class, poolClauses);
         this.repositoriesByEntityClass.put(SeasonCarPoolMember.class, poolMembers);
+        this.repositoriesByEntityClass.put(MatchdayPick.class, picks);
+        this.repositoriesByEntityClass.put(MatchdayPickRevision.class, pickRevisions);
+        this.repositoriesByEntityClass.put(MatchdayPickDecision.class, pickDecisions);
 		log.info("BackupExportService initialized: uploadRoot={}, repositoryCount={}",
 				uploadRoot, repositoriesByEntityClass.size());
 	}

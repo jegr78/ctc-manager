@@ -37,6 +37,9 @@ public class RaceService {
 	private final RaceCalendarService raceCalendarService;
 	private final ApplicationEventPublisher eventPublisher;
     private final RaceCarSelectionService carSelections;
+    private final RaceSettingsApplicationService settingsApplication;
+    private final PickLifecycleGuard pickGuard;
+    private final PickReservationService reservations;
 
 	public RaceListData getRaceListData(UUID matchdayId, UUID seasonId) {
 		List<Race> races;
@@ -249,6 +252,13 @@ public class RaceService {
                         plan.race() == editedRace ? carId : carId(plan.race()))).toList();
                 rejection = carSelections.validateAssignments(lockedSeason.getId(), assignments).message();
             }
+            for (var plan : planned) {
+                if (rejection == null) rejection = pickGuard.identityRejection(plan.race(), matchdayId, plan.home(), plan.away());
+            }
+            var submittedSettings = new RaceSettingsValues(numberOfLaps, tyreWearMultiplier, fuelConsumptionMultiplier,
+                    refuelingSpeed, initialFuel, numberOfRequiredPitStops, timeProgressionMode, timeProgressionMultiplier,
+                    weather, timeOfDay, availableTyres, mandatoryTyres);
+            if (rejection == null) rejection = pickGuard.setupRejection(race, trackId, carId, carPoolEntryId, submittedSettings);
             if (rejection == null) rejection = validatePlannedTracks(lockedSeason, planned);
             if (rejection != null) return new SaveResult(false, rejection, id, matchdayId);
             var selectedEntry = carPoolEntryId == null ? null : lockedSeason.getCarPoolEntries().stream()
@@ -259,29 +269,12 @@ public class RaceService {
                 applyPairing(race, matchday, homeTeam, awayTeam);
             }
 
-            race.setTrack(track);
-            race.setCar(car);
-            race.setCarPoolEntry(selectedEntry);
+            boolean firstSchedule = race.getDateTime() == null && dateTime != null;
             boolean dateTimeChanged = id != null && !Objects.equals(race.getDateTime(), dateTime);
             race.setDateTime(dateTime);
+            if (firstSchedule) race.enrolForPicksIfEnabled();
 
-            var settings = race.getSettings();
-            if (settings == null) {
-                settings = new RaceSettings(race);
-                race.setSettings(settings);
-            }
-            settings.setNumberOfLaps(numberOfLaps);
-            settings.setTyreWearMultiplier(tyreWearMultiplier);
-            settings.setFuelConsumptionMultiplier(fuelConsumptionMultiplier);
-            settings.setRefuelingSpeed(refuelingSpeed);
-            settings.setInitialFuel(initialFuel);
-            settings.setNumberOfRequiredPitStops(numberOfRequiredPitStops);
-            settings.setTimeProgressionMode(timeProgressionMode);
-            settings.setTimeProgressionMultiplier(timeProgressionMultiplier);
-            settings.setWeather(weather);
-            settings.setTimeOfDay(timeOfDay);
-            settings.setAvailableTyres(availableTyres);
-            settings.setMandatoryTyres(mandatoryTyres);
+            settingsApplication.apply(race, track, car, selectedEntry, submittedSettings);
 
             raceRepository.save(race);
             if (dateTimeChanged && race.getMatch() != null) {
@@ -356,6 +349,7 @@ public class RaceService {
 		var race = raceRepository.findById(raceId).orElseThrow();
         lockSelectionContext(race, race.getMatchday());
         race = raceRepository.findByIdForSelectionUpdate(raceId).orElseThrow();
+        pickGuard.requireNoHistory(List.of(race));
 		PlayoffDecisionGuard.requireOpen(race);
 		var matchdayId = race.getMatchday().getId();
 		var match = race.getMatch();
@@ -508,6 +502,7 @@ public class RaceService {
         Team regularAway = edited.hasTeamOverrides() ? home : away;
         return legs.stream().map(leg -> new PlannedRace(leg,
                 leg == edited ? home : leg.hasTeamOverrides() ? regularAway : regularHome,
+                leg == edited ? away : leg.hasTeamOverrides() ? regularHome : regularAway,
                 leg == edited ? track : leg.getTrack())).toList();
     }
 
@@ -524,6 +519,10 @@ public class RaceService {
             }
             boolean taken = remaining.stream().anyMatch(r -> r.getHomeTeam() != null && r.getTrack() != null
                     && plan.home().getId().equals(r.getHomeTeam().getId()) && plan.track().getId().equals(r.getTrack().getId()));
+            boolean reserved = reservations.pending(season.getId(), true).stream()
+                    .anyMatch(pending -> !pending.raceId().equals(plan.race().getId())
+                            && pending.teamId().equals(plan.home().getId()) && pending.trackId().equals(plan.track().getId()));
+            if (reserved) return "This track is reserved by another pending pick for this home team";
             if (taken || !selections.add(List.of(plan.home().getId(), plan.track().getId()))) {
                 return plan.home().getShortName() + " has already used " + plan.track().getName() + " this season";
             }
@@ -533,7 +532,7 @@ public class RaceService {
 
     private static UUID entryId(Race race) { return race.getCarPoolEntry() == null ? null : race.getCarPoolEntry().getId(); }
     private static UUID carId(Race race) { return race.getCar() == null ? null : race.getCar().getId(); }
-    private record PlannedRace(Race race, Team home, Track track) {}
+    private record PlannedRace(Race race, Team home, Team away, Track track) {}
 
 	public record RaceData(UUID id, UUID matchdayId, UUID homeTeamId, UUID awayTeamId,
 	                       UUID trackId, UUID carId, LocalDateTime dateTime,

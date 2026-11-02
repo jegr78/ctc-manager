@@ -15,6 +15,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 import org.assertj.core.api.Assertions;
 import org.ctc.backup.service.BackupArchiveService;
+import org.ctc.backup.schema.BackupSchema;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -25,34 +26,14 @@ import org.springframework.beans.factory.annotation.Value;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
-/**
- * Phase 74-10 / Phase 75-08 — Playwright E2E walkthrough for the Backup Import feature.
- *
- * <p>Drives the full click-through flow (upload → preview → confirm → execute) under
- * the {@code dev} profile ({@link PlaywrightConfig} base class boots {@code @SpringBootTest}
- * with {@code WebEnvironment.RANDOM_PORT} + {@code @ActiveProfiles("dev")}):
- * <ol>
- *   <li>Upload a Phase-73 export ZIP (generated at runtime via {@link BackupArchiveService#writeZip}).</li>
- *   <li>Assert the entity card grid and the schema-match pill are visible — SC#1.</li>
- *   <li>Proceed through the confirm page and execute the REAL import — proves D-15 #1
- *       success flash (Phase 75-08; the Phase 74 D-02#5 stub-flash scenario was removed
- *       because the stub no longer exists in production code).</li>
- *   <li>Assert cancel flow deletes the staging file — D-06 + D-16.</li>
- *   <li>Assert missing-checkbox validation error — D-10 server-side @AssertTrue.</li>
- *   <li>Assert stateless re-parse via UUID after cookie-jar wipe — SC#5.</li>
- * </ol>
- *
- * <p>Phase 75-08 D-15 / D-17 carry-forward: the {@code admin/backup-confirm.html} template
- * is unchanged; only the controller body was upgraded from a Phase 74 stub-flash to a real
- * {@link org.ctc.backup.service.BackupImportService#execute(java.util.UUID)} delegation.
- * The success-flash regex enforced here is the locked English D-15 #1 string:
- * {@code "Import completed. {N} rows restored across {M} tables."}.
- */
 @Tag("e2e")
 class BackupImportE2ETest extends PlaywrightConfig {
 
     @Autowired
     BackupArchiveService backupArchiveService;
+
+    @Autowired
+    BackupSchema backupSchema;
 
     @Value("${app.backup.staging-dir:data/dev/backup-staging}")
     Path stagingDir;
@@ -60,8 +41,6 @@ class BackupImportE2ETest extends PlaywrightConfig {
     @BeforeEach
     void setUp() {
         setupPage();
-        // Pre-register dialog handler: auto-accept the JS confirm() dialog from Execute Import (D-10).
-        // Registered AFTER setupPage() so it is bound to the freshly-built page instance.
         page.onDialog(d -> d.accept());
     }
 
@@ -70,21 +49,11 @@ class BackupImportE2ETest extends PlaywrightConfig {
         teardownPage();
     }
 
-    // =========================================================================
-    // Happy-path: full upload → preview → confirm → REAL execute walkthrough.
-    // The success flash binds the locked string
-    // ("Import completed. {N} rows restored across {M} tables.") and the real
-    // BackupImportService.execute(...) round-trips the dev fixture through
-    // wipe + restore on H2.
-    // =========================================================================
-
     @Test
     void givenValidBackupZip_whenAdminClicksConfirm_thenSuccessFlashRenderedOnAdminBackup(
             @TempDir Path tempDir) throws Exception {
+        // given / when / then
 
-        // given — generate a real Phase-73 export ZIP at runtime from the live dev fixture
-        // (REVISION-iteration-1 consistency fix: BackupArchiveService.writeZip is the canonical
-        // ZIP writer; BackupExportService.export does NOT exist — see 75-06 SUMMARY).
         Path fixtureZip = tempDir.resolve("ctc-backup-test.zip");
         try (OutputStream out = Files.newOutputStream(fixtureZip)) {
             backupArchiveService.writeZip(out, Instant.now());
@@ -105,14 +74,12 @@ class BackupImportE2ETest extends PlaywrightConfig {
         page.getByRole(AriaRole.BUTTON,
                 new Page.GetByRoleOptions().setName("Import Backup")).click();
 
-        // then — preview page rendered with correct content (SC#1)
         assertThat(page).hasURL(Pattern.compile(".*/admin/backup/import-preview$"));
         assertThat(page.locator("h1")).containsText("Backup Import");
         assertThat(page.locator("h1")).containsText("Preview");
 
-        // schema-match pill — locked UI-SPEC string (IMPORT-02)
         assertThat(page.locator(".alert.alert-success").first())
-                .containsText("Schema version 4 matches.");
+                .containsText("Schema version " + BackupSchema.SCHEMA_VERSION + " matches.");
 
         // header card — file metadata visible
         assertThat(page.locator(".card").first()).containsText("File:");
@@ -121,9 +88,8 @@ class BackupImportE2ETest extends PlaywrightConfig {
         assertThat(page.locator(".card").first()).containsText("Total imported rows:");
 
         // one card per exported entity
-        assertThat(page.locator(".card-grid > .card")).hasCount(30);
+        assertThat(page.locator(".card-grid > .card")).hasCount(backupSchema.getExportOrder().size());
 
-        // staging UUID must be present (D-18 stateless staging)
         String stagingUuid = page.locator("input[name='stagingId']").first().getAttribute("value");
         Assertions.assertThat(stagingUuid)
                 .as("Preview form must carry the staging UUID per D-18")
@@ -147,10 +113,6 @@ class BackupImportE2ETest extends PlaywrightConfig {
         page.getByRole(AriaRole.BUTTON,
                 new Page.GetByRoleOptions().setName("Execute Import")).click();
 
-        // then — Phase 75-08 D-15 #1: land on /admin/backup with the real success flash
-        // "Import completed. {N} rows restored across {M} tables." (English, locked terse style).
-        // The wipe+restore round-trips the dev fixture through H2 — restoredTotal/entityCount
-        // are positive integers because the fixture seeds its entities with data.
         assertThat(page).hasURL(Pattern.compile(".*/admin/backup$"));
         assertThat(page.locator(".alert.alert-success"))
                 .containsText(Pattern.compile("Import completed\\. \\d+ rows restored across \\d+ tables\\."));
@@ -165,13 +127,10 @@ class BackupImportE2ETest extends PlaywrightConfig {
                 .doesNotContain("Schema version mismatch", "safety checks", "Upload too large");
     }
 
-    // =========================================================================
-    // Cancel cleanup: POST to /import-cancel deletes staging file
-    // =========================================================================
-
     @Test
     void givenPreviewPage_whenAdminClicksCancel_thenStagingFileDeletedAndRedirects(
             @TempDir Path tempDir) throws IOException {
+        // given / when / then
 
         // given — reach the preview page
         uploadFixtureAndOpenPreview(tempDir);
@@ -183,7 +142,6 @@ class BackupImportE2ETest extends PlaywrightConfig {
                 .as("Staging file must exist on disk between preview and cancel")
                 .isTrue();
 
-        // pre-assert: cancel form is a POST form per Plan 08 + Plan 09 CSRF trade-off
         assertThat(page.locator("form[action$='/import-cancel']")).hasCount(1);
         Assertions.assertThat(page.locator("form[action$='/import-cancel']").getAttribute("method"))
                 .as("Cancel must be a POST form per Plan 08 + Plan 09 CSRF trade-off")
@@ -202,23 +160,18 @@ class BackupImportE2ETest extends PlaywrightConfig {
         // then — redirect to /admin/backup
         assertThat(page).hasURL(Pattern.compile(".*/admin/backup$"));
 
-        // staging file must be deleted synchronously (D-16 + Plan 08 deleteStagingFile(UUID))
         Assertions.assertThat(Files.exists(stagingFile))
                 .as("Staging file must be deleted synchronously by import-cancel per D-16 + Plan 08 deleteStagingFile(UUID)")
                 .isFalse();
 
-        // Flash success (Plan 08 locked string)
         assertThat(page.locator(".alert.alert-success")).containsText("Import canceled.");
         assertThat(page.locator(".alert.alert-error")).hasCount(0);
     }
 
-    // =========================================================================
-    // Missing-checkbox validation: server-side @AssertTrue enforcement
-    // =========================================================================
-
     @Test
     void givenConfirmPage_whenAdminSubmitsWithoutTickingCheckbox_thenSeesFieldError(
             @TempDir Path tempDir) throws IOException {
+        // given / when / then
 
         // given — reach the confirm page
         uploadFixtureAndOpenPreview(tempDir);
@@ -229,9 +182,6 @@ class BackupImportE2ETest extends PlaywrightConfig {
         // pre-assert: checkbox unchecked
         assertThat(page.locator("#acknowledged")).not().isChecked();
 
-        // when — click Execute Import WITHOUT ticking
-        // (dialog handler from @BeforeEach auto-accepts JS confirm() if it fires;
-        //  server-side @AssertTrue is the authoritative gate per D-10)
         page.getByRole(AriaRole.BUTTON,
                 new Page.GetByRoleOptions().setName("Execute Import")).click();
 
@@ -240,7 +190,6 @@ class BackupImportE2ETest extends PlaywrightConfig {
         // convention; URL is /import-execute because that is the POST target, not a redirect).
         assertThat(page).hasURL(Pattern.compile(".*/admin/backup/import-execute$"));
 
-        // field-error visible with locked copy — class-only selector (tag-agnostic per Plan 09 Notes)
         assertThat(page.locator(".field-error")).isVisible();
         assertThat(page.locator(".field-error"))
                 .containsText("You must acknowledge the deletion warning to continue.");
@@ -249,18 +198,14 @@ class BackupImportE2ETest extends PlaywrightConfig {
         assertThat(page.locator(".alert.alert-success")).hasCount(0);
     }
 
-    // =========================================================================
-    // SC#5 — stateless re-parse: confirm page renders after cookie-jar wipe
-    // =========================================================================
-
     @Test
     void givenStagingUuid_whenCookieJarIsClearedBetweenPreviewAndExecute_thenPagesStillFunction(
             @TempDir Path tempDir) throws IOException {
+        // given / when / then
 
         // given — upload fixture + reach preview page in the original context
         uploadFixtureAndOpenPreview(tempDir);
 
-        // SC#5 baseline: preview rendered correctly BEFORE the cookie wipe
         assertThat(page).hasURL(Pattern.compile(".*/admin/backup/import-preview$"));
 
         String stagingUuid = currentStagingUuid();
@@ -315,27 +260,12 @@ class BackupImportE2ETest extends PlaywrightConfig {
                     .as("Execute must redirect to /admin/backup per D-17 (endpoint URL unchanged Phase 74 → 75)")
                     .endsWith("/admin/backup");
 
-            // NOTE: Rendered Flash banner is intentionally NOT asserted here.
-            // Spring Flash uses HttpSession-backed handover across the redirect.
-            // After the cookie wipe there is no session cookie to carry the Flash key —
-            // correct architectural behaviour (Flash is session-coupled; staging file is UUID-coupled).
-            // Task 1's happy path covers the Flash render in a normal session (orthogonal axis).
-
         } finally {
             freshContext.close();
         }
     }
 
-    // =========================================================================
-    // Shared helpers
-    // =========================================================================
-
-    /**
-     * Generates a runtime fixture ZIP, uploads it, and navigates to the preview page.
-     * Returns after asserting the preview URL is loaded.
-     * Shared by cancel, missing-checkbox, and cookie-jar tests to avoid duplication.
-     */
-    private void uploadFixtureAndOpenPreview(Path tempDir) throws IOException {
+        private void uploadFixtureAndOpenPreview(Path tempDir) throws IOException {
         Path fixtureZip = tempDir.resolve("ctc-backup-test.zip");
         try (OutputStream out = Files.newOutputStream(fixtureZip)) {
             backupArchiveService.writeZip(out, Instant.now());
@@ -347,11 +277,7 @@ class BackupImportE2ETest extends PlaywrightConfig {
         assertThat(page).hasURL(Pattern.compile(".*/admin/backup/import-preview$"));
     }
 
-    /**
-     * Captures and validates the staging UUID from the current page's hidden input.
-     * Fails loudly if the UUID is blank or malformed.
-     */
-    private String currentStagingUuid() {
+        private String currentStagingUuid() {
         String value = page.locator("input[name='stagingId']").first().getAttribute("value");
         Assertions.assertThat(value)
                 .as("Preview/Confirm form must carry stagingId per D-18")

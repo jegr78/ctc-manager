@@ -10,6 +10,7 @@ import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.ctc.domain.service.PlayoffService;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
@@ -32,6 +33,9 @@ public class TestHelper {
 	private final DriverRepository driverRepository;
 	private final SeasonDriverRepository seasonDriverRepository;
 	private final PlayoffService playoffService;
+    private final MatchdayPickRepository pickRepository;
+    private final MatchdayPickRevisionRepository pickRevisionRepository;
+    private final MatchdayPickDecisionRepository pickDecisionRepository;
 
 	/**
 	 * Deletes a helper-created Season together with its committed fixture graph (race
@@ -41,8 +45,10 @@ public class TestHelper {
 	 * entities — callers delete the ones they created themselves. Do NOT use on seasons
 	 * whose scorings are shared (e.g. TestDataService seed data).
 	 */
+    @Transactional
 	public void deleteSeasonCascade(Season season) {
 		UUID seasonId = season.getId();
+        deletePickHistory(seasonId);
 		raceLineupRepository.deleteAll(raceLineupRepository.findByRaceMatchdaySeasonId(seasonId));
 		raceRepository.deleteAll(raceRepository.findByMatchdaySeasonId(seasonId));
 		matchRepository.deleteAll(matchRepository.findByMatchdaySeasonId(seasonId));
@@ -54,6 +60,22 @@ public class TestHelper {
 		raceScoringRepository.deleteAll(raceScorings);
 		matchScoringRepository.deleteAll(matchScorings);
 	}
+
+    @Transactional
+    public void deletePickHistory(UUID seasonId) {
+        var picks = pickRepository.findBySeasonIdForUpdate(seasonId);
+        if (!picks.isEmpty()) {
+            var pickIds = picks.stream().map(MatchdayPick::getId).toList();
+            pickDecisionRepository.deleteAll(pickDecisionRepository.findAll().stream()
+                    .filter(decision -> pickIds.contains(decision.getPick().getId())).toList());
+            pickDecisionRepository.flush();
+            pickRevisionRepository.deleteAll(pickRevisionRepository.findAll().stream()
+                    .filter(revision -> pickIds.contains(revision.getPick().getId())).toList());
+            pickRevisionRepository.flush();
+            pickRepository.deleteAll(picks);
+            pickRepository.flush();
+        }
+    }
 
 	public Season createSeason(String name) {
 		return createSeason(name, 2026, 1);

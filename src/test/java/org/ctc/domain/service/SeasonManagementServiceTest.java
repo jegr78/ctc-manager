@@ -22,6 +22,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SeasonManagementServiceTest {
+    @Mock private PickHistoryReferences pickHistory;
 
     @Mock
     private SeasonRepository seasonRepository;
@@ -316,7 +317,7 @@ class SeasonManagementServiceTest {
         track.setId(UUID.randomUUID());
         season.getTracks().add(track);
 
-        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(seasonRepository.findByIdForUpdate(season.getId())).thenReturn(Optional.of(season));
 
         // when
         int removed = service.removeTracksFromSeason(season.getId(), List.of(track.getId()));

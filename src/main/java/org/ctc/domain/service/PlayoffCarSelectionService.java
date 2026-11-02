@@ -10,6 +10,8 @@ import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Playoff;
 import org.ctc.domain.model.PlayoffMatchup;
 import org.ctc.domain.model.Team;
+import org.ctc.domain.model.Race;
+import org.ctc.domain.model.PickTargetRules;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ public class PlayoffCarSelectionService {
     private final RaceRepository races;
     private final RaceCarSelectionService selections;
     private final EntityManager entityManager;
+    private final PickLifecycleGuard pickGuard;
 
     public void lock(Playoff playoff) {
         try {
@@ -45,10 +48,14 @@ public class PlayoffCarSelectionService {
             seasons.findByIdForUpdate(seasonId).orElseThrow();
             var rows = races.findBySeasonForSelectionUpdate(seasonId);
             var assignments = new ArrayList<RaceCarSelectionService.Assignment>();
+            var newlyEligible = new ArrayList<Race>();
             for (var change : changes) {
                 for (var race : rows) {
                     if (race.getPlayoffMatchup() == null || !race.getPlayoffMatchup().getId().equals(change.matchup().getId())) continue;
                     Team home = race.projectPlayoffHome(change.team1());
+                    Team away = race.projectPlayoffAway(change.team2());
+                    pickGuard.requireIdentity(race, race.getMatchday().getId(), home, away);
+                    if (!PickTargetRules.isScheduledTarget(race) && PickTargetRules.isScheduledTarget(race, home, away)) newlyEligible.add(race);
                     var previousHome = race.getHomeTeam();
                     if (Objects.equals(previousHome == null ? null : previousHome.getId(), home == null ? null : home.getId())) continue;
                     assignments.add(new RaceCarSelectionService.Assignment(race.getId(), home == null ? null : home.getId(),
@@ -59,6 +66,7 @@ public class PlayoffCarSelectionService {
             }
             var result = selections.validateAssignments(seasonId, assignments);
             if (!result.valid()) throw new BusinessRuleException(result.message());
+            if (playoff.getSeason().isPicksCollectionEnabled()) newlyEligible.forEach(race -> race.setPicksManaged(true));
         } catch (RuntimeException ex) {
             throw RaceSelectionConcurrency.translate(ex);
         }

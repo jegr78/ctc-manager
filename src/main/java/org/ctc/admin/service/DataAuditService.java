@@ -91,6 +91,7 @@ public class DataAuditService {
 	private final SiteSlugger siteSlugger;
     private final SeasonRepository seasonRepository;
     private final SeasonCarPoolService carPoolService;
+    private final PickIntegrityAuditService pickIntegrity;
 
 	@Transactional(readOnly = true)
 	public DataAuditReport audit() {
@@ -114,6 +115,7 @@ public class DataAuditService {
 		auditPublicUrls(findings.get(PUBLIC_URL));
         auditCarMetadata(findings.get(CAR_METADATA), findings.get(CAR_ELIGIBILITY));
         auditCarPools(races, findings.get(CAR_POOL));
+        findings.get(Category.PRIVATE_PICKS).addAll(pickIntegrity.inspect());
 
 		List<DataAuditReport.Section> sections = findings.entrySet().stream()
 				.map(entry -> new DataAuditReport.Section(entry.getKey(), List.copyOf(entry.getValue())))

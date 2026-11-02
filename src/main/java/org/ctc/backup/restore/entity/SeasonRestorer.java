@@ -17,8 +17,8 @@ public class SeasonRestorer implements EntityRestorer {
     private static final String INSERT_SQL =
             "INSERT INTO seasons (id, name, season_year, season_number, description, active, "
                     + "created_at, updated_at, discord_race_results_thread_id, "
-                    + "discord_standings_thread_id, car_pool_mode, car_pool_state) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    + "discord_standings_thread_id, car_pool_mode, car_pool_state, picks_collection_enabled) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     @Override
     public String tableName() {
@@ -41,6 +41,7 @@ public class SeasonRestorer implements EntityRestorer {
                     ps.setString(10, nullableString(row, "discordStandingsThreadId"));
                     ps.setString(11, row.path("carPoolMode").asText("FIXED_CARS"));
                     ps.setString(12, row.path("carPoolState").asText("DRAFT"));
+                    ps.setBoolean(13, row.path("picksCollectionEnabled").asBoolean(false));
                 });
         log.debug("SeasonRestorer: restored {} rows", rows.size());
     }

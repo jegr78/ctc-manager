@@ -17,6 +17,7 @@ public class SeasonCarPoolService {
     private final CarRepository cars;
     private final SeasonCarPoolEntryRepository entries;
     private final RaceRepository races;
+    private final PickHistoryReferences pickHistory;
 
     public record ClauseInput(CarCategory category, Drivetrain drivetrain, Integer modelYear) {}
     public record CarOption(UUID id, String label) {}
@@ -195,6 +196,7 @@ public class SeasonCarPoolService {
     }
 
     private void requireUnused(Season season) {
+        if (pickHistory.hasSelection(season.getId())) throw new BusinessRuleException("The pool is referenced by confidential pick history and cannot be changed");
         if (races.existsByCarPoolEntrySeasonId(season.getId())) throw new BusinessRuleException("The pool is used by a race and cannot be changed.");
     }
 

@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class MatchdayService {
+    private final PickLifecycleGuard pickGuard;
 
     private final MatchdayRepository matchdayRepository;
     private final SeasonRepository seasonRepository;
@@ -149,6 +150,7 @@ public class MatchdayService {
         }
         entityManager.refresh(matchday, LockModeType.PESSIMISTIC_WRITE);
         matchday.getRaces().forEach(PlayoffDecisionGuard::requireOpen);
+        pickGuard.requireNoHistory(matchday.getRaces());
         matchdayRepository.delete(matchday);
         log.info("Deleted matchday: {}", matchday.getLabel());
         return seasonId;

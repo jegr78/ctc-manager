@@ -19,6 +19,7 @@ import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class RaceSelectionFormDataTest {
+    @Mock private PickReservationService reservations;
     @Mock RaceRepository raceRepository;
     @Mock MatchdayRepository matchdayRepository;
     @Mock TeamRepository teamRepository;

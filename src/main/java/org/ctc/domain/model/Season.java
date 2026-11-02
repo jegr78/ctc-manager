@@ -18,6 +18,9 @@ import lombok.ToString;
 @ToString(exclude = {"phases", "seasonDrivers", "seasonTeams", "cars", "tracks", "carPoolEntries"})
 public class Season extends BaseEntity {
 
+    @Column(nullable = false)
+    private boolean picksCollectionEnabled;
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
 	private UUID id;

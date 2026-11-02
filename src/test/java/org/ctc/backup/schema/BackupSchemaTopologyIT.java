@@ -16,20 +16,6 @@ import org.springframework.test.context.ActiveProfiles;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * Phase 72 / Plan 01 — Wave 0 stub. Boots Spring and asserts BackupSchema is correctly wired.
- *
- * <p>RED until Tasks 2-4 land BackupSchema + EntityRef + EntityTopoSorter.
- *
- * <p>Covers the four invariants the production code must satisfy:
- * <ul>
- *   <li>size == 24 (D-03 amended: 23 + PlayoffRound)</li>
- *   <li>FK-respecting ordering (every owning-side {@code @ManyToOne}/{@code @OneToOne}
- *       dependency precedes its owner)</li>
- *   <li>immutability ({@code List.copyOf})</li>
- *   <li>Team self-FK (parentTeam) is detected and skipped — Team appears exactly once</li>
- * </ul>
- */
 @SpringBootTest
 @ActiveProfiles("dev")
 @Tag("integration")
@@ -39,11 +25,11 @@ class BackupSchemaTopologyIT {
     private BackupSchema backupSchema;
 
     @Test
-    void givenSpringContext_whenGetExportOrder_thenReturns30Entities() {
+    void givenSpringContext_whenGetExportOrder_thenReturns33Entities() {
         // when
         List<EntityRef> exportOrder = backupSchema.getExportOrder();
         // then
-        assertThat(exportOrder).as("28 league entities plus DiscordGlobalConfig and DiscordPost").hasSize(30);
+        assertThat(exportOrder).as("31 league entities plus DiscordGlobalConfig and DiscordPost").hasSize(33);
     }
 
     @Test

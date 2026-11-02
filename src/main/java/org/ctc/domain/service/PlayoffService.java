@@ -535,6 +535,7 @@ public class PlayoffService {
 		race.setMatchday(matchday);
 		race.setDateTime(dateTime);
 		race.setPlayoffMatchup(matchup);
+        race.enrolForPicksIfEnabled();
 		race = raceRepository.save(race);
 
 		log.info("Added leg {} to matchup {} (round: {})", legNumber, matchupId,

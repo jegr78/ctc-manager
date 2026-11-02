@@ -38,8 +38,14 @@ class RaceCategorySaveTest {
 
     @BeforeEach
     void setUp() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "pickGuard",
+                new PickLifecycleGuard(org.mockito.Mockito.mock(MatchdayPickRepository.class)));
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "reservations", org.mockito.Mockito.mock(PickReservationService.class));
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "settingsApplication",
+                new RaceSettingsApplicationService(carRepository, trackRepository, null));
         org.springframework.test.util.ReflectionTestUtils.setField(service, "carSelections",
-                new RaceCarSelectionService(seasonRepository, teamRepository, raceRepository));
+                new RaceCarSelectionService(seasonRepository, teamRepository, raceRepository,
+                        org.mockito.Mockito.mock(PickReservationService.class)));
 
         season = new Season("Test native selection");
         season.setId(UUID.fromString("00000000-0000-0000-0000-000000000800"));

@@ -41,8 +41,14 @@ class RaceServiceTest {
 
     @BeforeEach
     void setUpSelectionPolicy() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "pickGuard",
+                new PickLifecycleGuard(org.mockito.Mockito.mock(MatchdayPickRepository.class)));
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "reservations", org.mockito.Mockito.mock(PickReservationService.class));
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "settingsApplication",
+                new RaceSettingsApplicationService(carRepository, trackRepository, null));
         org.springframework.test.util.ReflectionTestUtils.setField(service, "carSelections",
-                new RaceCarSelectionService(seasonRepository, teamRepository, raceRepository));
+                new RaceCarSelectionService(seasonRepository, teamRepository, raceRepository,
+                        org.mockito.Mockito.mock(PickReservationService.class)));
         lenient().when(raceRepository.findByIdForSelectionUpdate(any())).thenAnswer(inv -> raceRepository.findById(inv.getArgument(0)));
         lenient().when(raceRepository.findBySeasonForSelectionUpdate(any())).thenAnswer(inv -> raceRepository.findByMatchdaySeasonId(inv.getArgument(0)));
     }
