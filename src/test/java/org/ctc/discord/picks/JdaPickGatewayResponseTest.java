@@ -26,7 +26,7 @@ class JdaPickGatewayResponseTest {
     @Test
     void givenDeferredReply_whenSdkAcknowledges_thenOnlyPrivateMentionFreeFollowupsAreAvailable() {
         // given
-        when(event.deferReply(true)).thenReturn(initial);
+        when(event.deferReply(anyBoolean())).thenReturn(initial);
         var followup = mock(WebhookMessageCreateAction.class, RETURNS_SELF);
         when(hook.sendMessage("Test private payload")).thenReturn(followup);
         // when
@@ -37,6 +37,8 @@ class JdaPickGatewayResponseTest {
         verify(initial).queue(success.capture(), any());
         success.getValue().accept(hook);
         future.join().replyPrivate("Test private payload");
+        verify(event).deferReply(true);
+        verify(event, never()).deferReply(false);
         verify(hook).setEphemeral(true);
         verify(followup).setEphemeral(true);
         verify(followup).setAllowedMentions(List.of());
@@ -48,7 +50,7 @@ class JdaPickGatewayResponseTest {
     @Test
     void givenFailedAcknowledgement_whenSdkFails_thenExposeGenericFailureWithoutTokenOrPayload() {
         // given
-        when(event.deferReply(true)).thenReturn(initial);
+        when(event.deferReply(anyBoolean())).thenReturn(initial);
         // when
         var future = response.deferPrivate().toCompletableFuture();
         var failure = ArgumentCaptor.forClass(Consumer.class);
