@@ -14,6 +14,7 @@ import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonPhaseGroupRepository;
 import org.ctc.domain.service.SeasonPhaseService;
+import org.ctc.domain.service.RaceCarPresentation;
 import org.ctc.sitegen.model.GenerationContext;
 import org.ctc.sitegen.model.SiteSlugs;
 import org.ctc.sitegen.model.GroupSubTabView;
@@ -252,14 +253,14 @@ public class MatchdaysPageGenerator {
         int awayTotal = pointsForTeam(results, race.getAwayTeam());
 
         String trackName = race.getTrack() != null ? race.getTrack().getName() : null;
-        String carName = race.getCar() != null ? race.getCar().getDisplayName() : null;
+        var carPresentation = RaceCarPresentation.from(race);
 
         boolean hasResults = !race.getResults().isEmpty();
         boolean homeTeamWon = hasResults && homeTotal > awayTotal;
         boolean awayTeamWon = hasResults && awayTotal > homeTotal;
         return new RaceView(homeShortName, awayShortName,
-                trackName, carName, homeTotal, awayTotal, hasResults,
-                homeTeamWon, awayTeamWon, results);
+                trackName, carPresentation.carName(), homeTotal, awayTotal, hasResults,
+                homeTeamWon, awayTeamWon, results, carPresentation.poolEntryLabel());
     }
     private int pointsForTeam(List<RaceView.ResultView> results, Team team) {
         if (team == null) {

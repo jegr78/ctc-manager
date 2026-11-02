@@ -63,6 +63,7 @@ public class MatchdayController {
         var matchday = data.matchday();
         model.addAttribute("matchday", matchday);
         model.addAttribute("lineupsByTeam", data.lineupsByTeam());
+        model.addAttribute("raceCarPresentations", data.carPresentations());
         model.addAttribute("hasMatches", data.hasMatches());
         model.addAttribute("hasSchedule", data.hasSchedule());
         model.addAttribute("scheduleMissingCount", data.scheduleMissingCount());

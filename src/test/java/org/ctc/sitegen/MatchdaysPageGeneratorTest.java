@@ -298,4 +298,67 @@ class MatchdaysPageGeneratorTest {
         assertThat(matches.get(1).select(".playoff-legs tbody td").eachText()).containsExactly("-", "-");
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void givenFixedOrCategoryRace_whenGeneratingDetail_thenPrepareBothNamesWithoutAnEmptyPoolPlaceholder(boolean category) throws Exception {
+        // given
+        var season = new Season("Test presentation", 2031, 99);
+        season.setId(UUID.randomUUID());
+        var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Test car display", 0);
+        matchday.setId(UUID.randomUUID());
+        var race = new org.ctc.domain.model.Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setHomeTeamOverride(new org.ctc.domain.model.Team("Test home", "T-DHOME"));
+        race.setAwayTeamOverride(new org.ctc.domain.model.Team("Test away", "T-DAWAY"));
+        race.setCar(new org.ctc.domain.model.Car("Test Honda", "NSX Gr.3 MR"));
+        if (category) {
+            var entry = new org.ctc.domain.model.SeasonCarPoolEntry();
+            entry.setLabel("Gr.3 MR + Gr.3 RR");
+            race.setCarPoolEntry(entry);
+        }
+        var writer = org.mockito.Mockito.mock(TemplateWriter.class);
+        var slugger = org.mockito.Mockito.mock(SiteSlugger.class);
+        org.mockito.Mockito.when(slugger.slugify(anyString())).thenReturn("test");
+        var days = org.mockito.Mockito.mock(org.ctc.domain.repository.MatchdayRepository.class);
+        var races = org.mockito.Mockito.mock(org.ctc.domain.repository.RaceRepository.class);
+        var lineups = org.mockito.Mockito.mock(org.ctc.domain.repository.RaceLineupRepository.class);
+        org.mockito.Mockito.when(days.findBySeasonIdOrderBySortIndexAsc(season.getId())).thenReturn(List.of(matchday));
+        org.mockito.Mockito.when(races.findByMatchdayId(matchday.getId())).thenReturn(List.of(race));
+        var generator = new MatchdaysPageGenerator(writer, slugger, days, races, lineups, null, null);
+        var generation = new org.ctc.sitegen.model.GenerationContext(tempDir, season, "test", "Test display", false,
+                null, new org.ctc.sitegen.model.SiteSlugs(java.util.Map.of(), java.util.Map.of(), List.of()));
+        // when
+        generator.generateDetails(generation, new SiteGeneratorService.GenerationResult());
+        var contexts = org.mockito.ArgumentCaptor.forClass(Context.class);
+        org.mockito.Mockito.verify(writer).write(org.mockito.ArgumentMatchers.eq("site/matchday"), contexts.capture(),
+                org.mockito.ArgumentMatchers.any(Path.class), org.mockito.ArgumentMatchers.eq(tempDir),
+                org.mockito.ArgumentMatchers.eq("test"), org.mockito.ArgumentMatchers.eq("Test display"));
+        var context = contexts.getValue();
+        context.setVariable("rootPath", ".");
+        context.setVariable("assetsPath", "assets");
+        var document = Jsoup.parse(templateEngine.process("site/matchday", context));
+        // then
+        assertThat(document.select(".race-card").text()).contains("Test Honda — NSX Gr.3 MR");
+        if (category) assertThat(document.select(".race-card").text()).contains("Gr.3 MR + Gr.3 RR");
+        else assertThat(document.select(".race-card").text()).doesNotContain("Pool entry", "Gr.3 MR + Gr.3 RR");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void givenOptionalCategoryContext_whenRenderingLegacyMatchCard_thenKeepCarAndOnlyShowPresentPoolLabel(boolean category) {
+        // given
+        String label = "Gr.3 MR + Gr.3 RR <img src=x onerror='window.injected=1'>";
+        var race = new org.ctc.sitegen.model.RaceView("Test home", "Test away", "Test track", "Test Honda MR", 0, 0,
+                false, false, false, List.of(), category ? label : null);
+        var context = new Context();
+        context.setVariable("race", race);
+        // when
+        var document = Jsoup.parse(templateEngine.process("site/fragments/match-card", context));
+        // then
+        assertThat(document.text()).contains("Test Honda MR");
+        if (category) assertThat(document.select(".pool-entry-label").text()).isEqualTo(label);
+        else assertThat(document.select(".pool-entry-label")).isEmpty();
+    }
+
 }

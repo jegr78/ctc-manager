@@ -66,6 +66,8 @@
             <span th:text="${race.track?.name ?: '-'}"></span>
             <span class="label">Car</span>
             <span th:text="${race.car?.displayName ?: '-'}"></span>
+            <span th:if="${carPresentation?.poolEntryLabel != null}" class="label">Pool entry</span>
+            <span th:if="${carPresentation?.poolEntryLabel != null}" class="pool-entry-label" th:text="${carPresentation.poolEntryLabel}"></span>
             <span class="label">Date &amp; Time</span>
             <span th:data-london-time="${race.dateTime != null ? race.dateTime.toString().substring(0, 16) : ''}"
                   th:text="${race.dateTime != null ? #temporals.format(race.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></span>

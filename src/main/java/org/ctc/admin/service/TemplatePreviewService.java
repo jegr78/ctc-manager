@@ -98,6 +98,7 @@ public class TemplatePreviewService {
     private Context buildSettingsContext() {
         var ctx = buildRaceHeaderContext();
         ctx.setVariable("carName", "Mazda RX-Vision GT3");
+        ctx.setVariable("poolEntryLabel", "Gr.3 MR + Gr.3 RR");
         ctx.setVariable("trackName", "Nürburgring 24h");
         ctx.setVariable("numberOfLaps", 5);
         ctx.setVariable("tyreWearMultiplier", "10x");

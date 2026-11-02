@@ -30,7 +30,10 @@
             <li th:each="race, iter : ${match.races}" class="match-race-entry">
                 <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link"
                    th:text="'Leg ' + ${iter.count} + ' · ' + ${race.track?.name ?: '—'}"></a>
-                <span class="text-dim" th:text="${race.car?.displayName ?: 'Car not set'}"></span>
+                <div th:with="carPresentation=${raceCarPresentations?.get(race.id)}">
+                    <span class="text-dim" th:text="${race.car?.displayName ?: 'Car not set'}"></span>
+                    <small th:if="${carPresentation?.poolEntryLabel != null}" class="pool-entry-label" th:text="${'Pool entry: ' + carPresentation.poolEntryLabel}"></small>
+                </div>
                 <div class="actions"><a th:href="@{/admin/races/{id}/edit(id=${race.id})}" class="btn btn-secondary btn-sm">Race setup</a><a th:href="@{/admin/races/{id}/lineup(id=${race.id})}" class="btn btn-secondary btn-sm">Lineup</a><a th:href="@{/admin/races/{id}/results(id=${race.id})}" class="btn btn-secondary btn-sm">Results</a></div>
             </li>
         </ul>

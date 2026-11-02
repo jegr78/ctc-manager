@@ -5,7 +5,7 @@ import java.util.List;
 public record RaceView(String homeTeamShortName, String awayTeamShortName, String track, String car, int homeTotal,
                        int awayTotal, boolean hasResults,
                        boolean homeTeamWon, boolean awayTeamWon,
-                       List<ResultView> results) {
+                       List<ResultView> results, String poolEntryLabel) {
 
 	public String getScore() {
 		return homeTotal + " : " + awayTotal;

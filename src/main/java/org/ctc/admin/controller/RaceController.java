@@ -60,6 +60,7 @@ public class RaceController {
 	                   Model model) {
 		var data = raceService.getRaceListData(matchdayId, seasonId);
 		model.addAttribute("races", data.races());
+        model.addAttribute("raceCarPresentations", data.carPresentations());
 		model.addAttribute("raceScores", data.raceScores());
 		model.addAttribute("matchday", data.matchday());
 		model.addAttribute("selectedSeasonId", data.selectedSeasonId());
@@ -71,6 +72,7 @@ public class RaceController {
 	public String detail(@PathVariable UUID id, Model model) {
 		var data = raceService.getRaceDetailData(id);
 		model.addAttribute("race", data.race());
+        model.addAttribute("carPresentation", data.carPresentation());
 		model.addAttribute("homeTotal", data.homeTotal());
 		model.addAttribute("awayTotal", data.awayTotal());
 		model.addAttribute("driverTeamMap", data.driverTeamMap());
@@ -198,6 +200,7 @@ public class RaceController {
 		var data = raceFormDataService.getResultsFormData(id);
 		model.addAttribute("raceForm", toRaceForm(data.data()));
 		model.addAttribute("race", data.race());
+        model.addAttribute("carPresentation", data.carPresentation());
 		model.addAttribute("raceScoring", data.raceScoring());
 		return "admin/race-results";
 	}
