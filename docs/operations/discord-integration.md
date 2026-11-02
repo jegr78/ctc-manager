@@ -813,7 +813,8 @@ locks them and applies only the selected revision's setup. Neither action posts 
 
 Compare existing internal values with the selected submission before approving. If they differ,
 explicitly select replacement consent. A changed submission version or an internal settings
-change after the page loaded rejects the request. A restore also invalidates an open review or correction form. The error page retains the entered reason;
+change after the page loaded rejects the request. A restore or application restart also invalidates
+an open review or correction form. The error page retains the entered reason;
 use **Reload current version** to review the current state before another decision.
 
 For an approved target, **Correct approved settings** records a separate complete correction and

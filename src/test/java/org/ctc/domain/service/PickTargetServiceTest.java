@@ -273,12 +273,24 @@ class PickTargetServiceTest {
     @Test
     void givenManagementActorFromOldRestoreGeneration_whenLocking_thenRejectInsideAdmittedTransactionAfterTargetLocks() {
         // given
-        var manager = new ManagementPickActor("test-manager", epoch.getAsLong()); epoch.afterRestore(null);
+        var manager = new ManagementPickActor("test-manager", epoch.managementGeneration()); epoch.afterRestore(null);
         // when / then
         assertThatThrownBy(() -> service.lockForManagement(race.getId(), manager)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("reset");
         var order = inOrder(seasons, races);
         order.verify(races).findById(race.getId()); order.verify(seasons).findByIdForUpdate(season.getId());
         order.verify(races).findBySeasonForSelectionUpdate(season.getId());
+    }
+
+    @Test
+    void givenManagementFormFromPreviousProcess_whenLockingAfterRestoreAndRestart_thenRejectOldContextAndAcceptFreshForm() {
+        // given
+        var previousProcess = new PickSessionEpoch();
+        var oldForm = new ManagementPickActor("test-manager", previousProcess.managementGeneration());
+        previousProcess.afterRestore(null);
+        // when / then: the service uses a fresh process epoch whose numeric counter is zero again
+        assertThatThrownBy(() -> service.lockForManagement(race.getId(), oldForm))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("reset");
+        assertThat(service.lockForManagement(race.getId(), new ManagementPickActor("test-manager", epoch.managementGeneration()))).isNotNull();
     }
 
 }

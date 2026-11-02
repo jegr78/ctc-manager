@@ -61,7 +61,7 @@ public class MatchdayPickAdminService {
 
     @Transactional(readOnly = true)
     public Detail detail(UUID raceId) {
-        long generation = epoch.getAsLong();
+        String generation = epoch.managementGeneration();
         var race = race(raceId);
         var pick = picks.findSnapshotByRaceId(raceId).orElse(null);
         var row = row(race, races.findByMatchdaySeasonId(race.getMatchday().getSeason().getId()), pick);
@@ -143,7 +143,7 @@ public class MatchdayPickAdminService {
         reviews.correct(raceId, form.getExpectedVersion(), actor(principal, form.getExpectedGeneration()), form.getReason(), form.payload(), form.getSettingsFingerprint());
     }
 
-    private ManagementPickActor actor(Principal principal, long generation) {
+    private ManagementPickActor actor(Principal principal, String generation) {
         String name = principal == null ? null : principal.getName();
         if (name != null && !name.isBlank() && name.length() <= 128) {
             return new ManagementPickActor(name, generation);
@@ -152,8 +152,8 @@ public class MatchdayPickAdminService {
         throw new BusinessRuleException("An authenticated management actor is required");
     }
 
-    private static void requireForm(Long version, String fingerprint, Long generation) {
-        if (version == null || version < 0 || generation == null || generation < 0 || fingerprint == null || !fingerprint.matches("[0-9a-f]{64}")) {
+    private static void requireForm(Long version, String fingerprint, String generation) {
+        if (version == null || version < 0 || generation == null || !generation.matches("[0-9a-f-]{36}:[0-9]+") || fingerprint == null || !fingerprint.matches("[0-9a-f]{64}")) {
             throw new BusinessRuleException("Reload the current review before applying a decision");
         }
     }

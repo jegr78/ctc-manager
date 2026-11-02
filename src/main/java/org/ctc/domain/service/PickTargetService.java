@@ -108,8 +108,8 @@ public class PickTargetService {
         }
         var race = races.findById(raceId).orElseThrow(PickTargetService::unavailable);
         var target = locked(race.getMatchday().getSeason().getId(), raceId);
-        if (actor.generation() != null && actor.generation() != epoch.getAsLong()) {
-            throw new BusinessRuleException("This management form was reset by a restore; reload its current version");
+        if (actor.generation() != null && !actor.generation().equals(epoch.managementGeneration())) {
+            throw new BusinessRuleException("This management form was reset by a restore or application restart; reload its current version");
         }
         return target;
     }

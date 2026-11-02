@@ -23,6 +23,7 @@ class MatchdayPickAdminServiceTest {
     @Mock Environment environment;
     @InjectMocks MatchdayPickAdminService service;
     final UUID race = UUID.randomUUID();
+    static final String GENERATION = "00000000-0000-0000-0000-000000000000:0";
 
     @Test
     void givenProductionWithoutPrincipal_whenPostingDecision_thenRejectBeforeDomainMutation() {
@@ -40,7 +41,7 @@ class MatchdayPickAdminServiceTest {
         // when
         service.decide(race, form, () -> "test-manager");
         // then
-        verify(reviews).approve(race, 3, 2, new ManagementPickActor("test-manager", 0L), "Test review reason", true, "0".repeat(64));
+        verify(reviews).approve(race, 3, 2, new ManagementPickActor("test-manager", GENERATION), "Test review reason", true, "0".repeat(64));
         verifyNoInteractions(environment);
     }
 
@@ -51,7 +52,7 @@ class MatchdayPickAdminServiceTest {
         // when
         service.decide(race, form(), null);
         // then
-        verify(reviews).close(race, 3, new ManagementPickActor("development-manager", 0L), "Test review reason");
+        verify(reviews).close(race, 3, new ManagementPickActor("development-manager", GENERATION), "Test review reason");
     }
 
     @Test
@@ -64,7 +65,7 @@ class MatchdayPickAdminServiceTest {
         assertThatThrownBy(() -> service.decide(race, form, () -> "test-manager")).hasMessageContaining("Reload");
         form.setExpectedVersion(3L); form.setExpectedGeneration(null);
         assertThatThrownBy(() -> service.decide(race, form, () -> "test-manager")).hasMessageContaining("Reload");
-        form.setExpectedGeneration(-1L);
+        form.setExpectedGeneration("malformed");
         assertThatThrownBy(() -> service.decide(race, form, () -> "test-manager")).hasMessageContaining("Reload");
         verifyNoInteractions(reviews, environment);
     }
@@ -79,7 +80,7 @@ class MatchdayPickAdminServiceTest {
     }
 
     PickReviewForm form() {
-        var form = new PickReviewForm(); form.setExpectedVersion(3L); form.setExpectedGeneration(0L); form.setSettingsFingerprint("0".repeat(64));
+        var form = new PickReviewForm(); form.setExpectedVersion(3L); form.setExpectedGeneration(GENERATION); form.setSettingsFingerprint("0".repeat(64));
         form.setAction(PickReviewForm.Action.CLOSE); form.setReason("Test review reason"); return form;
     }
 }

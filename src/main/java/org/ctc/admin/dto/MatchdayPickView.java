@@ -27,7 +27,7 @@ public final class MatchdayPickView {
         public Decision { correction = List.copyOf(correction); }
     }
     public record Detail(Row row, String fingerprint, boolean requiresReplacement, String returnReason, List<Comparison> comparison,
-                         List<Revision> revisions, List<Decision> decisions, long generation) {
+                         List<Revision> revisions, List<Decision> decisions, String generation) {
         public Detail { comparison = List.copyOf(comparison); revisions = List.copyOf(revisions); decisions = List.copyOf(decisions); }
     }
 }

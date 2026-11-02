@@ -70,13 +70,13 @@ class MatchdayPickControllerTest {
     }
 
     PickReviewForm form() {
-        var form = new PickReviewForm(); form.setExpectedVersion(4L); form.setExpectedGeneration(0L); form.setAction(PickReviewForm.Action.RETURN); form.setReason("Test correction reason");
+        var form = new PickReviewForm(); form.setExpectedVersion(4L); form.setExpectedGeneration("00000000-0000-0000-0000-000000000000:0"); form.setAction(PickReviewForm.Action.RETURN); form.setReason("Test correction reason");
         form.setSettingsFingerprint("0".repeat(64)); return form;
     }
     Detail detail() {
         var row = new Row(race, season, day, "Test season | Test matchday | vs T-AWAY | Leg 1", "Test season", "Test matchday",
                 PickState.SUBMITTED, 5, 2, null, "Test deadline", "Deadline passed", false, false, "Closed", true,
                 List.of(PickReviewForm.Action.RETURN), false);
-        return new Detail(row, "1".repeat(64), false, null, List.of(), List.of(), List.of(), 0);
+        return new Detail(row, "1".repeat(64), false, null, List.of(), List.of(), List.of(), "00000000-0000-0000-0000-000000000000:0");
     }
 }
