@@ -33,7 +33,7 @@ Before implementation, audit every Race save/delete, team/parent reassignment, f
 - [x] Implement native entry/member selection and latest-response handling.
 - [x] Verify H2/MariaDB concurrency, rollback, backup and read-only audit.
 - [x] Inspect desktop/mobile/native browser behavior.
-- [ ] Complete code review and independent security review; fix every finding.
+- [x] Complete code review and independent security review; fix every finding.
 - [ ] Falsify newly introduced guards and restore committed bytes.
 - [ ] Run authoritative clean verify -Pe2e on the committed reviewed head.
 - [ ] Verify matching-head CI, squash merge, Wiki/tracker reconciliation and branch cleanup.

@@ -160,7 +160,8 @@ class RaceCarSelectionIT {
             return "test-concurrent-calendar";
         }).when(googleCalendar).createEvent(anyString(), any(LocalDateTime.class), eq(30));
         // when
-        calendar.createOrUpdateCalendarEvent(fixture.race());
+        org.assertj.core.api.Assertions.assertThatCode(() -> calendar.createOrUpdateCalendarEvent(fixture.race()))
+                .as("calendar persistence succeeds after a concurrent selection").doesNotThrowAnyException();
         // then
         tx.executeWithoutResult(status -> {
             var saved = races.findById(fixture.race()).orElseThrow();
