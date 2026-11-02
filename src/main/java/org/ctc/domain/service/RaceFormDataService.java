@@ -104,7 +104,8 @@ public class RaceFormDataService {
                     data.availableTyres(), data.mandatoryTyres(), data.timeProgressionMode(), data.carPoolEntryId());
         }
 
-        return new RaceService.ResultsFormData(data, race, race.getMatchday().getPhase().getRaceScoring());
+        return new RaceService.ResultsFormData(data, race, race.getMatchday().getPhase().getRaceScoring(),
+                RaceCarPresentation.from(race));
     }
 
     public Map<String, Object> getUsedSelections(UUID seasonId, UUID homeTeamId, UUID excludeRaceId) {

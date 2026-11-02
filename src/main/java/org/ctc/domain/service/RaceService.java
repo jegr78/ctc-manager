@@ -75,7 +75,8 @@ public class RaceService {
 			}
 		}
 
-		return new RaceListData(races, raceScores, matchday, selectedSeasonId, seasonRepository.findAll());
+		return new RaceListData(races, raceScores, matchday, selectedSeasonId, seasonRepository.findAll(),
+                RaceCarPresentation.forRaces(races));
 	}
 
 	public RaceDetailData getRaceDetailData(UUID raceId) {
@@ -160,7 +161,7 @@ public class RaceService {
 				hasMatch && !overlayExists, overlayExists,
 				calendarAvailable, hasCalendarEvent, canCreateCalendarEvent,
 				lobbySettingsReady && lobbyTeamsPresent && !lobbySettingsGraphicExists,
-				!lobbySettingsReady, lobbySettingsGraphicExists);
+				!lobbySettingsReady, lobbySettingsGraphicExists, RaceCarPresentation.from(race));
 	}
 
     @Transactional
@@ -560,7 +561,8 @@ public class RaceService {
 	}
 
 	public record RaceListData(List<Race> races, Map<UUID, int[]> raceScores,
-	                           Matchday matchday, UUID selectedSeasonId, List<Season> seasons) {
+	                           Matchday matchday, UUID selectedSeasonId, List<Season> seasons,
+                               Map<UUID, RaceCarPresentation> carPresentations) {
 	}
 
 	public record RaceDetailData(Race race, int homeTotal, int awayTotal,
@@ -574,10 +576,10 @@ public class RaceService {
 	                             boolean calendarAvailable, boolean hasCalendarEvent,
 	                             boolean canCreateCalendarEvent,
 	                             boolean canGenerateLobbySettings, boolean lobbySettingsMissing,
-	                             boolean lobbySettingsExist) {
+	                             boolean lobbySettingsExist, RaceCarPresentation carPresentation) {
 	}
 
-	public record ResultsFormData(RaceData data, Race race, RaceScoring raceScoring) {
+	public record ResultsFormData(RaceData data, Race race, RaceScoring raceScoring, RaceCarPresentation carPresentation) {
 	}
 
 	public record RaceFormData(RaceData data, List<Matchday> matchdays, List<Team> teams,

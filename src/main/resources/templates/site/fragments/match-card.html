@@ -15,6 +15,7 @@
         <span th:if="${race.track != null && race.car != null}"> — </span>
         <span th:text="${race.car ?: ''}"></span>
     </div>
+    <div th:if="${race.poolEntryLabel != null}">Pool entry: <span class="pool-entry-label" th:text="${race.poolEntryLabel}"></span></div>
 </th:block>
 </body>
 </html>

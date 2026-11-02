@@ -113,6 +113,77 @@ class SettingsGraphicServiceTest {
                 .getVariable("timeProgressionMultiplier")).isEqualTo(0);
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void givenFixedOrCategoryRace_whenGenerating_thenKeepConcreteCarAndOptionalSavedEntryLabel(boolean category) throws Exception {
+        // given
+        service = spy(service);
+        doNothing().when(service).renderScreenshot(anyString(), any(Path.class));
+        var race = createReadyRace(false);
+        var car = new Car("Test Honda", "NSX Gr.3 MR");
+        car.setCategory(CarCategory.GR_3);
+        car.setDrivetrain(Drivetrain.MR);
+        race.setCar(car);
+        if (category) {
+            var entry = new SeasonCarPoolEntry();
+            entry.setLabel("Gr.3 MR + Gr.3 RR");
+            race.setCarPoolEntry(entry);
+        }
+        when(standingsService.calculateStandings(any(), any())).thenReturn(List.of());
+        // when
+        service.generateSettings(race);
+        // then
+        var context = org.mockito.ArgumentCaptor.forClass(Context.class);
+        verify(templateEngine).process(eq("admin/settings-render"), context.capture());
+        org.assertj.core.api.Assertions.assertThat(context.getValue().getVariable("carName"))
+                .isEqualTo("Test Honda — NSX Gr.3 MR");
+        org.assertj.core.api.Assertions.assertThat(context.getValue().getVariable("poolEntryLabel"))
+                .isEqualTo(category ? "Gr.3 MR + Gr.3 RR" : null);
+    }
+
+    @Test
+    void givenCategoryEntryWithoutConcreteCar_whenGenerating_thenRejectBeforeRendering() throws Exception {
+        // given
+        service = spy(service);
+        var race = createReadyRace(false);
+        var entry = new SeasonCarPoolEntry();
+        entry.setLabel("Gr.3 MR + Gr.3 RR");
+        race.setCarPoolEntry(entry);
+        race.setCar(null);
+        // when / then
+        assertThatThrownBy(() -> service.generateSettings(race)).isInstanceOf(IllegalStateException.class)
+                .hasMessage("Race has no car");
+        verify(templateEngine, never()).process(anyString(), any(Context.class));
+        verify(service, never()).renderScreenshot(anyString(), any(Path.class));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void givenCustomSettingsTemplate_whenRenderingSavedSelection_thenKeepLegacyCarVariableAndEscapeOptionalEntry(boolean category) throws Exception {
+        // given
+        service = spy(service);
+        doNothing().when(service).renderScreenshot(anyString(), any(Path.class));
+        var race = createReadyRace(false);
+        String label = "Gr.3 MR + RR <img src=x onerror='window.injected=1'>";
+        if (category) {
+            var entry = new SeasonCarPoolEntry();
+            entry.setLabel(label);
+            race.setCarPoolEntry(entry);
+        }
+        service.saveTemplate("<html><p id='car' th:text='${carName}'></p><p id='pool' th:if='${poolEntryLabel != null}' th:text='${poolEntryLabel}'></p></html>");
+        when(standingsService.calculateStandings(any(), any())).thenReturn(List.of());
+        // when
+        service.generateSettings(race);
+        // then
+        var html = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(service).renderScreenshot(html.capture(), any(Path.class));
+        var document = org.jsoup.Jsoup.parse(html.getValue());
+        org.assertj.core.api.Assertions.assertThat(document.select("#car").text()).isEqualTo("Toyota — GR86");
+        if (category) org.assertj.core.api.Assertions.assertThat(document.select("#pool").text()).isEqualTo(label);
+        else org.assertj.core.api.Assertions.assertThat(document.select("#pool")).isEmpty();
+        org.assertj.core.api.Assertions.assertThat(document.select("img[src=x], [onerror]")).isEmpty();
+    }
+
 	private Race createReadyRace(boolean groupAttached) throws IOException {
 		var season = new Season("S", 2026, 1); season.setId(UUID.randomUUID());
 		var home = new Team("H", "H"); home.setId(UUID.randomUUID());

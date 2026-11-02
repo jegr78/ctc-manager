@@ -1200,3 +1200,5 @@ a.season-tag:hover { background: var(--bg-hover); border-color: var(--text-dim);
 @media (max-width: 480px) {
     .site-menu .nav-links { max-height: min(calc(100dvh - 180px), var(--menu-available-height, 100dvh)); }
 }
+
+.pool-entry-label { overflow-wrap: anywhere; min-width: 0; }

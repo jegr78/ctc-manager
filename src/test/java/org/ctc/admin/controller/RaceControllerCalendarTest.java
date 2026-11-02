@@ -101,15 +101,16 @@ class RaceControllerCalendarTest {
 	}
 
 	private RaceDetailData detailData(boolean calendarAvailable, boolean hasCalendarEvent, boolean canCreateCalendarEvent) {
-		return new RaceDetailData(
-				homeAwayRace(), 0, 0, Map.of(), Map.of(),
+		var race = homeAwayRace();
+        return new RaceDetailData(
+				race, 0, 0, Map.of(), Map.of(),
 				false, false, false, false,
 				false, false, false,
 				false, false,
 				false, false, false,
 				false, false,
 				calendarAvailable, hasCalendarEvent, canCreateCalendarEvent,
-				false, false, false);
+				false, false, false, org.ctc.domain.service.RaceCarPresentation.from(race));
 	}
 
 	@Test

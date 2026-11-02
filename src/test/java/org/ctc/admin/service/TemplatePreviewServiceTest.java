@@ -154,6 +154,16 @@ class TemplatePreviewServiceTest {
     }
 
     @Test
+    void givenSettingsPreview_whenRenderingOptionalPoolVariable_thenKeepConcreteCarAndShowExampleEntry() {
+        // given
+        String template = "<html><body><p th:text=\"${carName}\"></p><p th:text=\"${poolEntryLabel}\"></p></body></html>";
+        // when
+        var html = service.renderPreview("settings", template);
+        // then
+        assertThat(org.jsoup.Jsoup.parse(html).text()).contains("Mazda RX-Vision GT3", "Gr.3 MR + Gr.3 RR");
+    }
+
+    @Test
     void givenRaceResultsTemplate_whenRenderPreview_thenContainsResultRows() {
         // given
         String template = """

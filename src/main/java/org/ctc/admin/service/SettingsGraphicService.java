@@ -9,6 +9,7 @@ import org.ctc.domain.model.PlayoffSeed;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.repository.PlayoffSeedRepository;
 import org.ctc.domain.service.StandingsService;
+import org.ctc.domain.service.RaceCarPresentation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
@@ -102,7 +103,9 @@ public class SettingsGraphicService extends AbstractGraphicService implements Te
 		ctx.setVariable("fontBase64", encodeClasspathResource(FONT_CLASSPATH, "font/woff2"));
 
 		// Settings data
-		ctx.setVariable("carName", race.getCar().getDisplayName());
+		var carPresentation = RaceCarPresentation.from(race);
+        ctx.setVariable("carName", carPresentation.carName());
+        ctx.setVariable("poolEntryLabel", carPresentation.poolEntryLabel());
 		ctx.setVariable("trackName", race.getTrack().getName());
 		ctx.setVariable("numberOfLaps", settings.getNumberOfLaps());
 		ctx.setVariable("tyreWearMultiplier", settings.getTyreWearMultiplier());

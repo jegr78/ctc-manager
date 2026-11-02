@@ -92,7 +92,10 @@
                         <div th:each="race, iter : ${match.races}" class="leg-row"
                              th:styleappend="${!iter.last ? 'border-bottom:1px solid var(--border);' : ''}">
                             <div class="leg-label" th:text="'Leg ' + ${iter.count}"></div>
-                            <div class="leg-detail" th:text="${(race.track?.name ?: '') + (race.car != null ? ' · ' + race.car.displayName : '')}"></div>
+                            <div class="leg-detail" th:with="carPresentation=${raceCarPresentations?.get(race.id)}">
+                                <span th:text="${(race.track?.name ?: '') + (race.car != null ? ' · ' + race.car.displayName : '')}"></span>
+                                <small th:if="${carPresentation?.poolEntryLabel != null}" class="pool-entry-label" th:text="${'Pool entry: ' + carPresentation.poolEntryLabel}"></small>
+                            </div>
                             <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link leg-link">
                                 <span th:if="${race.results.isEmpty() and match.walkoverTeam != null}" class="badge badge-inactive">w/o</span>
                                 <span th:if="${race.results.isEmpty() and match.walkoverTeam == null}" class="badge badge-inactive">Open</span>
@@ -112,7 +115,10 @@
                     </div>
                     <div th:if="${matchday.phase.legs <= 1 && !match.races.isEmpty()}" class="legs-container--single">
                         <div th:each="race : ${match.races}" class="single-leg-row">
-                            <div class="leg-detail" th:text="${(race.track?.name ?: '') + (race.car != null ? ' · ' + race.car.displayName : '')}"></div>
+                            <div class="leg-detail" th:with="carPresentation=${raceCarPresentations?.get(race.id)}">
+                                <span th:text="${(race.track?.name ?: '') + (race.car != null ? ' · ' + race.car.displayName : '')}"></span>
+                                <small th:if="${carPresentation?.poolEntryLabel != null}" class="pool-entry-label" th:text="${'Pool entry: ' + carPresentation.poolEntryLabel}"></small>
+                            </div>
                             <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link leg-link">
                                 <span th:if="${race.results.isEmpty() and match.walkoverTeam != null}" class="badge badge-inactive">w/o</span>
                                 <span th:if="${race.results.isEmpty() and match.walkoverTeam == null}" class="badge badge-inactive">Open</span>

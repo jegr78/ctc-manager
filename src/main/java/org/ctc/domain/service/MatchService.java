@@ -94,6 +94,7 @@ public class MatchService {
 
 		Map<String, Object> model = new HashMap<>();
 		model.put("match", match);
+        model.put("raceCarPresentations", RaceCarPresentation.forRaces(match.getRaces()));
 		model.put("archiveCategories", data.archiveCategories());
 		model.put("defaultSelectionId", data.defaultSelectionId());
 		model.put("pageTitle", "Match: " + match.getHomeTeam().getShortName() + " vs " + awayShort);

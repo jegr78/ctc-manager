@@ -41,7 +41,7 @@ public class MatchdayService {
 
     public record MatchdayDetailData(Matchday matchday, Map<String, List<RaceLineup>> lineupsByTeam,
                                       boolean hasMatches, boolean hasSchedule, long scheduleMissingCount,
-                                      boolean hasResults) {}
+                                      boolean hasResults, Map<UUID, RaceCarPresentation> carPresentations) {}
 
     public List<Season> getAllSeasons() {
         return seasonRepository.findAll();
@@ -89,7 +89,8 @@ public class MatchdayService {
         long scheduleMissingCount = nonByeMatches.size() - matchesWithDateTime;
         boolean hasResults = nonByeMatches.stream()
                 .anyMatch(m -> m.getHomeScore() != null && m.getAwayScore() != null);
-        return new MatchdayDetailData(matchday, lineupsByTeam, hasMatches, hasSchedule, scheduleMissingCount, hasResults);
+        return new MatchdayDetailData(matchday, lineupsByTeam, hasMatches, hasSchedule, scheduleMissingCount, hasResults,
+                RaceCarPresentation.forRaces(matchday.getRaces()));
     }
 
     @Transactional

@@ -11,6 +11,7 @@
         <span th:text="${race.matchday.label}"></span> —
         <span th:text="${race.track?.name ?: 'No track'}"></span> —
         <span th:text="${race.car?.displayName ?: 'No car'}"></span>
+        <span th:if="${carPresentation?.poolEntryLabel != null}" class="pool-entry-label" th:text="${'Pool entry: ' + carPresentation.poolEntryLabel}"></span>
     </p>
     <div th:if="${raceScoring == null}" class="alert alert-warning mb-md">
         This phase has no race scoring. Set one on the phase before entering results.

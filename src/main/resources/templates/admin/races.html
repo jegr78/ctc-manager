@@ -20,8 +20,8 @@
     </div>
 
     <div class="card">
-        <div class="table-scroll">
-        <table th:if="${!races.isEmpty()}" id="racesTable">
+        <div class="table-scroll" role="region" aria-label="Race list" tabindex="0">
+        <table th:if="${!races.isEmpty()}" id="racesTable" class="race-summary-table">
             <thead>
                 <tr>
                     <th class="sortable" data-col="0">Season</th>
@@ -62,7 +62,10 @@
                         </a>
                     </td>
                     <td th:text="${race.track?.name ?: '-'}" class="text-dim"></td>
-                    <td th:text="${race.car?.displayName ?: '-'}" class="text-dim"></td>
+                    <td class="text-dim race-summary-car" th:with="carPresentation=${raceCarPresentations?.get(race.id)}">
+                        <span th:text="${race.car?.displayName ?: '-'}"></span>
+                        <small th:if="${carPresentation?.poolEntryLabel != null}" class="pool-entry-label" th:text="${'Pool entry: ' + carPresentation.poolEntryLabel}"></small>
+                    </td>
                     <td>
                         <span th:if="${race.playoffMatchup != null}" class="badge">Playoff</span>
                         <span th:if="${race.match != null && race.playoffMatchup == null}" class="badge badge-inactive">Match</span>
