@@ -172,3 +172,10 @@ list. The final clean build discards all compiled mutation artifacts.
 | private archive preflight | `PickCollectionDisabledIT` | 2 |
 
 </details>
+
+The first full clean run passed all 2,465 unit tests, then exposed an outdated legacy acceptance
+fixture that still treated schema 5 as unknown. The run was stopped after that assertion failure.
+The fixture now uses the current schema version plus one and retains its SCHEMA_MISMATCH and
+no-write expectations. All seven tests of BackupLenientV1AcceptanceIT pass after correction;
+production behavior and the 57 guard probes are unchanged. A fresh full committed-head run is
+required for finalization.

@@ -33,23 +33,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * D-17 acceptance IT for the lenient schema_version gate (D-10, D-11).
- *
- * <p>Builds synthetic backup ZIPs programmatically (per RESEARCH §RQ-9 — no binary
- * fixtures committed) and asserts:
- * <ul>
- *   <li>v1 manifest (24 pre-v1.13 entities, no Discord JSON entries) — stage succeeds,
- *       {@code preview.schemaMatches() == true}, execute leaves Discord tables empty
- *       and surfaces the {@code DiscordGlobalConfigService.getOrInitialize()} self-heal
- *       contract as the only path that introduces a row.</li>
- *   <li>v2 manifest without the Discord JSON entries — refused with {@code DATA_MISMATCH}.</li>
- *   <li>v2 manifest with the Discord tables but without {@code site_slugs} — accepted, and
- *       the slug table stays empty.</li>
- *   <li>v5 (and higher) manifests — refused with {@code SCHEMA_MISMATCH}.</li>
- *   <li>v0 (and lower) manifests — refused with {@code SCHEMA_MISMATCH}.</li>
- * </ul>
- */
 @SpringBootTest
 @ActiveProfiles("dev")
 @Tag("integration")
@@ -158,9 +141,9 @@ class BackupLenientV1AcceptanceIT {
     }
 
     @Test
-    void givenV5ManifestZip_whenStage_thenRefusedWithSchemaMismatch() throws Exception {
+    void givenUnsupportedFutureManifestZip_whenStage_thenRefusedWithSchemaMismatch() throws Exception {
         // given
-        MockMultipartFile file = wrapAsMultipart(buildSyntheticZip(5, V1_TABLES_24));
+        MockMultipartFile file = wrapAsMultipart(buildSyntheticZip(BackupSchema.SCHEMA_VERSION + 1, V1_TABLES_24));
 
         // when / then
         assertThatThrownBy(() -> backupImportService.stage(file))
