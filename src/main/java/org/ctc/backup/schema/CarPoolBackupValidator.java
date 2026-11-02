@@ -113,9 +113,10 @@ public final class CarPoolBackupValidator {
             if (!memberships.computeIfAbsent(entry, ignored -> new HashSet<>()).add(car)) fail("Duplicate snapshot entry/car pair.");
             if (!seasonCars.computeIfAbsent(season, ignored -> new HashSet<>()).add(car)) fail("Frozen entries overlap.");
         }
-        for (var entry : entries.keySet()) {
+        for (var item : entries.entrySet()) {
+            var entry = item.getKey();
             if (!definitions.containsKey(entry)) fail("Pool entry has no clauses.");
-            var season = uuid(entries.get(entry), "season");
+            var season = uuid(item.getValue(), "season");
             if (states.get(season) == CarPoolState.FROZEN && !memberships.containsKey(entry)) fail("Frozen pool entry is empty.");
         }
         for (var season : seasons.keySet()) {
