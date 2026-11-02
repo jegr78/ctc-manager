@@ -2,12 +2,14 @@ package org.ctc.discord;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.discord.dto.Channel;
 import org.ctc.discord.dto.ChannelCreateRequest;
+import org.ctc.discord.dto.PermissionOverwrite;
 import org.ctc.discord.dto.ChannelModifyRequest;
 import org.ctc.discord.dto.Role;
 import org.ctc.discord.dto.Thread;
@@ -43,6 +45,33 @@ public class DiscordRestClient {
 	public DiscordRestClient(@Qualifier("discordBotRestClient") RestClient bot) {
 		this.bot = bot;
 	}
+
+    public AccessGuild fetchAccessGuild(String guildId) throws DiscordApiException {
+        return execute(() -> bot.get().uri("/guilds/{guildId}", guildId).retrieve().body(AccessGuild.class));
+    }
+
+    public AccessChannel fetchAccessChannel(String channelId) throws DiscordApiException {
+        return execute(() -> bot.get().uri("/channels/{channelId}", channelId).retrieve().body(AccessChannel.class));
+    }
+
+    public AccessMember fetchAccessMember(String guildId, String userId) throws DiscordApiException {
+        return execute(() -> bot.get().uri("/guilds/{guildId}/members/{userId}", guildId, userId).retrieve().body(AccessMember.class));
+    }
+
+    public List<PermissionRole> fetchPermissionRoles(String guildId) throws DiscordApiException {
+        return execute(() -> bot.get().uri("/guilds/{guildId}/roles", guildId).retrieve()
+                .body(new ParameterizedTypeReference<List<PermissionRole>>() { }));
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record AccessGuild(String id, @JsonProperty("owner_id") String ownerId) { }
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record AccessChannel(String id, @JsonProperty("guild_id") String guildId, Integer type,
+                                @JsonProperty("permission_overwrites") List<PermissionOverwrite> permissionOverwrites) { }
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record AccessMember(BotUser user, List<String> roles) { }
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record PermissionRole(String id, String permissions) { }
 
 	public BotUser fetchBotUser() throws DiscordApiException {
 		return execute(() -> bot.get()

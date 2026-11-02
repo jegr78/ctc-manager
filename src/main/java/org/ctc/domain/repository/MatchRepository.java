@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface MatchRepository extends JpaRepository<Match, UUID> {
 
+    boolean existsByDiscordChannelId(String channelId);
+
 	@EntityGraph(attributePaths = {"homeTeam", "awayTeam"})
 	List<Match> findByMatchdayId(UUID matchdayId);
 

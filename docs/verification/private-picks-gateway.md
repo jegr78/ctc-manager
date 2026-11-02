@@ -21,7 +21,7 @@ responses; real bot registration, messages and deployment activation are operato
 | Maintained outgoing transport | JDA adapter and existing Discord identity | SDK reconnect/resume, bounded queues and shutdown | No hand-written protocol, message-content intent or incoming endpoint | Adapter tests, Java 25 dependency build, source/route audit |
 | Exact management-owned binding | Binding entity/repository/service and native form DTO | Exact season/team/guild/channel persists | Duplicate/ambiguous binding, foreign IDs and shared match channel reject | H2/MariaDB constraints and native form/controller tests |
 | Channel access without a selected race | PickAccessService and fresh Discord facts | Any current private-channel member receives its configured scopes | DMs, other guilds, lookup failure, revoked view and role-only inference deny | Recorded member/role/overwrite fixtures |
-| Exact selected-target access | Target authorization and domain actor recheck | Effective-home scheduled target in a verified scope | Wrong race/home/season or stale local binding deny | Real transaction proxy and permission-revocation IT |
+| Exact selected-target access | Target authorization and domain actor recheck | Exact managed home target in a verified scope | Wrong race/home/season or stale local binding deny | Real transaction proxy and permission-revocation IT |
 | Private interaction responses | Transport-neutral handler/response adapter | Ephemeral defer before queued work; private completion | Saturated queue, exceptions and expired continuation never post publicly | Deterministic clock, fake callbacks and deadline tests |
 | Modal acknowledgement support | Immediate response adapter contract | A modal opens through an immediate supported response | No defer-then-modal chain or expired acknowledgement | Adapter unit fixtures |
 | Explicit command registration | Operator-only registration operation | Upsert this feature's configured guild command | No startup registration or replacement of unrelated commands | Local fake registration API |
@@ -57,3 +57,25 @@ pin the Gateway library version.
 - https://docs.jda.wiki/net/dv8tion/jda/api/interactions/callbacks/IReplyCallback.html
 - https://docs.discord.com/developers/interactions/receiving-and-responding
 - https://docs.discord.com/developers/topics/permissions
+
+Authorization remains separate from editability: an authorized member can recover an original
+receipt or inspect own history after results, while the existing target/deadline policies still
+reject new confirmations. Initial channel access reconstructs scopes from current bindings;
+client-supplied or stale actor scopes never grant access.
+
+## Focused evidence
+
+- Access-service red: 20 tests, four intended assertion failures, zero errors. Covers initial
+  channel scope without a race, fresh target ownership, stale/forged scope rejection, shared
+  match channels, lookup failure and access to own historical receipt data.
+- Fresh Discord permission red: 22 tests, seven intended assertion failures, zero errors.
+  Covers role/member overwrites, administrator/owner access, public-channel refusal, failed or
+  incomplete lookups, parent-role-only refusal and permission revocation between interactions.
+- Both classes pass together: 42 tests, zero failures/errors. Permission arithmetic uses
+  BigInteger as required by Discord's variable-length permission representation and performs
+  fresh member/channel/guild/role reads instead of granting from metadata caches.
+
+The first code checkpoint provides the independently testable access policies and raw REST facts.
+The binding model/repository and access classes are deliberately not registered with JPA/Spring
+until migration and backup support are added together. No Gateway session or collection path is
+activated by this checkpoint.
