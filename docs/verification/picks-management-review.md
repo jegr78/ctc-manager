@@ -83,3 +83,5 @@ Each guard was broken separately from its correct committed checkpoint and resto
 | Checkpoint | `c962bb4d70d72843b75c0aee5057b8050ea4c7fa` | |
 | management-startup-instance | `PickTargetServiceTest#givenManagementFormFromPreviousProcess_whenLockingAfterRestoreAndRestart_thenRejectOldContextAndAcceptFreshForm` | 1 / 0 |
 | management-restore-counter | `PickTargetServiceTest#givenManagementActorFromOldRestoreGeneration_whenLocking_thenRejectInsideAdmittedTransactionAfterTargetLocks` | 1 / 0 |
+
+The canonical run passed every unit/integration/browser test and the coverage gate, then SpotBugs identified `NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE` in the correction GET model lookup. A null-model regression failed at the intended assertion with one failure and zero JUnit errors. The GET now prepares a fresh typed service form directly; POST refresh/error handlers continue to retain their bound form. The correction passed five controller tests, 24 HTTP integration tests and four browser tests with zero failures/errors/skips before the repeated canonical run.

@@ -52,8 +52,9 @@ public class MatchdayPickController {
 
     @GetMapping("/{raceId}/correction")
     public String correction(@PathVariable UUID raceId, Model model) {
-        if (!model.containsAttribute("form")) model.addAttribute("form", service.correctionForm(raceId));
-        return correctionModel(raceId, (PickCorrectionForm) model.getAttribute("form"), model);
+        var form = service.correctionForm(raceId);
+        model.addAttribute("form", form);
+        return correctionModel(raceId, form, model);
     }
 
     @PostMapping("/{raceId}/correction/refresh")
