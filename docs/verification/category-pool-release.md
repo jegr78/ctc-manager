@@ -29,8 +29,8 @@ milestone is shipped. Owner-planned host boot evidence in #301 remains excluded.
 - [x] Complete read-only integrity and informational eligibility coverage.
 - [x] Exercise the complete synthetic native/browser workflow and inspect desktop/mobile with playwright-cli.
 - [x] Update README, CLAUDE and user-facing Wiki; link delivered verification to #273.
-- [ ] Finish code review and independent security review; implement all findings.
-- [ ] Falsify each new guard from a correct committed checkpoint and restore exact bytes.
+- [x] Finish code review and independent security review; implement all findings.
+- [x] Falsify each new guard from a correct committed checkpoint and restore exact bytes.
 - [ ] Run authoritative committed-head clean verify -Pe2e -Ddocker.available=true with all static/coverage gates.
 - [ ] Pass matching-head CI/CodeQL, squash merge, reconcile the complete parent chain and clean own topic branch.
 
@@ -112,3 +112,23 @@ README, CLAUDE and Wiki changes describe the informational distinction and prepa
 seasons. The Wiki also clarifies the existing referenced-asset export boundary. Wiki publication
 waits for verified merge. The verification checklist for delivered #277 is reconciled here with
 its actual merge and CI evidence.
+
+## Review and guard falsification
+
+Code self-review and an independent read-only security pass reviewed
+`bce602e614d8107c9ff2ccd1851f0fad2a0c0b66` against
+`9fd15117f1caf2d0e831d4f67752679e8e090a6c`. Neither review retained a finding.
+The reviewed caller audit confirms the audit controller and template consume enum sections
+without a hard-coded category list, dynamic text remains escaped, and all new fixtures stay
+separate from production. The independent pass made no file changes or test executions.
+
+Five new guards were individually broken from that correct committed checkpoint: unknown
+category, drivetrain and accepted year; absence of information for complete metadata; and the
+score-name wrapping rule. All five produced the intended seven assertion failures with zero
+errors. Each source file was restored byte for byte from the commit, and the worktree was clean
+before adding this evidence. Existing archive admission and migration constraints were unchanged;
+the new archive/schema cases characterize and exercise their shipped contract.
+
+The retained local ledger is `category-release-falsification.json`, with logs under
+`logs/category-release-guard-*.log`. The final verification commit adds documentation only after
+the reviewed production head.
