@@ -3,7 +3,6 @@ package org.ctc.discord.picks;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -48,7 +47,11 @@ class JdaPickGatewayTransportTest {
             // then
             assertThat(session).isNotNull();
             verify(outbound).requireEnabled();
-            factory.verify(() -> JDABuilder.createLight("test-token", EnumSet.noneOf(GatewayIntent.class)));
+            var token = ArgumentCaptor.forClass(String.class);
+            var intents = ArgumentCaptor.forClass(java.util.Collection.class);
+            factory.verify(() -> JDABuilder.createLight(token.capture(), intents.capture()));
+            assertThat(token.getValue()).isEqualTo("test-token");
+            assertThat(intents.getValue()).doesNotContain(GatewayIntent.MESSAGE_CONTENT).isEmpty();
             verify(builder).setAutoReconnect(true);
             verify(builder).setEnableShutdownHook(false);
             verify(jda, never()).updateCommands();
