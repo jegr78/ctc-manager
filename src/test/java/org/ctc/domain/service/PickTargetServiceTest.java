@@ -228,4 +228,45 @@ class PickTargetServiceTest {
         return new ChannelPickActor("123", "456", "12345", Set.of(new ChannelPickActor.Binding(season.getId(), home.getId())));
     }
 
+    @Test
+    void givenTwoSeasonBindingsAndReturnLeg_whenListing_thenRetainBothSeasonContextsAndExactLegOwnership() {
+        // given
+        var second = new Season("Test second season"); second.setId(UUID.randomUUID()); second.setPicksCollectionEnabled(true);
+        var phase = new SeasonPhase(); phase.setId(UUID.randomUUID()); phase.setSeason(second); phase.setPhaseType(PhaseType.REGULAR); phase.setLabel("Second league");
+        var day = new Matchday(phase, "Second matchday", 2); day.setId(UUID.randomUUID()); day.setPickDeadline(race.getMatchday().getPickDeadline());
+        var match = new Match(day, away, home); match.setId(UUID.randomUUID());
+        var outbound = new Race(); outbound.setId(UUID.randomUUID()); outbound.setMatchday(day); outbound.setMatch(match);
+        outbound.setDateTime(race.getDateTime()); outbound.setPicksManaged(true);
+        var returning = new Race(); returning.setId(UUID.randomUUID()); returning.setMatchday(day); returning.setMatch(match);
+        returning.setDateTime(race.getDateTime().plusDays(1)); returning.setHomeTeamOverride(home); returning.setAwayTeamOverride(away); returning.setPicksManaged(true);
+        var both = new ChannelPickActor("123", "456", "12345", Set.of(new ChannelPickActor.Binding(season.getId(), home.getId()),
+                new ChannelPickActor.Binding(second.getId(), home.getId())));
+        when(access.authorizeChannel("123", "456", "12345")).thenReturn(both);
+        when(seasons.findById(season.getId())).thenReturn(Optional.of(season)); when(seasons.findById(second.getId())).thenReturn(Optional.of(second));
+        when(races.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(race));
+        when(races.findByMatchdaySeasonId(second.getId())).thenReturn(List.of(outbound, returning));
+        // when
+        var listed = service.listHomeRaces(both);
+        // then
+        assertThat(listed).extracting(org.ctc.domain.picks.HomeRaceTarget::raceId).containsExactlyInAnyOrder(race.getId(), returning.getId());
+        assertThat(listed.stream().filter(row -> row.raceId().equals(returning.getId())).findFirst().orElseThrow().label())
+                .contains(second.getDisplayLabel(), "Second matchday", "T-AWAY", "Leg 2");
+    }
+
+    @Test
+    void givenOwnConfirmedPickAfterRaceDecision_whenListing_thenKeepReadOnlyRecoveryTarget() {
+        // given
+        var pick = new MatchdayPick(race, season, home); pick.submit();
+        race.getMatch().setHomeScore(0);
+        when(picks.findSnapshotByRaceId(race.getId())).thenReturn(Optional.of(pick));
+        when(seasons.findById(season.getId())).thenReturn(Optional.of(season));
+        when(races.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(race));
+        // when
+        var listed = service.listHomeRaces(channel());
+        // then
+        assertThat(listed).hasSize(1);
+        assertThat(listed.getFirst().editable()).isFalse();
+        assertThat(listed.getFirst().state()).isEqualTo(PickState.SUBMITTED);
+    }
+
 }

@@ -36,8 +36,19 @@ public final class PickGatewayReply {
         try {
             response.deferPrivate().thenAccept(continuation -> {
                 if (continuation == null || !continuationValid()) return;
-                PickGatewayResponse.Continuation guarded = message -> {
-                    if (continuationValid()) safelyReply(continuation, currentGeneration() ? message : RESET);
+                PickGatewayResponse.Continuation guarded = new PickGatewayResponse.Continuation() {
+                    @Override public void replyPrivate(String message) {
+                        if (continuationValid()) safelyReply(continuation, currentGeneration() ? message : RESET);
+                    }
+                    @Override public void replyPrivate(PickGatewayMessage message) {
+                        if (!continuationValid()) return;
+                        if (!currentGeneration()) { safelyReply(continuation, RESET); return; }
+                        try {
+                            continuation.replyPrivate(message);
+                        } catch (RuntimeException unavailable) {
+                            // Interactive replies retain the same private failure boundary as text replies.
+                        }
+                    }
                 };
                 if (!currentGeneration()) { guarded.replyPrivate(RESET); return; }
                 try {

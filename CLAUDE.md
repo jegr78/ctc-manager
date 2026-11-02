@@ -125,6 +125,8 @@ docker compose -f docker-compose.prod.yml up -d
 
 Deliberately enabled (`spring.jpa.open-in-view=true`). The Hibernate session remains open until the end of the HTTP request so that Thymeleaf can render lazy-loaded fields. This is appropriate for this admin application using server-side rendering — no lazy-init workarounds in controllers are necessary.
 
+* **Private picks dialogs:** Keep 30-minute drafts transient, bound to user/guild/channel/race and the version loaded at edit start. Component routes use server-held nonces and allowed-page choices; expire them on restore and reject concurrent session work without blocking initial acknowledgement. Modal opening shows empty input fields immediately; every data-bearing read and final confirmation rechecks access. Continue between modals through private buttons. Enforce exact stage fields, bounded values and Discord component limits. Confirmation retains one durable request ID and the original restore generation through the admitted transaction. Team viewing reads committed revisions through a transactional DTO service; never expose another member's draft. Collection/readiness gates stay unchanged.
+
 ## Development Approach
 
 * **TDD (Test-Driven Development):** Write tests first, then implementation. Red → Green → Refactor.
