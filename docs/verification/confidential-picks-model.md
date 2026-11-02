@@ -179,3 +179,10 @@ The fixture now uses the current schema version plus one and retains its SCHEMA_
 no-write expectations. All seven tests of BackupLenientV1AcceptanceIT pass after correction;
 production behavior and the 57 guard probes are unchanged. A fresh full committed-head run is
 required for finalization.
+
+Matching-head CI then passed all 2,465 unit and 982 integration tests and exposed one remaining
+legacy browser expectation: schema 4 and 30 preview cards. BackupImportE2ETest now checks the
+current schema version and the actual export-order cardinality; the separate schema guard still
+pins version 5 and all 33 entity types. Its four browser tests and four archive unit tests pass.
+The second local full run was stopped before executing that obsolete browser assertion. These
+fixture corrections introduce no production change; finalization requires a new full run and CI.
