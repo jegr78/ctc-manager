@@ -4,6 +4,7 @@ import org.ctc.domain.model.TimeProgressionMode;
 
 import static org.ctc.admin.dto.DataAuditFinding.Category.PAIRING;
 import static org.ctc.admin.dto.DataAuditFinding.Category.CAR_METADATA;
+import static org.ctc.admin.dto.DataAuditFinding.Category.CAR_ELIGIBILITY;
 import static org.ctc.admin.dto.DataAuditFinding.Category.CAR_POOL;
 import static org.ctc.admin.dto.DataAuditFinding.Category.PHASE_GROUP;
 import static org.ctc.admin.dto.DataAuditFinding.Category.PLAYOFF;
@@ -111,14 +112,14 @@ public class DataAuditService {
 		auditSuccession(seasonTeamRepository.findAllForBackup(), phaseTeams, findings.get(SUCCESSION));
 		auditPlayoffs(matchups, legs, findings.get(PLAYOFF));
 		auditPublicUrls(findings.get(PUBLIC_URL));
-        auditCarMetadata(findings.get(CAR_METADATA));
+        auditCarMetadata(findings.get(CAR_METADATA), findings.get(CAR_ELIGIBILITY));
         auditCarPools(races, findings.get(CAR_POOL));
 
 		List<DataAuditReport.Section> sections = findings.entrySet().stream()
 				.map(entry -> new DataAuditReport.Section(entry.getKey(), List.copyOf(entry.getValue())))
 				.toList();
 		DataAuditReport report = new DataAuditReport(Instant.now().truncatedTo(ChronoUnit.SECONDS), sections);
-		log.info("Data audit found {} anomalies", report.total());
+		log.info("Data audit found {} findings", report.total());
 		return report;
 	}
 
@@ -162,7 +163,7 @@ public class DataAuditService {
         }
     }
 
-    private void auditCarMetadata(List<DataAuditFinding> findings) {
+    private void auditCarMetadata(List<DataAuditFinding> findings, List<DataAuditFinding> information) {
         for (var car : carRepository.findAll()) {
             Integer year = car.getModelYear();
             Integer proposed = car.getProposedModelYear();
@@ -176,6 +177,16 @@ public class DataAuditService {
                         "Car %s · %s".formatted(car.getDisplayName(), car.getId()),
                         "Accepted year %s, proposed year %s; invalid year or missing review provenance".formatted(year, proposed),
                         "Review the source evidence and save a four-digit accepted year, or explicitly mark it unknown"));
+            }
+            var limits = new ArrayList<String>();
+            if (car.getCategory() == null) limits.add("Category is unknown; no category clause can match.");
+            if (car.getDrivetrain() == null) limits.add("Drivetrain is unknown; clauses with a drivetrain filter do not match.");
+            if (year == null) limits.add("Accepted model year is unknown; exact-year clauses do not match. Without a year filter, other matching metadata still applies.");
+            if (!limits.isEmpty()) {
+                information.add(new DataAuditFinding(CAR_ELIGIBILITY, UNDETERMINABLE,
+                        "Car %s · %s".formatted(car.getDisplayName(), car.getId()),
+                        "Eligibility information for draft and future pools. " + String.join(" ", limits),
+                        "Unknown values are valid. Review source evidence only when needed for future pools; keep accepted decisions and frozen historical memberships unchanged."));
             }
         }
     }

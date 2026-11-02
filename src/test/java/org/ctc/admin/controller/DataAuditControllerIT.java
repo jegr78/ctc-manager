@@ -33,6 +33,29 @@ class DataAuditControllerIT {
 	@Autowired private MockMvc mockMvc;
 	@Autowired private SiteSlugRepository siteSlugRepository;
 	@Autowired private TestHelper testHelper;
+    @Autowired private org.ctc.domain.repository.CarRepository cars;
+
+    @Test
+    void givenExplicitUnknownYear_whenReadingAudit_thenShowEscapedEligibilityInformation() throws Exception {
+        // given
+        var car = new org.ctc.domain.model.Car("Test <img src=x onerror='window.injected=1'>", "Unknown year " + UUID.randomUUID());
+        car.setCategory(org.ctc.domain.model.CarCategory.GR_3);
+        car.setDrivetrain(org.ctc.domain.model.Drivetrain.MR);
+        car.setModelYearOverride(true);
+        car.setModelYearSource("MANUAL");
+        car.setModelYearEvidence("Deliberately unknown test year");
+        cars.saveAndFlush(car);
+        // when
+        var response = mockMvc.perform(get("/admin/data-audit")).andExpect(status().isOk()).andReturn();
+        // then
+        var page = Jsoup.parse(response.getResponse().getContentAsString());
+        assertThat(page.select("#audit-car_eligibility h2").text()).contains("Car eligibility information");
+        var row = page.select("#audit-car_eligibility tbody tr").stream()
+                .filter(element -> element.text().contains(car.getId().toString())).findFirst().orElseThrow();
+        assertThat(row.text()).contains(car.getDisplayName(), "model year is unknown", "Unknown values are valid")
+                .doesNotContain("invalid", "corrupt", "fictional");
+        assertThat(page.select("img[src=x], [onerror]")).isEmpty();
+    }
 
 	@Test
 	void givenReservedSlugAndCollidingTeamNames_whenAuditPageShown_thenFindingsAreListedAndEscaped() throws Exception {
