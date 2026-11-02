@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 
-public class PickGatewayReply {
+public final class PickGatewayReply {
     private static final String RESET = "This interaction was reset. Start again.";
     private static final String BUSY = "Picks are busy. Try again shortly.";
     private static final String FAILED = "This request could not be completed. Check your current submission before retrying.";

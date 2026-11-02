@@ -148,8 +148,8 @@ merge evidence are recorded on PR #324.
 ## Final review and guard evidence
 
 The complete independent security pass reviewed `9bf34039..589053ad` and reported no findings.
-Subsequent changes only strengthen test fixtures and record evidence; the production tree and POM
-remain identical to that reviewed snapshot. The SDK shutdown-retry correction was already included
+Subsequent changes strengthen test fixtures and record evidence. The only later production delta
+is the finalization hardening described below; callback and authorization guard bodies are unchanged. The SDK shutdown-retry correction was already included
 in the reviewed code. Later fixture checks passed 87 unit tests, and isolated H2 constraints passed
 seven integration cases.
 
@@ -245,7 +245,7 @@ literal guild/channel/member/role JSON, then repeats the complete fetch after pe
 It passes with the real REST client and permission decoder against a local fake HTTP transport.
 An incorrect `owner_id` mapping produces the intended assertion failure with zero errors. The first
 canonical run was stopped to add this required wire-format witness; it is not counted as completed
-verification. Production code remains unchanged from the independently reviewed snapshot.
+verification. That HTTP contract addition changes tests only; the later finalization hardening is recorded below.
 
 Canonical command for the final committed head:
 
@@ -255,3 +255,18 @@ Canonical command for the final committed head:
 
 The matching-head unit/integration/E2E totals, JaCoCo ratio, Checkstyle, SpotBugs/find-sec-bugs,
 CodeQL, CI and merge readbacks are maintained in the PR delivery checklist.
+
+
+## Static-analysis correction
+
+The first complete canonical run on `9df40003` passed 2,606 unit, 1,030 integration and 219 browser
+tests with zero failures/errors and the three existing unit skips. Its final SpotBugs check then
+reported `CT_CONSTRUCTOR_THROW`: the reply wrapper's validating constructor belonged to an
+inheritable class. That run is recorded as failed, not as final verification.
+
+`PickGatewayReply` is now final. It has no subclasses and is constructed directly rather than
+proxied by Spring. This prevents finalizer-based subclass access to a partly initialized wrapper.
+No detector, threshold or suppression was changed. A focused lifecycle verification passed the
+reply/admission tests, reported zero SpotBugs findings and confirmed the find-sec-bugs pack active.
+The existing 72 guard bodies remain unchanged. The final hardening review and repeated clean
+canonical result are recorded on PR #324 for the corrected committed head.
