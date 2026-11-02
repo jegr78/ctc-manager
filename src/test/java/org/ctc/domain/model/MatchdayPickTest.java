@@ -39,6 +39,8 @@ class MatchdayPickTest {
         pick.close();
         assertThat(pick.isManualClosed()).isTrue();
         assertThat(pick.isManualOpen()).isFalse();
+        assertThatThrownBy(pick::submit).isInstanceOf(BusinessRuleException.class).hasMessageContaining("closed");
+        assertThat(pick.getVersion()).isEqualTo(3);
         assertThat(pick.getLatestRevisionNumber()).isEqualTo(1);
         assertThat(pick.getState()).isEqualTo(PickState.RETURNED);
     }
