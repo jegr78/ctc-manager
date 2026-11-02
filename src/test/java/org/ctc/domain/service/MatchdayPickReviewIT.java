@@ -38,6 +38,7 @@ class MatchdayPickReviewIT extends PickPersistenceIT {
     @Autowired MockMvc mvc;
     @Autowired DriverRepository drivers;
     @Autowired RaceLineupRepository lineups;
+    @Autowired PickSessionEpoch epoch;
     @MockitoSpyBean DiscordPostService discord;
     @MockitoSpyBean PickTargetService reviewTargets;
     UUID extraDriver;
@@ -256,17 +257,46 @@ class MatchdayPickReviewIT extends PickPersistenceIT {
         assertThatCode(() -> admin.detail(fixture.race().getId())).doesNotThrowAnyException();
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"approval", "correction"})
+    void givenManagementFormOpenedBeforeRestore_whenPostingAfterRestore_thenRejectWithoutChangingRestoredState(String kind) throws Exception {
+        // given
+        submit();
+        MockHttpServletRequestBuilder request;
+        if (kind.equals("approval")) request = decision(PickReviewForm.Action.APPROVE, "Test pre-restore approval");
+        else {
+            mvc.perform(decision(PickReviewForm.Action.APPROVE, "Test initial approval")).andExpect(status().is3xxRedirection());
+            request = correction(admin.correctionForm(fixture.race().getId())).param("laps", "22").param("weather", "Test stale correction")
+                    .param("timeProgressionMode", "EQUAL_CONDITIONS");
+        }
+        long version = admin.detail(fixture.race().getId()).row().version();
+        epoch.afterRestore(null);
+        // when / then
+        mvc.perform(request).andExpect(status().isOk()).andExpect(model().attributeHasErrors("form"));
+        assertThat(admin.detail(fixture.race().getId()).row().version()).isEqualTo(version);
+        if (kind.equals("approval")) {
+            mvc.perform(decision(PickReviewForm.Action.APPROVE, "Test explicitly reloaded approval")).andExpect(status().is3xxRedirection());
+        } else {
+            mvc.perform(correction(admin.correctionForm(fixture.race().getId())).param("laps", "22").param("weather", "Test reloaded correction")
+                    .param("timeProgressionMode", "EQUAL_CONDITIONS")).andExpect(status().is3xxRedirection());
+        }
+        assertThat(admin.detail(fixture.race().getId()).row().version()).isEqualTo(version + 1);
+    }
+
     void submit() { submissions.submit(fixture.race().getId(), 0, UUID.randomUUID(), actor, payload); }
     String path() { return "/admin/matchday-picks/" + fixture.race().getId(); }
     MockHttpServletRequestBuilder decision(PickReviewForm.Action action, String reason) {
         var detail = admin.detail(fixture.race().getId());
+        var form = admin.reviewForm(detail);
         var request = post(path() + "/decision").param("action", action.name()).param("reason", reason)
-                .param("expectedVersion", Long.toString(detail.row().version())).param("settingsFingerprint", detail.fingerprint());
+                .param("expectedVersion", form.getExpectedVersion().toString()).param("settingsFingerprint", form.getSettingsFingerprint())
+                .param("expectedGeneration", form.getExpectedGeneration().toString());
         if (detail.row().revisionNumber() != null) request.param("revisionNumber", detail.row().revisionNumber().toString());
         return request;
     }
     MockHttpServletRequestBuilder correction(PickCorrectionForm form) {
         return post(path() + "/correction").param("expectedVersion", form.getExpectedVersion().toString()).param("settingsFingerprint", form.getSettingsFingerprint())
+                .param("expectedGeneration", form.getExpectedGeneration().toString())
                 .param("trackId", form.getTrackId().toString()).param("carId", form.getCarId().toString()).param("tyreWear", "2")
                 .param("fuelConsumption", "3").param("refuelingSpeed", "4").param("initialFuel", "DEFAULT").param("requiredPitStops", "1")
                 .param("availableTyres", "RS", "RM").param("mandatoryTyres", "RM").param("timeOfDay", "Sunset")

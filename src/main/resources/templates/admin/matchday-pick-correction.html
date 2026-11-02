@@ -6,7 +6,7 @@
     <h1>Correct approved settings</h1><p class="pick-target-label" th:text="${review.row.label}"></p>
     <p class="text-dim mb-md">Save a separate internal correction with its reason. The original approved revision and team lock remain. Publication is a separate management action.</p>
     <form th:action="@{/admin/matchday-picks/{id}/correction(id=${review.row.raceId})}" method="post" th:object="${form}" class="card entity-editor-form">
-        <input type="hidden" th:field="*{expectedVersion}"><input type="hidden" th:field="*{settingsFingerprint}">
+        <input type="hidden" th:field="*{expectedVersion}"><input type="hidden" th:field="*{expectedGeneration}"><input type="hidden" th:field="*{settingsFingerprint}">
         <input type="hidden" name="!carPoolEntryId" th:value="*{carPoolEntryId}"><input type="hidden" name="!carId" th:value="*{carId}"><input type="hidden" name="!trackId" th:value="*{trackId}">
         <div th:if="${#fields.hasErrors('*')}" class="field-error" role="alert"><p>The correction was not saved.</p><ul><li th:each="error : ${#fields.errors('*')}" th:text="${error}"></li></ul></div>
         <fieldset><legend>Track and car</legend>

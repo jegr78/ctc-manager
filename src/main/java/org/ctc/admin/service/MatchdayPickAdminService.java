@@ -37,6 +37,7 @@ public class MatchdayPickAdminService {
     private final RaceFormDataService forms;
     private final Clock clock;
     private final Environment environment;
+    private final PickSessionEpoch epoch;
 
     @Transactional(readOnly = true)
     public Overview overview(UUID seasonId, UUID matchdayId, PickState state) {
@@ -60,6 +61,7 @@ public class MatchdayPickAdminService {
 
     @Transactional(readOnly = true)
     public Detail detail(UUID raceId) {
+        long generation = epoch.getAsLong();
         var race = race(raceId);
         var pick = picks.findSnapshotByRaceId(raceId).orElse(null);
         var row = row(race, races.findByMatchdaySeasonId(race.getMatchday().getSeason().getId()), pick);
@@ -85,19 +87,20 @@ public class MatchdayPickAdminService {
                 history.stream().map(revision -> new Revision(revision.getRevisionNumber(), revision.getReceiptVersion(), revision.getSubmitterId(),
                         revision.getConfirmedAt(), values(revision.getPayload()))).toList(),
                 decisionHistory.stream().map(decision -> new Decision(decision.getKind(), decision.getAggregateVersion(), decision.getActorId(),
-                        decision.getReason(), decision.getDecidedAt(), decision.getCorrectionPayload() == null ? List.of() : values(decision.getCorrectionPayload()))).toList());
+                        decision.getReason(), decision.getDecidedAt(), decision.getCorrectionPayload() == null ? List.of() : values(decision.getCorrectionPayload()))).toList(), generation);
     }
 
     public PickReviewForm reviewForm(Detail detail) {
         var form = new PickReviewForm(); form.setExpectedVersion(detail.row().version()); form.setRevisionNumber(detail.row().revisionNumber());
         form.setSettingsFingerprint(detail.fingerprint());
+        form.setExpectedGeneration(detail.generation());
         if (!detail.row().actions().isEmpty()) form.setAction(detail.row().actions().getFirst());
         return form;
     }
 
     public void decide(UUID raceId, PickReviewForm form, Principal principal) {
-        requireForm(form.getExpectedVersion(), form.getSettingsFingerprint());
-        var actor = actor(principal);
+        requireForm(form.getExpectedVersion(), form.getSettingsFingerprint(), form.getExpectedGeneration());
+        var actor = actor(principal, form.getExpectedGeneration());
         if (form.getAction() == null) throw new BusinessRuleException("Choose a review decision");
         switch (form.getAction()) {
             case OPEN_MISSING -> reviews.openMissing(raceId, form.getExpectedVersion(), actor, form.getReason());
@@ -117,6 +120,7 @@ public class MatchdayPickAdminService {
         if (!detail.row().correctable()) throw new BusinessRuleException("Only an approved pick with unchanged target identity can be corrected");
         var race = race(raceId); var snapshot = PickSetupSnapshot.from(race); var values = snapshot.settings();
         var form = new PickCorrectionForm(); form.setExpectedVersion(detail.row().version()); form.setSettingsFingerprint(detail.fingerprint());
+        form.setExpectedGeneration(detail.generation());
         form.setTrackId(snapshot.trackId()); form.setCarId(snapshot.carId()); form.setCarPoolEntryId(snapshot.entryId());
         form.setLaps(values.laps()); form.setTyreWear(values.tyreWear()); form.setFuelConsumption(values.fuelConsumption());
         form.setRefuelingSpeed(values.refuelingSpeed()); form.setRequiredPitStops(values.requiredPitStops());
@@ -135,21 +139,21 @@ public class MatchdayPickAdminService {
     }
 
     public void correct(UUID raceId, PickCorrectionForm form, Principal principal) {
-        requireForm(form.getExpectedVersion(), form.getSettingsFingerprint());
-        reviews.correct(raceId, form.getExpectedVersion(), actor(principal), form.getReason(), form.payload(), form.getSettingsFingerprint());
+        requireForm(form.getExpectedVersion(), form.getSettingsFingerprint(), form.getExpectedGeneration());
+        reviews.correct(raceId, form.getExpectedVersion(), actor(principal, form.getExpectedGeneration()), form.getReason(), form.payload(), form.getSettingsFingerprint());
     }
 
-    private ManagementPickActor actor(Principal principal) {
+    private ManagementPickActor actor(Principal principal, long generation) {
         String name = principal == null ? null : principal.getName();
         if (name != null && !name.isBlank() && name.length() <= 128) {
-            return new ManagementPickActor(name);
+            return new ManagementPickActor(name, generation);
         }
-        if (principal == null && environment.acceptsProfiles(Profiles.of("dev", "local"))) return new ManagementPickActor("development-manager");
+        if (principal == null && environment.acceptsProfiles(Profiles.of("dev", "local"))) return new ManagementPickActor("development-manager", generation);
         throw new BusinessRuleException("An authenticated management actor is required");
     }
 
-    private static void requireForm(Long version, String fingerprint) {
-        if (version == null || version < 0 || fingerprint == null || !fingerprint.matches("[0-9a-f]{64}")) {
+    private static void requireForm(Long version, String fingerprint, Long generation) {
+        if (version == null || version < 0 || generation == null || generation < 0 || fingerprint == null || !fingerprint.matches("[0-9a-f]{64}")) {
             throw new BusinessRuleException("Reload the current review before applying a decision");
         }
     }

@@ -36,6 +36,7 @@ public class PickTargetService {
     private final PickDeadlinePolicy deadlines;
     private final PickCollectionStatus collection;
     private final PickAccessService access;
+    private final PickSessionEpoch epoch;
 
     @Transactional(readOnly = true)
     public List<HomeRaceTarget> listHomeRaces(ChannelPickActor actor) {
@@ -106,7 +107,11 @@ public class PickTargetService {
             throw new BusinessRuleException("An authenticated management actor is required");
         }
         var race = races.findById(raceId).orElseThrow(PickTargetService::unavailable);
-        return locked(race.getMatchday().getSeason().getId(), raceId);
+        var target = locked(race.getMatchday().getSeason().getId(), raceId);
+        if (actor.generation() != null && actor.generation() != epoch.getAsLong()) {
+            throw new BusinessRuleException("This management form was reset by a restore; reload its current version");
+        }
+        return target;
     }
 
     private LockedTarget locked(UUID seasonId, UUID raceId) {

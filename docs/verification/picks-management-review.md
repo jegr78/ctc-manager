@@ -42,3 +42,9 @@ Self-review reproduced a marked, missing target changed to a bye. Its overview a
 Every approval/correction caller was audited. The existing rollback fixture with a deliberately different setup now supplies explicit replacement consent and its reviewed fingerprint, retaining its assertion that settings SQL executes before the forced decision failure. No production persistence shape changed. Existing backup/audit rules continue to validate saved revisions and corrections; consent and fingerprint are request-level checks.
 
 Collection and confidentiality readiness remain disabled. Publication and the later changed-since-publication indication belong to the existing disclosure deliverable #285.
+
+The independent security review found no additional issue beyond the identified restore-generation case. Old approval and correction forms were each reproduced as wrongly accepted after a restore event, at intended HTTP-status assertions with two failures and zero JUnit errors. Management forms now retain the generation captured before their read. A generation-bound management actor is checked after target locks inside the existing admitted transaction. Trusted internal callers retain the original one-argument actor contract.
+
+The first targeted concurrency invocation passed H2 but skipped ten MariaDB cases because docker.available was absent. That invocation is not evidence for the MariaDB contract; the explicit Docker-enabled follow-up is recorded separately.
+
+The explicit Docker-enabled lifecycle passed 92 unit tests, 44 integration tests and four browser tests with zero failures/errors/skips. Both H2 and MariaDB concurrency classes ran all ten cases, including the deliberately failing approval commit. The generation-bound UI forms were refused after restore; the positive reload cases also exercise the production form preparers. No persistence or deployment setting was relaxed.

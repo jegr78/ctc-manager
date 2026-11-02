@@ -35,7 +35,7 @@
         <div th:if="${#fields.hasErrors('*')}" class="field-error" role="alert"><p>The decision was not saved. Review the errors and reload if the saved version changed.</p><ul><li th:each="error : ${#fields.errors('*')}" th:text="${error}"></li></ul></div>
         <p th:unless="${review.row.targetValid}" class="field-error">The target identity changed. Resolve it before applying a review decision.</p>
         <form th:if="${!review.row.actions.isEmpty()}" th:action="@{/admin/matchday-picks/{id}/decision(id=${review.row.raceId})}" method="post" class="entity-editor-form">
-            <input type="hidden" th:field="*{expectedVersion}"><input type="hidden" th:field="*{settingsFingerprint}">
+            <input type="hidden" th:field="*{expectedVersion}"><input type="hidden" th:field="*{expectedGeneration}"><input type="hidden" th:field="*{settingsFingerprint}">
             <fieldset><legend>Apply a management decision</legend>
                 <div class="form-group"><label for="pick-action">Decision</label><select id="pick-action" th:field="*{action}" required><option th:each="action : ${review.row.actions}" th:value="${action}" th:text="${action.label}"></option></select><span class="field-error" th:errors="*{action}"></span></div>
                 <div class="form-group"><label for="pick-revision">Revision to approve</label><input id="pick-revision" type="text" th:field="*{revisionNumber}" readonly aria-describedby="revision-help"><p class="text-dim" id="revision-help">Approval uses this exact current revision. Other decisions do not approve a revision.</p><span class="field-error" th:errors="*{revisionNumber}"></span></div>

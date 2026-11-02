@@ -8,6 +8,7 @@ import lombok.Setter;
 @Setter
 public class PickReviewForm {
     @NotNull @Min(0) private Long expectedVersion;
+    @NotNull @Min(0) private Long expectedGeneration;
     @Positive private Integer revisionNumber;
     @NotNull private Action action;
     @NotBlank @Size(max = 1000) private String reason;

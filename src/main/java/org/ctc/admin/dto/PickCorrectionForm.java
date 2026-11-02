@@ -12,6 +12,7 @@ import org.ctc.domain.model.*;
 @Setter
 public class PickCorrectionForm {
     @NotNull @Min(0) private Long expectedVersion;
+    @NotNull @Min(0) private Long expectedGeneration;
     @NotBlank @Size(max = 1000) private String reason;
     @NotBlank @Pattern(regexp = "[0-9a-f]{64}") private String settingsFingerprint;
     @NotNull private UUID trackId;
