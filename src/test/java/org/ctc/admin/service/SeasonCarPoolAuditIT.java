@@ -33,6 +33,8 @@ class SeasonCarPoolAuditIT {
     @Autowired MatchRepository matches;
     @Autowired PlayoffService playoffService;
     @Autowired MatchdayRepository matchdays;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired org.ctc.domain.service.CarMetadataService metadata;
 
     @Test
     void givenOverlappingFrozenSnapshots_whenAudited_thenEvidenceIsReportedWithoutRepair() {
@@ -131,6 +133,76 @@ class SeasonCarPoolAuditIT {
         else assertThat(saved.getCarPoolEntry().getId()).isEqualTo(fixture.entry());
         if (kind.equals("missing-home")) assertThat(saved.getHomeTeam()).isNull();
         else assertThat(saved.isBye() || saved.getPlayoffMatchup() != null && saved.getPlayoffMatchup().isBye()).isTrue();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"foreign-entry", "nonmember-car", "car-without-entry", "entry-without-car", "draft-reference"})
+    void givenHistoricalSelectionMismatch_whenAudited_thenReportExactIntegrityProblemWithoutRepair(String kind) {
+        // given
+        var fixture = nativeFixture(false);
+        var race = races.findById(fixture.race()).orElseThrow();
+        String expected;
+        switch (kind) {
+            case "foreign-entry" -> {
+                var other = helper.createSeason("Test audit foreign " + UUID.randomUUID());
+                pools.changeMode(other.getId(), CarPoolMode.CATEGORY_POOL);
+                var otherEntry = pools.saveEntry(other.getId(), null, "Test foreign ownership", List.of(
+                        new SeasonCarPoolService.ClauseInput(CarCategory.GR_3, null, 9893)));
+                pools.freeze(other.getId());
+                race.setCarPoolEntry(entries.findById(otherEntry).orElseThrow());
+                expected = "different season";
+            }
+            case "nonmember-car" -> {
+                race.setCar(cars.saveAndFlush(new Car("Test audit nonmember", UUID.randomUUID().toString())));
+                expected = "not a frozen entry member";
+            }
+            case "car-without-entry" -> { race.setCarPoolEntry(null); expected = "without a pool entry"; }
+            case "entry-without-car" -> { race.setCar(null); expected = "not a frozen entry member"; }
+            default -> { seasons.findById(fixture.season()).orElseThrow().setCarPoolState(CarPoolState.DRAFT); expected = "outside a frozen category pool"; }
+        }
+        em.flush();
+        var before = jdbc.queryForMap("SELECT * FROM races WHERE id=?", fixture.race());
+        var seasonBefore = jdbc.queryForMap("SELECT * FROM seasons WHERE id=?", fixture.season());
+        long membersBefore = members.count();
+        // when
+        var findings = poolFindings();
+        // then
+        assertThat(findings).anySatisfy(finding -> {
+            assertThat(finding.subject()).contains(fixture.race().toString());
+            assertThat(finding.evidence()).contains(expected);
+        });
+        em.flush();
+        assertThat(jdbc.queryForMap("SELECT * FROM races WHERE id=?", fixture.race())).isEqualTo(before);
+        assertThat(jdbc.queryForMap("SELECT * FROM seasons WHERE id=?", fixture.season())).isEqualTo(seasonBefore);
+        assertThat(members.count()).isEqualTo(membersBefore);
+    }
+
+    @Test
+    void givenUsedFrozenMemberYearCleared_whenAudited_thenExplainFutureEligibilityWithoutInvalidatingHistory() {
+        // given
+        var fixture = nativeFixture(false);
+        var car = cars.findById(fixture.car()).orElseThrow();
+        metadata.applyManual(car, car.getCategory(), car.getDrivetrain(), null,
+                car.isCategoryOverride(), car.isDrivetrainOverride(), true);
+        em.flush();
+        em.clear();
+        var memberIds = entries.findById(fixture.entry()).orElseThrow().getMembers().stream().map(SeasonCarPoolMember::getId).toList();
+        var before = jdbc.queryForMap("SELECT * FROM cars WHERE id=?", fixture.car());
+        // when
+        var report = audit.audit();
+        // then
+        assertThat(report.findings(org.ctc.admin.dto.DataAuditFinding.Category.CAR_POOL))
+                .noneMatch(finding -> finding.subject().contains(fixture.race().toString()) || finding.subject().contains(fixture.season().toString()));
+        assertThat(report.findings(org.ctc.admin.dto.DataAuditFinding.Category.CAR_ELIGIBILITY)).anySatisfy(finding -> {
+            assertThat(finding.subject()).contains(fixture.car().toString());
+            assertThat(finding.evidence()).contains("draft and future pools", "model year is unknown");
+        });
+        em.flush();
+        assertThat(jdbc.queryForMap("SELECT * FROM cars WHERE id=?", fixture.car())).isEqualTo(before);
+        var frozen = entries.findById(fixture.entry()).orElseThrow();
+        assertThat(frozen.getMembers()).extracting(SeasonCarPoolMember::getId).containsExactlyElementsOf(memberIds);
+        assertThat(frozen.getClauses().getFirst().getModelYear()).isEqualTo(9893);
+        assertThat(races.findById(fixture.race()).orElseThrow().getCarPoolEntry().getId()).isEqualTo(fixture.entry());
     }
 
     private List<org.ctc.admin.dto.DataAuditFinding> poolFindings() {

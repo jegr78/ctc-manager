@@ -1,6 +1,5 @@
 package org.ctc.admin.dto;
 
-/** One anomaly of the read-only data audit, with the evidence behind it and the correction it needs. */
 public record DataAuditFinding(Category category, Resolution resolution, String subject, String evidence,
 		String correction) {
 
@@ -13,6 +12,7 @@ public record DataAuditFinding(Category category, Resolution resolution, String 
 		PUBLIC_URL("Ambiguous public URLs", "#210"),
         RACE_SETTINGS("Inconsistent race settings", "#280"),
         CAR_METADATA("Car metadata without valid review evidence", "#274"),
+        CAR_ELIGIBILITY("Car eligibility information", "#278"),
         CAR_POOL("Inconsistent seasonal car pools", "#275, #276, #278");
 
 		private final String label;

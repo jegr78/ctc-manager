@@ -23,8 +23,8 @@ GitHub is the tracker; the shipped local GSD milestone is historical.
 - [x] Inspect admin/public/native desktop/mobile flows and actual settings graphics with playwright-cli.
 - [x] Complete code review and independent security review; fix all findings.
 - [x] Falsify new logical guards from a correct committed checkpoint and restore exact bytes.
-- [ ] Run authoritative clean verify -Pe2e on the reviewed committed head.
-- [ ] Pass matching-head CI, squash merge, reconcile Wiki/tracker and clean the own branch.
+- [x] Run authoritative clean verify -Pe2e on the reviewed committed head.
+- [x] Pass matching-head CI, squash merge, reconcile Wiki/tracker and clean the own branch.
 
 ## Caller audit
 
@@ -116,3 +116,14 @@ The falsification ledger is retained locally as `category-presentation-falsifica
 per-case logs under `logs/presentation-guard-*.log`. Layout mutations restore the corresponding
 complete rule group. Existing public metadata wrapping remains unchanged; no new business or
 selection validation rule was added.
+
+## Delivered
+
+PR #321 merged on 2026-11-02 at 08:17:42 UTC as
+`d6f4c4dae94be158cb3ae4e52eb4d2a38f8df430`. The tested head was
+`f0749cbf57b897da2aee0f642c27386f765665d0`. Its authoritative clean verification passed 2,245
+unit/controller, 866 integration and 214 E2E cases, with zero failures/errors and 92.2124% line
+coverage. Only three existing unit deactivations remained. SpotBugs reported zero findings,
+FindSecBugs was active, and all six GitHub checks passed. Wiki commit
+`2e1c5819cf9d75ead637416476569797a5339c84` was verified remotely. Issue #277 was completed,
+parent #273 retained #278, and the delivered local topic branch was removed after exact-head proof.

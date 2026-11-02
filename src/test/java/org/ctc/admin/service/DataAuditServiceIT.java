@@ -125,6 +125,66 @@ class DataAuditServiceIT {
         assertThat(jdbcTemplate.queryForMap("SELECT * FROM cars WHERE id = ?", car.getId())).isEqualTo(before);
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"category", "drivetrain", "model year", "explicit unknown year"})
+    void givenUnknownCarMetadata_whenAuditing_thenExplainEligibilityAsInformationWithoutRepair(String missing) {
+        // given
+        var car = new org.ctc.domain.model.Car("Test_Audit_Eligibility_" + id, missing);
+        car.setCategory(org.ctc.domain.model.CarCategory.GR_3);
+        car.setDrivetrain(org.ctc.domain.model.Drivetrain.MR);
+        car.setModelYear(2016);
+        car.setModelYearSource("Test accepted source");
+        car.setModelYearEvidence("Test source review");
+        switch (missing) {
+            case "category" -> car.setCategory(null);
+            case "drivetrain" -> car.setDrivetrain(null);
+            default -> car.setModelYear(null);
+        }
+        if (missing.equals("explicit unknown year")) {
+            car.setModelYearOverride(true);
+            car.setModelYearSource("MANUAL");
+            car.setModelYearEvidence("Deliberately cleared year");
+        }
+        entityManager.persist(car);
+        entityManager.flush();
+        var before = jdbcTemplate.queryForMap("SELECT * FROM cars WHERE id = ?", car.getId());
+        // when
+        var report = dataAuditService.audit();
+        // then
+        var information = report.sections().stream()
+                .filter(section -> section.category().name().equals("CAR_ELIGIBILITY"))
+                .flatMap(section -> section.findings().stream()).toList();
+        assertThat(information).anySatisfy(finding -> {
+            assertThat(finding.subject()).contains(car.getId().toString());
+            assertThat(finding.evidence()).contains("unknown", missing.contains("year") ? "model year" : missing)
+                    .doesNotContain("invalid", "corrupt", "fictional");
+            assertThat(finding.resolution()).isEqualTo(UNDETERMINABLE);
+            assertThat(finding.correction()).contains("Unknown values are valid");
+        });
+        assertThat(report.findings(Category.CAR_METADATA)).noneMatch(finding -> finding.subject().contains(car.getId().toString()));
+        entityManager.flush();
+        assertThat(jdbcTemplate.queryForMap("SELECT * FROM cars WHERE id = ?", car.getId())).isEqualTo(before);
+    }
+
+    @Test
+    void givenCompleteReviewedMetadata_whenAuditing_thenDoNotReportAnEligibilityLimitation() {
+        // given
+        var car = new org.ctc.domain.model.Car("Test_Audit_Complete_" + id, "Reviewed MR");
+        car.setCategory(org.ctc.domain.model.CarCategory.GR_3);
+        car.setDrivetrain(org.ctc.domain.model.Drivetrain.MR);
+        car.setModelYear(2016);
+        car.setModelYearSource("Test accepted source");
+        car.setModelYearEvidence("Test source review");
+        entityManager.persist(car);
+        entityManager.flush();
+        // when
+        var information = dataAuditService.audit().sections().stream()
+                .filter(section -> section.category().name().equals("CAR_ELIGIBILITY"))
+                .flatMap(section -> section.findings().stream()).toList();
+        // then
+        assertThat(information).noneMatch(finding -> finding.subject().contains(car.getId().toString()));
+    }
+
     @Test
     void givenContradictoryTimeMode_whenAuditing_thenReportsWithoutRepairing() {
         // given

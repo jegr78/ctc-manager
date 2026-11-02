@@ -1189,6 +1189,7 @@ a.season-header-title:hover {
 .score-banner__team {
     text-align: center;
     flex: 1;
+    min-width: 0;
 }
 
 .score-banner__label {
@@ -1203,6 +1204,7 @@ a.season-header-title:hover {
     font-size: 16px;
     font-weight: 600;
     margin-bottom: 8px;
+    overflow-wrap: anywhere;
 }
 
 .score-banner__value {
