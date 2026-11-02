@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/layout :: layout('Correct approved picks', ~{::section})}">
+<body>
+<section class="entity-editor pick-review-workspace">
+    <p><a class="back-link" th:href="@{/admin/matchday-picks/{id}(id=${review.row.raceId})}">Back to pick review</a></p>
+    <h1>Correct approved settings</h1><p class="pick-target-label" th:text="${review.row.label}"></p>
+    <p class="text-dim mb-md">Save a separate internal correction with its reason. The original approved revision and team lock remain. Publication is a separate management action.</p>
+    <form th:action="@{/admin/matchday-picks/{id}/correction(id=${review.row.raceId})}" method="post" th:object="${form}" class="card entity-editor-form">
+        <input type="hidden" th:field="*{expectedVersion}"><input type="hidden" th:field="*{settingsFingerprint}">
+        <input type="hidden" name="!carPoolEntryId" th:value="*{carPoolEntryId}"><input type="hidden" name="!carId" th:value="*{carId}"><input type="hidden" name="!trackId" th:value="*{trackId}">
+        <div th:if="${#fields.hasErrors('*')}" class="field-error" role="alert"><p>The correction was not saved.</p><ul><li th:each="error : ${#fields.errors('*')}" th:text="${error}"></li></ul></div>
+        <fieldset><legend>Track and car</legend>
+            <div class="form-group"><label for="correct-track">Track</label><select id="correct-track" th:field="*{trackId}" required><option value="">Choose a track</option>
+                <option th:if="${choices.unavailableTrack != null}" th:value="${choices.unavailableTrack.id}" th:text="${choices.unavailableTrack.label}"></option>
+                <option th:each="track : ${choices.seasonTracks}" th:value="${track.id}" th:text="${track.name}" th:disabled="${choices.usedTrackIds.contains(track.id)}"></option>
+            </select><span class="field-error" th:errors="*{trackId}"></span></div>
+            <div th:if="${choices.carSelection.category}" class="form-group"><label for="correct-entry">Category pool entry</label><select id="correct-entry" th:field="*{carPoolEntryId}"><option value="">Choose an entry</option>
+                <option th:if="${choices.carSelection.unavailableEntry != null}" th:value="${choices.carSelection.unavailableEntry.id}" th:text="${choices.carSelection.unavailableEntry.label}"></option>
+                <option th:each="entry : ${choices.carSelection.entries}" th:value="${entry.id}" th:text="${entry.label}" th:disabled="${entry.reason != null}"></option>
+            </select><span class="field-error" th:errors="*{carPoolEntryId}"></span></div>
+            <div class="form-group"><label for="correct-car">Car</label><select id="correct-car" th:field="*{carId}" required><option value="">Choose a car</option>
+                <option th:if="${choices.carSelection.unavailableCar != null}" th:value="${choices.carSelection.unavailableCar.id}" th:text="${choices.carSelection.unavailableCar.label}"></option>
+                <option th:unless="${choices.carSelection.category}" th:each="car : ${choices.seasonCars}" th:value="${car.id}" th:text="${car.displayName}" th:disabled="${choices.usedCarIds.contains(car.id)}"></option>
+                <option th:if="${choices.carSelection.category}" th:each="car : ${choices.carSelection.cars}" th:value="${car.id}" th:text="${car.label}"></option>
+            </select><span class="field-error" th:errors="*{carId}"></span></div>
+            <p class="text-dim" th:text="${choices.carSelection.hint}"></p>
+            <button class="btn btn-secondary" type="submit" formnovalidate th:formaction="@{/admin/matchday-picks/{id}/correction/refresh(id=${review.row.raceId})}">Refresh choices</button>
+        </fieldset>
+        <fieldset><legend>Race values and fuel</legend>
+            <div class="form-group"><label for="correct-laps">Laps</label><input id="correct-laps" th:type="${#fields.hasErrors('laps') ? 'text' : 'number'}" th:field="*{laps}" min="1" required><span class="field-error" role="alert" th:errors="*{laps}"></span></div>
+            <div class="form-group"><label for="correct-tyreWear">Tyre wear</label><input id="correct-tyreWear" th:type="${#fields.hasErrors('tyreWear') ? 'text' : 'number'}" th:field="*{tyreWear}" min="1" max="7" required><span class="field-error" role="alert" th:errors="*{tyreWear}"></span></div>
+            <div class="form-group"><label for="correct-fuelConsumption">Fuel consumption</label><input id="correct-fuelConsumption" th:type="${#fields.hasErrors('fuelConsumption') ? 'text' : 'number'}" th:field="*{fuelConsumption}" min="1" max="6" required><span class="field-error" role="alert" th:errors="*{fuelConsumption}"></span></div>
+            <div class="form-group"><label for="correct-refuelingSpeed">Refuelling litres per second</label><input id="correct-refuelingSpeed" th:type="${#fields.hasErrors('refuelingSpeed') ? 'text' : 'number'}" th:field="*{refuelingSpeed}" min="1" max="10" required><span class="field-error" role="alert" th:errors="*{refuelingSpeed}"></span></div>
+            <div class="form-group"><label for="correct-requiredPitStops">Required pit stops</label><input id="correct-requiredPitStops" th:type="${#fields.hasErrors('requiredPitStops') ? 'text' : 'number'}" th:field="*{requiredPitStops}" min="0" max="2" required><span class="field-error" role="alert" th:errors="*{requiredPitStops}"></span></div>
+            <div class="form-group"><label for="correct-fuel">Initial fuel</label><select id="correct-fuel" th:field="*{initialFuel}" required><option value="">Choose initial fuel</option><option th:each="fuel : ${fuels}" th:value="${fuel}" th:text="${fuel.settingsValue()}"></option></select><span class="field-error" th:errors="*{initialFuel}"></span></div>
+        </fieldset>
+        <fieldset><legend>Time and weather</legend>
+            <div class="form-group"><label for="correct-time-mode">Time progression mode</label><select id="correct-time-mode" th:field="*{timeProgressionMode}" required><option value="MULTIPLIER">Multiplier</option><option value="EQUAL_CONDITIONS">Equal Conditions</option></select><span class="field-error" th:errors="*{timeProgressionMode}"></span></div>
+            <div class="form-group"><label for="correct-multiplier">Time progression multiplier</label><input id="correct-multiplier" th:type="${#fields.hasErrors('timeProgressionMultiplier') ? 'text' : 'number'}" th:field="*{timeProgressionMultiplier}" min="0" max="6" aria-describedby="correct-time-help"><p class="text-dim" id="correct-time-help">Enter 0 to 6 for Multiplier. Leave blank for Equal Conditions.</p><span class="field-error" th:errors="*{timeProgressionMultiplier}"></span></div>
+            <div class="form-group"><label for="correct-weather">Weather</label><textarea id="correct-weather" th:field="*{weather}" maxlength="255" rows="3" required></textarea><span class="field-error" th:errors="*{weather}"></span></div>
+            <div class="form-group"><label for="correct-daytime">Time of day</label><input id="correct-daytime" type="text" th:field="*{timeOfDay}" maxlength="255" required><span class="field-error" th:errors="*{timeOfDay}"></span></div>
+        </fieldset>
+        <fieldset><legend>Available tyres</legend><div class="pick-tyre-options"><label class="pick-check-option" th:each="tyre : ${tyres}" th:for="${'correct-available-' + tyre}"><input th:id="${'correct-available-' + tyre}" type="checkbox" th:field="*{availableTyres}" th:value="${tyre}"><span th:text="${tyre}"></span></label></div><span class="field-error" th:errors="*{availableTyres}"></span></fieldset>
+        <fieldset><legend>Mandatory tyres</legend><p class="text-dim">Leave all unchecked for None. Selected mandatory tyres must also be available.</p><div class="pick-tyre-options"><label class="pick-check-option" th:each="tyre : ${tyres}" th:for="${'correct-mandatory-' + tyre}"><input th:id="${'correct-mandatory-' + tyre}" type="checkbox" th:field="*{mandatoryTyres}" th:value="${tyre}"><span th:text="${tyre}"></span></label></div><span class="field-error" th:errors="*{mandatoryTyres}"></span></fieldset>
+        <fieldset><legend>Correction reason</legend><div class="form-group"><label for="correct-reason">Reason for internal correction</label><textarea id="correct-reason" th:field="*{reason}" maxlength="1000" rows="3" required></textarea><span class="field-error" th:errors="*{reason}"></span></div></fieldset>
+        <div class="entity-editor-actions"><button type="submit" class="btn btn-primary" th:disabled="${!review.row.correctable}">Save internal correction</button><a class="btn btn-secondary" th:href="@{/admin/matchday-picks/{id}(id=${review.row.raceId})}">Cancel correction</a></div>
+    </form>
+</section>
+</body>
+</html>

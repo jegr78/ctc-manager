@@ -15,6 +15,7 @@
             <a th:href="@{/admin/races/{id}/results(id=${race.id})}" class="btn btn-primary">Results</a>
             <a th:href="@{/admin/races/{id}/lineup(id=${race.id})}" class="btn btn-secondary">Lineup</a>
             <a th:href="@{/admin/races/{id}/edit(id=${race.id})}" class="btn btn-secondary">Edit</a>
+            <a th:if="${race.picksManaged}" th:href="@{/admin/matchday-picks/{id}(id=${race.id})}" class="btn btn-secondary">Review team picks</a>
 
         </div>
     </div>

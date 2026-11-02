@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 
 public interface MatchdayPickDecisionRepository extends JpaRepository<MatchdayPickDecision, UUID> {
+    List<MatchdayPickDecision> findByPickIdOrderByAggregateVersionDesc(UUID pickId);
     java.util.Optional<MatchdayPickDecision> findFirstByPickIdAndKindOrderByAggregateVersionDesc(
             UUID pickId, org.ctc.domain.model.PickDecisionKind kind);
     @Lock(LockModeType.PESSIMISTIC_WRITE)

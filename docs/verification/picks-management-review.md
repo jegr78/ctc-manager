@@ -1,0 +1,44 @@
+# Management pick review
+
+Issue #284 provides internal review, deadline exceptions and explicit approval of confidential picks. Existing domain decisions and immutable history remain authoritative. Publishing and collection activation remain separate deliverables in #285 and #286.
+
+## Delivery checklist
+
+- [x] Record requirements and observe intended assertion-red tests.
+- [x] Add native overview/detail forms and versioned DTOs using existing management authentication/CSRF.
+- [x] Guard explicit replacement and concurrent settings changes inside the approval transaction.
+- [x] Show immutable history, overrides and approved correction provenance.
+- [x] Verify actual transactions, rejected actions, no publishing and database rollback.
+- [x] Verify keyboard/no-JavaScript forms and desktop/mobile layout.
+- [ ] Complete self-review and independent security review; falsify new guards individually.
+
+Final verification, CI, actual merge, tracker/Wiki reconciliation and branch removal are tracked in the PR delivery checklist.
+
+## Requirements matrix
+
+| Requirement | Production path | Positive test | Rejection test | Runtime witness |
+| --- | --- | --- | --- | --- |
+| Full exact target, current revision and saved history | MatchdayPickAdminService and review templates | Missing/submitted/returned/approved overview and detail | Missing or foreign filter context, wrong target | Real H2 history and browser rendering |
+| Native context-preserving management forms | MatchdayPickController and form DTO | Season/matchday filters, links, reason and back navigation | Binding/domain errors retain inputs and errors | MockMvc plus no-JavaScript Playwright |
+| Authenticated management and CSRF | Existing security chain and server-derived actor | Authenticated internal POST | Anonymous/CSRF-less POST, supplied actor spoof | Production-profile security IT |
+| Late missing opening and correction without new date | Existing PickReviewService decisions | Open/return/close exact target with reason | Approved lock, blank reason and stale version | Real service proxies and team-write policy |
+| Exact atomic approval with explicit replace decision | PickReviewService and RaceSettingsApplicationService | Latest revision applies car/track/settings only | Stale revision, differing settings without consent, concurrently changed settings, invalid/result/reoriented target | Transaction/rollback IT and unchanged schedule/lineup assertions |
+| Corrections preserve approval and original revision | Existing correction domain service and review history | Actor/reason/time/full correction payload visible | Ordinary editing cannot unlock approved team state | Existing race editor integration and history fixtures |
+| Review never publishes | Review services and controller | Approval and management decisions save internally | Any Discord side effect or unintended public action | Real DiscordPostService spy and fake outbound transport |
+| Existing management layout | New templates and contextual links | Labeled fieldsets/actions/history on desktop/mobile | Long values, hidden errors, overflow, missing focus labels | Screenshots in ignored .screenshots/ and browser tests |
+
+## Focused evidence
+
+The first approval test reproduced silent replacement of a different configured car with one intended assertion failure and zero JUnit errors. Approval now requires explicit replacement consent and compares the submitted settings fingerprint under the existing target locks. Four additional domain tests cover exact consent, stale approval/correction snapshots and identical preconfigured content.
+
+The focused native-management lifecycle passed 67 unit tests, 22 integration tests and four browser tests, with zero failures/errors/skips. Real transactions cover manual opening/closure, correction return, stale approval, exact settings transfer with an existing lineup, explicit replacement, concurrent settings change, results/decided targets, a reoriented return leg and a failure after settings SQL flush. A real DiscordPostService spy observes no invocation. Production-profile tests preserve authentication and CSRF for every new write endpoint.
+
+Playwright runs with JavaScript disabled on desktop 1440x1000 and mobile 390x844. The form tests exercise keyboard approval, missing consent, raw numeric error retention, full correction history and native category/member refresh. The initial checkbox-size assertions failed on both viewports with zero JUnit errors; scoped checkbox styling corrected them. Long values fit the page. Screenshots and rendered HTML remain in ignored .screenshots/.
+
+CLI visual inspection uses those actual rendered HTML snapshots and current application assets through a loopback-only read-only preview. Desktop/mobile decision screenshots were inspected alongside the native server workflow screenshots. The preview never submits a management action. No live Discord command, channel or message is used.
+
+Self-review reproduced a marked, missing target changed to a bye. Its overview assertion failed before correction with zero JUnit errors. Such targets now remain readable and offer no review decision. Current returned reasons are visible in the status block as well as immutable history. Long correction forms use static actions to avoid covering mobile inputs.
+
+Every approval/correction caller was audited. The existing rollback fixture with a deliberately different setup now supplies explicit replacement consent and its reviewed fingerprint, retaining its assertion that settings SQL executes before the forced decision failure. No production persistence shape changed. Existing backup/audit rules continue to validate saved revisions and corrections; consent and fingerprint are request-level checks.
+
+Collection and confidentiality readiness remain disabled. Publication and the later changed-since-publication indication belong to the existing disclosure deliverable #285.

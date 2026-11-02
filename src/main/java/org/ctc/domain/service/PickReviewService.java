@@ -10,6 +10,7 @@ import org.ctc.domain.model.MatchdayPickDecision;
 import org.ctc.domain.model.PickDecisionKind;
 import org.ctc.domain.model.PickPayload;
 import org.ctc.domain.model.PickState;
+import org.ctc.domain.model.PickSetupSnapshot;
 import org.ctc.domain.picks.ManagementPickActor;
 import org.ctc.domain.repository.MatchdayPickDecisionRepository;
 import org.ctc.domain.repository.MatchdayPickRepository;
@@ -41,6 +42,11 @@ public class PickReviewService {
     }
 
     public void approve(UUID raceId, long expectedVersion, int revisionNumber, ManagementPickActor actor, String reason) {
+        approve(raceId, expectedVersion, revisionNumber, actor, reason, false, null);
+    }
+
+    public void approve(UUID raceId, long expectedVersion, int revisionNumber, ManagementPickActor actor, String reason,
+                        boolean replaceExisting, String expectedSettingsFingerprint) {
         decide(raceId, expectedVersion, actor, reason, PickDecisionKind.APPROVE, target -> {
             var pick = target.pick();
             if (pick.getLatestRevisionNumber() == null || pick.getLatestRevisionNumber() != revisionNumber) {
@@ -48,6 +54,13 @@ public class PickReviewService {
             }
             var revision = revisions.findByPickIdAndRevisionNumber(pick.getId(), revisionNumber)
                     .orElseThrow(() -> new BusinessRuleException("The pick revision does not exist"));
+            var existing = PickSetupSnapshot.from(target.race());
+            if (expectedSettingsFingerprint != null && !existing.fingerprint().equals(expectedSettingsFingerprint)) {
+                throw new BusinessRuleException("Internal settings changed; reload before approving");
+            }
+            if (existing.configured() && !existing.matches(revision.getPayload()) && !replaceExisting) {
+                throw new BusinessRuleException("Explicit replace consent is required for differing internal settings");
+            }
             eligibility.validate(target.race(), revision.getPayload());
             settings.apply(target.race(), revision.getPayload());
             pick.approve(revisionNumber);
@@ -56,10 +69,18 @@ public class PickReviewService {
 
     public void correct(UUID raceId, long expectedVersion, ManagementPickActor actor, String reason,
                         PickPayload payload) {
+        correct(raceId, expectedVersion, actor, reason, payload, null);
+    }
+
+    public void correct(UUID raceId, long expectedVersion, ManagementPickActor actor, String reason,
+                        PickPayload payload, String expectedSettingsFingerprint) {
         if (payload == null) throw new BusinessRuleException("A complete correction payload is required");
         decide(raceId, expectedVersion, actor, reason, PickDecisionKind.CORRECTION, payload, target -> {
             if (target.pick().getState() != PickState.APPROVED) {
                 throw new BusinessRuleException("Only approved settings can be corrected");
+            }
+            if (expectedSettingsFingerprint != null && !PickSetupSnapshot.from(target.race()).fingerprint().equals(expectedSettingsFingerprint)) {
+                throw new BusinessRuleException("Internal settings changed; reload before correcting");
             }
             eligibility.validate(target.race(), payload);
             settings.apply(target.race(), payload);

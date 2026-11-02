@@ -66,14 +66,14 @@ public class PickTargetService {
         return result.values().stream().sorted(Comparator.comparing(HomeRaceTarget::label).thenComparing(HomeRaceTarget::raceId)).toList();
     }
 
-    private static String label(Season season, Race race, List<Race> rows) {
+    public static String label(Season season, Race race, List<Race> rows) {
         var phase = race.getMatchday().getPhase();
         var parts = new ArrayList<String>();
         parts.add(season.getDisplayLabel());
         parts.add(phase.getLabel() == null || phase.getLabel().isBlank() ? phase.getPhaseType().name() : phase.getLabel());
         if (race.getMatchday().getGroup() != null) parts.add(race.getMatchday().getGroup().getName());
         parts.add(race.getMatchday().getLabel());
-        parts.add("vs " + race.getAwayTeam().getShortName());
+        parts.add("vs " + (race.getAwayTeam() == null ? "Bye" : race.getAwayTeam().getShortName()));
         var legs = rows.stream().filter(other -> Objects.equals(pairingId(other), pairingId(race)))
                 .sorted(Comparator.comparingInt((Race other) -> other.getMatchday().getSortIndex())
                         .thenComparing(Race::getDateTime, Comparator.nullsLast(Comparator.naturalOrder())).thenComparing(Race::getId)).toList();

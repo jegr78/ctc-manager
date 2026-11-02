@@ -30,6 +30,7 @@ public class GlobalModelAdvice {
 		if (uri.startsWith("/admin/race-scorings")) return "race-scorings";
 		if (uri.startsWith("/admin/match-scorings")) return "match-scorings";
 		if (uri.startsWith("/admin/seasons")) return "seasons";
+		if (uri.startsWith("/admin/matchday-picks")) return "matchdays";
 		if (uri.startsWith("/admin/matchdays")) return "matchdays";
 		if (uri.startsWith("/admin/matches")) return "matchdays";
 		if (uri.startsWith("/admin/races")) return "races";
