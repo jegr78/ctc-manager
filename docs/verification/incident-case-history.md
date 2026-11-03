@@ -1,9 +1,9 @@
 # Permanent incident cases and reporting windows
 
-Issue #288 delivers the first implementation unit of #287. The current upstream baseline is
-`c659f16185d3370d6fb2b60ece5a1cbce02acc66`. GitHub is the current plan; the local roadmap's
-latest milestone is already shipped. There are no open PRs, another checkout or recent
-incident branches. Owner-managed deployment work and the assigned dependency dashboard are
+Issue #288 delivers the first implementation unit of #287. The selection baseline was
+`c659f16185d3370d6fb2b60ece5a1cbce02acc66`; finalization uses `097d4939cd59ed2f981da3df1785cda8b19baf05`. GitHub is the current plan; the local roadmap's
+latest milestone is already shipped. Selection found no open PR, another checkout or recent
+incident branch. Owner-managed deployment work and the assigned dependency dashboard are
 excluded.
 
 ## Delivery checklist
@@ -17,7 +17,7 @@ excluded.
 - [x] Verify H2/MariaDB concurrency, restore and source identity protection.
 - [x] Verify native desktop/mobile management forms.
 - [x] Update README, CLAUDE, domain vocabulary and the user-facing Wiki draft.
-- [ ] Complete focused checks, individual new-guard witnesses and independent review.
+- [x] Complete focused checks, individual new-guard witnesses and independent review.
 - [ ] Verify the final committed head, pass GitHub CI, merge and reconcile the tracker.
 - [ ] Publish the Wiki changes and remove the proven landed topic branch.
 
@@ -194,3 +194,53 @@ revision to be frozen, allowing only a domain retry with unchanged state before 
 CI on `ad33866d` cleared the original eleven static findings but reported overlapping default
 prefix suppression for the two representation warnings. Their annotation now uses EXACT matching;
 the detector and all other rules remain enabled. Final full verification still must confirm it.
+
+## Guard witnesses and final review
+
+The correct checkpoint `35338f7e` was committed before mutation. Each of 23 focused probes
+then broke one guarantee, required its intended assertion to fail and restored the exact
+committed bytes. Across these probes, 34 selected cases produced 30 intended assertion
+failures, zero JUnit errors and zero skips. The working tree was clean after restoration.
+
+| Guarantee | Focused witness |
+| --- | --- |
+| cutoff | `IncidentReportServiceTest#givenExactCutoff_whenMutating_thenRejectEvenWithOpenWindowState` |
+| creator | `IncidentReportServiceTest#givenDifferentCreator_whenEditingOrWithdrawing_thenKeepOriginalHistory` |
+| party | `IncidentReportServiceTest#givenCreatorRepresentingAnotherParty_whenEditingOrWithdrawing_thenPreserveTheOriginalParty` |
+| receipt-owner | `IncidentReportServiceTest#givenRequestOwnedByAnotherCreator_whenReplaying_thenDoNotDiscloseReceipt` |
+| authorization-adapter | `IncidentReportServiceTest#givenNoConfiguredReporterAuthorization_whenSubmitting_thenDenyInsteadOfTrustingAnActorRecord` |
+| window-version | `IncidentReportServiceTest#givenChangedWindowOrReportVersion_whenEditing_thenRejectWithoutMutation` |
+| report-version | `IncidentReportServiceTest#givenChangedWindowOrReportVersion_whenEditing_thenRejectWithoutMutation` |
+| future-deadline | `IncidentWindowServiceTest#givenNonFutureDeadline_whenOpening_thenKeepDraftWithoutDecision` |
+| canonical-target | `IncidentContextServiceTest#givenMixedRegularAndPlayoffOwnership_whenResolving_thenRejectAmbiguousScope` |
+| payload | `IncidentReportServiceTest#givenInvalidCaseInput_whenSubmitting_thenKeepReportAndHistoryAbsent` |
+| legacy-schema | `IncidentBackupValidatorTest#givenIncidentRowsDisguisedAsOlderSchema_whenValidating_thenRejectInsteadOfGrantingLegacyDefaults` |
+| archive-budget | `IncidentBackupValidatorTest#givenReferenceBudgetExceeded_whenReading_thenRejectBeforeRetainingUnboundedArchiveMetadata` |
+| bound-race-deletion | `IncidentLifecycleGuardTest#boundRegularContextProtectsItsRaceIdsBeforeFirstReport` |
+| archive-context-races | `IncidentBackupValidatorTest#givenContextWithoutReports_whenItsReportableRaceIdentityIsInvalid_thenRejectBeforeRestore` |
+| sql-exclusive-target | `V29IncidentMigrationTest#givenMigrationCreatorClosed_whenWritingAllIncidentTables_thenPreserveFutureUtcTimesAndEnforceIndependentConstraints` |
+| sql-channel-unique | `V29IncidentMigrationTest#givenMigrationCreatorClosed_whenWritingAllIncidentTables_thenPreserveFutureUtcTimesAndEnforceIndependentConstraints` |
+| native-window-version | `IncidentManagementIT#nativeWindowRequiresAnExplicitVersion` |
+| native-binding-version | `IncidentManagementIT#nativeBindingRequiresAnExplicitVersion` |
+| current-race-context | `IncidentWindowConcurrencyMariaDbIT#raceIdentitySaveSeesAContextCommittedWhileItWaitedForTheSeason` |
+| current-channel-context | `IncidentWindowConcurrencyMariaDbIT#channelLinkSeesAContextCommittedWhileItWaitedForTheGuildLock` |
+| closure-first-submit | `IncidentWindowConcurrencyMariaDbIT#closureIncludesTheFirstReportCommittedWhileWaiting` |
+| configured-guild | `IncidentContextServiceTest#givenWrongGuildOrUnrelatedChannel_whenBinding_thenRejectBeforeCreatingContext` |
+| exact-pairing-channel | `IncidentContextServiceTest#givenWrongGuildOrUnrelatedChannel_whenBinding_thenRejectBeforeCreatingContext` |
+
+The native version probes ran through the actual HTTP forms. The three current-read probes
+used real MariaDB barriers for race edits, channel links and closure after a first submission.
+No released migration was changed. The database probes separately removed exclusive-target
+and unique-channel constraints from the new bundled DDL, then restored its exact bytes.
+
+The root self-review traced requirements, changed callers, imports, channel archival, lock
+order, private replay, form binding, backup preflight and the read-only audit. No blockers
+remain after the two reproduced corrections above. Existing conversation, review and inline
+feedback were empty. The independent security reviewer rechecked corrected head `1bf7218a`
+and reported no remaining findings. Production sources are unchanged since that review;
+the subsequent code delta adds two passing original-party identity unit cases.
+
+Authorization before private access and under lock, together with durable receipts and immutable
+original attribution, remains covered. Final acceptance still requires the complete committed-head
+`clean verify -Pe2e -Ddocker.available=true`, measured coverage, all applicable exact-head CI checks,
+the actual squash merge, tracker reconciliation and publication of the prepared Wiki pages.
