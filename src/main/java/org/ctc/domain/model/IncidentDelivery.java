@@ -52,5 +52,44 @@ public class IncidentDelivery extends BaseEntity {
                 + (operation == IncidentDeliveryOperation.RECEIPT ? "R" : "D");
         return delivery;
     }
+    public void claim(UUID token, String generation, Instant now, Instant until) {
+        if (token == null || generation == null || generation.isBlank() || generation.length() > 64
+                || now == null || until == null || !until.isAfter(now) || report.getWindow().isDeliveryPaused()
+                || state != IncidentDeliveryState.PENDING && state != IncidentDeliveryState.FAILED || now.isBefore(nextAttemptAt)) throw unavailable();
+        state = IncidentDeliveryState.CLAIMED; claimToken = token; claimGeneration = generation; leaseUntil = until;
+        attempts++; version++; completedAt = null; failureCode = null; messageId = null;
+    }
+
+    public void acknowledge(UUID token, long expectedVersion, String generation, Instant now, String remoteMessageId) {
+        requireClaim(token, expectedVersion, generation, now);
+        if (remoteMessageId == null || !remoteMessageId.matches("[0-9]{1,32}")) throw unavailable();
+        state = IncidentDeliveryState.SENT; messageId = remoteMessageId; completedAt = now; failureCode = null; version++;
+    }
+
+    public void fail(UUID token, long expectedVersion, String generation, Instant now, String code, boolean uncertain, Instant retryAt) {
+        requireClaim(token, expectedVersion, generation, now);
+        if (code == null || !code.matches("[A-Z0-9_]{1,64}") || retryAt == null || !retryAt.isAfter(now)) throw unavailable();
+        state = uncertain ? IncidentDeliveryState.UNCERTAIN : IncidentDeliveryState.FAILED;
+        failureCode = code; completedAt = now; nextAttemptAt = retryAt; version++;
+    }
+
+    public boolean expireClaim(Instant now) {
+        if (state != IncidentDeliveryState.CLAIMED || report.getWindow().isDeliveryPaused() || now == null || now.isBefore(leaseUntil)) return false;
+        state = IncidentDeliveryState.UNCERTAIN; failureCode = "CLAIM_EXPIRED"; completedAt = now; version++; return true;
+    }
+
+    public boolean supersede(Instant now) {
+        if (operation != IncidentDeliveryOperation.RECEIPT || report.getWindow().isDeliveryPaused()
+                || state != IncidentDeliveryState.PENDING && state != IncidentDeliveryState.FAILED) return false;
+        if (now == null || now.isBefore(capturedAt)) throw unavailable();
+        state = IncidentDeliveryState.SUPERSEDED; completedAt = now; failureCode = null; version++; return true;
+    }
+
+    private void requireClaim(UUID token, long expectedVersion, String generation, Instant now) {
+        if (state != IncidentDeliveryState.CLAIMED || report.getWindow().isDeliveryPaused() || version != expectedVersion
+                || token == null || !token.equals(claimToken) || generation == null || !generation.equals(claimGeneration)
+                || now == null || now.isBefore(capturedAt) || !now.isBefore(leaseUntil)) throw unavailable();
+    }
+    private static BusinessRuleException unavailable() { return new BusinessRuleException("Incident delivery claim changed or is unavailable; reload its current state"); }
     @Override public String toString() { return "IncidentDelivery[" + operation + "," + state + "]"; }
 }

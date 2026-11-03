@@ -73,3 +73,16 @@ This checkpoint does not complete #290. Remaining work is the actual neutral HTT
 bounded claims/leases and due worker, safe retry/uncertainty/reconciliation, receipt supersession,
 worker restore/concurrency witnesses, status presentation, final documentation, individual guard
 falsification, independent review, canonical local/CI verification and merge/housekeeping.
+
+## Claim and outcome checkpoint
+
+The delivery state contract first produced 21 intended assertion failures, zero errors/skips.
+Its corrected run passed 53 unit cases including the upgrade, capture and archive validators.
+Pending/known-rejected work can acquire one claim; future work, restored contexts and already
+claimed/sent/uncertain work cannot. Acknowledgement requires the exact token, aggregate version,
+runtime generation, live lease and a valid remote message identity. Known rejection can become
+retryable after its delay; unknown results and expired claims are quarantined. Supersession keeps
+an unsent generic operation and its original revision but never erases an already sent receipt.
+
+These state transitions are not yet wired to HTTP or the worker. The complete issue scope and
+all remaining delivery/reconciliation/restore/concurrency/UI/review/verification gates remain open.
