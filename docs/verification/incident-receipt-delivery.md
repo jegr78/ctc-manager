@@ -175,3 +175,9 @@ IncidentMatchTarget/PickPublicationService conventions. Narrow EXACT metadata an
 explicit acceptance entries preserve the intended transaction identity without changing runtime
 behavior or disabling other detector rules. The corrected committed head is reverified before
 landing; the first run is not treated as a green build.
+
+The corrected lifecycle check passed 57 selected unit and 18 H2/MariaDB atomic-storage and
+restore-admission integration cases, with zero failures/errors/skips. SpotBugs reported zero
+findings and the find-sec-bugs-loaded guard passed. The independent review of the exact
+annotation-only delta found no issues. A final clean full-profile run follows on the corrected
+committed head; no functional behavior or existing guard was changed.
