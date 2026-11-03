@@ -41,6 +41,10 @@ class IncidentNoticeServiceTest {
     @Test
     void givenAnotherReportsRevision_whenEnqueuing_thenRejectInsteadOfCapturingForeignPrivateHistory() {
         var other = IncidentUnitFixture.id(new IncidentReport(f.window, f.race, "400000000000000005", f.party()));
+        other.appendRevision();
+        var ownRevision=IncidentUnitFixture.id(new IncidentReportRevision(other,1,1,payload,other.getAuthorId(),IncidentUnitFixture.NOW,UUID.randomUUID()));
+        var existing=IncidentUnitFixture.id(IncidentDelivery.capture(other,ownRevision,IncidentDeliveryOperation.RECEIPT,IncidentUnitFixture.NOW));
+        when(deliveries.findByOperationKey(other.getId()+":RECEIPT")).thenReturn(Optional.of(existing));
         assertThatThrownBy(() -> notices.enqueueFirstSubmission(other, revision)).isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class);
         verify(deliveries, never()).save(any());
     }
