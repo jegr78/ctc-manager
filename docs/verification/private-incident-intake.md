@@ -196,3 +196,11 @@ rules remain unchanged.
 The focused recheck passed 56 unit and 48 integration cases, twenty-four each on H2 and MariaDB,
 with zero failures, errors or skips. Independent review, two publication-order falsifications
 and the final local/CI verification of the corrected committed head follow this checkpoint.
+
+The self-review and independent security delta review of committed correction `bbc08f49`
+found no outstanding findings. Prepared replies remain private, writer admission surrounds
+forwarding, and current authorization, original-creator isolation, versions, cutoff and restore
+generation checks remain intact. Both individual publication-order mutations produced the
+intended failure, with zero errors/skips, and restored a clean committed checkpoint. Together
+with the preceding 27 probes, 29 independent protection probes are recorded. The corrected
+head receives a fresh canonical local build and exact-head CI in parallel before merge.
