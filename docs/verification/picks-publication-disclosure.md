@@ -117,7 +117,15 @@ strengthen two tests without changing production code: uncertain snapshots inclu
 remote message ID, and static-export fixtures generate a participating team profile. The latter
 also verifies that the profile-specific asset copier runs.
 
-All 57 individual mutations reached their intended assertions, with zero JUnit errors. Source was
+A final destination check found one additional medium-severity issue: an otherwise successful
+settings/lobby response could name a missing or different channel. [Discord permits moving a
+webhook](https://docs.discord.com/developers/resources/webhook#modify-webhook), so the captured
+pairing channel must match the response before local confirmation. Four HTTP cases first failed
+at the intended assertions; all 19 publication-service integration cases then passed. Preview
+keeps its existing webhook-ID alias. Independent re-review cleared this correction on `c6c4ed70`.
+The channel and public-flags guards were also falsified independently on that corrected source.
+
+All 58 individual mutations reached their intended assertions, with zero JUnit errors. Source was
 restored from the committed checkpoint after each probe. Invalid probes that stopped at an import
 check were rejected; insufficiently isolated snapshot/profile witnesses were strengthened and rerun.
 The table records only qualified final results.
@@ -186,6 +194,7 @@ clean command. See the [compiler plugin documentation](https://maven.apache.org/
 | h2 state membership | `V28PublicationConnectionMigrationTest` | 1 |
 | h2 active membership | `V28PublicationConnectionMigrationTest` | 1 |
 | retain original round | `PickPublicationPersistenceIT#givenFrozenOriginalRoundAfterALegacyRaceMoves_whenDeletingItsOriginalRound_thenRetainTheReferencedPublicationIdentity` | 1 |
+| confirmed destination channel | `PickPublicationDiscordIT#givenMissingOrDifferentResponseChannel_whenPublishing_thenKeepTheOutputUncertainWithoutConfirmingItsDestination` | 4 |
 
 ## Release gates
 

@@ -857,7 +857,7 @@ and a link to any unresolved output.
 ### Unconfirmed deliveries
 
 A timeout or database failure after Discord accepted a message leaves its outcome unconfirmed.
-Further publishing for the affected races is blocked. Open **Review unconfirmed publications**
+Further publishing for the affected races is blocked. Missing or unexpected response channels also leave the output unconfirmed; check the pairing webhook destination before resolving it. Open **Review unconfirmed publications**
 from team-pick review. Viewing the list or record performs no Discord request.
 
 If the original message exists, copy its Discord message ID, enter a management reason and select
