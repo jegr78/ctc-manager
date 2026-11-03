@@ -32,7 +32,7 @@ class PickPublicationAttemptTest {
         var attempt = new PickPublicationAttempt(capture("valid"));
         // when / then
         assertThatThrownBy(() -> new PickPublicationSnapshot(attempt)).isInstanceOf(BusinessRuleException.class);
-        attempt.uncertain("TIMEOUT", NOW.plusSeconds(1));
+        attempt.uncertain("TIMEOUT", "test-possible-remote-message", NOW.plusSeconds(1));
         assertThatThrownBy(() -> new PickPublicationSnapshot(attempt)).isInstanceOf(BusinessRuleException.class);
         assertThat(attempt.getActiveRaceId()).isEqualTo(attempt.getRace().getId());
     }
