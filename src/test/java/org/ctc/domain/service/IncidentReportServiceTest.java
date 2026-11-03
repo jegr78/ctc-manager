@@ -162,6 +162,20 @@ class IncidentReportServiceTest {
         assertThat(saved).isEmpty(); verifyNoInteractions(revisions);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"id", "type"})
+    void givenCreatorRepresentingAnotherParty_whenEditingOrWithdrawing_thenPreserveTheOriginalParty(String change) {
+        var receipt = submit(UUID.randomUUID());
+        var changed = new org.ctc.domain.model.IncidentParty(change.equals("type") ? org.ctc.domain.model.IncidentPartyType.ORGANIZATION : org.ctc.domain.model.IncidentPartyType.TEAM,
+                change.equals("id") ? f.away.getId() : f.home.getId(), "Test changed party", "300000000000000003");
+        var current = actor(actor.userId(), changed);
+        assertThatThrownBy(() -> service.edit(receipt.reportId(), 1, 1, UUID.randomUUID(), current, payload))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("original reporting party");
+        assertThatThrownBy(() -> service.withdraw(receipt.reportId(), 1, 1, UUID.randomUUID(), current))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("original reporting party");
+        assertThat(history).hasSize(1); assertThat(saved.get(receipt.reportId()).getParty()).isEqualTo(f.party());
+    }
+
     private IncidentReportReceipt submit(UUID request) {
         return assertDoesNotThrow(() -> service.submit(f.window.getId(), f.race.getId(), 1, request, actor, payload));
     }
