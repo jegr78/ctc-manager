@@ -26,8 +26,11 @@ public final class MatchdayPickView {
     public record Decision(PickDecisionKind kind, long version, String actor, String reason, Instant decidedAt, List<Value> correction) {
         public Decision { correction = List.copyOf(correction); }
     }
+    public record Publication(String state, Long version, List<String> fields, UUID batchId, boolean pending) {
+        public Publication { fields = List.copyOf(fields); }
+    }
     public record Detail(Row row, String fingerprint, boolean requiresReplacement, String returnReason, List<Comparison> comparison,
-                         List<Revision> revisions, List<Decision> decisions, String generation) {
+                         List<Revision> revisions, List<Decision> decisions, String generation, Publication publication) {
         public Detail { comparison = List.copyOf(comparison); revisions = List.copyOf(revisions); decisions = List.copyOf(decisions); }
     }
 }

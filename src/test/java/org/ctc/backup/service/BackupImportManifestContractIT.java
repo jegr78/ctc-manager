@@ -48,6 +48,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class BackupImportManifestContractIT {
 
 	private static final ObjectMapper JSON = new ObjectMapper();
+	private static final java.util.Set<String> PICK_TABLES = java.util.Set.of(
+			"matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions",
+			"team_pick_channel_bindings", "pick_publication_attempts", "pick_publication_snapshots");
 
 	@Autowired BackupImportService backupImportService;
 	@Autowired BackupArchiveService backupArchiveService;
@@ -150,11 +153,12 @@ class BackupImportManifestContractIT {
     @Test
     void givenVersionThreeWithoutPoolFiles_whenStaged_thenFixedOnlyLegacyArchiveRemainsSupported() throws Exception {
         // given
-        byte[] zip = rewrite(export(), name -> !name.startsWith("data/season-car-pool-"), manifest -> {
+        byte[] zip = rewrite(export(), name -> !name.startsWith("data/season-car-pool-") && !isPickData(name), manifest -> {
             manifest.put("schema_version", 3);
             counts(manifest).remove("season_car_pool_entries");
             counts(manifest).remove("season_car_pool_clauses");
             counts(manifest).remove("season_car_pool_members");
+            PICK_TABLES.forEach(counts(manifest)::remove);
         });
         var preview = stage(zip);
         // when / then
@@ -166,10 +170,11 @@ class BackupImportManifestContractIT {
 	void givenVersionOneArchiveWithoutDiscordTables_whenStaged_thenAccepted() throws Exception {
 		// given
 		byte[] zip = rewrite(export(), name -> !name.equals("data/discord-global-config.json")
-				&& !name.equals("data/discord-post.json"), manifest -> {
+				&& !name.equals("data/discord-post.json") && !isPickData(name), manifest -> {
 			manifest.put("schema_version", 1);
 			counts(manifest).remove("discord_global_config");
 			counts(manifest).remove("discord_post");
+			PICK_TABLES.forEach(counts(manifest)::remove);
 		});
 
 		// when
@@ -251,6 +256,10 @@ class BackupImportManifestContractIT {
 		Path dir = Paths.get(stagingDirRaw).toAbsolutePath().normalize();
 		Files.createDirectories(dir);
 		return dir;
+	}
+
+	private boolean isPickData(String name) {
+		return PICK_TABLES.stream().anyMatch(table -> name.equals("data/" + table.replace('_', '-') + ".json"));
 	}
 
 	private byte[] export() throws IOException {

@@ -28,7 +28,27 @@ public class LobbySettingsGraphicService extends AbstractGraphicService implemen
 		super(templateEngine, uploadDir);
 	}
 
+    public org.ctc.domain.picks.RenderedPickGraphic renderPublication(Race race) throws IOException {
+        return publicationGraphic(prepareContext(race), CUSTOM_TEMPLATE_FILE, loadDefaultTemplate(),
+                org.ctc.domain.model.PickDisclosureField.lobby());
+    }
+
 	public String generateLobbySettings(Race race) throws IOException {
+        var ctx = prepareContext(race);
+
+		String html = renderTemplate(ctx);
+
+		Path raceDir = uploadDir.resolve("races").resolve(race.getId().toString());
+		Files.createDirectories(raceDir);
+		Path outputFile = raceDir.resolve("lobby-settings.png");
+
+		renderScreenshot(html, outputFile);
+
+		log.info("Generated lobby settings graphic: {}", outputFile);
+		return "/uploads/races/" + race.getId() + "/lobby-settings.png";
+	}
+
+    private Context prepareContext(Race race) throws IOException {
 		if (race.getTrack() == null) {
 			throw new IllegalStateException("Race has no track");
 		}
@@ -69,17 +89,8 @@ public class LobbySettingsGraphicService extends AbstractGraphicService implemen
 		ctx.setVariable("matchdayName", race.getMatchday().getLabel());
 		ctx.setVariable("v", v);
 
-		String html = renderTemplate(ctx);
-
-		Path raceDir = uploadDir.resolve("races").resolve(race.getId().toString());
-		Files.createDirectories(raceDir);
-		Path outputFile = raceDir.resolve("lobby-settings.png");
-
-		renderScreenshot(html, outputFile);
-
-		log.info("Generated lobby settings graphic: {}", outputFile);
-		return "/uploads/races/" + race.getId() + "/lobby-settings.png";
-	}
+        return ctx;
+    }
 
 	static WeatherDisplay parseWeather(String raw) {
 		String trimmed = raw == null ? "" : raw.trim();

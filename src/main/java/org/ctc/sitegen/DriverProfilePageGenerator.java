@@ -24,6 +24,7 @@ import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceResultRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.service.SeasonPhaseService;
+import org.ctc.domain.service.PickDisclosureService;
 import org.ctc.sitegen.model.GenerationContext;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
@@ -48,6 +49,7 @@ public class DriverProfilePageGenerator {
     private final RaceLineupRepository raceLineupRepository;
     private final SeasonPhaseService seasonPhaseService;
     private final SharedProfilePageGenerator sharedProfilePageGenerator;
+    private final PickDisclosureService disclosure;
 
     public void generate(GenerationContext ctx, SiteGeneratorService.GenerationResult result) throws IOException {
         var season = ctx.season();
@@ -174,11 +176,12 @@ public class DriverProfilePageGenerator {
     private DriverProfileRow toProfileRow(RaceResult result, Map<String, RaceLineup> guestLookup) {
         RaceLineup lineup = guestLookup.get(result.getRace().getId() + ":" + result.getDriver().getId());
         String matchdayUrl = "../matchday/" + siteSlugger.slugify(result.getRace().getMatchday().getLabel()) + ".html";
+        var trackName = disclosure.forPublic(result.getRace().getId()).trackName();
         return lineup != null
-                ? new DriverProfileRow(result, true, lineup.getTeam().getShortName(), matchdayUrl)
-                : new DriverProfileRow(result, false, null, matchdayUrl);
+                ? new DriverProfileRow(result, true, lineup.getTeam().getShortName(), matchdayUrl, trackName)
+                : new DriverProfileRow(result, false, null, matchdayUrl, trackName);
     }
 
-    public record DriverProfileRow(RaceResult result, boolean guest, String fieldingTeamName, String matchdayUrl) {
+    public record DriverProfileRow(RaceResult result, boolean guest, String fieldingTeamName, String matchdayUrl, String trackName) {
     }
 }

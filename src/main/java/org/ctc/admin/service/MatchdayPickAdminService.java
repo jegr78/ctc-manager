@@ -38,6 +38,7 @@ public class MatchdayPickAdminService {
     private final Clock clock;
     private final Environment environment;
     private final PickSessionEpoch epoch;
+    private final PickPublicationAdminService publication;
 
     @Transactional(readOnly = true)
     public Overview overview(UUID seasonId, UUID matchdayId, PickState state) {
@@ -87,7 +88,7 @@ public class MatchdayPickAdminService {
                 history.stream().map(revision -> new Revision(revision.getRevisionNumber(), revision.getReceiptVersion(), revision.getSubmitterId(),
                         revision.getConfirmedAt(), values(revision.getPayload()))).toList(),
                 decisionHistory.stream().map(decision -> new Decision(decision.getKind(), decision.getAggregateVersion(), decision.getActorId(),
-                        decision.getReason(), decision.getDecidedAt(), decision.getCorrectionPayload() == null ? List.of() : values(decision.getCorrectionPayload()))).toList(), generation);
+                        decision.getReason(), decision.getDecidedAt(), decision.getCorrectionPayload() == null ? List.of() : values(decision.getCorrectionPayload()))).toList(), generation, publication.status(race));
     }
 
     public PickReviewForm reviewForm(Detail detail) {

@@ -107,6 +107,98 @@ class PickBackupValidatorTest {
         assertThatCode(() -> validate(5, rows)).doesNotThrowAnyException();
     }
 
+    @Test
+    void givenConfirmedLegacyPublication_whenValidatingSchemaSeven_thenKeepFrozenHistoricalContent() throws Exception {
+        // given / when / then
+        assertThatCode(() -> validate(7, publicationFixture())).doesNotThrowAnyException();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"old-schema", "unknown-field", "unknown-mask", "content-hash", "request-hash", "source-version", "source-history",
+            "orphan-race", "orphan-attempt", "lobby-car", "uncertain-snapshot", "prepared-terminal-time", "duplicate-snapshot", "backward-confirmation"})
+    void givenForgedPublicationEvidence_whenValidating_thenRejectBeforeReplacement(String problem) throws Exception {
+        // given
+        var rows = publicationFixture();
+        var attempt = rows.get("pick_publication_attempts").getFirst();
+        var snapshot = rows.get("pick_publication_snapshots").getFirst();
+        switch (problem) {
+            case "unknown-field" -> attempt.put("unexpected", "Test invalid");
+            case "unknown-mask" -> attempt.put("fieldMask", 8192);
+            case "content-hash" -> attempt.put("contentHash", "0".repeat(64));
+            case "request-hash" -> attempt.put("requestHash", "0".repeat(64));
+            case "source-version" -> attempt.put("sourceVersion", 1);
+            case "source-history" -> attempt.put("origin", "APPROVAL").put("sourceVersion", 2);
+            case "orphan-race" -> attempt.put("race", UUID.randomUUID().toString());
+            case "orphan-attempt" -> snapshot.put("attempt", UUID.randomUUID().toString());
+            case "lobby-car" -> attempt.put("output", "LOBBY_SETTINGS");
+            case "uncertain-snapshot" -> attempt.put("state", "UNCERTAIN").put("activeRaceId", race.toString()).put("failureCode", "UNKNOWN_REMOTE_OUTCOME");
+            case "prepared-terminal-time" -> {
+                rows.remove("pick_publication_snapshots"); attempt.put("state", "PREPARED").put("activeRaceId", race.toString()).putNull("messageId");
+            }
+            case "duplicate-snapshot" -> rows.get("pick_publication_snapshots").add(snapshot.deepCopy().put("id", UUID.randomUUID().toString()));
+            case "backward-confirmation" -> snapshot.put("confirmedAt", "2026-11-02T00:00:00Z");
+            case "old-schema" -> { }
+            default -> throw new AssertionError(problem);
+        }
+        // when / then
+        assertThatThrownBy(() -> validate(problem.equals("old-schema") ? 6 : 7, rows))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("pick");
+    }
+
+    private Map<String, List<ObjectNode>> publicationFixture() throws Exception {
+        var rows = fixture();
+        var payload = PickPayloadReader.read(rows.get("matchday_pick_revisions").getFirst().get("payload"));
+        var v = org.ctc.domain.model.RaceSettingsValues.from(payload);
+        var content = new org.ctc.domain.model.PickPublicationContent(track, car, null, "Test historical track", "Test historical car", null,
+                v.laps(), v.tyreWear(), v.fuelConsumption(), v.refuelingSpeed(), v.initialFuel(), v.requiredPitStops(),
+                v.timeProgressionMode(), v.timeProgressionMultiplier(), v.weather(), v.timeOfDay(), v.availableTyres(), v.mandatoryTyres());
+        var attemptId = UUID.randomUUID();
+        var attempt = mapper.createObjectNode();
+        attempt.put("id", attemptId.toString()).put("batchId", UUID.randomUUID().toString()).put("race", race.toString())
+                .put("seasonId", season.toString()).put("originalMatchdayId", day.toString()).put("originalHomeTeamId", team.toString())
+                .put("originalAwayTeamId", away.toString()).put("contentVersion", 1).put("sourceVersion", 0).put("origin", "LEGACY")
+                .put("output", "SETTINGS").put("contentHash", content.fingerprint()).put("fieldMask", 8191).put("actorId", "test-admin")
+                .put("channelId", "123456789012345678").put("webhookId", "234567890123456789").putNull("targetMessageId")
+                .put("templateHash", "a".repeat(64)).put("requestManifest", "{}")
+                .put("requestHash", org.ctc.domain.model.PickPublicationAttempt.manifestHash("{}"))
+                .put("runtimeGeneration", "12345678-1234-1234-1234-123456789abc:0").put("capturedAt", "2026-11-03T00:00:00Z")
+                .put("state", "SUCCEEDED").putNull("activeRaceId").put("messageId", "test-confirmed-message")
+                .put("completedAt", "2026-11-03T00:00:01Z").putNull("failureCode").putNull("reconciledBy")
+                .putNull("reconciliationReason").putNull("resolvedAt").putNull("createdAt").putNull("updatedAt");
+        attempt.set("content", mapper.valueToTree(content));
+        rows.put("pick_publication_attempts", new ArrayList<>(List.of(attempt)));
+        var snapshot = mapper.createObjectNode().put("id", UUID.randomUUID().toString()).put("attempt", attemptId.toString())
+                .put("confirmedAt", "2026-11-03T00:00:01Z").putNull("createdAt").putNull("updatedAt");
+        rows.put("pick_publication_snapshots", new ArrayList<>(List.of(snapshot)));
+        return rows;
+    }
+
+    @Test
+    void givenOnlyUnenrolledLegacyPublicationRecords_whenValidating_thenRetainLegacyRestoreAvailability() throws Exception {
+        // given
+        var rows = publicationFixture(); rows.remove("matchday_picks"); rows.remove("matchday_pick_revisions");
+        rows.get("seasons").getFirst().put("picksCollectionEnabled", false); rows.get("races").getFirst().put("picksManaged", false);
+        var validator = new PickBackupValidator(7);
+        // when
+        rows.forEach((table, values) -> values.forEach(row -> validator.accept(table, row))); validator.validate();
+        // then
+        assertThat(validator.hasConfidentialContent()).isFalse();
+    }
+
+    @Test
+    void givenFrozenLegacyPublicationWhoseRoundLaterMovedSeason_whenValidating_thenKeepTheCapturedHistoricalIdentity() throws Exception {
+        // given
+        var rows = publicationFixture(); rows.remove("matchday_picks"); rows.remove("matchday_pick_revisions");
+        rows.get("seasons").getFirst().put("picksCollectionEnabled", false); rows.get("races").getFirst().put("picksManaged", false);
+        UUID otherSeason = UUID.randomUUID(), otherPhase = UUID.randomUUID();
+        rows.get("seasons").add(node("{\"id\":\"%s\",\"picksCollectionEnabled\":false,\"carPoolMode\":\"FIXED_CARS\",\"cars\":[],\"tracks\":[]}".formatted(otherSeason)));
+        rows.put("season_phases", new ArrayList<>(rows.get("season_phases")));
+        rows.get("season_phases").add(node("{\"id\":\"%s\",\"season\":\"%s\"}".formatted(otherPhase, otherSeason)));
+        rows.get("matchdays").getFirst().put("phase", otherPhase.toString());
+        // when / then
+        assertThatCode(() -> validate(7, rows)).doesNotThrowAnyException();
+    }
+
     private void validate(int version, Map<String, List<ObjectNode>> rows) {
         var validator = new PickBackupValidator(version);
         rows.forEach((table, values) -> values.forEach(row -> validator.accept(table, row)));

@@ -25,11 +25,11 @@ class BackupSchemaTopologyIT {
     private BackupSchema backupSchema;
 
     @Test
-    void givenSpringContext_whenGetExportOrder_thenReturns34Entities() {
+    void givenSpringContext_whenGetExportOrder_thenReturns36Entities() {
         // when
         List<EntityRef> exportOrder = backupSchema.getExportOrder();
         // then
-        assertThat(exportOrder).as("32 league entities plus DiscordGlobalConfig and DiscordPost").hasSize(34);
+        assertThat(exportOrder).as("34 league entities plus DiscordGlobalConfig and DiscordPost").hasSize(36);
     }
 
     @Test

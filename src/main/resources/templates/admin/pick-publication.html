@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/layout :: layout('Publication review', ~{::section})}">
+<body><section class="entity-editor private-picks-workspace pick-review-workspace">
+    <h1>Publication review</h1>
+    <p>A failed or lost response does not prove that Discord rejected a message. Check the original output before sending these races again.</p>
+    <div class="card">
+        <h2 th:text="${publication.output}"></h2>
+        <p th:text="${'Destination: ' + publication.channelId}"></p>
+        <div th:each="row : ${publication.rows}">
+            <h3 th:text="${row.label}"></h3>
+            <p th:text="${row.state + ' / captured version ' + row.version}"></p>
+            <p th:if="${row.changed}">The current internal setup differs from this captured output. Confirming this output will not publish those later changes.</p>
+            <p>Fields covered by this output:</p><ul><li th:each="field : ${row.fields}" th:text="${field}"></li></ul>
+        </div>
+    </div>
+    <p th:if="${publication.inFlight}" role="status">This output is still being sent or checked. Reload after it finishes.</p>
+    <form th:if="${publication.open and !publication.inFlight}" th:action="@{/admin/pick-publications/{id}/confirm(id=${publication.batchId})}" th:object="${form}" method="post" class="card entity-editor-form">
+        <input type="hidden" th:field="*{expectedFingerprint}"><input type="hidden" th:field="*{expectedGeneration}">
+        <div th:if="${#fields.hasErrors('*')}" role="alert"><p th:each="error : ${#fields.allErrors()}" th:text="${error}"></p></div>
+        <fieldset><legend>Verify the delivered message</legend>
+            <p>Copy the original Discord message ID. Confirmation checks its webhook, text and every image against the captured output. A mismatch leaves these fields withheld.</p>
+            <div class="form-group"><label for="messageId">Discord message ID</label><input type="text" th:field="*{messageId}" inputmode="numeric" maxlength="20"></div>
+            <div class="form-group"><label for="reason">Management reason</label><textarea th:field="*{reason}" required maxlength="1000" rows="3"></textarea></div>
+        </fieldset>
+        <button type="submit" class="btn btn-primary">Verify and confirm</button>
+        <fieldset><legend>Retire an uncertain output</legend>
+            <p>If it cannot be verified, first remove or retire the uncertain Discord output yourself. This action records your decision and clears its local edit mapping. It does not remove a Discord message or release settings.</p>
+            <label class="pick-check-option"><input type="checkbox" th:field="*{remoteHandled}"><span>I have removed or otherwise retired the uncertain remote output.</span></label>
+        </fieldset>
+        <button type="submit" class="btn btn-danger" th:formaction="@{/admin/pick-publications/{id}/abandon(id=${publication.batchId})}">Record retirement</button>
+    </form>
+    <a class="btn btn-secondary" th:href="@{/admin/pick-publications/{id}(id=${publication.batchId})}">Reload review</a>
+    <a class="btn btn-secondary" th:href="@{/admin/pick-publications}">Back to unconfirmed publications</a>
+</section></body></html>

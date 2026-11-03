@@ -20,6 +20,15 @@
         </dl>
         <div class="actions mt-md"><a class="btn btn-secondary" th:href="@{/admin/races/{id}(id=${review.row.raceId})}">Race workspace</a><a class="btn btn-secondary" th:href="@{/admin/matchdays/{id}(id=${review.row.matchdayId})}">Matchday workspace</a></div>
     </div>
+    <div class="card" id="pick-publication">
+        <h2>Publication status</h2>
+        <p th:text="${review.publication.state}"></p>
+        <p th:if="${review.publication.pending}">An output is still pending or uncertain. Resolve it before publishing these races again.</p>
+        <p th:if="${review.publication.version != null}" th:text="${'Confirmed content version: ' + review.publication.version}"></p>
+        <ul th:unless="${review.publication.fields.isEmpty()}"><li th:each="field : ${review.publication.fields}" th:text="${field}"></li></ul>
+        <a th:if="${review.publication.batchId != null}" th:href="@{/admin/pick-publications/{id}(id=${review.publication.batchId})}">Review publication record</a>
+        <p>Use the existing publishing tools in the pairing workspace to disclose the current approved setup. Approval and internal corrections do not publish it.</p>
+    </div>
     <div class="card" id="pick-comparison">
         <h2>Settings comparison</h2><p class="text-dim mb-md">Approval applies the exact selected revision to internal race settings. It never publishes them.</p>
         <p th:if="${review.requiresReplacement}" class="field-error">Existing internal settings differ. Approval requires an explicit decision to replace them.</p>

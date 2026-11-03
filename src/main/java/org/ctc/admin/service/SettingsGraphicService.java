@@ -35,7 +35,27 @@ public class SettingsGraphicService extends AbstractGraphicService implements Te
 		this.playoffSeedRepository = playoffSeedRepository;
 	}
 
+    public org.ctc.domain.picks.RenderedPickGraphic renderPublication(Race race) throws IOException {
+        return publicationGraphic(prepareContext(race), CUSTOM_TEMPLATE_FILE, loadDefaultTemplate(),
+                org.ctc.domain.model.PickDisclosureField.all());
+    }
+
 	public String generateSettings(Race race) throws IOException {
+        var ctx = prepareContext(race);
+
+		String html = renderTemplate(ctx);
+
+		Path raceDir = uploadDir.resolve("races").resolve(race.getId().toString());
+		Files.createDirectories(raceDir);
+		Path outputFile = raceDir.resolve("settings.png");
+
+		renderScreenshot(html, outputFile);
+
+		log.info("Generated settings graphic: {}", outputFile);
+		return "/uploads/races/" + race.getId() + "/settings.png";
+	}
+
+    private Context prepareContext(Race race) throws IOException {
 		if (race.getHomeTeam() == null || race.getAwayTeam() == null) {
 			throw new IllegalStateException("Race has no teams assigned");
 		}
@@ -120,17 +140,8 @@ public class SettingsGraphicService extends AbstractGraphicService implements Te
 		ctx.setVariable("availableTyres", settings.getAvailableTyres());
 		ctx.setVariable("mandatoryTyres", settings.getMandatoryTyres());
 
-		String html = renderTemplate(ctx);
-
-		Path raceDir = uploadDir.resolve("races").resolve(race.getId().toString());
-		Files.createDirectories(raceDir);
-		Path outputFile = raceDir.resolve("settings.png");
-
-		renderScreenshot(html, outputFile);
-
-		log.info("Generated settings graphic: {}", outputFile);
-		return "/uploads/races/" + race.getId() + "/settings.png";
-	}
+        return ctx;
+    }
 
 	private String renderTemplate(Context ctx) throws IOException {
 		Path customTemplate = uploadDir.resolve(CUSTOM_TEMPLATE_FILE);

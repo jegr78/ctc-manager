@@ -765,7 +765,7 @@ The outgoing consumer defaults off. `DISCORD_PICKS_ENABLED` maps to `app.discord
 worker count defaults to 2 and queue capacity to 32. The existing `DISCORD_BOT_TOKEN`, saved guild
 and application ID are reused. No public interaction endpoint or message-content intent is required.
 The application also requires confidentiality readiness, so enabling the setting alone does not
-activate collection. Confidentiality and rollout acceptance remain in #285 and #286.
+activate collection. Final confidentiality and rollout acceptance remains in #286.
 
 After confidentiality acceptance, use the explicit **Register /picks for this guild** action.
 It upserts only this feature's guild command. Startup and backup restore never register commands.
@@ -774,7 +774,7 @@ Tests use local fakes; this implementation does not register a live command or s
 Backup schema 6 retains channel bindings, including exact IDs. Schemas 1 through 5 remain supported
 and restore without bindings. A committed restore invalidates pending interaction generations.
 Start the interaction again after restore, permission revocation, an expired callback or a busy queue.
-Existing publishing and webhook clients keep their current behavior.
+Settings-bearing publication uses the confirmed-content rules below; existing URLs and controls remain available.
 
 ### Private entry and recovery
 
@@ -825,3 +825,61 @@ separate explicit publication through the existing management controls.
 
 These review screens do not enable collection. Confidentiality and production rollout remain
 separate acceptance gates.
+
+
+### Season opt-in and existing settings
+
+Open a season editor and choose **Review collection**. Existing seasons default to paused.
+Review each configured unfinished race, including drafts without a date. Classify its current
+setup as withheld, or as already public when a matching confirmed publication record proves it.
+An unresolved delivery blocks activation. Completed historical races remain on their legacy display
+rules. Classification neither approves a submission nor sends a message.
+
+Enable collection after reviewing all configured targets. Pause stops new collection without
+removing race enrollment, private history or confirmed public content. The Gateway still remains
+disabled until final rollout acceptance, even when the season is configured for collection.
+
+### Explicit publication and public pages
+
+Use the existing pairing settings, lobby-settings or explicit match-preview button. Managed races
+require exact approved content or a recorded internal correction. Each physical Discord output
+captures its own content before sending. A successful lobby graphic releases its track and lobby
+fields while keeping the omitted car withheld. A settings graphic or explicit preview can release
+its rendered fields. Unknown custom templates remain usable, but do not establish an additional
+public field mask for website generation.
+
+Generated public pages read the last confirmed content version. An internal correction, approval,
+website regeneration, Gateway disconnect or paused season never releases newer choices. Automatic
+preview edits omit managed settings attachments. Internal PNG caches remain private and are not
+copied to public assets. The team-pick review shows confirmed fields, unpublished internal changes
+and a link to any unresolved output.
+
+### Unconfirmed deliveries
+
+A timeout or database failure after Discord accepted a message leaves its outcome unconfirmed.
+Further publishing for the affected races is blocked. Missing or unexpected response channels also leave the output unconfirmed; check the pairing webhook destination before resolving it. Open **Review unconfirmed publications**
+from team-pick review. Viewing the list or record performs no Discord request.
+
+If the original message exists, copy its Discord message ID, enter a management reason and select
+**Verify and confirm**. The application checks the original webhook, text, attachment names, sizes
+and image bytes against the captured output. A mismatch or unavailable source leaves the outcome
+pending. Confirmation releases only that captured content, even if the internal setup changed.
+Restart or restore invalidates an open resolution form; reload it before submitting.
+
+If the output cannot be verified, remove or retire the uncertain Discord output yourself. Then
+check the acknowledgment, enter a reason and select **Record retirement**. This stores the decision
+without releasing fields and clears the matching local edit mapping. It does not delete a Discord
+message. A later explicit publication uses a fresh message rather than editing the uncertain one.
+Previously confirmed public content remains available.
+
+The existing connect/read timeouts bound webhook requests. Attachment verification accepts only
+`app.discord.attachment-hosts`, which defaults to `cdn.discordapp.com`, and checks at most 8 MiB
+per captured image. No live Discord messages or command registration are needed for automated tests.
+
+### Publication backup and recovery
+
+Schema 7 exports all 36 entity tables, including immutable publication attempts and confirmed
+snapshots. Schemas 1 through 6 may omit the new publication files. Restore preserves exact masks,
+versions, unresolved outcomes and season catalog memberships without querying Discord or resending
+messages. Legacy-only publication receipts remain restorable without enabling collection. Archives
+with private enrollment/history remain blocked until final confidentiality acceptance is delivered.

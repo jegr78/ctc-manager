@@ -24,6 +24,11 @@ public final class PickBackupValidator {
             Map.entry("race_settings", Set.of("id", "race", "numberOfLaps", "tyreWearMultiplier", "fuelConsumptionMultiplier", "refuelingSpeed", "initialFuel", "numberOfRequiredPitStops", "timeProgressionMode", "timeProgressionMultiplier", "weather", "timeOfDay", "availableTyres", "mandatoryTyres")),
             Map.entry("matchday_picks", Set.of("id", "race", "season", "team", "originalMatchday", "originalAwayTeam", "version", "state", "latestRevisionNumber", "approvedRevisionNumber", "manualOpen", "manualClosed", "createdAt", "updatedAt")),
             Map.entry("matchday_pick_revisions", Set.of("id", "pick", "revisionNumber", "payload", "confirmedAt", "submitterId", "requestId", "receiptVersion", "createdAt", "updatedAt")),
+            Map.entry("pick_publication_attempts", Set.of("id", "batchId", "race", "seasonId", "originalMatchdayId", "originalHomeTeamId", "originalAwayTeamId",
+                    "contentVersion", "sourceVersion", "origin", "output", "content", "contentHash", "fieldMask", "actorId", "channelId", "webhookId", "targetMessageId",
+                    "templateHash", "requestManifest", "requestHash", "runtimeGeneration", "capturedAt", "state", "activeRaceId", "messageId", "completedAt",
+                    "failureCode", "reconciledBy", "reconciliationReason", "resolvedAt", "createdAt", "updatedAt")),
+            Map.entry("pick_publication_snapshots", Set.of("id", "attempt", "confirmedAt", "createdAt", "updatedAt")),
             Map.entry("matchday_pick_decisions", Set.of("id", "pick", "kind", "aggregateVersion", "actorKind", "actorId", "reason", "decidedAt", "correctionPayload", "createdAt", "updatedAt")));
     private final int version;
     private final Map<String, Map<String, JsonNode>> rows = new HashMap<>();
@@ -35,6 +40,8 @@ public final class PickBackupValidator {
     public void accept(String table, JsonNode row) {
         if (!FIELDS.containsKey(table)) return;
         try {
+            boolean publication = table.startsWith("pick_publication_");
+            if (publication && version < 7) fail("Publication evidence requires schema version 7");
             if (version < 6 && table.equals("team_pick_channel_bindings")) fail("Channel bindings require schema version 6");
             String flag = table.equals("seasons") ? "picksCollectionEnabled" : table.equals("races") ? "picksManaged" : null;
             if (flag != null) {
@@ -47,17 +54,27 @@ public final class PickBackupValidator {
                 return;
             }
             if (!row.isObject()) fail("A retained row must be an object");
-            if (table.startsWith("matchday_pick") || table.equals("team_pick_channel_bindings")) {
+            if (publication || table.startsWith("matchday_pick") || table.equals("team_pick_channel_bindings")) {
                 row.fieldNames().forEachRemaining(field -> { if (!FIELDS.get(table).contains(field)) fail("Unknown history field " + field); });
                 for (String field : List.of("createdAt", "updatedAt")) {
                     if (row.hasNonNull(field)) validYear(LocalDateTime.parse(text(row, field, 40)));
                 }
             }
+            if (publication) {
+                for (String field : FIELDS.get(table)) if (!row.has(field)) fail("Missing publication field " + field);
+                retainedValues += row.size();
+            }
             var projected = JsonNodeFactory.instance.objectNode();
             for (String field : FIELDS.get(table)) {
                 var value = row.get(field);
                 if (value == null) continue;
-                if (field.equals("payload") || field.equals("correctionPayload")) {
+                if (publication && field.equals("content")) {
+                    PickPublicationContentReader.read(value);
+                    retainedValues += value.size();
+                } else if (publication && field.equals("requestManifest")) {
+                    text(row, field, 16000);
+                    retainedValues += value.textValue().length() / 1000;
+                } else if (field.equals("payload") || field.equals("correctionPayload")) {
                     if (!value.isNull()) PickPayloadReader.read(value);
                 } else if (field.equals("cars") || field.equals("tracks")) {
                     if (!value.isArray()) fail("Season pools must be arrays");
@@ -158,9 +175,108 @@ public final class PickBackupValidator {
                 }
             }
             validateReservations(pending);
+            validatePublications();
         } catch (IllegalArgumentException | DateTimeException | org.ctc.domain.exception.BusinessRuleException exception) {
             throw wrapped(exception);
         }
+    }
+
+    private void validatePublications() {
+        var active = new HashSet<String>();
+        var versions = new HashMap<String, String>();
+        var confirmed = new HashSet<String>();
+        for (var item : index("pick_publication_attempts").entrySet()) {
+            var row = item.getValue();
+            String raceId = reference(row, "race", "races");
+            String seasonId = reference(row, "seasonId", "seasons");
+            String dayId = reference(row, "originalMatchdayId", "matchdays");
+            String homeId = reference(row, "originalHomeTeamId", "teams");
+            String awayId = reference(row, "originalAwayTeamId", "teams");
+            String phaseId = reference(index("matchdays").get(dayId), "phase", "season_phases");
+            if (homeId.equals(awayId)) fail("Invalid publication target context");
+            uuid(row, "batchId"); text(row, "actorId", 128); text(row, "channelId", 64); text(row, "webhookId", 64);
+            for (String field : List.of("targetMessageId", "messageId")) if (row.hasNonNull(field)) text(row, field, 64);
+            if (!text(row, "templateHash", 64).matches("[0-9a-f]{64}")) fail("Invalid publication template proof");
+            String generation = text(row, "runtimeGeneration", 64);
+            if (!generation.matches("[0-9a-f-]{36}:[0-9]+")) fail("Invalid publication runtime context");
+            UUID.fromString(generation.substring(0, 36));
+            long version = nonnegativeLong(row, "contentVersion"), sourceVersion = nonnegativeLong(row, "sourceVersion");
+            if (version == 0) fail("Invalid publication content version");
+            var origin = PickPublicationOrigin.valueOf(text(row, "origin", 16));
+            if (origin != PickPublicationOrigin.LEGACY && !seasonId.equals(uuid(index("season_phases").get(phaseId), "season"))) {
+                fail("Invalid publication target context");
+            }
+            if ((origin == PickPublicationOrigin.LEGACY) != (sourceVersion == 0)) fail("Invalid publication source version");
+            var output = PickPublicationOutput.valueOf(text(row, "output", 24));
+            long mask = nonnegativeLong(row, "fieldMask");
+            if (mask > Integer.MAX_VALUE) fail("Invalid publication field mask");
+            var fields = PickDisclosureField.fields((int) mask);
+            if (output == PickPublicationOutput.LOBBY_SETTINGS && fields.contains(PickDisclosureField.CAR)) fail("Lobby cannot disclose a car");
+            var content = PickPublicationContentReader.read(row.get("content"));
+            String hash = text(row, "contentHash", 64);
+            if (!PickPublicationAttempt.hashMatches(hash, content.fingerprint())
+                    || !PickPublicationAttempt.hashMatches(text(row, "requestHash", 64), PickPublicationAttempt.manifestHash(text(row, "requestManifest", 16000)))) {
+                fail("Publication hashes disagree with captured evidence");
+            }
+            String signature = hash + ":" + origin + ":" + sourceVersion + ":" + seasonId + ":" + dayId + ":" + homeId + ":" + awayId;
+            String previous = versions.putIfAbsent(raceId + ":" + version, signature);
+            if (previous != null && !previous.equals(signature)) fail("Publication version mixes different content or provenance");
+            if (origin != PickPublicationOrigin.LEGACY) validatePublicationSource(raceId, sourceVersion, origin, content);
+            instant(row, "capturedAt");
+            var state = PickPublicationState.valueOf(text(row, "state", 16));
+            boolean open = state == PickPublicationState.PREPARED || state == PickPublicationState.UNCERTAIN;
+            if (open ? !raceId.equals(nullableUuid(row, "activeRaceId")) || !active.add(raceId) : row.hasNonNull("activeRaceId")) fail("Invalid active publication claim");
+            if ((state == PickPublicationState.PREPARED) == row.hasNonNull("completedAt")) fail("Invalid publication completion state");
+            if (row.hasNonNull("completedAt")) {
+                instant(row, "completedAt");
+                if (Instant.parse(row.get("completedAt").asText()).isBefore(Instant.parse(row.get("capturedAt").asText()))) fail("Publication completion precedes capture");
+            }
+            boolean reconciled = row.hasNonNull("resolvedAt");
+            if (reconciled != row.hasNonNull("reconciledBy") || reconciled != row.hasNonNull("reconciliationReason")) fail("Incomplete publication reconciliation");
+            if (reconciled) {
+                if (state != PickPublicationState.SUCCEEDED && state != PickPublicationState.ABANDONED) fail("Invalid reconciled publication state");
+                text(row, "reconciledBy", 128); text(row, "reconciliationReason", 1000); instant(row, "resolvedAt");
+                if (!row.hasNonNull("completedAt") || Instant.parse(row.get("resolvedAt").asText()).isBefore(Instant.parse(row.get("completedAt").asText()))) fail("Publication resolution precedes completion");
+            }
+            if (state == PickPublicationState.ABANDONED && !reconciled) fail("Abandonment requires a recorded decision");
+            if (state == PickPublicationState.FAILED || state == PickPublicationState.UNCERTAIN || row.hasNonNull("failureCode")) {
+                if (!text(row, "failureCode", 64).matches("[A-Z0-9_-]{1,64}")) fail("Invalid publication outcome category");
+            }
+            if (state == PickPublicationState.SUCCEEDED) {
+                text(row, "messageId", 64);
+                if (!fields.isEmpty()) confirmed.add(item.getKey());
+            }
+        }
+        var snapshotAttempts = new HashSet<String>();
+        for (var row : index("pick_publication_snapshots").values()) {
+            String attemptId = reference(row, "attempt", "pick_publication_attempts");
+            var attempt = index("pick_publication_attempts").get(attemptId);
+            if (!confirmed.contains(attemptId) || !snapshotAttempts.add(attemptId)) fail("Snapshot requires unique successful disclosed content");
+            instant(row, "confirmedAt");
+            String confirmedAt = attempt.hasNonNull("resolvedAt") ? attempt.get("resolvedAt").asText() : attempt.get("completedAt").asText();
+            if (!Instant.parse(confirmedAt).equals(Instant.parse(row.get("confirmedAt").asText()))) fail("Snapshot confirmation differs from its successful outcome");
+        }
+        if (!snapshotAttempts.equals(confirmed)) fail("Confirmed publication is missing its disclosed snapshot");
+    }
+
+    private void validatePublicationSource(String raceId, long version, PickPublicationOrigin origin, PickPublicationContent content) {
+        var pick = index("matchday_picks").values().stream().filter(row -> raceId.equals(uuid(row, "race"))).findFirst()
+                .orElseThrow(() -> new ValidationException("Invalid pick publication source aggregate"));
+        String pickId = uuid(pick, "id");
+        var decision = index("matchday_pick_decisions").values().stream()
+                .filter(row -> pickId.equals(uuid(row, "pick")) && nonnegativeLong(row, "aggregateVersion") == version).findFirst()
+                .orElseThrow(() -> new ValidationException("Invalid pick publication source decision"));
+        PickPayload payload;
+        if (origin == PickPublicationOrigin.CORRECTION && "CORRECTION".equals(text(decision, "kind", 16))) {
+            payload = PickPayloadReader.read(decision.get("correctionPayload"));
+        } else if (origin == PickPublicationOrigin.APPROVAL && "APPROVE".equals(text(decision, "kind", 16))) {
+            var revision = index("matchday_pick_revisions").values().stream().filter(row -> pickId.equals(uuid(row, "pick"))
+                    && nonnegativeLong(row, "receiptVersion") < version).max(Comparator.comparingLong(row -> nonnegativeLong(row, "receiptVersion")))
+                    .orElseThrow(() -> new ValidationException("Invalid pick publication source revision"));
+            payload = PickPayloadReader.read(revision.get("payload"));
+        } else throw new ValidationException("Invalid pick publication source origin");
+        var captured = new PickSetupSnapshot(content.trackId(), content.carId(), content.carPoolEntryId(), content.settings());
+        if (!captured.matches(payload)) fail("Published content differs from its immutable source");
     }
 
     private void validatePayload(PickPayload payload, String seasonId) {

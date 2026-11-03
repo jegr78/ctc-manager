@@ -194,9 +194,9 @@ public class MatchController {
 	}
 
 	@PostMapping("/{id}/post-settings")
-	public String postSettings(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+	public String postSettings(@PathVariable UUID id, RedirectAttributes redirectAttributes, java.security.Principal principal) {
 		try {
-			discordPostService.postSettings(matchService.findById(id));
+			discordPostService.postSettings(matchService.findById(id), principal);
 			redirectAttributes.addFlashAttribute("successMessage", "Settings posted.");
 		} catch (BusinessRuleException e) {
 			applyErrorFlash(redirectAttributes, e, "Post settings");
@@ -207,9 +207,9 @@ public class MatchController {
 	}
 
 	@PostMapping("/{id}/post-lobby-settings")
-	public String postLobbySettings(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+	public String postLobbySettings(@PathVariable UUID id, RedirectAttributes redirectAttributes, java.security.Principal principal) {
 		try {
-			discordPostService.postLobbySettings(matchService.findById(id));
+			discordPostService.postLobbySettings(matchService.findById(id), principal);
 			redirectAttributes.addFlashAttribute("successMessage", "Lobby settings posted.");
 		} catch (BusinessRuleException e) {
 			applyErrorFlash(redirectAttributes, e, "Post lobby settings");
@@ -272,9 +272,9 @@ public class MatchController {
 	}
 
 	@PostMapping("/{id}/post-match-preview")
-	public String postMatchPreview(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+	public String postMatchPreview(@PathVariable UUID id, RedirectAttributes redirectAttributes, java.security.Principal principal) {
 		try {
-			discordPostService.postMatchPreview(matchService.findById(id));
+			discordPostService.postMatchPreview(matchService.findById(id), principal);
 			redirectAttributes.addFlashAttribute("successMessage", "Match preview posted.");
 		} catch (BusinessRuleException e) {
 			applyErrorFlash(redirectAttributes, e, "Post match preview");

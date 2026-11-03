@@ -18,6 +18,7 @@ app:
       queue-capacity: 32
     bot-token: ${DISCORD_BOT_TOKEN:}
     allowed-hosts: discord.com
+    attachment-hosts: cdn.discordapp.com
     base-url: https://discord.com/api/v10
     connect-timeout: 5s
     read-timeout: 30s

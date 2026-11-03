@@ -135,15 +135,16 @@ public class BackupImportService {
      * {@code SUPPORTED_SCHEMA_VERSIONS.toString()}, where {@code Set.of(1, 2)} produces
      * a hash-randomised order that breaks message-matching assertions.
      */
-    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6));
+    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6, 7));
 
     /** Tables an older schema version never exported; they may be absent when the manifest announces no rows. */
     static final Map<Integer, Set<String>> TABLES_ABSENT_IN_SCHEMA = Map.of(
-            1, Set.of("team_pick_channel_bindings", "discord_global_config", "discord_post", "site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
-            2, Set.of("team_pick_channel_bindings", "site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
-            3, Set.of("team_pick_channel_bindings", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
-            4, Set.of("team_pick_channel_bindings", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
-            5, Set.of("team_pick_channel_bindings"));
+            1, Set.of("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "discord_global_config", "discord_post", "site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
+            2, Set.of("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
+            3, Set.of("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
+            4, Set.of("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
+            5, Set.of("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings"),
+            6, Set.of("pick_publication_attempts", "pick_publication_snapshots"));
 
     /** Batch size for the JSON-stream-to-batchUpdate accumulator. */
     private static final int RESTORE_BATCH_SIZE = 500;
@@ -762,9 +763,9 @@ public class BackupImportService {
      * Counts the rows {@link #restoreAll} would restore, through the same entry lookup and parse loop,
      * so the manifest check cannot pass on bytes the restore never reads.
      */
-    private Map<String, Long> countRestorableRows(Path staged, int version) throws BackupArchiveException {
-        var poolValidator = new org.ctc.backup.schema.CarPoolBackupValidator(version);
-        var pickValidator = new org.ctc.backup.schema.PickBackupValidator(version);
+    private void validateRestorableRows(Path staged, BackupManifest manifest) throws BackupArchiveException {
+        var poolValidator = new org.ctc.backup.schema.CarPoolBackupValidator(manifest.schemaVersion());
+        var pickValidator = new org.ctc.backup.schema.PickBackupValidator(manifest.schemaVersion());
         Map<String, Long> counts = new LinkedHashMap<>();
         long[] inflatedBytes = {0L};
         try (ZipFile zf = new ZipFile(staged.toFile())) {
@@ -779,6 +780,7 @@ public class BackupImportService {
                 }
             }
             poolValidator.validate();
+            assertRowCountsMatchManifest(counts, manifest);
             pickValidator.validate();
             if (pickValidator.hasConfidentialContent() && !pickCollection.isConfidentialityReady()) {
                 throw new BackupArchiveException(Reason.SCHEMA_MISMATCH,
@@ -793,7 +795,6 @@ public class BackupImportService {
         } catch (IOException ex) {
             throw new BackupArchiveException(Reason.MANIFEST_INVALID, "ZIP read failure", ex);
         }
-        return counts;
     }
 
     /** Streams the JSON array of {@code entry} and hands each top-level object to {@code onRow}. */
@@ -996,7 +997,10 @@ public class BackupImportService {
             throw new BackupArchiveException(Reason.SCHEMA_MISMATCH,
                     "Schema version " + manifest.schemaVersion() + " not supported (accepted: " + SUPPORTED_SCHEMA_VERSIONS + "). Cannot import.");
         }
-        Map<String, Long> actualCounts = countRestorableRows(staged, manifest.schemaVersion());
+        validateRestorableRows(staged, manifest);
+    }
+
+    private void assertRowCountsMatchManifest(Map<String, Long> actualCounts, BackupManifest manifest) {
         Set<String> absentInSchema = TABLES_ABSENT_IN_SCHEMA.getOrDefault(manifest.schemaVersion(), Set.of());
         List<String> problems = new ArrayList<>();
         for (EntityRef ref : backupSchema.getExportOrder()) {

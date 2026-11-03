@@ -163,6 +163,57 @@ class DiscordPostServiceMatchPreviewAutoEditIT {
 		return discordPostRepository.save(p);
 	}
 
+    @Test
+    void givenManagedUnpublishedChoicesWithCollectionDisabled_whenAutoEditing_thenReplaceOnlySafeAttachments() throws Exception {
+        // given
+        String webhookPath = "/api/v10/webhooks/123456789012345678/Test_preview-token";
+        setAnnouncementWebhook(wm.baseUrl() + webhookPath);
+        Match match = seedMatchWithRace("Priv", "Test changed teaser", null);
+        match.getMatchday().getSeason().setPicksCollectionEnabled(false);
+        match.getRaces().forEach(race -> race.setPicksManaged(true));
+        seedExistingPreviewPost(match, "123456789012345678", "234567890123456789");
+        Path privateGraphic = Path.of(uploadDir, "preview-private-test.png").toAbsolutePath().normalize();
+        Files.writeString(privateGraphic, "TEST-PRIVATE-CAR-TRACK-WEATHER-7ca1");
+        when(settingsGraphicService.generateSettings(any(Race.class))).thenReturn("/uploads/preview-private-test.png");
+        wm.stubFor(patch(urlPathEqualTo(webhookPath + "/messages/234567890123456789"))
+                .willReturn(okJson("{\"id\":\"234567890123456789\",\"channel_id\":\"123456789012345678\"}")));
+        String request;
+        // when
+        try {
+            service.autoEditMatchPreviewIfNeeded(match);
+            request = wm.getAllServeEvents().getFirst().getRequest().getBodyAsString();
+        } finally { Files.deleteIfExists(privateGraphic); }
+        // then
+        assertThat(request).contains("Test changed teaser", "lineups-md1.png")
+                .doesNotContain("TEST-PRIVATE-CAR-TRACK-WEATHER-7ca1", "settings-md1.png");
+    }
+
+    @Test
+    void givenStaleUnenrolledCallerAfterPersistentEnrollment_whenAutoEditing_thenUseTheCurrentManagedMarker() throws Exception {
+        // given
+        String webhookPath = "/api/v10/webhooks/123456789012345679/Test_stale-preview-token";
+        setAnnouncementWebhook(wm.baseUrl() + webhookPath);
+        Match current = seedMatchWithRace("Stal", "Test stale caller teaser", null);
+        current.getRaces().forEach(race -> { race.setPicksManaged(true); raceRepository.saveAndFlush(race); });
+        seedExistingPreviewPost(current, "123456789012345679", "234567890123456780");
+        var stale = new Match(current.getMatchday(), current.getHomeTeam(), current.getAwayTeam());
+        stale.setId(current.getId()); stale.setDiscordTeaser(current.getDiscordTeaser());
+        var oldRace = new Race(); oldRace.setId(current.getRaces().getFirst().getId()); oldRace.setMatch(stale);
+        oldRace.setMatchday(current.getMatchday()); oldRace.setDateTime(current.getRaces().getFirst().getDateTime());
+        stale.getRaces().add(oldRace);
+        Path privateGraphic = Path.of(uploadDir, "preview-private-stale-test.png").toAbsolutePath().normalize();
+        Files.writeString(privateGraphic, "TEST-PRIVATE-STALE-SETTINGS-713f");
+        when(settingsGraphicService.generateSettings(any(Race.class))).thenReturn("/uploads/preview-private-stale-test.png");
+        wm.stubFor(patch(urlPathEqualTo(webhookPath + "/messages/234567890123456780"))
+                .willReturn(okJson("{\"id\":\"234567890123456780\",\"channel_id\":\"123456789012345679\"}")));
+        String request;
+        // when
+        try { service.autoEditMatchPreviewIfNeeded(stale); request = wm.getAllServeEvents().getFirst().getRequest().getBodyAsString(); }
+        finally { Files.deleteIfExists(privateGraphic); }
+        // then
+        assertThat(request).contains("Test stale caller teaser", "lineups-md1.png").doesNotContain("TEST-PRIVATE-STALE-SETTINGS-713f", "settings-md1.png");
+    }
+
 	@Test
 	void givenExistingMatchPreviewRow_whenAutoEdit_thenWebhookPatchFiresOnce() throws Exception {
 		String webhookPath = "/webhooks/940/tok-ae1";

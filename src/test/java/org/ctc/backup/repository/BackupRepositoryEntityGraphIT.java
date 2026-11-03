@@ -77,7 +77,7 @@ class BackupRepositoryEntityGraphIT {
 	void givenAllExportOrderEntities_whenInvokeFindAllForBackup_thenNoLazyInitExceptionOnDeclaredAttributePaths() {
 		// given
 		List<EntityRef> order = backupSchema.getExportOrder();
-		assertThat(order).as("export order must contain 34 entities").hasSize(34);
+		assertThat(order).as("export order must contain 36 entities").hasSize(36);
 
 		Set<String> missingRepositories = new HashSet<>();
 		Set<String> missingFinder = new HashSet<>();
@@ -232,6 +232,11 @@ class BackupRepositoryEntityGraphIT {
 	 * direct getter.
 	 */
 	private Object readField(Object instance, String fieldName) {
+		if (instance == null) return null;
+		int separator = fieldName.indexOf('.');
+		if (separator >= 0) {
+			return readField(readField(instance, fieldName.substring(0, separator)), fieldName.substring(separator + 1));
+		}
 		String getterName = "get" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
 		// 1) Try the conventional getter.
 		try {
