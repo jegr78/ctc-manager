@@ -115,13 +115,20 @@ _Avoid_: Transient form answer, discussion thread
 
 **Reporter**:
 The person who created an incident report and alone may ordinarily edit or withdraw it before
-the reporting cutoff.
+the reporting cutoff. Current channel access and eligibility for the original reporting party
+remain necessary; sharing a team role does not grant another creator's private history.
 _Avoid_: Any teammate, reporting organization
 
 **Reporting party**:
 The team or shared organization attributed to an incident report, retained as it was at first
 confirmation and distinct from its individual reporter.
 _Avoid_: User-selected side, public reporter identity
+
+**Reporting-party candidate**:
+The current team or shared organization resolved from the invoking person's relevant match
+roles for one private draft. Confirmation captures the definitive reporting party; later role
+or label changes never rewrite the saved snapshot.
+_Avoid_: User-selected team, frozen current role configuration
 
 **Incident revision**:
 One immutable complete confirmed version of an incident report's facts and evidence references.

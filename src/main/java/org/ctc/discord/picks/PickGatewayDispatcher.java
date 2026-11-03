@@ -38,7 +38,7 @@ public class PickGatewayDispatcher {
     }
 
     public void accept(String expectedGuild, PickGatewayInteraction interaction) {
-        if (!belongsToPicks(interaction) || interaction.createdAt() == null
+        if (!belongsToReporting(interaction) || interaction.createdAt() == null
                 || !clock.instant().isBefore(interaction.createdAt().plusSeconds(3))) return;
         var pool = executor;
         var reply = new PickGatewayReply(interaction.response(), clock, interaction.createdAt(), epoch,
@@ -47,9 +47,9 @@ public class PickGatewayDispatcher {
                     pool.execute(task);
                 });
         if (expectedGuild == null || !expectedGuild.equals(interaction.guildId())) {
-            reply.replyPrivate("Picks are unavailable in this channel.");
+            reply.replyPrivate(incident(interaction) ? "Incident reporting is unavailable in this channel." : "Picks are unavailable in this channel.");
         } else if (pool == null) {
-            reply.replyPrivate("Picks are unavailable. Try again later.");
+            reply.replyPrivate(incident(interaction) ? "Incident reporting is unavailable. Try again later." : "Picks are unavailable. Try again later.");
         } else if (imports.isLocked()) {
             reply.replyPrivate("A backup restore is in progress. Try again later.");
         } else {
@@ -61,9 +61,12 @@ public class PickGatewayDispatcher {
         }
     }
 
-    private boolean belongsToPicks(PickGatewayInteraction interaction) {
+    private boolean belongsToReporting(PickGatewayInteraction interaction) {
         if (interaction == null || interaction.kind() == null || interaction.action() == null) return false;
         return interaction.kind() == PickGatewayInteraction.Kind.COMMAND
-                ? "picks".equals(interaction.action()) : interaction.action().startsWith("ctc-picks:");
+                ? "picks".equals(interaction.action()) || "incidents".equals(interaction.action())
+                : interaction.action().startsWith("ctc-picks:") || interaction.action().startsWith("ctc-incidents:");
     }
+
+    private static boolean incident(PickGatewayInteraction event) { return "incidents".equals(event.action()) || event.action().startsWith("ctc-incidents:"); }
 }

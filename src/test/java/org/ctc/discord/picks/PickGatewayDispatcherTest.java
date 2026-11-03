@@ -94,7 +94,7 @@ class PickGatewayDispatcherTest {
         when(response.deferPrivate()).thenAnswer(invocation -> CompletableFuture.completedFuture(continuation));
         var entered = new CountDownLatch(1); var release = new CountDownLatch(1); var busy = new CountDownLatch(1);
         doAnswer(invocation -> {
-            if ("Picks are busy. Try again shortly.".equals(invocation.getArgument(0))) busy.countDown();
+            if ("The bot is busy. Try again shortly.".equals(invocation.getArgument(0))) busy.countDown();
             return null;
         }).when(continuation).replyPrivate(anyString());
         doAnswer(invocation -> {
@@ -178,5 +178,22 @@ class PickGatewayDispatcherTest {
     }
     static PickGatewaySettings settings() {
         var settings = new PickGatewaySettings(); settings.setWorkers(1); settings.setQueueCapacity(1); return settings;
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"command", "component"})
+    void givenIncidentInteraction_whenDispatching_thenReuseTheSharedPrivateTransport(String entry) {
+        dispatcher.start();
+        dispatcher.accept(GUILD, event(GUILD, entry.equals("command") ? PickGatewayInteraction.Kind.COMMAND : PickGatewayInteraction.Kind.BUTTON,
+                entry.equals("command") ? "incidents" : "ctc-incidents:opaque:nonce"));
+        verify(handler).onInteraction(any(), any());
+    }
+
+    @Test
+    void givenIncidentFromAnotherGuild_whenDispatching_thenDenyPrivatelyBeforeAnyFeature() {
+        dispatcher.start();
+        dispatcher.accept(GUILD, event("999", PickGatewayInteraction.Kind.COMMAND, "incidents"));
+        verify(response).replyPrivate("Incident reporting is unavailable in this channel.");
+        verifyNoInteractions(handler);
     }
 }

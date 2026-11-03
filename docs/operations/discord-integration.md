@@ -979,9 +979,10 @@ revisions; withdrawal retains the record and history. At the cutoff, the server 
 submissions, edits and withdrawals even if no scheduler notice has run. Stored links are references
 only, and the manager does not download footage or archive Discord conversations.
 
-The foundation requires a trusted access adapter before intake can accept reports. It does not
-register an incident command, enable live intake automatically, send notices or publish cases to
-the website. Those capabilities are separate delivery units. Backups contain private case data
+The trusted access adapter derives the reporting party from current match roles and channel
+permissions. Private `/incidents` dialogs support confirmed submission, My reports, editing and
+withdrawal. The application does not register commands or enable the Gateway automatically.
+Neutral notices, linked threads and rulings remain separate delivery units. Backups contain private case data
 and must receive the same restricted handling as confidential picks. Supported schemas 1 through
 7 restore without incident records or invented reporting windows.
 
@@ -1000,3 +1001,48 @@ Saved active and withdrawn cases remain visible in this internal workspace, incl
 original party, creator reference and original-race link. Deadline decisions retain the manager,
 reason, accepted time and chosen cutoff. The read-only Data Audit reports inconsistent history
 with a record locator; it does not repair records or show report payload text in its findings.
+
+### Private incident dialogs
+
+The existing outgoing Gateway serves both `/picks` and `/incidents`; do not start a second bot
+consumer. Its legacy configuration key remains `app.discord.picks.enabled`, default false.
+Incident scope comes from the confirmed match context/window and does not require a season's
+private-picks opt-in or a private team-channel binding.
+
+Use `/incidents` in the bound regular or playoff match channel. Choose **New report**, select
+the concrete leg when needed, then **Enter report**. Supply involved drivers, replay timestamp,
+description and optional footage/links. `00:00` and free-text replay notation are accepted.
+Review every private summary page before **Confirm report**. Nothing is stored before this
+confirmation. The receipt confirms committed Manager storage and separately says neutral
+receipt delivery is pending.
+
+**My reports** lists only the invoking person's accessible cases. View the full paged text,
+choose **Edit report** for complete replacement values, or explicitly confirm **Withdraw report**.
+Prior revisions remain stored. The edit form starts empty; saved text is retrieved only through
+authorized private views. Stale edits ask for a reload instead of replacing newer revisions.
+Drafts expire after 30 minutes and reset after restore. Losing access leaves permanent history
+intact, and a shared team role never grants access to another creator's undeclared case.
+
+Current participant role IDs determine attribution. One matching role attributes that team;
+parent-role fallback is supported. A role shared by both participants in one organization
+attributes the organization without a subteam question. No matching participant role, opposing roles
+or an incorrectly shared role are explained privately with management guidance. The individual
+account reference remains internal. Role/label changes do not rewrite existing attribution.
+
+### Incident command registration
+
+Registration is an explicit operator action after the complete incident rollout acceptance in
+#293. No live guild command, report or message is registered or submitted by the test workflow.
+Use the configured existing bot application and guild, with Bot authentication, to create a guild
+chat-input command through `POST /applications/{applicationId}/guilds/{guildId}/commands`.
+Its payload has no report fields or slash options:
+
+```json
+{"type":1,"name":"incidents","description":"Report and manage your own match incidents","options":[]}
+```
+
+The current management registration button continues to register `/picks` only. Keep bot tokens
+out of logs, screenshots and saved command lines. An authorized operator can use the Discord
+API tooling already used for guild commands. Gateway reconnect/start never registers commands.
+Keep the existing Forms until the complete incident workflow is accepted and deliberately
+activated. Notices, closure delivery, linked threads and rulings are completed by #290–#293.

@@ -137,6 +137,7 @@ public class IncidentContextService {
         lockGuild(context.getGuildId());
         entityManager.flush(); entityManager.refresh(context);
         var target = refresh(resolve(reference(context)));
+        refreshRoleMetadata(target);
         requireIdentity(context, target); requireGuild(context.getGuildId());
         requireChannel(target, context.getGuildId(), context.getChannelId());
         return context;
@@ -152,6 +153,18 @@ public class IncidentContextService {
         target.races().forEach(entityManager::refresh);
         entityManager.refresh(target.match() != null ? target.match() : target.playoffMatchup());
         return resolve(target.reference());
+    }
+
+    private void refreshRoleMetadata(IncidentMatchTarget target) {
+        var participants = new java.util.TreeMap<UUID, Team>();
+        participants.put(target.home().getId(), target.home()); participants.put(target.away().getId(), target.away());
+        participants.values().forEach(team -> entityManager.refresh(team, jakarta.persistence.LockModeType.PESSIMISTIC_READ));
+        var parents = new java.util.TreeMap<UUID, Team>();
+        for (var team : participants.values()) {
+            var parent = team.getParentTeam();
+            if (parent != null && !participants.containsKey(parent.getId())) parents.put(parent.getId(), parent);
+        }
+        parents.values().forEach(team -> entityManager.refresh(team, jakarta.persistence.LockModeType.PESSIMISTIC_READ));
     }
 
     private void requireChannel(IncidentMatchTarget target, String guild, String channel) {

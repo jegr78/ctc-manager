@@ -1,6 +1,7 @@
 package org.ctc.discord.picks;
 
 import java.time.Clock;
+import org.ctc.discord.incidents.IncidentInteractionHandler;
 import org.ctc.backup.lock.ImportLockService;
 import org.ctc.discord.repository.DiscordGlobalConfigRepository;
 import org.ctc.domain.service.PickCollectionStatus;
@@ -25,9 +26,12 @@ public class PickGatewayConfiguration {
     }
 
     @Bean
-    public PickGatewayDispatcher pickGatewayDispatcher(PickGatewaySettings settings, PickGatewayInteractionHandler handler,
+    public PickGatewayDispatcher pickGatewayDispatcher(PickGatewaySettings settings, PickInteractionHandler picks, IncidentInteractionHandler incidents,
                                                        ImportLockService imports, Clock clock, PickSessionEpoch epoch) {
-        return new PickGatewayDispatcher(settings, handler, imports, clock, epoch);
+        return new PickGatewayDispatcher(settings, (event, reply) -> {
+            if ("incidents".equals(event.action()) || event.action().startsWith("ctc-incidents:")) incidents.onInteraction(event, reply);
+            else picks.onInteraction(event, reply);
+        }, imports, clock, epoch);
     }
 
     @Bean
