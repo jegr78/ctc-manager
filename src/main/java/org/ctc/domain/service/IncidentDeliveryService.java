@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import java.time.Clock;
@@ -30,6 +31,8 @@ public class IncidentDeliveryService {
     private final PickSessionEpoch epoch;
     private final IncidentReceiptSender sender;
 
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", matchType = edu.umd.cs.findbugs.annotations.SuppressMatchType.EXACT,
+            justification = "Spring injects the shared transaction-scoped EntityManager proxy; copying it would break persistence context identity. See docs/security/sast-acceptance.md.")
     public IncidentDeliveryService(IncidentDeliveryRepository rows, IncidentWindowService windows, ImportLockService imports,
                                    PlatformTransactionManager transactions, EntityManager em, Clock clock, PickSessionEpoch epoch, IncidentReceiptSender sender) {
         this.rows=rows;this.windows=windows;this.imports=imports;this.transactions=new TransactionTemplate(transactions);

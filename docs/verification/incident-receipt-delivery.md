@@ -165,3 +165,13 @@ whole-context resumption, actual archive restore pause and the atomic first-subm
 
 The canonical committed-head local build, CI, verified merge and tracker/branch cleanup are the
 remaining landing gates. Their actual results are recorded in the linked issue and pull request.
+
+
+The first full final run completed all 3,033 unit, 1,480 integration and 234 browser cases
+without failures or errors, with only the three established unit skips. Line coverage was
+93.1675%. Its final SpotBugs gate reported four managed-entity references in internal synchronous
+events and one injected EntityManager reference. These structural findings follow the existing
+IncidentMatchTarget/PickPublicationService conventions. Narrow EXACT metadata annotations and
+explicit acceptance entries preserve the intended transaction identity without changing runtime
+behavior or disabling other detector rules. The corrected committed head is reverified before
+landing; the first run is not treated as a green build.
