@@ -211,6 +211,23 @@ class PickPublicationPersistenceIT {
     }
 
     @Test
+    void givenRenderingThatChangesCapturedChoices_whenPublishing_thenRollBackBeforeAnyNetworkOrPreparedAttempt() {
+        // given
+        tx.executeWithoutResult(status -> races.findById(fixture.race().getId()).orElseThrow().setPicksManaged(false));
+        var sends = new AtomicInteger();
+        // when / then
+        assertThatThrownBy(() -> publications.publish(List.of(fixture.race().getId()), PickPublicationOutput.SETTINGS, new ManagementPickActor("test-manager"), rows -> {
+            rows.getFirst().getTrack().setName("Test changed inside rendering");
+            return bundle(() -> { sends.incrementAndGet(); return "unexpected"; }, message -> message);
+        })).isInstanceOf(BusinessRuleException.class).hasMessageContaining("render changed");
+        assertThat(sends).hasValue(0);
+        tx.executeWithoutResult(status -> {
+            assertThat(attempts.findByActiveRaceId(fixture.race().getId())).isEmpty();
+            assertThat(tracks.findById(trackId).orElseThrow().getName()).contains("Test private original");
+        });
+    }
+
+    @Test
     void givenFrozenOriginalRoundAfterALegacyRaceMoves_whenDeletingItsOriginalRound_thenRetainTheReferencedPublicationIdentity() {
         // given
         tx.executeWithoutResult(status -> {

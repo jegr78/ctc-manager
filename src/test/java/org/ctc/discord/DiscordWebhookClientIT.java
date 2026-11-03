@@ -51,6 +51,7 @@ class DiscordWebhookClientIT {
 
 	@Autowired
 	private DiscordWebhookClient client;
+    @Autowired private DiscordRateLimitInterceptor interceptor;
 
 	@BeforeEach
 	void resetWireMock() {
@@ -107,6 +108,18 @@ class DiscordWebhookClientIT {
         // when / then
         assertThatThrownBy(() -> client.getMessageEvidence(wm.baseUrl() + "/api/v10/webhooks/123456789012345678/Test_evidence-token", "234567890123456789"))
                 .isInstanceOf(org.ctc.discord.exception.DiscordApiException.class).hasMessageNotContaining("Test_Private_Malformed_Message");
+    }
+
+    @Test
+    void givenUnlistedLoopbackAttachmentHost_whenVerifying_thenRejectBeforeReadingEvenAValidImage() {
+        // given
+        var restricted = new DiscordWebhookClient(interceptor, new com.fasterxml.jackson.databind.ObjectMapper(), new DiscordHostValidator("localhost"),
+                "Test evidence client", java.time.Duration.ofSeconds(1), java.time.Duration.ofSeconds(1), "cdn.discordapp.com");
+        String path = "/attachments/345678901234567890/456789012345678901/settings-race-1.png";
+        wm.stubFor(com.github.tomakehurst.wiremock.client.WireMock.get(urlPathEqualTo(path)).willReturn(aResponse().withBody("image")));
+        // when / then
+        assertThatThrownBy(() -> restricted.downloadAttachment(wm.baseUrl() + path, 5)).isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class);
+        wm.verify(0, com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor(urlPathEqualTo(path)));
     }
 
     @Test
