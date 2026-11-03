@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class MatchdayServiceTest {
+    @Mock private IncidentLifecycleGuard incidentGuard;
     @Mock private PickLifecycleGuard pickGuard;
 
     @Mock private MatchdayRepository matchdayRepository;

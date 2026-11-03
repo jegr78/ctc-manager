@@ -878,8 +878,9 @@ per captured image. No live Discord messages or command registration are needed 
 
 ### Publication backup and recovery
 
-Schema 7 exports all 36 entity tables, including immutable publication attempts and confirmed
-snapshots. Schemas 1 through 6 may omit the new publication files. Restore preserves exact masks,
+Current schema 8 exports all 41 entity tables, including immutable publication attempts, confirmed
+snapshots and permanent incident history. Schemas 1 through 6 may omit publication files; schema 7
+requires them but has no incident tables. Schema 8 requires all five incident files even when empty. Restore preserves exact masks,
 versions, unresolved outcomes and season catalog memberships without querying Discord or resending
 messages. Legacy-only publication receipts remain restorable without enabling collection. Archives
 with valid private enrollment and history restore after the complete preflight. Invalid references,
@@ -964,3 +965,38 @@ live guild registration, messages, production changes and test-guild UAT need se
   before accepting real submissions.
 - [ ] Keep the existing Google Forms available until the operator deliberately retires them.
   Do not delete Forms or migrate old responses automatically.
+
+### Permanent incident records
+
+Incident contexts belong to one regular match or one playoff pairing. An auxiliary regular-match
+view of a playoff race shares that playoff context. Management explicitly binds the configured
+guild and match channel, then confirms a future reporting deadline. The suggested cutoff is
+24 elapsed hours after the first planned race start in Europe/Berlin. Missing or ambiguous starts
+have no automatic replacement. Later schedule changes do not move a confirmed cutoff.
+
+Reports retain their case reference, exact race, original creator and reporting party. Edits append
+revisions; withdrawal retains the record and history. At the cutoff, the server rejects new
+submissions, edits and withdrawals even if no scheduler notice has run. Stored links are references
+only, and the manager does not download footage or archive Discord conversations.
+
+The foundation requires a trusted access adapter before intake can accept reports. It does not
+register an incident command, enable live intake automatically, send notices or publish cases to
+the website. Those capabilities are separate delivery units. Backups contain private case data
+and must receive the same restricted handling as confidential picks. Supported schemas 1 through
+7 restore without incident records or invented reporting windows.
+
+Open **Incident reports** from a regular match or playoff pairing. Bind the pairing first. Regular
+matches use their saved channel; standalone playoffs require an explicit channel ID. Opening the
+page does not create a binding or window. Resolve ambiguous shared legacy channel assignments
+before proceeding.
+
+After binding, review the planned start and suggested cutoff. Enter the Berlin date/time and its
+UTC offset, then choose **Open reporting**. To adjust an open, unexpired window, enter the new
+cutoff and a reason, then choose **Change deadline**. A concurrent change keeps the submitted
+values and asks you to reload the current state. Missing version tokens are rejected. Neither
+opening nor changing the deadline starts live Discord intake or posts messages.
+
+Saved active and withdrawn cases remain visible in this internal workspace, including their
+original party, creator reference and original-race link. Deadline decisions retain the manager,
+reason, accepted time and chosen cutoff. The read-only Data Audit reports inconsistent history
+with a record locator; it does not repair records or show report payload text in its findings.

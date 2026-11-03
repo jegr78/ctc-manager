@@ -33,14 +33,21 @@ class DiscordChannelServiceLockTest {
 
 	private final DiscordRestClient restClient = mock(DiscordRestClient.class);
 	private final EntityManager entityManager = mock(EntityManager.class);
-	private final DiscordChannelService service = new DiscordChannelService(restClient,
-			mock(DiscordGlobalConfigService.class), mock(DiscordBotIdentityCache.class),
-			mock(MatchRepository.class), mock(ApplicationEventPublisher.class), entityManager);
+	private final org.ctc.domain.repository.SeasonRepository seasons = mock(org.ctc.domain.repository.SeasonRepository.class);
+    private final DiscordGlobalConfigService configs = mock(DiscordGlobalConfigService.class);
+    private final DiscordChannelService service = new DiscordChannelService(restClient,
+			configs, mock(DiscordBotIdentityCache.class),
+			mock(MatchRepository.class), mock(ApplicationEventPublisher.class), entityManager, seasons,
+            mock(org.ctc.domain.service.IncidentLifecycleGuard.class), java.time.Clock.systemUTC());
 	private final Match match = new Match();
 
 	@BeforeEach
 	void setUp() {
 		match.setId(UUID.randomUUID());
+        var season = new org.ctc.domain.model.Season("Test channel locking"); season.setId(UUID.randomUUID());
+        var day = new org.ctc.domain.model.Matchday(); var phase = new org.ctc.domain.model.SeasonPhase(); phase.setSeason(season); day.setPhase(phase); match.setMatchday(day);
+        when(seasons.findByIdForUpdate(season.getId())).thenReturn(java.util.Optional.of(season));
+        when(configs.getOrInitialize()).thenReturn(new org.ctc.discord.model.DiscordGlobalConfig());
 		when(entityManager.find(Match.class, match.getId())).thenReturn(match);
 	}
 

@@ -72,6 +72,9 @@ public class DiscordChannelService {
 	private final MatchRepository matchRepository;
 	private final ApplicationEventPublisher eventPublisher;
 	private final EntityManager entityManager;
+    private final org.ctc.domain.repository.SeasonRepository seasons;
+    private final org.ctc.domain.service.IncidentLifecycleGuard incidents;
+    private final java.time.Clock clock;
 
 	/**
 	 * Creates the match's Discord channel and webhook. The match row stays locked until the
@@ -85,6 +88,7 @@ public class DiscordChannelService {
 			log.info("Match {} already has Discord channel {}; nothing created", match.getId(), match.getDiscordChannelId());
 			return false;
 		}
+		incidents.requireNewChannel(match);
 		DiscordGlobalConfig cfg = configService.getOrInitialize();
 		assertPreconditions(match, cfg);
 
@@ -163,6 +167,7 @@ public class DiscordChannelService {
 			throw new BusinessRuleException(
 					"Match already has a Discord channel linked: " + match.getDiscordChannelId());
 		}
+		incidents.requireChannelLink(match, channelId);
 		restClient.fetchChannel(channelId);
 
 		List<Webhook> existing = restClient.listWebhooks(channelId);
@@ -185,6 +190,18 @@ public class DiscordChannelService {
 		log.info("Discord channel linked to match {} → channelId={}", match.getId(), sanitize(channelId));
 	}
 
+    @Transactional
+    public void moveToArchive(java.util.UUID id, String categoryId) throws DiscordApiException {
+        if (!hasText(categoryId)) throw new BusinessRuleException("Select an archive category before confirming the move.");
+        var requested = new Match(); requested.setId(id);
+        var match = lockForChannelChange(requested);
+        if (!hasText(match.getDiscordChannelId())) throw new BusinessRuleException("Match has no Discord channel to archive.");
+        incidents.requireChannelArchival(match);
+        restClient.modifyChannel(match.getDiscordChannelId(), new org.ctc.discord.dto.ChannelModifyRequest(null, categoryId));
+        match.setDiscordChannelArchivedAt(java.time.LocalDateTime.now(clock));
+        matchRepository.save(match);
+    }
+
 	private Match lockForChannelChange(Match requested) {
 		Match match = entityManager.find(Match.class, requested.getId());
 		if (match == null) {
@@ -192,10 +209,15 @@ public class DiscordChannelService {
 		}
 		entityManager.flush();
 		try {
+            var seasonId = match.getMatchday().getSeason().getId();
+            seasons.findByIdForUpdate(seasonId).orElseThrow(() -> new BusinessRuleException("The channel's season is unavailable"));
+            var config = configService.getOrInitialize();
+            entityManager.flush(); entityManager.refresh(config, LockModeType.PESSIMISTIC_WRITE);
 			entityManager.refresh(match, LockModeType.PESSIMISTIC_WRITE);
+            if (!seasonId.equals(match.getMatchday().getSeason().getId())) throw new BusinessRuleException("The pairing moved; reload before changing its channel");
 		} catch (jakarta.persistence.EntityNotFoundException _) {
 			throw new EntityNotFoundException("Match", requested.getId());
-		} catch (PessimisticLockException | LockTimeoutException _) {
+		} catch (org.springframework.dao.PessimisticLockingFailureException | PessimisticLockException | LockTimeoutException _) {
 			throw new DiscordChannelBusyException();
 		} catch (PersistenceException e) {
 			if (e.getCause() instanceof LockAcquisitionException) {

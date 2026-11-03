@@ -4,6 +4,7 @@
 <body>
 <section class="entity-editor playoff-matchup-workspace">
     <div class="toolbar">
+        <a th:href="@{/admin/playoffs/matchup/{id}/incidents(id=${matchup.id})}" class="btn btn-secondary">Incident reports</a>
         <h1>
             <span th:text="${matchup.round.label}"></span> —
             <a th:if="${matchup.team1 != null}" th:href="@{/admin/teams/{id}(id=${matchup.team1.id})}" class="detail-link" th:text="${matchup.team1.shortName}"></a>

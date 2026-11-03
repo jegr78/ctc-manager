@@ -91,6 +91,11 @@ public class BackupExportService {
     private final TeamPickChannelBindingRepository pickBindings;
     private final PickPublicationAttemptRepository publicationAttempts;
     private final PickPublicationSnapshotRepository publicationSnapshots;
+    private final IncidentMatchContextRepository incidentContexts;
+    private final IncidentReportWindowRepository incidentWindows;
+    private final IncidentReportRepository incidentReports;
+    private final IncidentReportRevisionRepository incidentRevisions;
+    private final IncidentReportEventRepository incidentEvents;
 
 
 	private final String uploadDirRaw;
@@ -136,6 +141,11 @@ public class BackupExportService {
             TeamPickChannelBindingRepository pickBindings,
             PickPublicationAttemptRepository publicationAttempts,
             PickPublicationSnapshotRepository publicationSnapshots,
+            IncidentMatchContextRepository incidentContexts,
+            IncidentReportWindowRepository incidentWindows,
+            IncidentReportRepository incidentReports,
+            IncidentReportRevisionRepository incidentRevisions,
+            IncidentReportEventRepository incidentEvents,
 			@Value("${app.upload-dir:data/dev/uploads}") String uploadDirRaw
 	) {
 		this.backupSchema = backupSchema;
@@ -175,6 +185,11 @@ public class BackupExportService {
         this.pickBindings = pickBindings;
         this.publicationAttempts = publicationAttempts;
         this.publicationSnapshots = publicationSnapshots;
+        this.incidentContexts = incidentContexts;
+        this.incidentWindows = incidentWindows;
+        this.incidentReports = incidentReports;
+        this.incidentRevisions = incidentRevisions;
+        this.incidentEvents = incidentEvents;
 		this.uploadDirRaw = uploadDirRaw;
 	}
 
@@ -218,6 +233,11 @@ public class BackupExportService {
         this.repositoriesByEntityClass.put(TeamPickChannelBinding.class, pickBindings);
         this.repositoriesByEntityClass.put(PickPublicationAttempt.class, publicationAttempts);
         this.repositoriesByEntityClass.put(PickPublicationSnapshot.class, publicationSnapshots);
+        this.repositoriesByEntityClass.put(IncidentMatchContext.class, incidentContexts);
+        this.repositoriesByEntityClass.put(IncidentReportWindow.class, incidentWindows);
+        this.repositoriesByEntityClass.put(IncidentReport.class, incidentReports);
+        this.repositoriesByEntityClass.put(IncidentReportRevision.class, incidentRevisions);
+        this.repositoriesByEntityClass.put(IncidentReportEvent.class, incidentEvents);
 		log.info("BackupExportService initialized: uploadRoot={}, repositoryCount={}",
 				uploadRoot, repositoriesByEntityClass.size());
 	}

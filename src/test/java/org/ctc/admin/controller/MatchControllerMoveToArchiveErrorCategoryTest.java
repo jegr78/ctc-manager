@@ -6,14 +6,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import java.util.UUID;
-import org.ctc.discord.DiscordRestClient;
-import org.ctc.discord.dto.ChannelModifyRequest;
 import org.ctc.discord.exception.DiscordApiException.Category;
 import org.ctc.discord.service.DiscordChannelService;
-import org.ctc.domain.model.Match;
 import org.ctc.domain.service.MatchService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -40,11 +36,10 @@ class MatchControllerMoveToArchiveErrorCategoryTest {
 		// given
 		MatchService matchService = mock(MatchService.class);
 		DiscordChannelService channelService = mock(DiscordChannelService.class);
-		DiscordRestClient restClient = mock(DiscordRestClient.class);
 		RedirectAttributes ra = mock(RedirectAttributes.class);
 		UUID id = UUID.randomUUID();
 
-		MatchController controller = new MatchController(matchService, channelService, restClient,
+		MatchController controller = new MatchController(matchService, channelService,
 				mock(org.ctc.discord.service.DiscordPostService.class),
 				mock(org.ctc.admin.service.TeamCardService.class),
 				mock(org.ctc.domain.repository.SeasonTeamRepository.class));
@@ -57,7 +52,7 @@ class MatchControllerMoveToArchiveErrorCategoryTest {
 		verify(ra).addFlashAttribute("errorMessage",
 				"Select an archive category before confirming the move.");
 		verify(ra).addFlashAttribute("errorCategory", "data-incomplete");
-		verify(restClient, never()).modifyChannel(anyString(), any(ChannelModifyRequest.class));
+		verify(channelService, never()).moveToArchive(any(), anyString());
 	}
 
 	private static String invokeMoveToArchive(MatchController controller, UUID id,
@@ -74,12 +69,12 @@ class MatchControllerMoveToArchiveErrorCategoryTest {
 		// given
 		MatchService matchService = mock(MatchService.class);
 		DiscordChannelService channelService = mock(DiscordChannelService.class);
-		DiscordRestClient restClient = mock(DiscordRestClient.class);
 		RedirectAttributes ra = mock(RedirectAttributes.class);
 		UUID id = UUID.randomUUID();
-		when(matchService.findById(id)).thenReturn(new Match());
+		org.mockito.Mockito.doThrow(new org.ctc.domain.exception.BusinessRuleException("Match has no Discord channel to archive."))
+                .when(channelService).moveToArchive(id, "cat-1");
 
-		MatchController controller = new MatchController(matchService, channelService, restClient,
+		MatchController controller = new MatchController(matchService, channelService,
 				mock(org.ctc.discord.service.DiscordPostService.class),
 				mock(org.ctc.admin.service.TeamCardService.class),
 				mock(org.ctc.domain.repository.SeasonTeamRepository.class));
@@ -91,6 +86,6 @@ class MatchControllerMoveToArchiveErrorCategoryTest {
 		assertThat(view).isEqualTo("redirect:/admin/matches/" + id);
 		verify(ra).addFlashAttribute("errorMessage", "Match has no Discord channel to archive.");
 		verify(ra).addFlashAttribute("errorCategory", "not-found");
-		verify(restClient, never()).modifyChannel(anyString(), any(ChannelModifyRequest.class));
+		verify(channelService).moveToArchive(id, "cat-1");
 	}
 }

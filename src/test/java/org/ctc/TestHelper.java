@@ -33,9 +33,15 @@ public class TestHelper {
 	private final DriverRepository driverRepository;
 	private final SeasonDriverRepository seasonDriverRepository;
 	private final PlayoffService playoffService;
+    private final org.ctc.domain.repository.PlayoffRepository playoffRepository;
     private final MatchdayPickRepository pickRepository;
     private final MatchdayPickRevisionRepository pickRevisionRepository;
     private final MatchdayPickDecisionRepository pickDecisionRepository;
+    private final IncidentMatchContextRepository incidentContexts;
+    private final IncidentReportWindowRepository incidentWindows;
+    private final IncidentReportRepository incidentReports;
+    private final IncidentReportRevisionRepository incidentRevisions;
+    private final IncidentReportEventRepository incidentEvents;
 
 	/**
 	 * Deletes a helper-created Season together with its committed fixture graph (race
@@ -48,18 +54,36 @@ public class TestHelper {
     @Transactional
 	public void deleteSeasonCascade(Season season) {
 		UUID seasonId = season.getId();
+        deleteIncidentHistory(seasonId);
         deletePickHistory(seasonId);
 		raceLineupRepository.deleteAll(raceLineupRepository.findByRaceMatchdaySeasonId(seasonId));
 		raceRepository.deleteAll(raceRepository.findByMatchdaySeasonId(seasonId));
 		matchRepository.deleteAll(matchRepository.findByMatchdaySeasonId(seasonId));
 		matchdayRepository.deleteAll(matchdayRepository.findBySeasonIdOrderBySortIndexAsc(seasonId));
-		var phases = seasonPhaseRepository.findBySeasonIdOrderBySortIndex(seasonId);
+		playoffRepository.findBySeasonId(seasonId).ifPresent(playoffRepository::delete);
+        playoffRepository.flush();
+        var phases = seasonPhaseRepository.findBySeasonIdOrderBySortIndex(seasonId);
 		var raceScorings = phases.stream().map(SeasonPhase::getRaceScoring).filter(Objects::nonNull).toList();
 		var matchScorings = phases.stream().map(SeasonPhase::getMatchScoring).filter(Objects::nonNull).toList();
 		seasonRepository.deleteById(seasonId);
 		raceScoringRepository.deleteAll(raceScorings);
 		matchScoringRepository.deleteAll(matchScorings);
 	}
+
+    @Transactional
+    public void deleteIncidentHistory(UUID seasonId) {
+        for (var context : incidentContexts.findBySeasonId(seasonId)) {
+            var window = incidentWindows.findByContextId(context.getId()).orElse(null);
+            if (window != null) {
+                incidentEvents.deleteAll(incidentEvents.findByWindowIdOrderByAcceptedAtAscIdAsc(window.getId())); incidentEvents.flush();
+                var reports = incidentReports.findByWindowIdOrderByCaseReferenceAsc(window.getId());
+                for (var report : reports) incidentRevisions.deleteAll(incidentRevisions.findByReportIdOrderByRevisionNumberAsc(report.getId()));
+                incidentRevisions.flush(); incidentReports.deleteAll(reports); incidentReports.flush();
+                incidentWindows.delete(window); incidentWindows.flush();
+            }
+            incidentContexts.delete(context); incidentContexts.flush();
+        }
+    }
 
     @Transactional
     public void deletePickHistory(UUID seasonId) {

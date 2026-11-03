@@ -8,8 +8,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchForm;
 import org.ctc.admin.service.TeamCardService;
-import org.ctc.discord.DiscordRestClient;
-import org.ctc.discord.dto.ChannelModifyRequest;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
 import org.ctc.discord.exception.DiscordChannelBusyException;
@@ -43,7 +41,6 @@ public class MatchController {
 
 	private final MatchService matchService;
 	private final DiscordChannelService discordChannelService;
-	private final DiscordRestClient discordRestClient;
 	private final DiscordPostService discordPostService;
 	private final TeamCardService teamCardService;
 	private final SeasonTeamRepository seasonTeamRepository;
@@ -316,13 +313,7 @@ public class MatchController {
 				redirectAttributes.addFlashAttribute("errorCategory", "data-incomplete");
 				return "redirect:/admin/matches/" + id;
 			}
-			Match match = matchService.findById(id);
-			if (match.getDiscordChannelId() == null) {
-				throw new BusinessRuleException("Match has no Discord channel to archive.");
-			}
-			discordRestClient.modifyChannel(match.getDiscordChannelId(),
-					new ChannelModifyRequest(null, categoryId));
-			matchService.markChannelArchived(id);
+			discordChannelService.moveToArchive(id, categoryId);
 			redirectAttributes.addFlashAttribute("successMessage", "Channel moved to archive.");
 		} catch (BusinessRuleException e) {
 			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());

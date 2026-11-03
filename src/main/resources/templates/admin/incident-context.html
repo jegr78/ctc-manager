@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/layout :: layout('Incident reporting', ~{::section})}">
+<body>
+<section class="entity-editor incident-workspace">
+    <a th:href="${page.backPath}" class="back-link">Back to pairing</a>
+    <h1>Incident reporting</h1>
+    <p class="mb-md" th:text="${page.pairing}"></p>
+    <p class="text-dim mb-md">Reporting setup does not send Discord messages. Only confirmed reports become permanent cases.</p>
+    <p th:if="${page.intakeUnavailable}" class="text-dim mb-md">Discord incident submission is currently unavailable.</p>
+
+    <form th:if="${!page.bound}" th:action="@{${page.bindingPath}}" th:object="${incidentBindingForm}" method="post" class="card entity-editor-form">
+        <fieldset>
+            <legend>Bind this pairing</legend>
+            <p class="text-dim mb-md">Use the configured guild and the pairing's channel. Saving this binding prepares reporting; opening needs a separate deadline confirmation.</p>
+            <div th:if="${#fields.hasGlobalErrors()}" class="field-error" role="alert"><p th:each="error : ${#fields.globalErrors()}" th:text="${error}"></p></div>
+            <input type="hidden" th:field="*{expectedVersion}">
+            <span th:errors="*{expectedVersion}" class="field-error" role="alert"></span>
+            <div class="form-group"><label for="incident-guild">Discord guild ID</label><input id="incident-guild" th:field="*{guildId}" readonly required><span th:errors="*{guildId}" class="field-error" role="alert"></span></div>
+            <div class="form-group"><label for="incident-channel">Pairing channel ID</label><input id="incident-channel" th:field="*{channelId}" th:readonly="${page.regular}" required inputmode="numeric"><span th:errors="*{channelId}" class="field-error" role="alert"></span></div>
+            <p th:if="${#strings.isEmpty(page.guildId)}" class="text-dim">Configure a guild in <a th:href="@{/admin/discord-config}">Discord configuration</a> before binding.</p>
+            <p th:if="${page.regular and #strings.isEmpty(page.channelId)}" class="text-dim">Link a Discord channel from the pairing page before binding.</p>
+            <button type="submit" class="btn btn-primary" th:disabled="${#strings.isEmpty(page.guildId) or (page.regular and #strings.isEmpty(page.channelId))}">Bind pairing</button>
+        </fieldset>
+    </form>
+
+    <div class="card" id="incident-deadline-preview">
+        <h2>Reporting deadline</h2>
+        <dl><dt>State</dt><dd data-testid="incident-window-state" th:text="${page.state}"></dd><dt th:text="${page.draft or !page.bound ? 'Current planned start' : 'Planned start at confirmation'}"></dt><dd th:text="${page.plannedStart}"></dd><dt>Suggested cutoff</dt><dd th:text="${page.suggestedDeadline}"></dd><dt th:if="${page.bound}">Confirmed cutoff</dt><dd th:if="${page.bound}" data-testid="incident-confirmed-deadline" th:text="${page.confirmedDeadline}"></dd></dl>
+        <p class="text-dim">The suggestion is 24 elapsed hours after planned start. Confirm a future deadline explicitly. Later schedule edits do not change the confirmed cutoff.</p>
+        <p th:if="${page.suggestionExpired}" class="field-error">The suggested cutoff has already passed. Choose an explicit future deadline.</p>
+        <p th:if="${!#strings.isEmpty(page.previewProblem)}" class="field-error" th:text="${page.previewProblem}"></p>
+        <p th:if="${!#strings.isEmpty(page.discordDeadline)}">Discord timestamp: <code th:text="${page.discordDeadline}"></code></p>
+        <p th:if="${page.bound and !page.draft and !page.changeable}" class="text-dim">Reporting has expired or closed. New reports, edits and withdrawals are blocked. Stored cases remain available.</p>
+    </div>
+
+    <form th:if="${page.bound and (page.draft or page.changeable or editingAttempt)}" th:action="@{/admin/incident-contexts/{id}/window/{action}(id=${page.contextId},action=${opening ? 'open' : 'deadline'})}" th:object="${incidentDeadlineForm}" method="post" class="card entity-editor-form">
+        <fieldset>
+            <legend th:text="${opening ? 'Confirm reporting deadline' : 'Change reporting deadline'}"></legend>
+            <div th:if="${#fields.hasGlobalErrors()}" class="field-error" role="alert"><p th:each="error : ${#fields.globalErrors()}" th:text="${error}"></p></div>
+            <input type="hidden" th:field="*{expectedVersion}"><span th:errors="*{expectedVersion}" class="field-error" role="alert"></span>
+            <div class="form-group"><label for="incident-deadline">Reporting deadline in Europe/Berlin</label><input id="incident-deadline" th:type="${#fields.hasErrors('deadline') ? 'text' : 'datetime-local'}" th:field="*{deadline}" step="1" required aria-describedby="incident-offset-help"><span th:errors="*{deadline}" class="field-error" role="alert"></span></div>
+            <div class="form-group"><label for="incident-offset">Berlin UTC offset at that deadline</label><input id="incident-offset" th:field="*{offset}" placeholder="+01:00 or +02:00" required aria-describedby="incident-offset-help"><span th:errors="*{offset}" class="field-error" role="alert"></span><small id="incident-offset-help" class="text-dim">Enter the offset that applies to the chosen Berlin date. Nonexistent times reject; repeated autumn times require the intended offset.</small></div>
+            <div class="form-group" th:if="${!opening}"><label for="incident-reason">Reason for deadline change</label><textarea id="incident-reason" th:field="*{reason}" maxlength="1000" rows="3" required></textarea><span th:errors="*{reason}" class="field-error" role="alert"></span></div>
+            <div class="actions"><button type="submit" class="btn btn-primary" th:disabled="${opening ? !page.draft : !page.changeable}" th:text="${opening ? 'Open reporting' : 'Change deadline'}"></button><a th:href="@{/admin/incident-contexts/{id}(id=${page.contextId})}" class="btn btn-secondary">Reload current state</a></div>
+        </fieldset>
+    </form>
+
+    <div th:if="${page.bound}" class="card">
+        <h2>Saved cases</h2>
+        <p th:if="${page.cases.isEmpty()}" class="text-dim">No confirmed reports. Unfinished input never replaces a saved case.</p>
+        <article th:each="case : ${page.cases}" class="incident-case">
+            <h3 th:text="${case.reference}"></h3><p><span th:text="${case.state}"></span> · Revision <span th:text="${case.revision}"></span></p>
+            <dl><dt>Original reporting party</dt><dd th:text="${case.party}"></dd><dt>Original creator Discord ID</dt><dd th:text="${case.authorId}"></dd><dt>Race context</dt><dd><span th:text="${case.matchday}"></span> · <a th:href="@{/admin/races/{id}(id=${case.raceId})}">View original race</a></dd><dt>Involved drivers</dt><dd class="incident-text" th:text="${case.drivers}"></dd><dt>Replay timestamp</dt><dd class="incident-text" th:text="${case.replayTimestamp}"></dd><dt>Description</dt><dd class="incident-text" th:text="${case.description}"></dd><dt>Evidence references</dt><dd class="incident-text" th:text="${case.evidence}"></dd></dl>
+        </article>
+    </div>
+    <div th:if="${!page.decisions.isEmpty()}" class="card">
+        <h2>Deadline decisions</h2>
+        <article th:each="decision : ${page.decisions}"><h3 th:text="${decision.action}"></h3><p th:text="${decision.at}"></p><p th:text="${decision.actor}"></p><p class="incident-text" th:text="${decision.reason}"></p><p th:text="${decision.deadline}"></p></article>
+    </div>
+</section>
+</body>
+</html>

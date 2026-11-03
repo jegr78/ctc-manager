@@ -67,10 +67,6 @@ import org.ctc.sitegen.SiteSlugger;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Inspects the persisted league data for historical anomalies and reports them with their evidence.
- * It never writes: every finding only proposes a correction for a later, reviewed action.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -92,6 +88,7 @@ public class DataAuditService {
     private final SeasonRepository seasonRepository;
     private final SeasonCarPoolService carPoolService;
     private final PickIntegrityAuditService pickIntegrity;
+    private final IncidentIntegrityAuditService incidentIntegrity;
 
 	@Transactional(readOnly = true)
 	public DataAuditReport audit() {
@@ -116,6 +113,7 @@ public class DataAuditService {
         auditCarMetadata(findings.get(CAR_METADATA), findings.get(CAR_ELIGIBILITY));
         auditCarPools(races, findings.get(CAR_POOL));
         findings.get(Category.PRIVATE_PICKS).addAll(pickIntegrity.inspect());
+        findings.get(Category.INCIDENT_REPORTS).addAll(incidentIntegrity.inspect());
 
 		List<DataAuditReport.Section> sections = findings.entrySet().stream()
 				.map(entry -> new DataAuditReport.Section(entry.getKey(), List.copyOf(entry.getValue())))

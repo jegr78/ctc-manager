@@ -26,20 +26,20 @@ class BackupSchemaGuardTest {
     ObjectMapper backupObjectMapper;
 
     @Test
-    void givenBackupSchema_whenInspected_thenSchemaVersionIsSeven() {
+    void givenBackupSchema_whenInspected_thenSchemaVersionIsEight() {
         // when / then
         assertThat(BackupSchema.SCHEMA_VERSION)
-                .as("BackupSchema.SCHEMA_VERSION changed from 7; this is a wire contract bump")
-                .isEqualTo(7);
+                .as("BackupSchema.SCHEMA_VERSION changed from 8; this is a wire contract bump")
+                .isEqualTo(8);
     }
 
     @Test
-    void givenBackupSchema_whenInspected_thenExportOrderHasThirtySixEntities() {
+    void givenBackupSchema_whenInspected_thenExportOrderHasFortyOneEntities() {
         // when / then
         assertThat(backupSchema.getExportOrder().size())
-                .as("BackupSchema.EXPORT_ORDER size changed from 36; a new entity needs a SCHEMA_VERSION bump "
+                .as("BackupSchema.EXPORT_ORDER size changed from 41; a new entity needs a SCHEMA_VERSION bump "
                         + "and an entry in BackupImportService.TABLES_ABSENT_IN_SCHEMA for older versions")
-                .isEqualTo(36);
+                .isEqualTo(41);
     }
 
     @ParameterizedTest

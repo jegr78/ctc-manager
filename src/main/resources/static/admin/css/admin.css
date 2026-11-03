@@ -2896,3 +2896,9 @@ body:has(.archive-dialog[open]) { overflow: hidden; }
 .pick-review-workspace .pick-tyre-options { display: flex; flex-wrap: wrap; gap: 20px; }
 .pick-review-workspace .table-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .pick-review-workspace .entity-editor-actions { position: static; }
+
+.incident-workspace { overflow-wrap: anywhere; }
+.incident-workspace fieldset, .incident-workspace dd { min-width: 0; }
+.incident-workspace .incident-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.incident-workspace h3, .incident-workspace code { overflow-wrap: anywhere; }
+.incident-workspace .incident-case + .incident-case { margin-top: 1.5rem; }

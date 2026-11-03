@@ -39,6 +39,7 @@ public class RaceService {
     private final RaceCarSelectionService carSelections;
     private final RaceSettingsApplicationService settingsApplication;
     private final PickLifecycleGuard pickGuard;
+    private final IncidentLifecycleGuard incidentGuard;
     private final PickReservationService reservations;
 
 	public RaceListData getRaceListData(UUID matchdayId, UUID seasonId) {
@@ -254,6 +255,7 @@ public class RaceService {
             }
             for (var plan : planned) {
                 if (rejection == null) rejection = pickGuard.identityRejection(plan.race(), matchdayId, plan.home(), plan.away());
+                if (rejection == null) rejection = incidentGuard.identityRejection(plan.race(), matchdayId, plan.home(), plan.away());
             }
             var submittedSettings = new RaceSettingsValues(numberOfLaps, tyreWearMultiplier, fuelConsumptionMultiplier,
                     refuelingSpeed, initialFuel, numberOfRequiredPitStops, timeProgressionMode, timeProgressionMultiplier,
@@ -350,6 +352,7 @@ public class RaceService {
         lockSelectionContext(race, race.getMatchday());
         race = raceRepository.findByIdForSelectionUpdate(raceId).orElseThrow();
         pickGuard.requireNoHistory(List.of(race));
+        incidentGuard.requireNoHistory(List.of(race));
 		PlayoffDecisionGuard.requireOpen(race);
 		var matchdayId = race.getMatchday().getId();
 		var match = race.getMatch();
