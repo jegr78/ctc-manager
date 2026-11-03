@@ -13,7 +13,7 @@ release plan is shipped; GitHub defines this dependency order. Selection base: `
 - [x] Implement atomic first-submit receipt work and locked deadline/disclosure capture.
 - [x] Add bounded durable delivery with explicit retry/uncertainty and restore admission.
 - [x] Align migration, archive round-trip/preflight, audit and operator documentation.
-- [ ] Review and independently assess security; falsify new protections individually.
+- [x] Review and independently assess security; falsify new protections individually.
 - [ ] Verify one final committed head locally and in CI, then merge and reconcile the tracker/Wiki.
 - [ ] Clean up the proven landed branch and continue the queue.
 
@@ -136,3 +136,32 @@ can resume. Production authentication, CSRF and native form tokens are included 
 runtime check. The independent read-only security pass reviewed production through bd675255
 and the test-only f3b70706 delta with no findings. Rebasing onto the release-only master delta
 changes the POM/version history, not the reviewed production implementation.
+
+
+## Final review and individual guard falsification
+
+The complete native check passed nine focused unit cases, forty-one management/reconciliation
+integration cases, and two desktop/mobile browser cases without JavaScript. The first phone
+browser run exposed horizontal overflow in a long review action. The corrected short visible
+label retains an escaped full accessible name; scoped checkbox styles also preserve native
+controls. Both viewport workflows then passed and their screenshots were visually inspected.
+An independent read-only security delta pass confirmed the change without findings.
+
+Thirty guards were falsified individually from committed correct checkpoints: twenty-four
+unit witnesses and six real integration witnesses. Each mutant produced an assertion failure
+in the intended test with zero errors or skips, and each source file was restored byte for byte
+from its committed object. One initial ownership probe exposed a test gap: the capture model
+also rejected the foreign revision. The test now exercises an already existing operation so
+the earlier replay-ownership check is independently necessary. That strengthened contract passed
+on correct code and failed at its intended assertion under the individual mutant. Production
+bytes remained unchanged between these two correct test checkpoints.
+
+Covered protections include claim eligibility, due time and restore pause, acknowledgement
+identity/version/generation/lease, unknown-result quarantine, expiry and sent history, outbound
+policy and exact destination, receipt-only dispatch, response identity and transport ambiguity,
+rate-limit rejection provenance, bot/content/nonce verification, empty mention parsing, revision
+ownership/freeze, explicit management review, current review version/restore generation,
+whole-context resumption, actual archive restore pause and the atomic first-submit event source.
+
+The canonical committed-head local build, CI, verified merge and tracker/branch cleanup are the
+remaining landing gates. Their actual results are recorded in the linked issue and pull request.
