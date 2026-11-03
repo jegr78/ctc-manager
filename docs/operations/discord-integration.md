@@ -764,8 +764,8 @@ Removing a binding or revoking channel access prevents an old dialog from confir
 The outgoing consumer defaults off. `DISCORD_PICKS_ENABLED` maps to `app.discord.picks.enabled`;
 worker count defaults to 2 and queue capacity to 32. The existing `DISCORD_BOT_TOKEN`, saved guild
 and application ID are reused. No public interaction endpoint or message-content intent is required.
-The application also requires confidentiality readiness, so enabling the setting alone does not
-activate collection. Final confidentiality and rollout acceptance remains in #286.
+The delivered capability supports confidential collection and private-history restore. A consumer
+starts only after its explicit Gateway opt-in; season enrollment remains a separate management action.
 
 After confidentiality acceptance, use the explicit **Register /picks for this guild** action.
 It upserts only this feature's guild command. Startup and backup restore never register commands.
@@ -823,8 +823,8 @@ native **Refresh choices** before selecting a concrete member. Validation retain
 Zero multiplier remains distinct from Equal Conditions. Corrections remain internal until a
 separate explicit publication through the existing management controls.
 
-These review screens do not enable collection. Confidentiality and production rollout remain
-separate acceptance gates.
+Review and approval keep content private. Gateway startup and season enrollment remain explicit
+operator actions, following the rollout checklist below.
 
 
 ### Season opt-in and existing settings
@@ -836,8 +836,8 @@ An unresolved delivery blocks activation. Completed historical races remain on t
 rules. Classification neither approves a submission nor sends a message.
 
 Enable collection after reviewing all configured targets. Pause stops new collection without
-removing race enrollment, private history or confirmed public content. The Gateway still remains
-disabled until final rollout acceptance, even when the season is configured for collection.
+removing race enrollment, private history or confirmed public content. The Gateway still requires
+its own explicit opt-in, even when the season is configured for collection.
 
 ### Explicit publication and public pages
 
@@ -882,4 +882,85 @@ Schema 7 exports all 36 entity tables, including immutable publication attempts 
 snapshots. Schemas 1 through 6 may omit the new publication files. Restore preserves exact masks,
 versions, unresolved outcomes and season catalog memberships without querying Discord or resending
 messages. Legacy-only publication receipts remain restorable without enabling collection. Archives
-with private enrollment/history remain blocked until final confidentiality acceptance is delivered.
+with valid private enrollment and history restore after the complete preflight. Invalid references,
+pointers or publication evidence are rejected before any database wipe.
+
+
+### Running one internal consumer
+
+The application remains internal. No public interaction endpoint or team account is required.
+Use the existing bot identity and run exactly one enabled CTC Gateway consumer. Keep other app
+copies and development/test processes disabled for that identity. The two default workers and
+32-item queue belong to that one consumer. Starting its lifecycle twice does not open another session.
+
+The adapter uses JDA 6.7.0 for outgoing Gateway connections, reconnect/resume and rate limits.
+Allow outbound HTTPS/WebSocket connectivity to Discord; keep the Manager behind its existing
+private access and prod/docker authentication. No message-content intent is needed. The bot must
+be able to view the bound private channels and retrieve current guild/member/role permission data.
+Authorized members need current access to their exact bound channel. Existing explicit publication
+controls retain their own webhook/channel permissions.
+
+`DISCORD_PICKS_ENABLED` defaults to `false`. For the supported private deployment, set it in the
+configured private app environment file consumed by `deploy/compose.yaml` through `CTC_APP_ENV_FILE`.
+Pass it explicitly into the app process for other launches; a host environment variable alone is
+not automatically passed into a container. Follow the deployment runbook for an app-only restart.
+Do not restart the host or unrelated services to enable this feature.
+
+Keep `DISCORD_BOT_TOKEN` in that private configuration. Never put tokens, callback URLs, private
+picks or backup ZIPs in public logs, tickets or a repository. The application reuses the saved guild
+and application IDs. Inspect Gateway health in management; the view does not fetch Discord data or
+show the token. `DISABLED`, `MISCONFIGURED`, `CONNECTING`, `CONNECTED`, `RECONNECTING`, `STOPPED` and
+`FAILED` identify runtime state. Capability readiness does not start a consumer.
+
+### Deadlines, failures and restore downtime
+
+A matchday deadline is interpreted in Europe/Berlin. Ordinary edits stop at the exact cutoff.
+A missing deadline, a spring clock gap or an autumn repeated time requires an explicit management
+decision. The read-only data audit reports an unreviewed ambiguous deadline for unfinished managed
+targets. It does not choose an offset or alter a deadline. A recorded opening/return stays open
+without another cutoff until management closes or approves it. Approval immediately locks team edits.
+Completed and legacy targets keep their existing lifecycle.
+
+An unfinished wizard lasts 30 minutes; private callback continuations stop after 15 minutes.
+Neither duration extends a pick deadline. A missing receipt is recovered through `/picks` and the
+team's authoritative saved state. Do not assume a failed response means a transaction was rejected,
+and do not ask the team to repeat a confirmation without checking its current revision first.
+
+Webhook and bot REST requests use the configured 5-second connect and 30-second read bounds.
+Queue saturation and transport faults return private failures without inventing a saved receipt.
+The Gateway SDK reports reconnect state; avoid launching a second consumer to work around it.
+Uncertain public delivery must follow the reconciliation procedure above before another send.
+
+During restore, new Gateway writes are refused privately and already admitted transactions drain
+through commit or rollback before the replacement. A committed restore invalidates unfinished
+sessions and old confirmations. Keep outbound integrations paused during recovery qualification,
+following the recovery runbook. Restore/reconnect never registers commands, publishes settings or
+rebuilds public evidence from live choices. Restart the private interaction after recovery and
+check the retained receipt/history. Valid private archives preserve exact channel bindings,
+Equal Conditions versus numeric 0x, manual openings/closures and immutable public/private versions.
+
+### Operator rollout checklist
+
+These are operator actions. Automated acceptance uses synthetic fixtures and offline transports;
+live guild registration, messages, production changes and test-guild UAT need separate authorization.
+
+- [ ] Select a verified release and review its acceptance evidence. Keep the Gateway off while
+  configuring it and stop any other consumer using the same identity.
+- [ ] Configure an isolated test guild and synthetic team channels through the existing private
+  management screens. Verify exact season/team/guild/channel bindings and bot visibility.
+- [ ] After separate live authorization, use **Register /picks for this guild**. It upserts only
+  that guild's picks command and preserves unrelated commands. Startup/restore do not register it.
+- [ ] Perform the authorized test-guild UAT. A teammate can view the saved team revision; an
+  opponent, wrong channel or revoked member cannot. An old open dialog must not bypass a revocation.
+- [ ] Exercise fixed and enabled category choices, Equal Conditions and 0x, replacement/conflict,
+  exact deadline closure, missing reopening, return and manual close. Check receipt recovery and
+  approval lock. Generate the existing team cards before testing settings graphics. Approval must remain private until explicit publication; lobby-only output must
+  still withhold the omitted car.
+- [ ] Qualify backup/recovery using the existing isolated recovery procedure. Check IDs, immutable
+  history, old public masks, newer private corrections and unresolved delivery. Old dialogs must
+  be invalidated and recovery must not resend messages.
+- [ ] Classify preconfigured unfinished races using actual publication evidence. Enable only the
+  intended future seasons and the one configured Gateway consumer. Verify its health and access
+  before accepting real submissions.
+- [ ] Keep the existing Google Forms available until the operator deliberately retires them.
+  Do not delete Forms or migrate old responses automatically.
