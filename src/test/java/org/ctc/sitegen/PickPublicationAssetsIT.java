@@ -11,6 +11,7 @@ import org.ctc.domain.repository.TeamRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.CarRepository;
 import org.ctc.domain.repository.TrackRepository;
+import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.model.*;
 import org.ctc.domain.picks.AuthorizedPickActor;
 import org.ctc.domain.picks.ManagementPickActor;
@@ -43,6 +44,7 @@ class PickPublicationAssetsIT {
     @Autowired TransactionTemplate tx;
     @Autowired SeasonRepository seasons;
     @Autowired TeamRepository teams;
+    @Autowired PhaseTeamRepository phaseTeams;
     @Autowired SiteGeneratorService generator;
     @Autowired RaceRepository races;
     @Autowired CarRepository cars;
@@ -61,11 +63,16 @@ class PickPublicationAssetsIT {
         tx.executeWithoutResult(status -> {
             fixture = helper.createFullSeasonFixture("T-AS" + UUID.randomUUID().toString().substring(0, 6));
             fixture.race().setPicksManaged(true);
+            phaseTeams.saveAll(List.of(new PhaseTeam(fixture.matchday().getPhase(), fixture.homeTeam()),
+                    new PhaseTeam(fixture.matchday().getPhase(), fixture.awayTeam())));
+            var previous = helper.createMatchday(fixture.season(), "T-AS previous round", 0);
+            helper.createMatch(previous, fixture.homeTeam(), fixture.awayTeam()).setWalkoverTeam(fixture.homeTeam());
         });
     }
     @AfterEach
     void cleanUp() {
         tx.executeWithoutResult(status -> {
+            phaseTeams.deleteAll(phaseTeams.findByPhaseId(fixture.matchday().getPhase().getId())); phaseTeams.flush();
             helper.deleteSeasonCascade(seasons.findById(fixture.season().getId()).orElseThrow()); seasons.flush();
             if (privateCar != null) cars.deleteById(privateCar);
             if (privateTrack != null) tracks.deleteById(privateTrack);
@@ -138,10 +145,15 @@ class PickPublicationAssetsIT {
         try (var files = Files.walk(ROOT.resolve("site"))) {
             var exported = files.filter(Files::isRegularFile).toList();
             assertThat(exported).anyMatch(path -> path.toString().endsWith(".html"));
+            boolean teamProfileGenerated = false;
             for (Path file : exported) {
-                assertThat(new String(Files.readAllBytes(file), StandardCharsets.UTF_8)).as("public artifact %s", file.getFileName())
+                String content = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+                if (file.getParent().getFileName().toString().equals("team") && file.toString().endsWith(".html")
+                        && content.contains(fixture.homeTeam().getName())) teamProfileGenerated = true;
+                assertThat(content).as("public artifact %s", file.getFileName())
                         .doesNotContain(PRIVATE, "/uploads/races/", "private-cache-" + fixture.race().getId());
             }
+            assertThat(teamProfileGenerated).as("the participating team's real profile must exercise its own asset copier").isTrue();
         }
         assertThat(Files.readString(uploads.resolve(cache))).isEqualTo(PRIVATE);
     }
