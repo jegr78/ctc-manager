@@ -38,6 +38,7 @@ public final class DiscordApiExceptionMapper {
 			case 401 -> new DiscordAuthException(AUTH_MESSAGE, e);
 			case 403 -> from403(e);
 			case 404 -> new DiscordNotFoundException(NOT_FOUND_MESSAGE, e);
+            case 429 -> new DiscordTransientException(TRANSIENT_MESSAGE, e, true);
 			case 400 -> from400(e);
 			default -> new DiscordTransientException(TRANSIENT_MESSAGE, e);
 		};

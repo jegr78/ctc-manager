@@ -147,6 +147,9 @@ public class IncidentWindowService {
         return windows.findByContextId(contextId).orElseThrow(() -> new BusinessRuleException("Incident window is unavailable"));
     }
 
+    @Transactional(readOnly = true)
+    public java.util.List<UUID> dueWindowIds(Instant now, org.springframework.data.domain.Pageable page) { return windows.findDueWindowIds(now, page); }
+
     private static Instant future(Instant deadline, Instant now) {
         var normalized = deadline == null ? null : deadline.truncatedTo(ChronoUnit.MICROS);
         if (normalized == null || !now.isBefore(normalized)) throw new BusinessRuleException("Choose an explicit future incident deadline");

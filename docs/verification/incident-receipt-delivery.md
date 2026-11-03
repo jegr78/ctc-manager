@@ -86,3 +86,31 @@ an unsent generic operation and its original revision but never erases an alread
 
 These state transitions are not yet wired to HTTP or the worker. The complete issue scope and
 all remaining delivery/reconciliation/restore/concurrency/UI/review/verification gates remain open.
+
+## HTTP dispatch and worker checkpoint
+
+The production-shaped HTTP contract first produced nineteen intended assertion failures and
+zero errors/skips, including the existing retry interceptor. Its corrected run passed thirty
+unit and nine rate-limit integration cases. The bot sends fixed neutral text with empty parsed
+mentions and a stable nonce no longer than 25 characters, with enforce_nonce enabled. It verifies
+the captured guild/channel and the returned message identity. Pure rate-limit rejection stays
+retryable; an earlier unknown server result remains uncertain even after a later rate-limit or
+permission rejection. No raw upstream body or exception becomes a persisted failure code.
+[Discord's message API](https://docs.discord.com/developers/resources/message#create-message)
+limits nonce deduplication to recent messages, so persisted unknown outcomes never retry blindly.
+
+The initial dispatch integration contract produced seventeen intended assertion failures without
+errors/skips. The complete corrected check passed forty-four unit and twenty-six H2/MariaDB
+integration cases. SQL locks are released before HTTP. One writer admission spans claim commit,
+external send and outcome commit, including all failures; restore waits for that complete operation.
+The current window and operation are refreshed under their existing locking order. Restart scans
+use persisted pending/retryable work; abandoned claims become uncertain. Detailed disclosure jobs
+are excluded from neutral dispatch, and a pending generic receipt is superseded only after its
+corresponding disclosure is confirmed sent. Deadline/closure races freeze the accepted revision.
+
+The scheduled worker is off unless app.discord.incidents.delivery-enabled is explicitly true.
+It skips recovery-check/outbound-disabled policy and active restore, requests batches of ten due
+windows and receipts, and prevents overlapping ticks. Its bounded claim lease is ten minutes;
+the existing HTTP timeout and retry settings are unchanged. Final operator recovery controls,
+management status presentation, full archive state/restore witnesses, review and delivery gates
+remain open for this same issue.
