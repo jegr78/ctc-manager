@@ -102,6 +102,10 @@ The feature PR records the final canonical counts, exact head/base, coverage and
   Their full-run regression also caught transient Discord failures being classified as incomplete
   data. Transport uncertainty retains the transient category, pending history and reconciliation
   requirement; existing HTTP error-category assertions remain unchanged.
+- Manifest file/count checks run before cross-table integrity validation, retaining the missing-file
+  diagnostic before any wipe. Legacy archive fixtures omit tables their schema never exported.
+  The repository probe traverses nested graph paths, and the lifecycle webhook fixture returns its
+  configured channel ID. Existing restore and browser assertions remain in place.
 
 ## Guard falsification and final review
 

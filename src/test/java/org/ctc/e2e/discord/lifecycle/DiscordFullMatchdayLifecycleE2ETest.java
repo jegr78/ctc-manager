@@ -165,7 +165,7 @@ class DiscordFullMatchdayLifecycleE2ETest extends PlaywrightConfig {
 	}
 
 	private void step2_postTeamCards_thenMultipartPosted() {
-		WireMockDiscordStubs.stubExecuteWebhook(wm, WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN, MSG_TEAM_CARDS);
+		WireMockDiscordStubs.stubExecuteWebhook(wm, WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN, CHANNEL_SNOWFLAKE, MSG_TEAM_CARDS);
 		postAction("post-team-cards");
 		wm.verify(postRequestedFor(urlPathEqualTo(webhookPath(WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN)))
 				.withQueryParam("wait", equalTo("true"))
@@ -176,7 +176,7 @@ class DiscordFullMatchdayLifecycleE2ETest extends PlaywrightConfig {
 	}
 
 	private void step3_postSettings_thenMultipartPosted() {
-		WireMockDiscordStubs.stubExecuteWebhook(wm, WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN, MSG_SETTINGS);
+		WireMockDiscordStubs.stubExecuteWebhook(wm, WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN, CHANNEL_SNOWFLAKE, MSG_SETTINGS);
 		postAction("post-settings");
 		wm.verify(postRequestedFor(urlPathEqualTo(webhookPath(WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN)))
 				.withQueryParam("wait", equalTo("true"))
@@ -185,7 +185,7 @@ class DiscordFullMatchdayLifecycleE2ETest extends PlaywrightConfig {
 	}
 
 	private void step4_postLineups_thenMultipartPosted() {
-		WireMockDiscordStubs.stubExecuteWebhook(wm, WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN, MSG_LINEUPS);
+		WireMockDiscordStubs.stubExecuteWebhook(wm, WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN, CHANNEL_SNOWFLAKE, MSG_LINEUPS);
 		postAction("post-lineups");
 		wm.verify(postRequestedFor(urlPathEqualTo(webhookPath(WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN)))
 				.withQueryParam("wait", equalTo("true"))
@@ -194,7 +194,7 @@ class DiscordFullMatchdayLifecycleE2ETest extends PlaywrightConfig {
 	}
 
 	private void step5_postSchedule_thenEmbedPosted() {
-		WireMockDiscordStubs.stubExecuteWebhook(wm, WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN, MSG_SCHEDULE);
+		WireMockDiscordStubs.stubExecuteWebhook(wm, WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN, CHANNEL_SNOWFLAKE, MSG_SCHEDULE);
 		postAction("post-schedule");
 		wm.verify(postRequestedFor(urlPathEqualTo(webhookPath(WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN)))
 				.withQueryParam("wait", equalTo("true"))
@@ -204,7 +204,7 @@ class DiscordFullMatchdayLifecycleE2ETest extends PlaywrightConfig {
 
 	private void step6_postProvisionalScores_thenMultipartPosted() {
 		seedRaceResults(false);
-		WireMockDiscordStubs.stubExecuteWebhook(wm, WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN, MSG_PROVISIONAL);
+		WireMockDiscordStubs.stubExecuteWebhook(wm, WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN, CHANNEL_SNOWFLAKE, MSG_PROVISIONAL);
 		postAction("post-provisional");
 		wm.verify(postRequestedFor(urlPathEqualTo(webhookPath(WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN)))
 				.withQueryParam("wait", equalTo("true"))
@@ -215,7 +215,7 @@ class DiscordFullMatchdayLifecycleE2ETest extends PlaywrightConfig {
 	private void step7_postMatchResults_thenMultipartPostedAndForumThreadIdQueryParamSent() throws Exception {
 		seedRaceResults(true);
 		seedForumThread();
-		WireMockDiscordStubs.stubExecuteWebhook(wm, WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN, MSG_MATCH_RESULTS);
+		WireMockDiscordStubs.stubExecuteWebhook(wm, WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN, CHANNEL_SNOWFLAKE, MSG_MATCH_RESULTS);
 		WireMockDiscordStubs.stubExecuteWebhookForumThread(wm, FORUM_WEBHOOK_SNOWFLAKE, FORUM_WEBHOOK_TOKEN,
 				FORUM_THREAD_SNOWFLAKE, MSG_FORUM_RACE_RESULT);
 		WireMockDiscordStubs.stubFetchChannelNotArchived(wm, FORUM_THREAD_SNOWFLAKE);

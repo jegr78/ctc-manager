@@ -232,6 +232,11 @@ class BackupRepositoryEntityGraphIT {
 	 * direct getter.
 	 */
 	private Object readField(Object instance, String fieldName) {
+		if (instance == null) return null;
+		int separator = fieldName.indexOf('.');
+		if (separator >= 0) {
+			return readField(readField(instance, fieldName.substring(0, separator)), fieldName.substring(separator + 1));
+		}
 		String getterName = "get" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
 		// 1) Try the conventional getter.
 		try {

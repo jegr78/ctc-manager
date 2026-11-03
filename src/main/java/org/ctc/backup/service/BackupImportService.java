@@ -763,9 +763,9 @@ public class BackupImportService {
      * Counts the rows {@link #restoreAll} would restore, through the same entry lookup and parse loop,
      * so the manifest check cannot pass on bytes the restore never reads.
      */
-    private Map<String, Long> countRestorableRows(Path staged, int version) throws BackupArchiveException {
-        var poolValidator = new org.ctc.backup.schema.CarPoolBackupValidator(version);
-        var pickValidator = new org.ctc.backup.schema.PickBackupValidator(version);
+    private void validateRestorableRows(Path staged, BackupManifest manifest) throws BackupArchiveException {
+        var poolValidator = new org.ctc.backup.schema.CarPoolBackupValidator(manifest.schemaVersion());
+        var pickValidator = new org.ctc.backup.schema.PickBackupValidator(manifest.schemaVersion());
         Map<String, Long> counts = new LinkedHashMap<>();
         long[] inflatedBytes = {0L};
         try (ZipFile zf = new ZipFile(staged.toFile())) {
@@ -779,6 +779,7 @@ public class BackupImportService {
                     }));
                 }
             }
+            assertRowCountsMatchManifest(counts, manifest);
             poolValidator.validate();
             pickValidator.validate();
             if (pickValidator.hasConfidentialContent() && !pickCollection.isConfidentialityReady()) {
@@ -794,7 +795,6 @@ public class BackupImportService {
         } catch (IOException ex) {
             throw new BackupArchiveException(Reason.MANIFEST_INVALID, "ZIP read failure", ex);
         }
-        return counts;
     }
 
     /** Streams the JSON array of {@code entry} and hands each top-level object to {@code onRow}. */
@@ -997,7 +997,10 @@ public class BackupImportService {
             throw new BackupArchiveException(Reason.SCHEMA_MISMATCH,
                     "Schema version " + manifest.schemaVersion() + " not supported (accepted: " + SUPPORTED_SCHEMA_VERSIONS + "). Cannot import.");
         }
-        Map<String, Long> actualCounts = countRestorableRows(staged, manifest.schemaVersion());
+        validateRestorableRows(staged, manifest);
+    }
+
+    private void assertRowCountsMatchManifest(Map<String, Long> actualCounts, BackupManifest manifest) {
         Set<String> absentInSchema = TABLES_ABSENT_IN_SCHEMA.getOrDefault(manifest.schemaVersion(), Set.of());
         List<String> problems = new ArrayList<>();
         for (EntityRef ref : backupSchema.getExportOrder()) {

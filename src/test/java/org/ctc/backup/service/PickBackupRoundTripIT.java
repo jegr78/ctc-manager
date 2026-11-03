@@ -278,6 +278,10 @@ class PickBackupRoundTripIT {
         var files = unzip(export());
         var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
         manifest.put("schema_version", 5);
+        for (String table : List.of("pick_publication_attempts", "pick_publication_snapshots")) {
+            ((ObjectNode) manifest.get("table_counts")).remove(table);
+            files.remove("data/" + table.replace('_', '-') + ".json");
+        }
         ((ObjectNode) manifest.get("table_counts")).remove("team_pick_channel_bindings");
         files.remove("data/team-pick-channel-bindings.json");
         files.put("manifest.json", JSON.writeValueAsBytes(manifest));

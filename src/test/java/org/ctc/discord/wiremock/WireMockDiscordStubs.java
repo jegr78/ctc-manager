@@ -30,10 +30,10 @@ public final class WireMockDiscordStubs {
 						.withHeader("X-RateLimit-Reset-After", "0.5")));
 	}
 
-	public static void stubExecuteWebhook(WireMockExtension wm, long webhookId, String token, long messageSnowflake) {
+	public static void stubExecuteWebhook(WireMockExtension wm, long webhookId, String token, long channelSnowflake, long messageSnowflake) {
 		wm.stubFor(post(urlPathEqualTo("/api/v10/webhooks/" + webhookId + "/" + token))
 				.withQueryParam("wait", equalTo("true"))
-				.willReturn(okJson("{\"id\":\"" + messageSnowflake + "\",\"channel_id\":\"channel-stub\"}")
+				.willReturn(okJson("{\"id\":\"" + messageSnowflake + "\",\"channel_id\":\"" + channelSnowflake + "\"}")
 						.withHeader("X-RateLimit-Remaining", "5")
 						.withHeader("X-RateLimit-Reset-After", "0.5")));
 	}
