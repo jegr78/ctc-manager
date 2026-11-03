@@ -86,3 +86,10 @@ Self-review and an independent read-only security pass reviewed checkpoint
 explicit season activation, current channel authorization and pre-wipe restore validation
 remain enforced. Final verification below belongs to the subsequent committed head after
 integrating upstream release/version-only commits.
+
+The initial full run exposed one obsolete security assertion that still expected the temporary
+confidentiality gate. It was corrected to require actual missing-guild configuration at the real
+service. The focused controller/service/security/browser regression then passed 25 unit,
+18 integration and three browser cases. Authentication and CSRF cases remain unchanged.
+The interrupted red run is not final evidence; final canonical verification restarts on the
+corrected committed head.
