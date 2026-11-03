@@ -984,3 +984,19 @@ register an incident command, enable live intake automatically, send notices or 
 the website. Those capabilities are separate delivery units. Backups contain private case data
 and must receive the same restricted handling as confidential picks. Supported schemas 1 through
 7 restore without incident records or invented reporting windows.
+
+Open **Incident reports** from a regular match or playoff pairing. Bind the pairing first. Regular
+matches use their saved channel; standalone playoffs require an explicit channel ID. Opening the
+page does not create a binding or window. Resolve ambiguous shared legacy channel assignments
+before proceeding.
+
+After binding, review the planned start and suggested cutoff. Enter the Berlin date/time and its
+UTC offset, then choose **Open reporting**. To adjust an open, unexpired window, enter the new
+cutoff and a reason, then choose **Change deadline**. A concurrent change keeps the submitted
+values and asks you to reload the current state. Missing version tokens are rejected. Neither
+opening nor changing the deadline starts live Discord intake or posts messages.
+
+Saved active and withdrawn cases remain visible in this internal workspace, including their
+original party, creator reference and original-race link. Deadline decisions retain the manager,
+reason, accepted time and chosen cutoff. The read-only Data Audit reports inconsistent history
+with a record locator; it does not repair records or show report payload text in its findings.

@@ -15,8 +15,8 @@ excluded.
 - [x] Protect incident identities through ordinary edits, deletion and results imports.
 - [x] Add the current migration, backup schema, explicit restorers and archive preflight.
 - [x] Verify H2/MariaDB concurrency, restore and source identity protection.
-- [ ] Verify native desktop/mobile management forms.
-- [ ] Update README, CLAUDE, domain vocabulary and the user-facing Wiki draft.
+- [x] Verify native desktop/mobile management forms.
+- [x] Update README, CLAUDE, domain vocabulary and the user-facing Wiki draft.
 - [ ] Complete focused checks, individual new-guard witnesses and independent review.
 - [ ] Verify the final committed head, pass GitHub CI, merge and reconcile the tracker.
 - [ ] Publish the Wiki changes and remove the proven landed topic branch.
@@ -139,3 +139,35 @@ SQL execution and ten managed-entity references in the internal pairing adapter.
 annotations and acceptance rationale are tracked in `docs/security/sast-acceptance.md`; a later
 complete verification must confirm that static analysis is green. This earlier run is not final
 acceptance of the changed head or the unfinished native forms.
+
+## Native management checkpoint
+
+Nine HTTP assertions failed before the native routes existed. The native implementation then
+passed those cases. Three additional assertions demonstrated that missing version tokens were
+being treated as the initial zero; required nullable version fields now reject that omission
+before any mutation. Specific form messages preserve rejected raw dates without exposing Java
+type names.
+
+The final focused native run passed 19 unit, 34 integration and four browser cases, with zero
+failures, errors or skips. Fourteen integration cases use the production security profile and
+prove management authentication, CSRF rejection, tokens inside the actual new forms, recorded
+authenticated actors and retained validation errors. Twenty management cases cover regular and
+standalone playoff bindings, canonical aliases, future confirmation, missing/ambiguous/past
+suggestions, invalid offsets/dates, required reasons/versions, stale edits, expiry, closed-window
+reopening rejection, escaped active/withdrawn records and both existing pairing-page links.
+
+The browser uses JavaScript-disabled contexts at 1440×1000 and 390×844. Native binding, confirmation
+and deadline change work, long private text wraps within the viewport, stale input survives until
+explicit reload, and expired pages hide mutation controls. Desktop/mobile screenshots were
+visually inspected; `.screenshots/incident-management-{desktop,mobile}.png` and the stale-mobile
+variant are local evidence. Their reports and parties are synthetic.
+
+A nonexistent planned wall time written through the legacy Race timestamp mapping normalizes
+during persistence. The integration fixture does not pretend that normalized value is still a
+gap. Direct domain tests cover planned-gap handling; the native integration submits an actual
+nonexistent Berlin deadline and requires rejection before persistence. Existing calendar/storage
+timezone behavior remains outside this change.
+
+Implementation is ready for self-review and the independent security pass. Individual semantic
+guard witnesses, committed-head full verification, green CI and the actual merge are still
+required. Wiki publication and tracker/branch cleanup follow the verified merge.

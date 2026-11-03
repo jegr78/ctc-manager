@@ -44,7 +44,12 @@ public class IncidentWindowService {
         var context = contexts.get(contextId);
         var window = windows.findByContextId(contextId).orElseThrow(() -> new BusinessRuleException("Incident window is unavailable"));
         if (window.getState() != IncidentWindowState.DRAFT) return preview(window.getPlannedStartLocal(), window.getPlannedStart());
-        var local = contexts.resolve(IncidentContextService.reference(context)).races().stream().map(Race::getDateTime)
+        return previewUnbound(IncidentContextService.reference(context));
+    }
+
+    @Transactional(readOnly = true)
+    public DeadlinePreview previewUnbound(org.ctc.domain.incidents.IncidentMatchRef reference) {
+        var local = contexts.resolve(reference).races().stream().map(Race::getDateTime)
                 .filter(Objects::nonNull).min(Comparator.naturalOrder()).orElse(null);
         return preview(local, resolvePlanned(local));
     }
