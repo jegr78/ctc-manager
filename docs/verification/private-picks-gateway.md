@@ -230,7 +230,7 @@ repository gates. No test, coverage, lint or security gate was skipped or weaken
 | admin-season-write-lock | [PrivatePicksAdminServiceTest](../../src/test/java/org/ctc/admin/service/PrivatePicksAdminServiceTest.java), `givenValidPrivateChannel*` | 1 |
 | registration-privacy | [PrivatePicksAdminServiceTest](../../src/test/java/org/ctc/admin/service/PrivatePicksAdminServiceTest.java), `givenUnavailableRegistration*` | 1 |
 | registration-identity | [PrivatePicksAdminServiceTest](../../src/test/java/org/ctc/admin/service/PrivatePicksAdminServiceTest.java), `givenUnavailableRegistration*` | 2 |
-| committed-restore-epoch | [PickBackupRoundTripIT](../../src/test/java/org/ctc/backup/service/PickBackupRoundTripIT.java), `givenApprovedCorrection*` | 1 |
+| committed-restore-epoch | [DiscordPicksBackupRoundTripIT](../../src/test/java/org/ctc/backup/service/DiscordPicksBackupRoundTripIT.java), `givenApprovedCorrection*` | 1 |
 | db-team-unique | [TeamPickChannelBindingIT](../../src/test/java/org/ctc/domain/service/TeamPickChannelBindingIT.java), `givenConflictingOrMalformedScope*` | 1 |
 | db-channel-unique | [TeamPickChannelBindingIT](../../src/test/java/org/ctc/domain/service/TeamPickChannelBindingIT.java), `givenConflictingOrMalformedScope*` | 1 |
 | db-season-fk | [TeamPickChannelBindingIT](../../src/test/java/org/ctc/domain/service/TeamPickChannelBindingIT.java), `givenConflictingOrMalformedScope*` | 1 |

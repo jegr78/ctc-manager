@@ -37,7 +37,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @Tag("integration")
-class GatewayRestoreAdmissionIT extends PickPersistenceIT {
+class DiscordPicksRestoreAdmissionIT extends PickPersistenceIT {
     static final String GUILD = "100000000000000001", CHANNEL = "200000000000000002";
     @Autowired PickAccessService access;
     @Autowired PickTargetService targets;

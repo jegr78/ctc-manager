@@ -16,7 +16,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 @EnabledIfSystemProperty(named = "docker.available", matches = "true")
 @Tag("integration")
-class PickBackupMariaDbIT extends PickBackupRoundTripIT {
+class PickBackupMariaDbIT extends DiscordPicksBackupRoundTripIT {
     @Container
     static MariaDBContainer<?> database = new MariaDBContainer<>("mariadb:11")
             .withDatabaseName("ctc_pick_backup_test").withUsername("ctc").withPassword("test");

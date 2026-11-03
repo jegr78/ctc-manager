@@ -14,7 +14,7 @@
             <dt>Saved guild</dt>
             <dd th:text="${#strings.isEmpty(setup.guildId) ? 'Not configured' : setup.guildId}"></dd>
         </dl>
-        <p class="text-dim">The outgoing connection is disabled by default. Collection remains unavailable until confidentiality acceptance is complete.</p>
+        <p class="text-dim">The outgoing connection is disabled by default. Enable the Gateway and opt in each season explicitly to start collection.</p>
     </div>
     <form th:action="@{/admin/discord-config/picks/bindings/save}" method="post" th:object="${form}" class="card entity-editor-form">
         <fieldset>
@@ -68,7 +68,7 @@
     </div>
     <div class="card">
         <h2>Register the Discord command</h2>
-        <p class="text-dim mb-md">Register /picks for the saved guild after the bot and server are configured and confidentiality acceptance is complete.</p>
+        <p class="text-dim mb-md">Register /picks for the saved guild after configuring the bot and server. Registration updates this command only.</p>
         <form th:action="@{/admin/discord-config/picks/register-command}" method="post">
             <button type="submit" class="btn btn-secondary" th:disabled="${!setup.registrationReady}">Register /picks for this guild</button>
         </form>

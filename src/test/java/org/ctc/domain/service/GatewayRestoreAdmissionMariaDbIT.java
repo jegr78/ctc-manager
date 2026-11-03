@@ -16,7 +16,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 @EnabledIfSystemProperty(named = "docker.available", matches = "true")
 @Tag("integration")
-class GatewayRestoreAdmissionMariaDbIT extends GatewayRestoreAdmissionIT {
+class GatewayRestoreAdmissionMariaDbIT extends DiscordPicksRestoreAdmissionIT {
     @Container
     static MariaDBContainer<?> database = new MariaDBContainer<>("mariadb:11")
             .withDatabaseName("ctc_gateway_admission_test").withUsername("ctc").withPassword("test");

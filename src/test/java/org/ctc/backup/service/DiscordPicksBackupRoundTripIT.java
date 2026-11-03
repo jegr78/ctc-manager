@@ -36,7 +36,7 @@ import static org.mockito.Mockito.*;
 
 @CtcDevSpringBootContext
 @Tag("integration")
-class PickBackupRoundTripIT {
+class DiscordPicksBackupRoundTripIT {
     static final ObjectMapper JSON = new ObjectMapper();
     static final Path ROOT = SitegenTestDir.create("private-picks-backup");
     @DynamicPropertySource
@@ -142,6 +142,16 @@ class PickBackupRoundTripIT {
     @Test
     void givenApprovedCorrectionAndClosedPendingHistory_whenRestoring_thenPreserveExactReceiptStateAndReservations() throws Exception {
         // given
+        UUID missingRace = tx.execute(status -> {
+            var day = helper.createMatchday(seasons.findById(fixture.season().getId()).orElseThrow(), "Test reopened missing target", 3);
+            day.setPickDeadline(LocalDateTime.of(2020, 1, 1, 12, 0));
+            var match = helper.createMatch(day, teams.findById(fixture.homeTeam().getId()).orElseThrow(), teams.findById(fixture.awayTeam().getId()).orElseThrow());
+            var race = helper.createRace(day, match);
+            race.setDateTime(LocalDateTime.of(2035, 1, 3, 20, 0));
+            race.setPicksManaged(true);
+            return race.getId();
+        });
+        reviews.openMissing(missingRace, 0, manager, "Test missing submission explicitly opened without another deadline");
         byte[] archive = export();
         long generation = epoch.getAsLong();
         reviews.correct(fixture.race().getId(), 5, manager, "After export", payload(1, "Changed after export"));
@@ -172,6 +182,13 @@ class PickBackupRoundTripIT {
             assertThat(pending.getState()).isEqualTo(PickState.RETURNED);
             assertThat(pending.isManualClosed()).isTrue();
             assertThat(pending.isManualOpen()).isFalse();
+            var opened = picks.findByRaceId(missingRace).orElseThrow();
+            assertThat(opened.getState()).isEqualTo(PickState.MISSING);
+            assertThat(opened.getVersion()).isEqualTo(1);
+            assertThat(opened.getLatestRevisionNumber()).isNull();
+            assertThat(opened.isManualOpen()).isTrue();
+            assertThat(opened.isManualClosed()).isFalse();
+            assertThat(opened.getRace().getMatchday().getPickDeadline()).isEqualTo(LocalDateTime.of(2020, 1, 1, 12, 0));
             assertThat(approved.getSeason().isPicksCollectionEnabled()).isTrue();
             assertThat(pending.getRace().isPicksManaged()).isTrue();
             assertThat(revisions.findByRequestId(original.requestId()).orElseThrow().receipt()).isEqualTo(original);
@@ -302,7 +319,8 @@ class PickBackupRoundTripIT {
                 new org.ctc.domain.picks.PreparedPickPublication<>("123456789012345678", "234567890123456789", null,
                         "a".repeat(64), "{}", Map.of(fixture.race().getId(), PickDisclosureField.lobby()),
                         () -> "test-lobby-message", message -> message));
-        reviews.correct(fixture.race().getId(), 5, manager, "Later internal unpublished correction", payload(1, "Test private after lobby"));
+        reviews.correct(fixture.race().getId(), 5, manager, "Later internal unpublished correction", payload(1, "Test private after lobby", TimeProgressionMode.MULTIPLIER, 0));
+        tx.executeWithoutResult(status -> races.findById(fixture.race().getId()).orElseThrow().getMatchday().setPickDeadline(LocalDateTime.of(2026, 10, 25, 2, 30)));
         assertThatThrownBy(() -> publications.publish(List.of(fixture.race().getId()), PickPublicationOutput.SETTINGS, manager, rows ->
                 new org.ctc.domain.picks.PreparedPickPublication<>("123456789012345678", "234567890123456789", null,
                         "b".repeat(64), "{}", Map.of(fixture.race().getId(), PickDisclosureField.all()),
@@ -310,6 +328,8 @@ class PickBackupRoundTripIT {
         byte[] archive = export();
         var before = disclosure.forPublic(fixture.race().getId());
         assertThat(before.carName()).isNull(); assertThat(before.settings().weather()).isEqualTo(corrected.weather());
+        assertThat(before.settings().timeProgressionMode()).isEqualTo(TimeProgressionMode.EQUAL_CONDITIONS);
+        assertThat(before.settings().timeProgressionMultiplier()).isNull();
         // when
         var preview = imports.stage(upload(archive)); imports.execute(preview.stagingId());
         // then
@@ -320,6 +340,11 @@ class PickBackupRoundTripIT {
             assertThat(attempt.getContent().weather()).isEqualTo("Test private after lobby");
             assertThat(attempt.getContentVersion()).isEqualTo(2);
             assertThat(attempt.getContentHash()).isEqualTo(attempt.getContent().fingerprint());
+            assertThat(attempt.getContent().timeProgressionMode()).isEqualTo(TimeProgressionMode.MULTIPLIER);
+            assertThat(attempt.getContent().timeProgressionMultiplier()).isZero();
+            var internal = races.findById(fixture.race().getId()).orElseThrow().getSettings();
+            assertThat(internal.getTimeProgressionMode()).isEqualTo(TimeProgressionMode.MULTIPLIER);
+            assertThat(internal.getTimeProgressionMultiplier()).isZero();
         });
         tx.executeWithoutResult(status -> {
             var season = seasons.findById(fixture.season().getId()).orElseThrow();
@@ -330,8 +355,11 @@ class PickBackupRoundTripIT {
     }
 
     private PickPayload payload(int option, String weather) {
+        return payload(option, weather, TimeProgressionMode.EQUAL_CONDITIONS, null);
+    }
+    private PickPayload payload(int option, String weather, TimeProgressionMode mode, Integer multiplier) {
         return new PickPayload(trackIds.get(option), carIds.get(option), null, 12, 2, 3, 4, PickInitialFuel.DEFAULT, 1,
-                TimeProgressionMode.EQUAL_CONDITIONS, null, weather, "Sunset", Set.of(PickTyre.RS, PickTyre.RM), Set.of(PickTyre.RM));
+                mode, multiplier, weather, "Sunset", Set.of(PickTyre.RS, PickTyre.RM), Set.of(PickTyre.RM));
     }
     private AuthorizedPickActor actor(UUID race) {
         return new AuthorizedPickActor(race, fixture.season().getId(), fixture.homeTeam().getId(), "12345");

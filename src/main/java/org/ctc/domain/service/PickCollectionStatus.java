@@ -5,11 +5,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class PickCollectionStatus {
     public boolean isConfidentialityReady() {
-        return false;
+        return true;
     }
 
     public boolean isAvailable() {
-        // Collection stays unavailable until the Gateway and confidentiality acceptance are delivered.
-        return false;
+        return isConfidentialityReady();
     }
 }

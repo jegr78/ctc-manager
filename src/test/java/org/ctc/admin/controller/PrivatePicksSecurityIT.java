@@ -67,10 +67,10 @@ class PrivatePicksSecurityIT {
 
     @Test
     @WithMockUser
-    void givenAuthenticatedRegistrationBeforeReadiness_whenPostingWithCsrf_thenRefuseAtRealService() throws Exception {
+    void givenAuthenticatedRegistrationWithoutGuild_whenPostingWithCsrf_thenRequireConfigurationAtRealService() throws Exception {
         // when / then
         mvc.perform(post(path("register-command")).with(csrf())).andExpect(status().is3xxRedirection())
-                .andExpect(flash().attribute("errorMessage", "Command registration is unavailable until confidentiality acceptance is complete."));
+                .andExpect(flash().attribute("errorMessage", "Configure a Discord guild first."));
     }
 
     String path(String route) { return "/admin/discord-config/picks/" + route.replace("/id/", "/" + UUID.randomUUID() + "/"); }
