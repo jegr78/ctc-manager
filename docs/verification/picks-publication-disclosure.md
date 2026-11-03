@@ -14,9 +14,7 @@ Unenrolled legacy races retain their display rules. Final consumer/readiness act
 - [x] Protect internal graphic caches and public asset copying.
 - [x] Exercise H2/MariaDB persistence, failure, concurrency, backup and read-only audit paths.
 - [x] Update terminology, operations and README documentation.
-- [ ] Falsify the new guards and complete code plus independent security review.
-- [ ] Integrate the stable upstream base and run canonical clean verification with Docker/E2E.
-- [ ] Pass exact-head CI/CodeQL, verify merge, reconcile tracker/Wiki and remove the topic branch.
+- [x] Falsify the new guards and complete code plus independent security review.
 
 ## Requirements matrix
 
@@ -82,7 +80,7 @@ Focused green evidence so far includes:
   `.screenshots/pick-{collection,publication}-{desktop,mobile}.png` and
   `.screenshots/time-progression-graphics/` were inspected.
 
-The final canonical run and exact-head CI evidence are recorded below after review.
+The feature PR records the final canonical counts, exact head/base, coverage and CI/CodeQL evidence.
 
 ## Required corrections found during implementation
 
@@ -114,5 +112,89 @@ The independent security pass reviewed `cd18a5b6` and found two medium-severity 
 
 All three new witnesses first failed at their intended assertions, with zero JUnit errors.
 The correction passed 18 unit and 68 H2/MariaDB integration cases, with no failures/errors/skips.
-Independent re-review and individual guard mutation runs follow on the corrected commit. No live Discord messages, command
+Independent re-review cleared both findings on `56c31bf4` with no further findings. Later commits
+strengthen two tests without changing production code: uncertain snapshots include a possible
+remote message ID, and static-export fixtures generate a participating team profile. The latter
+also verifies that the profile-specific asset copier runs.
+
+All 57 individual mutations reached their intended assertions, with zero JUnit errors. Source was
+restored from the committed checkpoint after each probe. Invalid probes that stopped at an import
+check were rejected; insufficiently isolated snapshot/profile witnesses were strengthened and rerun.
+The table records only qualified final results.
+
+Each probe uses the normal targeted Maven lifecycle. Body-only mutations retain the same APIs and
+use `maven.compiler.useIncrementalCompilation=false` to compile changed classes without rebuilding
+unchanged tests. This is limited to the isolated probes; the final canonical run uses the standard
+clean command. See the [compiler plugin documentation](https://maven.apache.org/plugins/maven-compiler-plugin/compile-mojo.html#useIncrementalCompilation).
+
+| Guard | Witness | Assertion failures |
+| --- | --- | --- |
+| persistent enrollment | `PickDisclosureServiceTest#givenManagedUnpublishedRace_whenCollectionIsEitherEnabledOrDisabled_thenWithholdEveryChoice` | 2 |
+| latest content version | `PickDisclosureServiceTest#givenOlderFullAndNewerLobbyPublication_whenReading_thenNeverMixContentVersionsEvenIfOlderConfirmationIsLater` | 1 |
+| confirmed outcomes only | `PickDisclosureServiceTest#givenUnconfirmedStoredAttempt_whenReading_thenKeepItWhollyWithheld` | 1 |
+| original target only | `PickDisclosureServiceTest#givenAReassignedTargetWithOldLegacyEvidence_whenReading_thenKeepItsCurrentChoicesWithheld` | 1 |
+| one content hash | `PickDisclosureServiceTest#givenConflictingHashesWithinOneVersion_whenReading_thenRejectInsteadOfUnioningDifferentChoices` | 1 |
+| one origin | `PickDisclosureServiceTest#givenMixedApprovalAndCorrectionOriginsAtOneSourceVersion_whenReading_thenRejectTheirUnion` | 1 |
+| one source version | `PickDisclosureServiceTest#givenConflictingProvenanceVersionsWithinOneContentVersion_whenReading_thenRejectInsteadOfMixingRevisions` | 1 |
+| captured content hash | `PickDisclosureServiceTest#givenStoredHashThatDoesNotMatchCapturedContent_whenReading_thenRejectUnverifiedChoices` | 1 |
+| lobby omits car | `PickPublicationContentTest#givenLobbyMask_whenProjecting_thenKeepCarAndPoolEntryPrivateWhileShowingOtherFields` | 1 |
+| selective settings mask | `PickPublicationContentTest#givenWeatherOnlyMask_whenProjecting_thenNeverCarryOtherPrivateFieldsInsideTheSettingsValue` | 1 |
+| known mask bits | `PickPublicationContentTest#givenKnownMask_whenEncodingAndDecoding_thenPreserveEveryFieldAndRejectUnknownBits` | 1 |
+| snapshot requires success | `PickPublicationAttemptTest#givenPreparedOrUncertainAttempt_whenCreatingSnapshotWithoutConfirmation_thenReject` | 1 |
+| snapshot requires fields | `PickPublicationAttemptTest#givenOutputWithNoProvenFields_whenConfirmed_thenNeverAdvancePublicContent` | 1 |
+| uncertain needs resolution | `PickPublicationAttemptTest#givenUncertainDelivery_whenNormalConfirmationArrives_thenRequireExplicitReconciliation` | 1 |
+| model resolution reason | `PickPublicationAttemptTest#givenUncertainAttempt_whenAbandoning_thenRequireARecordedManagementReasonAndReleaseTheActiveClaim` | 1 |
+| approved state | `PickPublicationAuthorizationTest#givenUnapprovedOrUnrecordedChoices_whenAuthorizing_thenRejectBeforeAnyRenderingOrNetwork` | 1 |
+| approved exact payload | `PickPublicationAuthorizationTest#givenUnapprovedOrUnrecordedChoices_whenAuthorizing_thenRejectBeforeAnyRenderingOrNetwork` | 1 |
+| current provenance version | `PickPublicationAuthorizationTest#givenUnapprovedOrUnrecordedChoices_whenAuthorizing_thenRejectBeforeAnyRenderingOrNetwork` | 1 |
+| exact migration classifications | `PickActivationServiceTest#givenIncompleteOrStaleMigrationReview_whenEnabling_thenRejectBeforeChangingAnyMarker` | 1 |
+| public migration evidence | `PickActivationServiceTest#givenIncompleteOrStaleMigrationReview_whenEnabling_thenRejectBeforeChangingAnyMarker` | 3 |
+| migration pending output | `PickActivationServiceTest#givenIncompleteOrStaleMigrationReview_whenEnabling_thenRejectBeforeChangingAnyMarker` | 1 |
+| migration current generation | `PickActivationServiceTest#givenIncompleteOrStaleMigrationReview_whenEnabling_thenRejectBeforeChangingAnyMarker` | 1 |
+| migration read generation | `PickActivationServiceTest#givenRestoreDuringTheReviewRead_whenPreparingActivation_thenBindTheFormToTheGenerationBeforeThoseReads` | 1 |
+| publication read generation | `PickPublicationAdminServiceTest#givenRestoreDuringPublicationReviewRead_whenPreparingTheForm_thenRetainItsOriginalGeneration` | 1 |
+| custom template conservative mask | `SettingsGraphicServiceTest#givenManagedRaceAndUnknownCustomTemplate_whenPublishing_thenKeepExplicitOutputWithoutInferringPublicFields` | 1 |
+| actual image bytes | `PickPublicationEvidenceServiceTest#givenMismatchedOrUnverifiableOutput_whenReconciling_thenRejectWithoutReleasingPrivateValues` | 1 |
+| public message flags | `PickPublicationEvidenceServiceTest#givenMismatchedOrUnverifiableOutput_whenReconciling_thenRejectWithoutReleasingPrivateValues` | 2 |
+| exact request manifest | `PickPublicationEvidenceServiceTest#givenMismatchedOrUnverifiableOutput_whenReconciling_thenRejectWithoutReleasingPrivateValues` | 1 |
+| manifest root shape | `PickPublicationManifestTest` | 1 |
+| manifest file count | `PickPublicationManifestTest` | 1 |
+| manifest file names | `PickPublicationManifestTest` | 2 |
+| resolution current view | `PickPublicationPersistenceIT#givenStaleFormOrRestoreContext_whenReconciling_thenDenyBeforeVerification` | 1 |
+| resolution current generation | `PickPublicationPersistenceIT#givenStaleFormOrRestoreContext_whenReconciling_thenDenyBeforeVerification` | 1 |
+| resolution in flight exclusion | `PickPublicationPersistenceIT#givenVerificationInProgress_whenTryingToResolveTheSameOutputAgain_thenDenyBothConfirmationAndRetirement` | 1 |
+| retirement remote acknowledgment | `PickPublicationPersistenceIT#givenUncertainOutput_whenAbandoning_thenRequireRemoteHandlingAndRetainTheDecisionWithoutReleasingFields` | 1 |
+| render input freezing | `PickPublicationPersistenceIT#givenRenderingThatChangesCapturedChoices_whenPublishing_thenRollBackBeforeAnyNetworkOrPreparedAttempt` | 1 |
+| remote success sql uncertainty | `PickPublicationPersistenceIT#givenRemoteSuccessAndLocalFailure_whenConfirming_thenPreserveUncertaintyInAnIndependentTransaction` | 1 |
+| automatic private attachment skip | `DiscordPostServiceMatchPreviewAutoEditIT` | 2 |
+| static race cache | `PickPublicationAssetsIT#givenPrivateCachedGraphicReferencedAsALogo_whenGeneratingTheSite_thenNeverCopyItsBytesOrLinkItsPath` | 3 |
+| profile race cache | `PickPublicationAssetsIT#givenPrivateCachedGraphicReferencedAsALogo_whenGeneratingTheSite_thenNeverCopyItsBytesOrLinkItsPath` | 3 |
+| attachment host admission | `DiscordWebhookClientIT#givenUnlistedLoopbackAttachmentHost_whenVerifying_thenRejectBeforeReadingEvenAValidImage` | 1 |
+| attachment complete size | `DiscordWebhookClientIT#givenWrongSizeOrUnsuccessfulAttachment_whenDownloading_thenRejectInsteadOfTrustingMetadata` | 1 |
+| bounded webhook wait | `DiscordWebhookClientIT#givenUnansweredWebhook_whenExecuting_thenBoundTheWaitAndReportAnUncertainTransportFailure` | 1 |
+| ambiguous retry remains uncertain | `DiscordWebhookClientIT#givenPossiblyAcceptedFirstWriteAndRejectedRetry_whenExecuting_thenReportDeliveryUncertainty` | 1 |
+| redirect is unconfirmed | `DiscordWebhookClientIT#givenRedirectWithAnApparentlyValidMessageBody_whenExecuting_thenNeverClaimSuccessfulDelivery` | 1 |
+| send response public flags | `PickPublicationDiscordIT#givenEphemeralOrUnfinishedWebhookResponse_whenPublishing_thenRetainUncertaintyWithoutPublicRelease` | 2 |
+| backup schema version | `PickBackupValidatorTest#givenForgedPublicationEvidence_whenValidating_thenRejectBeforeReplacement` | 1 |
+| backup content hash | `PickBackupValidatorTest#givenForgedPublicationEvidence_whenValidating_thenRejectBeforeReplacement` | 1 |
+| backup request hash | `PickBackupValidatorTest#givenForgedPublicationEvidence_whenValidating_thenRejectBeforeReplacement` | 1 |
+| backup source history | `PickBackupValidatorTest#givenForgedPublicationEvidence_whenValidating_thenRejectBeforeReplacement` | 1 |
+| legacy restore availability | `PickBackupValidatorTest#givenOnlyUnenrolledLegacyPublicationRecords_whenValidating_thenRetainLegacyRestoreAvailability` | 1 |
+| legacy frozen context | `PickBackupValidatorTest#givenFrozenLegacyPublicationWhoseRoundLaterMovedSeason_whenValidating_thenKeepTheCapturedHistoricalIdentity` | 1 |
+| h2 source membership | `V28PublicationConnectionMigrationTest` | 1 |
+| h2 output membership | `V28PublicationConnectionMigrationTest` | 1 |
+| h2 state membership | `V28PublicationConnectionMigrationTest` | 1 |
+| h2 active membership | `V28PublicationConnectionMigrationTest` | 1 |
+| retain original round | `PickPublicationPersistenceIT#givenFrozenOriginalRoundAfterALegacyRaceMoves_whenDeletingItsOriginalRound_thenRetainTheReferencedPublicationIdentity` | 1 |
+
+## Release gates
+
+Before merge, verify the final committed head against the current upstream base using
+`./mvnw clean verify -Pe2e -Ddocker.available=true`, including coverage, Checkstyle, SpotBugs and
+the loaded find-sec-bugs guard. Require all exact-head GitHub checks, including CodeQL.
+The [issue](https://github.com/jegr78/ctc-manager/issues/285) and its feature PR retain the final
+counts and merge evidence.
+
+After the verified merge, reconcile the issue and parent hierarchy, publish the prepared Wiki
+update and remove only the verified landed topic branch. No live Discord messages, command
 registration or production changes are required or performed by this verification.
