@@ -779,8 +779,8 @@ public class BackupImportService {
                     }));
                 }
             }
-            assertRowCountsMatchManifest(counts, manifest);
             poolValidator.validate();
+            assertRowCountsMatchManifest(counts, manifest);
             pickValidator.validate();
             if (pickValidator.hasConfidentialContent() && !pickCollection.isConfidentialityReady()) {
                 throw new BackupArchiveException(Reason.SCHEMA_MISMATCH,
