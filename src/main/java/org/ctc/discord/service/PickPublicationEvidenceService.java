@@ -15,13 +15,13 @@ public class PickPublicationEvidenceService {
     private final ObjectMapper mapper;
     public void verify(String webhookUrl, String messageId, String webhookId, String expectedChannelId,
                        String manifest, String requestHash) throws DiscordApiException {
-        if (!PickPublicationAttempt.manifestHash(manifest).equals(requestHash)) throw mismatch();
+        if (!PickPublicationAttempt.hashMatches(PickPublicationAttempt.manifestHash(manifest), requestHash)) throw mismatch();
         var captured = PickPublicationManifest.read(manifest, mapper);
         var message = client.getMessageEvidence(webhookUrl, messageId);
         if (message == null || !messageId.equals(message.id()) || !webhookId.equals(message.webhookId())
                 || expectedChannelId != null && !expectedChannelId.equals(message.channelId())
                 || (message.flags() & (64 | 128)) != 0
-                || !captured.contentHash().equals(PickPublicationAttempt.manifestHash(message.content() == null ? "" : message.content()))
+                || !PickPublicationAttempt.hashMatches(captured.contentHash(), PickPublicationAttempt.manifestHash(message.content() == null ? "" : message.content()))
                 || message.attachments().size() != captured.attachments().size()) throw mismatch();
         var names = new java.util.HashSet<String>();
         for (var attachment : message.attachments()) {
@@ -29,7 +29,7 @@ public class PickPublicationEvidenceService {
             var expected = captured.attachments().stream().filter(file -> file.filename().equals(attachment.filename())).findFirst().orElseThrow(PickPublicationEvidenceService::mismatch);
             if (attachment.size() != expected.bytes() || attachment.url() == null) throw mismatch();
             var bytes = client.downloadAttachment(attachment.url(), expected.bytes());
-            if (bytes == null || bytes.length != expected.bytes() || !PickPublicationManifest.hash(bytes).equals(expected.sha256())) throw mismatch();
+            if (bytes == null || bytes.length != expected.bytes() || !PickPublicationAttempt.hashMatches(PickPublicationManifest.hash(bytes), expected.sha256())) throw mismatch();
         }
     }
 

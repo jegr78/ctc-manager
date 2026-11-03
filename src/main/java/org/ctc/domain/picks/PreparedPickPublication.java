@@ -1,5 +1,6 @@
 package org.ctc.domain.picks;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
@@ -16,6 +17,9 @@ public record PreparedPickPublication<T>(String channelId, String webhookId, Str
         fields = fields.entrySet().stream().collect(Collectors.toUnmodifiableMap(Map.Entry::getKey,
                 entry -> Set.copyOf(entry.getValue())));
     }
+    @Override
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP", justification = "The canonical constructor copies the map and each field set into immutable collections.")
+    public Map<UUID, Set<PickDisclosureField>> fields() { return fields; }
     @FunctionalInterface public interface Delivery { String send() throws IOException; }
     @Override public String toString() { return "PreparedPickPublication[internal]"; }
 }

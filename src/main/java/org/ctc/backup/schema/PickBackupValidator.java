@@ -214,7 +214,8 @@ public final class PickBackupValidator {
             if (output == PickPublicationOutput.LOBBY_SETTINGS && fields.contains(PickDisclosureField.CAR)) fail("Lobby cannot disclose a car");
             var content = PickPublicationContentReader.read(row.get("content"));
             String hash = text(row, "contentHash", 64);
-            if (!hash.equals(content.fingerprint()) || !text(row, "requestHash", 64).equals(PickPublicationAttempt.manifestHash(text(row, "requestManifest", 16000)))) {
+            if (!PickPublicationAttempt.hashMatches(hash, content.fingerprint())
+                    || !PickPublicationAttempt.hashMatches(text(row, "requestHash", 64), PickPublicationAttempt.manifestHash(text(row, "requestManifest", 16000)))) {
                 fail("Publication hashes disagree with captured evidence");
             }
             String signature = hash + ":" + origin + ":" + sourceVersion + ":" + seasonId + ":" + dayId + ":" + homeId + ":" + awayId;

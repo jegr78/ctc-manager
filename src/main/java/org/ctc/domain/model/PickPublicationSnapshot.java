@@ -1,5 +1,6 @@
 package org.ctc.domain.model;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
@@ -19,6 +20,7 @@ public class PickPublicationSnapshot extends BaseEntity {
     @OneToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "attempt_id", nullable = false, unique = true) private PickPublicationAttempt attempt;
     @Convert(converter = UtcInstantConverter.class) @Column(nullable = false) private Instant confirmedAt;
 
+    @SuppressFBWarnings(value = "CT_CONSTRUCTOR_THROW", justification = "JPA requires proxyable entities; this constructor owns no resources and neither this entity nor its base defines a finalizer.")
     public PickPublicationSnapshot(PickPublicationAttempt attempt) {
         if (attempt == null || attempt.getState() != PickPublicationState.SUCCEEDED || attempt.fields().isEmpty()
                 || attempt.getMessageId() == null || attempt.getMessageId().isBlank() || attempt.getContent() == null

@@ -851,7 +851,7 @@ public class DiscordPostService {
         for (int index = 0; index < races.size(); index++) {
             var race = races.get(index);
             var graphic = lobby ? lobbySettingsGraphicService.renderPublication(race) : settingsGraphicService.renderPublication(race);
-            if (templateHash != null && !templateHash.equals(graphic.templateHash())) {
+            if (templateHash != null && !org.ctc.domain.model.PickPublicationAttempt.hashMatches(templateHash, graphic.templateHash())) {
                 throw new BusinessRuleException("Publication templates changed while rendering; retry the complete bundle");
             }
             templateHash = graphic.templateHash(); fields.put(race.getId(), graphic.fields());

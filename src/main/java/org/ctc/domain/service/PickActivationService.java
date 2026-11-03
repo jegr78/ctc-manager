@@ -111,7 +111,8 @@ public class PickActivationService {
         return snapshots.findByAttemptRaceIdOrderByAttemptContentVersionDescConfirmedAtDesc(race.getId()).stream()
                 .map(snapshot -> snapshot.getAttempt())
                 .filter(attempt -> attempt.getState() == PickPublicationState.SUCCEEDED && attempt.matchesTarget(race)
-                        && hash.equals(attempt.getContentHash()) && hash.equals(attempt.getContent().fingerprint()) && !attempt.fields().isEmpty())
+                        && PickPublicationAttempt.hashMatches(hash, attempt.getContentHash())
+                        && PickPublicationAttempt.hashMatches(hash, attempt.getContent().fingerprint()) && !attempt.fields().isEmpty())
                 .map(attempt -> new Evidence(attempt.getOutput().name(), attempt.getChannelId(), attempt.getMessageId(),
                         attempt.fields().stream().sorted().map(field -> field.name().toLowerCase(java.util.Locale.ENGLISH).replace('_', ' '))
                                 .collect(Collectors.joining(", "))))

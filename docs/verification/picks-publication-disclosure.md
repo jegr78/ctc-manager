@@ -107,6 +107,11 @@ The feature PR records the final canonical counts, exact head/base, coverage and
   Legacy archive fixtures omit tables their schema never exported.
   The repository probe traverses nested graph paths, and the lifecycle webhook fixture returns its
   configured channel ID. Existing restore and browser assertions remain in place.
+- The static-analysis pass replaced publication hash string comparisons with MessageDigest.isEqual,
+  made existing null rejection explicit and removed redundant flags boxing. Constructor finalizer
+  warnings are scoped to two resource-free JPA constructors with no finalizers. Two further scoped
+  annotations document the deeply immutable prepared field map and the shared Spring EntityManager
+  proxy. No detector, severity threshold or global exclusion was weakened.
 
 ## Guard falsification and final review
 

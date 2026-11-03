@@ -74,6 +74,7 @@ public class DiscordWebhookClient {
 
     public byte[] downloadAttachment(String url, int expectedBytes) throws DiscordApiException {
         try {
+            if (url == null) throw new IllegalArgumentException();
             var uri = java.net.URI.create(url);
             attachmentHosts.requireAllowed(url);
             boolean loopback = "localhost".equalsIgnoreCase(uri.getHost()) || "127.0.0.1".equals(uri.getHost());
@@ -81,7 +82,7 @@ public class DiscordWebhookClient {
                     || uri.getUserInfo() != null || uri.getFragment() != null || !loopback && uri.getPort() != -1 && uri.getPort() != 443
                     || uri.getPath() == null || !uri.getPath().startsWith("/attachments/")
                     || expectedBytes < 1 || expectedBytes > 8 * 1024 * 1024) throw new IllegalArgumentException();
-        } catch (IllegalArgumentException | NullPointerException blocked) {
+        } catch (IllegalArgumentException blocked) {
             throw new org.ctc.domain.exception.BusinessRuleException("The attachment cannot be verified using an allowed Discord source");
         }
         return execute(() -> RestClient.builder().requestFactory(requestFactory).defaultHeader(HttpHeaders.USER_AGENT, userAgent)

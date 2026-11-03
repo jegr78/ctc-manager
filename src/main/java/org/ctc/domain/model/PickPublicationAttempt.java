@@ -1,5 +1,6 @@
 package org.ctc.domain.model;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.nio.charset.StandardCharsets;
@@ -58,8 +59,10 @@ public class PickPublicationAttempt extends BaseEntity {
                           String actorId, String channelId, String webhookId, String targetMessageId, String templateHash,
                           String requestManifest, String runtimeGeneration, Instant capturedAt) { }
 
+    @SuppressFBWarnings(value = "CT_CONSTRUCTOR_THROW", justification = "JPA requires proxyable entities; this constructor owns no resources and neither this entity nor its base defines a finalizer.")
     public PickPublicationAttempt(Capture capture) {
-        require(capture != null && capture.batchId() != null && capture.race() != null && capture.race().getId() != null
+        if (capture == null) throw new BusinessRuleException("Publication requires complete capture metadata");
+        require(capture.batchId() != null && capture.race() != null && capture.race().getId() != null
                 && capture.content() != null && capture.origin() != null && capture.output() != null && capture.fields() != null
                 && capture.capturedAt() != null, "requires complete capture metadata");
         var day = capture.race().getMatchday();
@@ -145,8 +148,13 @@ public class PickPublicationAttempt extends BaseEntity {
     }
 
     private Instant outcomeTime(Instant at) {
-        require(at != null && !at.isBefore(capturedAt), "outcome cannot precede captured input");
+        if (at == null || at.isBefore(capturedAt)) throw new BusinessRuleException("Publication outcome cannot precede captured input");
         return at.truncatedTo(ChronoUnit.MICROS);
+    }
+
+    public static boolean hashMatches(String expected, String actual) {
+        return actual != null && MessageDigest.isEqual(
+                expected.getBytes(StandardCharsets.UTF_8), actual.getBytes(StandardCharsets.UTF_8));
     }
 
     public static String manifestHash(String manifest) {

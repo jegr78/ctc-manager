@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import java.io.IOException;
@@ -39,6 +40,7 @@ public class PickPublicationService {
     private final Clock clock;
     private final Set<UUID> inFlight = ConcurrentHashMap.newKeySet();
 
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "Spring injects the shared transaction-scoped EntityManager proxy; copying it would break persistence context identity.")
     public PickPublicationService(ImportLockService imports, PlatformTransactionManager manager, SeasonRepository seasons,
             RaceRepository races, PickPublicationAttemptRepository attempts, PickPublicationSnapshotRepository snapshots,
             PickPublicationAuthorization authorization, PickSessionEpoch epoch, EntityManager entities, Clock clock) {
