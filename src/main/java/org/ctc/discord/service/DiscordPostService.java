@@ -869,7 +869,8 @@ public class DiscordPostService {
             WebhookMessage response = targetMessageId == null
                     ? webhookClient.executeMultipart(webhookUrl, frozenPayload, frozen)
                     : webhookClient.editMessageWithAttachments(webhookUrl, targetMessageId, frozenPayload, frozen);
-            if (response == null || !hasText(response.id()) || (response.flags() & (64 | 128)) != 0 || targetMessageId != null && !targetMessageId.equals(response.id())) {
+            if (response == null || !hasText(response.id()) || (response.flags() & (64 | 128)) != 0
+                    || !preview && !channelId.equals(response.channelId()) || targetMessageId != null && !targetMessageId.equals(response.id())) {
                 throw new DiscordTransientException("Publication response is uncertain; reconcile the output before retrying", null);
             }
             return response.id();

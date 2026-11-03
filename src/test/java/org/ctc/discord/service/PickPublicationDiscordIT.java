@@ -158,6 +158,29 @@ class PickPublicationDiscordIT {
         tx.executeWithoutResult(status -> assertThat(attempts.findByActiveRaceId(fixture.race().getId())).isPresent());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"SETTINGS,false", "SETTINGS,true", "LOBBY_SETTINGS,false", "LOBBY_SETTINGS,true"})
+    void givenMissingOrDifferentResponseChannel_whenPublishing_thenKeepTheOutputUncertainWithoutConfirmingItsDestination(PickPublicationOutput output, boolean missing) {
+        // given
+        approve();
+        var response = new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode().put("id", MESSAGE).put("flags", 0);
+        if (!missing) response.put("channel_id", "456789012345678901");
+        wm.stubFor(post(urlPathEqualTo(WEBHOOK)).withQueryParam("wait", equalTo("true")).willReturn(okJson(response.toString())));
+        // when / then
+        assertThatThrownBy(() -> {
+            if (output == PickPublicationOutput.SETTINGS) posts.postSettings(match()); else posts.postLobbySettings(match());
+        }).isInstanceOf(BusinessRuleException.class).hasMessageContaining("reconcile");
+        assertThat(disclosure.forPublic(fixture.race().getId()).settings()).isNull();
+        assertThat(disclosure.forPublic(fixture.race().getId()).carName()).isNull();
+        tx.executeWithoutResult(status -> {
+            assertThat(attempts.findByActiveRaceId(fixture.race().getId())).isPresent().get()
+                    .extracting(PickPublicationAttempt::getState).isEqualTo(PickPublicationState.UNCERTAIN);
+            assertThat(snapshots.findByAttemptRaceIdOrderByAttemptContentVersionDescConfirmedAtDesc(fixture.race().getId())).isEmpty();
+            assertThat(postRecords.findAll().stream().filter(row -> fixture.match().getId().equals(row.getMatchId()))).isEmpty();
+        });
+        wm.verify(1, postRequestedFor(urlPathEqualTo(WEBHOOK)).withQueryParam("wait", equalTo("true")));
+    }
+
     @Test
     void givenApprovedSettingsWithCollectionDisabled_whenPosting_thenSendFrozenBytesOutsideSqlAndConfirmTheirPublicVersion() {
         // given
