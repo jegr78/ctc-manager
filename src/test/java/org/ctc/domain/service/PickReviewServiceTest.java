@@ -100,6 +100,74 @@ class PickReviewServiceTest {
     }
 
     @Test
+    void givenDifferingPreconfiguredSettings_whenApprovingWithoutReplaceConsent_thenPreserveManagementWork() {
+        // given
+        pick.submit();
+        var revision = revision(1, 1);
+        when(revisions.findByPickIdAndRevisionNumber(pick.getId(), 1)).thenReturn(Optional.of(revision));
+        var existing = new Car("Test existing", "Management choice"); existing.setId(UUID.randomUUID()); race.setCar(existing);
+        // when / then
+        assertThatThrownBy(() -> service.approve(race.getId(), 1, 1, actor, "Setup checked"))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("replace");
+        assertThat(race.getCar()).isSameAs(existing);
+        assertThat(pick.getState()).isEqualTo(PickState.SUBMITTED);
+        verifyNoInteractions(settings, decisions);
+    }
+
+    @Test
+    void givenExplicitReplaceConsentAndExactInternalSnapshot_whenApproving_thenApplyLatestRevision() {
+        // given
+        pick.submit(); var revision = revision(1, 1);
+        when(revisions.findByPickIdAndRevisionNumber(pick.getId(), 1)).thenReturn(Optional.of(revision));
+        var existing = new Car("Test", "Existing"); existing.setId(UUID.randomUUID()); race.setCar(existing);
+        var fingerprint = PickSetupSnapshot.from(race).fingerprint();
+        // when
+        service.approve(race.getId(), 1, 1, actor, "Explicit replacement checked", true, fingerprint);
+        // then
+        verify(settings).apply(race, revision.getPayload()); assertThat(pick.getState()).isEqualTo(PickState.APPROVED);
+    }
+
+    @Test
+    void givenInternalSettingsChangedAfterReview_whenApprovingWithOldSnapshot_thenPreserveBothSides() {
+        // given
+        pick.submit(); var revision = revision(1, 1);
+        when(revisions.findByPickIdAndRevisionNumber(pick.getId(), 1)).thenReturn(Optional.of(revision));
+        var fingerprint = PickSetupSnapshot.from(race).fingerprint();
+        var changed = new RaceSettings(race); changed.setWeather("Test concurrent management edit"); race.setSettings(changed);
+        // when / then
+        assertThatThrownBy(() -> service.approve(race.getId(), 1, 1, actor, "Replace checked", true, fingerprint))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Internal settings changed");
+        assertThat(pick.getVersion()).isEqualTo(1); assertThat(race.getSettings()).isSameAs(changed);
+        verifyNoInteractions(settings, decisions);
+    }
+
+    @Test
+    void givenIdenticalPreconfiguredPayload_whenApprovingWithoutReplaceConsent_thenRequireNoUnnecessaryReplacement() {
+        // given
+        pick.submit(); var revision = revision(1, 1); var payload = revision.getPayload();
+        when(revisions.findByPickIdAndRevisionNumber(pick.getId(), 1)).thenReturn(Optional.of(revision));
+        var car = new Car("Test", "Current"); car.setId(payload.carId()); race.setCar(car);
+        var track = new Track("Test current"); track.setId(payload.trackId()); race.setTrack(track);
+        var current = new RaceSettings(race); RaceSettingsValues.from(payload).applyTo(current); race.setSettings(current);
+        // when
+        service.approve(race.getId(), 1, 1, actor, "Matching setup checked", false, PickSetupSnapshot.from(race).fingerprint());
+        // then
+        assertThat(pick.getState()).isEqualTo(PickState.APPROVED); verify(settings).apply(race, payload);
+    }
+
+    @Test
+    void givenApprovedSettingsChangedAfterCorrectionForm_whenSavingCorrection_thenRejectStaleSnapshot() {
+        // given
+        pick.submit(); pick.approve(1); var fingerprint = PickSetupSnapshot.from(race).fingerprint();
+        var changed = new RaceSettings(race); changed.setNumberOfLaps(99); race.setSettings(changed);
+        // when / then
+        assertThatThrownBy(() -> service.correct(race.getId(), 2, actor, "Test correction", PickSubmissionServiceTest.payload(), fingerprint))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Internal settings changed");
+        assertThat(pick.getState()).isEqualTo(PickState.APPROVED); assertThat(pick.getVersion()).isEqualTo(2);
+        verifyNoInteractions(settings, decisions);
+    }
+
+    @Test
     void givenNewerRevision_whenApprovingStaleRevision_thenDoNotTouchSettingsOrHistory() {
         // given / when / then
         pick.submit();

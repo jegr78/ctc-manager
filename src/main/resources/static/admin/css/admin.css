@@ -2881,3 +2881,18 @@ body:has(.archive-dialog[open]) { overflow: hidden; }
 .race-summary-table th:nth-child(6), .race-summary-table td:nth-child(6) { min-width: 7rem; }
 .race-summary-car { min-width: 13rem; }
 .race-summary-car .pool-entry-label { max-width: 18rem; }
+
+.pick-review-workspace .card { min-width: 0; }
+.pick-review-workspace .pick-target-label, .pick-review-workspace .pick-reason, .pick-review-workspace td, .pick-review-workspace summary { overflow-wrap: anywhere; white-space: pre-wrap; }
+.pick-review-workspace .table-scroll table { min-width: 680px; }
+.pick-review-workspace .detail-fields { grid-template-columns: minmax(0, 180px) minmax(0, 1fr); }
+.pick-review-workspace dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.pick-review-workspace .pick-history-entry { margin-top: 16px; }
+.pick-review-workspace .pick-history-entry summary { cursor: pointer; padding: 8px 0; }
+@media (max-width: 640px) { .pick-review-workspace .detail-fields { grid-template-columns: minmax(0, 1fr); } }
+
+.pick-review-workspace .pick-check-option { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.pick-review-workspace .pick-check-option input[type="checkbox"] { width: 18px; height: 18px; min-height: 18px; flex: 0 0 18px; margin: 0; padding: 0; accent-color: var(--accent); }
+.pick-review-workspace .pick-tyre-options { display: flex; flex-wrap: wrap; gap: 20px; }
+.pick-review-workspace .table-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.pick-review-workspace .entity-editor-actions { position: static; }

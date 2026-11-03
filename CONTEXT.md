@@ -67,6 +67,11 @@ _Avoid_: Publication
 Confirmed disclosure of a particular content version through an explicit management action.
 _Avoid_: Approval, deadline expiry
 
+**Internal correction**:
+A management change to an approved race setup that retains its original approved submission and team lock.
+It remains private until management explicitly publishes the corrected content.
+_Avoid_: Undo approval, team resubmission, automatic publication
+
 **Managed race**:
 A race enrolled for confidential team picks, whose private history remains protected when collection stops.
 _Avoid_: Currently enabled collector

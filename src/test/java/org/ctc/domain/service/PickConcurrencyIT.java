@@ -172,6 +172,7 @@ class PickConcurrencyIT extends PickPersistenceIT {
         // given
         tx.executeWithoutResult(status -> settings.apply(races.findById(fixture.race().getId()).orElseThrow(), otherPayload));
         submissions.submit(fixture.race().getId(), 0, UUID.randomUUID(), actor, payload);
+        var reviewedFingerprint = tx.execute(status -> PickSetupSnapshot.from(races.findById(fixture.race().getId()).orElseThrow()).fingerprint());
         var flushed = new AtomicBoolean();
         doAnswer(invocation -> {
             invocation.callRealMethod();
@@ -186,7 +187,7 @@ class PickConcurrencyIT extends PickPersistenceIT {
         try {
             // when / then
             assertThatThrownBy(() -> reviews.approve(fixture.race().getId(), 1, 1,
-                    new ManagementPickActor("test-admin"), "test rollback")).isInstanceOf(RuntimeException.class);
+                    new ManagementPickActor("test-admin"), "test rollback", true, reviewedFingerprint)).isInstanceOf(RuntimeException.class);
             assertThat(flushed).as("settings SQL really completed before the decision insert failed").isTrue();
             tx.executeWithoutResult(status -> {
                 var pick = picks.findByRaceId(fixture.race().getId()).orElseThrow();

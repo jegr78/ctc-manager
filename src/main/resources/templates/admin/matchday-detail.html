@@ -16,6 +16,7 @@
         </div>
         <div class="actions">
             <a th:href="@{/admin/matchdays/{id}/edit(id=${matchday.id})}" class="btn btn-primary">Edit</a>
+            <a th:href="@{/admin/matchday-picks(seasonId=${matchday.season.id},matchdayId=${matchday.id})}" class="btn btn-secondary">Review team picks</a>
             <form th:action="@{/admin/matchdays/{id}/delete(id=${matchday.id})}" method="post"
                   onsubmit="return confirm('Really delete this matchday?')">
                 <button type="submit" class="btn btn-danger">Delete</button>

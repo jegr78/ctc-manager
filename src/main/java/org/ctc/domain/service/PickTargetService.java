@@ -36,6 +36,7 @@ public class PickTargetService {
     private final PickDeadlinePolicy deadlines;
     private final PickCollectionStatus collection;
     private final PickAccessService access;
+    private final PickSessionEpoch epoch;
 
     @Transactional(readOnly = true)
     public List<HomeRaceTarget> listHomeRaces(ChannelPickActor actor) {
@@ -66,14 +67,14 @@ public class PickTargetService {
         return result.values().stream().sorted(Comparator.comparing(HomeRaceTarget::label).thenComparing(HomeRaceTarget::raceId)).toList();
     }
 
-    private static String label(Season season, Race race, List<Race> rows) {
+    public static String label(Season season, Race race, List<Race> rows) {
         var phase = race.getMatchday().getPhase();
         var parts = new ArrayList<String>();
         parts.add(season.getDisplayLabel());
         parts.add(phase.getLabel() == null || phase.getLabel().isBlank() ? phase.getPhaseType().name() : phase.getLabel());
         if (race.getMatchday().getGroup() != null) parts.add(race.getMatchday().getGroup().getName());
         parts.add(race.getMatchday().getLabel());
-        parts.add("vs " + race.getAwayTeam().getShortName());
+        parts.add("vs " + (race.getAwayTeam() == null ? "Bye" : race.getAwayTeam().getShortName()));
         var legs = rows.stream().filter(other -> Objects.equals(pairingId(other), pairingId(race)))
                 .sorted(Comparator.comparingInt((Race other) -> other.getMatchday().getSortIndex())
                         .thenComparing(Race::getDateTime, Comparator.nullsLast(Comparator.naturalOrder())).thenComparing(Race::getId)).toList();
@@ -106,7 +107,11 @@ public class PickTargetService {
             throw new BusinessRuleException("An authenticated management actor is required");
         }
         var race = races.findById(raceId).orElseThrow(PickTargetService::unavailable);
-        return locked(race.getMatchday().getSeason().getId(), raceId);
+        var target = locked(race.getMatchday().getSeason().getId(), raceId);
+        if (actor.generation() != null && !actor.generation().equals(epoch.managementGeneration())) {
+            throw new BusinessRuleException("This management form was reset by a restore or application restart; reload its current version");
+        }
+        return target;
     }
 
     private LockedTarget locked(UUID seasonId, UUID raceId) {

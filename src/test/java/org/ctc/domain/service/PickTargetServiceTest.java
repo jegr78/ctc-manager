@@ -30,8 +30,9 @@ class PickTargetServiceTest {
     final EntityManager entityManager = mock(EntityManager.class);
     final PickCollectionStatus collection = mock(PickCollectionStatus.class);
     final PickAccessService access = mock(PickAccessService.class);
+    final PickSessionEpoch epoch = new PickSessionEpoch();
     final PickTargetService service = new PickTargetService(seasons, races, picks, entityManager,
-            new PickDeadlinePolicy(Clock.fixed(PickSubmissionServiceTest.NOW, ZoneOffset.UTC)), collection, access);
+            new PickDeadlinePolicy(Clock.fixed(PickSubmissionServiceTest.NOW, ZoneOffset.UTC)), collection, access, epoch);
     final Season season = new Season("Test_PickTarget");
     final Team home = new Team();
     final Team away = new Team();
@@ -267,6 +268,29 @@ class PickTargetServiceTest {
         assertThat(listed).hasSize(1);
         assertThat(listed.getFirst().editable()).isFalse();
         assertThat(listed.getFirst().state()).isEqualTo(PickState.SUBMITTED);
+    }
+
+    @Test
+    void givenManagementActorFromOldRestoreGeneration_whenLocking_thenRejectInsideAdmittedTransactionAfterTargetLocks() {
+        // given
+        var manager = new ManagementPickActor("test-manager", epoch.managementGeneration()); epoch.afterRestore(null);
+        // when / then
+        assertThatThrownBy(() -> service.lockForManagement(race.getId(), manager)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("reset");
+        var order = inOrder(seasons, races);
+        order.verify(races).findById(race.getId()); order.verify(seasons).findByIdForUpdate(season.getId());
+        order.verify(races).findBySeasonForSelectionUpdate(season.getId());
+    }
+
+    @Test
+    void givenManagementFormFromPreviousProcess_whenLockingAfterRestoreAndRestart_thenRejectOldContextAndAcceptFreshForm() {
+        // given
+        var previousProcess = new PickSessionEpoch();
+        var oldForm = new ManagementPickActor("test-manager", previousProcess.managementGeneration());
+        previousProcess.afterRestore(null);
+        // when / then: the service uses a fresh process epoch whose numeric counter is zero again
+        assertThatThrownBy(() -> service.lockForManagement(race.getId(), oldForm))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("reset");
+        assertThat(service.lockForManagement(race.getId(), new ManagementPickActor("test-manager", epoch.managementGeneration()))).isNotNull();
     }
 
 }

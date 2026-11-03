@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import jakarta.persistence.LockModeType;
 
 public interface MatchdayPickRevisionRepository extends JpaRepository<MatchdayPickRevision, UUID> {
+    List<MatchdayPickRevision> findByPickIdOrderByRevisionNumberDesc(UUID pickId);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select h from MatchdayPickRevision h where h.pick.season.id = :seasonId order by h.pick.id, h.id")
     List<MatchdayPickRevision> findHistoryBySeasonForUpdate(UUID seasonId);

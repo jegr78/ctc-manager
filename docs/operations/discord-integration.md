@@ -798,3 +798,30 @@ Repeated delivery of the same confirmation returns its original durable receipt.
 
 Tests exercise this flow offline. Live test-guild UAT needs separate operator authorization and
 synthetic fixtures. Do not enable production collection before confidentiality and rollout checks.
+
+
+### Management review and internal corrections
+
+Open **Review team picks** from a race or matchday workspace, or use `/admin/matchday-picks`.
+Choose a season, then filter matchday and submission state. A past deadline remains independent
+of whether a confirmed submission exists. Detail pages show the exact target, saved versions,
+original authors/timestamps, current return reason and management decision history.
+
+Choose a review decision and supply a reason. Opening a missing submission or returning an
+unapproved revision needs no replacement deadline. A manual close stops team writes; approval
+locks them and applies only the selected revision's setup. Neither action posts to Discord.
+
+Compare existing internal values with the selected submission before approving. If they differ,
+explicitly select replacement consent. A changed submission version or an internal settings
+change after the page loaded rejects the request. A restore or application restart also invalidates
+an open review or correction form. The error page retains the entered reason;
+use **Reload current version** to review the current state before another decision.
+
+For an approved target, **Correct approved settings** records a separate complete correction and
+reason while retaining the original approved revision and team lock. Category entry changes use
+native **Refresh choices** before selecting a concrete member. Validation retains entered values.
+Zero multiplier remains distinct from Equal Conditions. Corrections remain internal until a
+separate explicit publication through the existing management controls.
+
+These review screens do not enable collection. Confidentiality and production rollout remain
+separate acceptance gates.

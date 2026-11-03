@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import java.util.UUID;
 import java.util.function.LongSupplier;
 import java.util.concurrent.atomic.AtomicLong;
 import org.ctc.backup.event.BackupImportSucceededEvent;
@@ -12,7 +13,9 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 public class PickSessionEpoch implements LongSupplier {
     private final AtomicLong generation = new AtomicLong();
+    private final UUID instanceId = UUID.randomUUID();
     @Override public long getAsLong() { return generation.get(); }
+    public String managementGeneration() { return instanceId + ":" + generation.get(); }
     @Order(Ordered.HIGHEST_PRECEDENCE)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void afterRestore(BackupImportSucceededEvent event) { generation.incrementAndGet(); }
