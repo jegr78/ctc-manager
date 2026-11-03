@@ -814,7 +814,7 @@ public class DiscordPostService {
         } catch (UncheckedIOException failure) { throw DiscordApiExceptionMapper.from(failure.getCause()); }
         catch (IOException failure) {
             if (failure instanceof DiscordApiException api && api.category() != DiscordApiException.Category.TRANSIENT) throw api;
-            throw new BusinessRuleException("Publication delivery is unconfirmed; reconcile the pending output before sending again");
+            throw new DiscordTransientException("Publication delivery is unconfirmed; reconcile the pending output before sending again", null);
         }
     }
 

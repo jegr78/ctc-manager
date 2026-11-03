@@ -24,6 +24,7 @@ import org.ctc.discord.dto.WebhookPayload;
 import org.ctc.discord.exception.DiscordAuthException;
 import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.discord.exception.DiscordTransientException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.picks.AuthorizedPickActor;
 import org.ctc.domain.picks.ManagementPickActor;
@@ -153,7 +154,7 @@ class PickPublicationDiscordIT {
         wm.stubFor(post(urlPathEqualTo(WEBHOOK)).withQueryParam("wait", equalTo("true"))
                 .willReturn(okJson("{\"id\":\"" + MESSAGE + "\",\"channel_id\":\"" + CHANNEL + "\",\"flags\":" + flags + "}")));
         // when / then
-        assertThatThrownBy(() -> posts.postSettings(match())).isInstanceOf(BusinessRuleException.class).hasMessageContaining("reconcile");
+        assertThatThrownBy(() -> posts.postSettings(match())).isInstanceOf(DiscordTransientException.class).hasMessageContaining("reconcile");
         assertThat(disclosure.forPublic(fixture.race().getId()).carName()).isNull();
         tx.executeWithoutResult(status -> assertThat(attempts.findByActiveRaceId(fixture.race().getId())).isPresent());
     }
@@ -169,7 +170,7 @@ class PickPublicationDiscordIT {
         // when / then
         assertThatThrownBy(() -> {
             if (output == PickPublicationOutput.SETTINGS) posts.postSettings(match()); else posts.postLobbySettings(match());
-        }).isInstanceOf(BusinessRuleException.class).hasMessageContaining("reconcile");
+        }).isInstanceOf(DiscordTransientException.class).hasMessageContaining("reconcile");
         assertThat(disclosure.forPublic(fixture.race().getId()).settings()).isNull();
         assertThat(disclosure.forPublic(fixture.race().getId()).carName()).isNull();
         tx.executeWithoutResult(status -> {
@@ -344,7 +345,7 @@ class PickPublicationDiscordIT {
         approve(); posts.postSettings(match()); var previous = disclosure.forPublic(fixture.race().getId());
         reviews.correct(fixture.race().getId(), 2, new ManagementPickActor("test-admin"), "Test new internal setup", corrected());
         wm.stubFor(patch(urlPathEqualTo(WEBHOOK + "/messages/" + MESSAGE)).willReturn(aResponse().withStatus(503)));
-        assertThatThrownBy(() -> posts.postSettings(match())).isInstanceOf(BusinessRuleException.class).hasMessageContaining("reconcile");
+        assertThatThrownBy(() -> posts.postSettings(match())).isInstanceOf(DiscordTransientException.class).hasMessageContaining("reconcile");
         UUID batch = tx.execute(status -> attempts.findByActiveRaceId(fixture.race().getId()).orElseThrow().getBatchId());
         assertThat(disclosure.forPublic(fixture.race().getId())).isEqualTo(previous);
         // when
@@ -384,7 +385,7 @@ class PickPublicationDiscordIT {
                 .inScenario(scenario).whenScenarioStateIs("retry").willReturn(aResponse().withStatus(401)
                         .withHeader("Content-Type", "application/json").withBody("{\"message\":\"Unauthorized\",\"code\":0}")));
         // when / then
-        assertThatThrownBy(() -> posts.postSettings(match())).isInstanceOf(BusinessRuleException.class).hasMessageContaining("reconcile");
+        assertThatThrownBy(() -> posts.postSettings(match())).isInstanceOf(DiscordTransientException.class).hasMessageContaining("reconcile");
         tx.executeWithoutResult(status -> assertThat(attempts.findByActiveRaceId(fixture.race().getId())).isPresent()
                 .get().extracting(PickPublicationAttempt::getState).isEqualTo(PickPublicationState.UNCERTAIN));
         assertThat(disclosure.forPublic(fixture.race().getId()).settings()).isNull();

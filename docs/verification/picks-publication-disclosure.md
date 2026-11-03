@@ -98,6 +98,10 @@ The feature PR records the final canonical counts, exact head/base, coverage and
   ephemeral/deferred responses cannot establish successful publication.
 - Custom templates retain the existing explicit publishing path with an empty website-release mask.
   Requiring a builtin template would unnecessarily remove existing management functionality.
+- Existing controller fixtures now stub frozen publication graphics rather than internal cache paths.
+  Their full-run regression also caught transient Discord failures being classified as incomplete
+  data. Transport uncertainty retains the transient category, pending history and reconciliation
+  requirement; existing HTTP error-category assertions remain unchanged.
 
 ## Guard falsification and final review
 
