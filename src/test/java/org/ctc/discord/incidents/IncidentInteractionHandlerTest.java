@@ -167,6 +167,31 @@ class IncidentInteractionHandlerTest {
         assertThat(response.modal.id()).doesNotContain(USER, "Test guest");
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"message", "modal"})
+    void givenPublishedNextAction_whenAnotherThreadResolvesItImmediately_thenReleaseThePreviousSessionLockFirst(String kind) {
+        dispatch(PickGatewayInteraction.Kind.COMMAND, "incidents", Map.of());
+        var checked = new java.util.concurrent.atomic.AtomicBoolean();
+        var failure = new java.util.concurrent.atomic.AtomicReference<Throwable>();
+        response.onPublish = value -> {
+            String id; PickGatewayInteraction.Kind nextKind;
+            if (kind.equals("message") && value instanceof PickGatewayMessage message) {
+                var next = message.buttons().stream().filter(item -> item.label().equals("Enter report")).findFirst();
+                if (next.isEmpty()) return;
+                id = next.orElseThrow().id(); nextKind = PickGatewayInteraction.Kind.BUTTON;
+            } else if (kind.equals("modal") && value instanceof PickGatewayModal modal) {
+                id = modal.id(); nextKind = PickGatewayInteraction.Kind.MODAL;
+            } else return;
+            checked.set(true);
+            var next = new PickGatewayInteraction(UUID.randomUUID().toString(), GUILD, eventChannel, eventUser, nextKind, id, Map.of(), NOW, response);
+            try (var workers = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+                workers.submit(() -> sessions.withAction(next, (session, action) -> true)).get(2, java.util.concurrent.TimeUnit.SECONDS);
+            } catch (Exception denied) { failure.set(denied); }
+        };
+        click("New report"); if (kind.equals("modal")) click("Enter report");
+        assertThat(checked).isTrue(); assertThat(failure.get()).as("published controls must already be usable by the next interaction").isNull();
+    }
+
     void ownCase() {
         var own = new IncidentReporterView.CaseChoice(report, race, "INC-test", "ACTIVE", "Test original party", 3, 2, true);
         view = new IncidentReporterView(context, window, 7, true, view.label(), view.races(), List.of(own));
@@ -179,7 +204,7 @@ class IncidentInteractionHandlerTest {
     String button(String label) { var found = last().buttons().stream().filter(button -> button.label().equals(label)).findFirst().orElse(null); assertThat(found).as(label).isNotNull(); return found.id(); }
     PickGatewayMessage last() { assertThat(response.messages).isNotEmpty(); return response.messages.getLast(); }
     void dispatch(PickGatewayInteraction.Kind kind, String action, Map<String,List<String>> fields) {
-        var previous = response; response = new Response(); if (previous != null) { response.modal = previous.modal; response.messages.addAll(previous.messages); }
+        var previous = response; response = new Response(); if (previous != null) { response.modal = previous.modal; response.messages.addAll(previous.messages); response.onPublish = previous.onPublish; }
         var event = new PickGatewayInteraction(UUID.randomUUID().toString(), GUILD, eventChannel, eventUser, kind, action, fields, NOW, response);
         handler.onInteraction(event, new PickGatewayReply(response, clock, NOW, epoch, Runnable::run));
     }
@@ -188,12 +213,13 @@ class IncidentInteractionHandlerTest {
     void assertAdmissionReleased() { assertThat(imports.tryLock()).isTrue(); try { org.junit.jupiter.api.Assertions.assertDoesNotThrow(imports::awaitWritersDrained); } finally { imports.unlock(); } }
     static class Response implements PickGatewayResponse, PickGatewayResponse.Continuation {
         boolean deferred; String initial, text; PickGatewayModal modal; final List<PickGatewayMessage> messages = new ArrayList<>();
+        java.util.function.Consumer<Object> onPublish = value -> { };
         @Override public java.util.concurrent.CompletionStage<Continuation> deferPrivate() { deferred = true; return CompletableFuture.completedFuture(new Continuation() {
             @Override public void replyPrivate(String value) { text = value; }
-            @Override public void replyPrivate(PickGatewayMessage value) { messages.add(value); }
+            @Override public void replyPrivate(PickGatewayMessage value) { messages.add(value); onPublish.accept(value); }
         }); }
         @Override public void replyPrivate(String value) { initial = value; text = value; }
-        @Override public void replyPrivate(PickGatewayMessage value) { messages.add(value); }
-        @Override public void openModal(PickGatewayModal value) { modal = value; }
+        @Override public void replyPrivate(PickGatewayMessage value) { messages.add(value); onPublish.accept(value); }
+        @Override public void openModal(PickGatewayModal value) { modal = value; onPublish.accept(value); }
     }
 }

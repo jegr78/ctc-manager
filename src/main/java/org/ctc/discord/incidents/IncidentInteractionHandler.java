@@ -30,11 +30,11 @@ public class IncidentInteractionHandler implements PickGatewayInteractionHandler
     public void onInteraction(PickGatewayInteraction event, PickGatewayReply reply) {
         if (event.kind() == BUTTON) {
             try {
-                boolean opened = sessions.withAction(event, (session, action) -> {
-                    if (!action.name().equals("open-report")) return false;
-                    session.clearActions(); reply.openModal(form(session.action("fields", MODAL))); return true;
+                var modal = sessions.withAction(event, (session, action) -> {
+                    if (!action.name().equals("open-report")) return null;
+                    session.clearActions(); return form(session.action("fields", MODAL));
                 });
-                if (opened) return;
+                if (modal != null) { reply.openModal(modal); return; }
             } catch (BusinessRuleException unavailable) { reply.replyPrivate(UNAVAILABLE); return; }
         }
         long generation = epoch.getAsLong();
@@ -44,14 +44,24 @@ public class IncidentInteractionHandler implements PickGatewayInteractionHandler
                 if (generation != epoch.getAsLong()) throw unavailable();
                 var actor = access.authorizeChannel(event.guildId(), event.channelId(), event.userId()); var view = reads.home(actor);
                 if (event.kind() == COMMAND) { menu(sessions.create(event, view), view, continuation); return; }
+                var prepared = new PreparedReply();
                 sessions.withAction(event, (session, action) -> {
                     if (!session.contextId.equals(view.contextId()) || !session.windowId.equals(view.windowId())) throw unavailable();
-                    handle(event, session, action, actor, view, continuation); return true;
+                    handle(event, session, action, actor, view, prepared); return true;
                 });
+                prepared.forwardTo(continuation);
             } catch (IncidentAccessDeniedException denied) { continuation.replyPrivate(denied.getMessage()); }
             catch (BusinessRuleException | IllegalArgumentException unavailable) { continuation.replyPrivate(UNAVAILABLE); }
             finally { imports.exitWriter(); }
         });
+    }
+
+    // Publish the next action only after its preceding session operation has released the lock.
+    private static final class PreparedReply implements PickGatewayResponse.Continuation {
+        private java.util.function.Consumer<PickGatewayResponse.Continuation> delivery = ignored -> { };
+        @Override public void replyPrivate(String message) { delivery = target -> target.replyPrivate(message); }
+        @Override public void replyPrivate(PickGatewayMessage message) { delivery = target -> target.replyPrivate(message); }
+        void forwardTo(PickGatewayResponse.Continuation target) { delivery.accept(target); }
     }
 
     private void handle(PickGatewayInteraction event, Session session, Action action, AuthorizedIncidentActor actor,

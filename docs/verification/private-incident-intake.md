@@ -178,3 +178,21 @@ and the complete positive/negative interaction matrix are checked again by the f
 The remaining unchecked delivery gates above describe the state of this committed preflight
 record. Final local test totals, coverage, exact-head CI and merge/housekeeping evidence are
 recorded in the pull request and issue #289 without changing the verified source head.
+
+## CI publication-order correction
+
+The initial full local run passed on `7d9293a3`, but CI run `41706806719` exposed six
+interaction failures across H2 and MariaDB. Immediate follow-up controls could arrive while
+the preceding operation still held its transient session lock. The test client made that
+publication race visible; it was not a reason to ignore the failures or increase a timeout.
+
+A deterministic two-variant test resolves the newly published button/modal action on another
+thread before the publication callback returns. Both variants failed at the intended assertion
+with zero JUnit errors/skips. The handler now prepares its private message or modal under the
+session lock and publishes it after releasing that lock. Complete writer admission and guarded
+private transport still surround publication. Authorization, versions, confirmation and history
+rules remain unchanged.
+
+The focused recheck passed 56 unit and 48 integration cases, twenty-four each on H2 and MariaDB,
+with zero failures, errors or skips. Independent review, two publication-order falsifications
+and the final local/CI verification of the corrected committed head follow this checkpoint.
