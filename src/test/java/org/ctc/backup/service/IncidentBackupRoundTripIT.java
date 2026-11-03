@@ -108,7 +108,7 @@ class IncidentBackupRoundTripIT extends IncidentIntegrationFixture {
                 if(outcome.equals("REVIEWED_PENDING"))row.reconcileMissing(2,"test-previous-manager","Test previous review must not authorize restored work",NOW);
             }
         });
-        clock.set(NOW.plusSeconds(3600));windows.closeDue(windowId);
+        clock.set(NOW.plusSeconds(3600));windows.closeDue(windowId,null);
         var before=tx.execute(status -> {var row=deliveryRows.findById(id).orElseThrow();return java.util.List.of(row.getState().name(),row.getVersion(),row.getRevision().getId(),row.getOperationKey());});
         var preview=imports.stage(upload(export()));imports.execute(preview.stagingId());
         tx.executeWithoutResult(status -> {

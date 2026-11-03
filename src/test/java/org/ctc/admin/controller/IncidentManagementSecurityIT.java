@@ -30,6 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Tag("integration")
 class IncidentManagementSecurityIT extends IncidentIntegrationFixture {
     @Autowired MockMvc mvc;
+    @Autowired org.ctc.domain.repository.IncidentDeliveryRepository deliveryRows;
     @MockitoBean org.ctc.discord.DiscordRestClient discord;
 
     @ParameterizedTest
@@ -78,6 +79,21 @@ class IncidentManagementSecurityIT extends IncidentIntegrationFixture {
         var html = mvc.perform(get(path("/admin/matches/match/incidents"))).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         assertThat(Jsoup.parse(html).select("form[action='/admin/matches/" + fixture.match().getId() + "/incidents/bind'] input[name=_csrf]")).isNotEmpty();
         assertThat(contextRows.count()).isEqualTo(count);
+    }
+
+    @Test
+    @WithMockUser("test-manager")
+    void authenticatedDeliveryFormsContainCsrfWithoutChangingQueueState() throws Exception {
+        windows.open(contextId,NOW.plusSeconds(3600),0,manager);
+        var saved=reports.submit(windowId,fixture.race().getId(),1,UUID.randomUUID(),actor,payload);
+        UUID id=tx.execute(status -> deliveryRows.findByOperationKey(saved.reportId()+":RECEIPT").orElseThrow().getId());
+        String review=mvc.perform(get("/admin/incident-deliveries/"+id)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(Jsoup.parse(review).select("form input[name=_csrf]")).hasSize(1);
+        tx.executeWithoutResult(status -> org.springframework.test.util.ReflectionTestUtils.setField(windowRows.findById(windowId).orElseThrow(),"deliveryPaused",true));
+        String overview=mvc.perform(get("/admin/incident-contexts/"+contextId+"/deliveries")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(Jsoup.parse(overview).select("form input[name=_csrf]")).hasSize(1);
+        tx.executeWithoutResult(status -> assertThat(deliveryRows.findById(id).orElseThrow().getState()).isEqualTo(org.ctc.domain.model.IncidentDeliveryState.PENDING));
+        org.mockito.Mockito.verifyNoInteractions(discord);
     }
 
     private String path(String route) {
