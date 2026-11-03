@@ -19,7 +19,7 @@ Selection base: `4a20db629d0e5415b12735b506fa28f70446cebf`.
 - [x] Implement private transient drafts, explicit confirmation and My reports.
 - [x] Preserve versions, strict cutoff, durable replay and one first-submit receipt request.
 - [x] Verify real transaction/restore admission and production-shaped Discord payloads offline.
-- [ ] Falsify the new guards individually from a correct committed checkpoint.
+- [x] Falsify the new guards individually from a correct committed checkpoint.
 - [x] Update README, CLAUDE and the user-facing Wiki draft.
 - [x] Complete code review and an independent read-only security pass.
 - [ ] Integrate current upstream and run one final committed-head clean verify with E2E and Docker.
@@ -153,3 +153,28 @@ integration cases passed for current configured-guild denial and team/parent rol
 during the season-lock wait. Another thirty-eight unit and four integration cases passed
 for direct same-role foreign-creator payload rejection and a changed reporting party after
 review. Both database runs used H2 and MariaDB, with zero failures, errors or skips.
+
+## Individual guard falsification
+
+All 27 probes started from correct committed checkpoint `f43977eb`, changed one semantic
+protection at a time and restored the exact committed source after the intended red assertion.
+Every probe had at least one intended assertion failure and zero JUnit errors or skips. The
+working tree was clean after all restorations. Mockito's explicit no-write assertion is counted
+as an assertion failure, not a technical test error.
+
+| Protection | Independent probes |
+| --- | --- |
+| Current participant role, opposing/shared roles, configured guild, canonical ownership, window scope, actor candidate/context and original party | 9 |
+| Current private-read access, original-party index, creator-scoped payload query and eligibility before loading text | 4 |
+| Draft user/channel/guild, restore generation, exact expiry, action kind, invalidated stage and capacity | 8 |
+| Reviewed party, complete writer admission/release, explicit confirmation and complete private pagination | 5 |
+| Current configured role metadata after the season/guild wait on MariaDB | 1 |
+
+The creator and reviewed-party probes used real persisted interaction transactions. The writer
+admission probe removed registration and observed the restore drain proceeding too early. The
+metadata probe removed the post-wait refresh and observed unauthorized storage. Correct code
+and the complete positive/negative interaction matrix are checked again by the final clean build.
+
+The remaining unchecked delivery gates above describe the state of this committed preflight
+record. Final local test totals, coverage, exact-head CI and merge/housekeeping evidence are
+recorded in the pull request and issue #289 without changing the verified source head.
