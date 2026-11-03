@@ -11,16 +11,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import org.ctc.TestHelper;
 import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.PickDisclosureField;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.Team;
+import org.ctc.domain.picks.RenderedPickGraphic;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -29,7 +29,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
@@ -74,9 +73,6 @@ class MatchControllerPostSettingsPreFlightIT {
 	@Autowired
 	DiscordPostRepository discordPostRepository;
 
-	@Value("${app.upload-dir:uploads}")
-	String uploadDir;
-
 	@MockitoBean
 	SettingsGraphicService settingsGraphicService;
 
@@ -84,13 +80,8 @@ class MatchControllerPostSettingsPreFlightIT {
 	void resetState() throws Exception {
 		wm.resetAll();
 		discordPostRepository.deleteAll();
-		Path dummy = Path.of(uploadDir, "team-cards/preflight-dummy.png").toAbsolutePath().normalize();
-		Files.createDirectories(dummy.getParent());
-		if (!Files.exists(dummy)) {
-			Files.write(dummy, new byte[] {0x01});
-		}
-		when(settingsGraphicService.generateSettings(any(Race.class)))
-				.thenReturn("/uploads/team-cards/preflight-dummy.png");
+		when(settingsGraphicService.renderPublication(any(Race.class)))
+				.thenReturn(new RenderedPickGraphic(new byte[] {0x01}, "a".repeat(64), PickDisclosureField.all()));
 	}
 
 	@AfterEach

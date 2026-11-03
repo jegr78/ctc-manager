@@ -28,10 +28,12 @@ import org.ctc.discord.service.DiscordGlobalConfigService;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.PickDisclosureField;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.Team;
+import org.ctc.domain.picks.RenderedPickGraphic;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceRepository;
@@ -115,7 +117,8 @@ class MatchControllerPostMatchPreviewIT {
 		Path dummy = Path.of(uploadDir, "ctrl-preview-dummy.png").toAbsolutePath().normalize();
 		Files.createDirectories(dummy.getParent());
 		Files.write(dummy, PNG_BYTES);
-		when(settingsGraphicService.generateSettings(any(Race.class))).thenReturn("/uploads/ctrl-preview-dummy.png");
+		when(settingsGraphicService.renderPublication(any(Race.class)))
+				.thenReturn(new RenderedPickGraphic(PNG_BYTES, "a".repeat(64), PickDisclosureField.all()));
 		when(lineupGraphicService.generateLineup(any(Race.class))).thenReturn("/uploads/ctrl-preview-dummy.png");
 	}
 
