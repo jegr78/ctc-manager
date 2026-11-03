@@ -1,0 +1,36 @@
+package db.migration;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.util.zip.CRC32;
+import org.flywaydb.core.api.migration.BaseJavaMigration;
+import org.flywaydb.core.api.migration.Context;
+
+public class V29__AddIncidentReporting extends BaseJavaMigration {
+    private static final String SQL = loadSql();
+
+    @Override
+    public Integer getChecksum() {
+        var checksum = new CRC32(); checksum.update(SQL.getBytes(StandardCharsets.UTF_8));
+        return (int) checksum.getValue();
+    }
+
+    @Override
+    public void migrate(Context context) throws Exception {
+        var connection = context.getConnection();
+        // MariaDB's timezone-free datetime supports confirmed deadlines beyond its TIMESTAMP range.
+        String sql = connection.getMetaData().getDatabaseProductName().equals("MariaDB")
+                ? SQL.replace("TIMESTAMP(6)", "DATETIME(6)") : SQL;
+        try (var statement = connection.createStatement()) {
+            for (String part : sql.split(";")) if (!part.isBlank()) statement.execute(part);
+        }
+    }
+
+    private static String loadSql() {
+        try (var input = V29__AddIncidentReporting.class.getResourceAsStream("/db/schema/incident_reporting.sql")) {
+            if (input == null) throw new IllegalStateException("Missing incident reporting migration resource");
+            return new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException failure) { throw new UncheckedIOException(failure); }
+    }
+}

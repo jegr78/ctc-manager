@@ -11,6 +11,8 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
 
     boolean existsByDiscordChannelId(String channelId);
 
+    List<Match> findByDiscordChannelId(String channelId);
+
 	@EntityGraph(attributePaths = {"homeTeam", "awayTeam"})
 	List<Match> findByMatchdayId(UUID matchdayId);
 

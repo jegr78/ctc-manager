@@ -1,0 +1,85 @@
+# Permanent incident cases and reporting windows
+
+Issue #288 delivers the first implementation unit of #287. The current upstream baseline is
+`c659f16185d3370d6fb2b60ece5a1cbce02acc66`. GitHub is the current plan; the local roadmap's
+latest milestone is already shipped. There are no open PRs, another checkout or recent
+incident branches. Owner-managed deployment work and the assigned dependency dashboard are
+excluded.
+
+## Delivery checklist
+
+- [x] Verify live issue state, parent dependencies and parallel work before selection.
+- [x] Establish the context, window and report contracts with failing service tests.
+- [x] Implement canonical regular/playoff contexts and explicit management bindings.
+- [x] Implement confirmed deadlines, strict cutoff locking and immutable report history.
+- [ ] Protect incident identities through ordinary edits, deletion and results imports.
+- [x] Add the current migration, backup schema, explicit restorers and archive preflight.
+- [ ] Verify H2/MariaDB concurrency, restore and native desktop/mobile management forms.
+- [ ] Update README, CLAUDE, domain vocabulary and the user-facing Wiki draft.
+- [ ] Complete focused checks, individual new-guard witnesses and independent review.
+- [ ] Verify the final committed head, pass GitHub CI, merge and reconcile the tracker.
+- [ ] Publish the Wiki changes and remove the proven landed topic branch.
+
+## Requirements matrix
+
+| Requirement | Production path | Positive witness | Rejection witness | Runtime evidence |
+| --- | --- | --- | --- | --- |
+| One canonical pairing context | IncidentContextService and IncidentMatchTarget | Regular match and standalone playoff binding; auxiliary Match resolves to the same playoff context | Mixed ownership, unready/byes, wrong guild and unrelated shared legacy channels reject | IncidentContextServiceTest and H2/MariaDB unique/FK integration cases |
+| Explicit opening and planned-start default | IncidentWindowService and native management forms | First planned start interpreted in Berlin plus 24 elapsed hours; explicit future override | Missing/ambiguous start has no invented default; past defaults cannot open silently | IncidentWindowServiceTest and browser preview/confirmation |
+| Permanent confirmed deadline | IncidentReportWindow and IncidentReportEvent | Versioned open/change records actor, time, reason and the original planned-start snapshot | Schedule edits cannot change a confirmed cutoff; stale changes and expired/closed reopening reject | Service assertions and persisted window/event state |
+| Complete durable case | IncidentReportService, IncidentReport and IncidentReportRevision | All four form-equivalent values, stable reference, exact race, creator and frozen party survive edits | Empty fields, invalid ownership and malformed attribution reject before mutation; 00:00 remains valid | IncidentReportServiceTest and database fixtures |
+| Creator-only immutable history | IncidentReportService | Same author can edit or withdraw; distinct reports remain distinct; durable request replay returns its original receipt | Another team member, stale version or changed party cannot overwrite the case; withdrawn records stay queryable | Service and integration assertions on exact revisions/events |
+| Strict cutoff and lock order | Window lock followed by report lock inside existing restore writer admission | A confirmed write before the deadline commits with one captured acceptance instant | At now >= deadline every mutation rejects; edit/withdraw versus closure has one serialized outcome | IncidentWindowConcurrencyIT and MariaDB subclass |
+| Protected incident identities | Incident lifecycle checks beside existing race/match/pairing guards | Results-only edits preserve race/case IDs, history and attribution | Incident-bearing deletion, reparenting, participant changes and channel removal reject before mutation | Service/import integration tests and unchanged database state |
+| Results import remains atomic | CsvImportService protected-leg preflight | Unambiguous result replacement reuses stable incident-bearing race IDs | Ambiguous full imports fail before driver, result or pairing mutations | Synthetic CSV/Sheets and H2/MariaDB import witnesses |
+| Persistence ships with restore | New Flyway migration, BackupSchema, MixIns, explicit restorers and IncidentBackupValidator | Contexts, windows, active/withdrawn cases, sequential revisions and decisions round-trip with exact IDs | Missing/count-mismatched files, wrong owners and forged pointers/history reject before wipe | H2/MariaDB backup round-trips and malformed archive fixtures |
+| Legacy compatibility | Explicit supported-schema map | Supported older archives contain no incident state or invented windows | New incident state cannot be disguised as an older archive; unsupported versions stay rejected | Manifest contract and preflight tests |
+| Internal native management | IncidentContextController, IncidentWindowController, versioned DTOs and existing pairing pages | Regular/playoff links reach the canonical section; native desktop/mobile forms retain errors and timezone/offset context | Auth/CSRF, invalid dates, stale versions and private text escaping stay enforced | Controller/security and no-JavaScript browser cases |
+| Delivered foundation stays private | Existing Gateway and public generators remain unchanged | Management can inspect permanent stored cases without public incident publication | No live reports, external URL downloads, announcements, automatic opening or real Discord posts | Offline fixtures, public-output regression and diff review |
+
+## Boundaries and verification
+
+This delivery stores the permanent incident foundation and its management deadline controls.
+Role-resolution/private Gateway dialogs belong to #289, durable notices and scheduling to #290,
+linked Discord threads to #291, ruling publication to #292 and final rollout acceptance to #293.
+The foundation must not fabricate any of those later capabilities or silently enable intake.
+Trusted actor contracts keep creator identity separate from the immutable reporting party.
+
+Reuse the existing restore-admitted transaction boundary, pairing policy and native UI patterns.
+Window/report mutation locks order window before report; identity coordination also follows the
+existing season lock protocol. Incident reportability includes completed contested races and
+does not reuse the picks-only unfinished-race or unlimited late-opening policy.
+
+Determine migration and schema versions against current upstream. Never edit released migrations.
+New shape requires matching restoration support in this PR. Before the expensive final run,
+audit every constructor/caller and every archive/schema fixture affected by the new types and
+version, then complete focused tests and review. Run one final committed-head
+`./mvnw clean verify -Pe2e -Ddocker.available=true`; minimum line coverage is 82%, with Checkstyle,
+SpotBugs/find-sec-bugs and CodeQL retained. Skipped MariaDB tests are not acceptance evidence.
+
+All fixtures are synthetic and offline. No production activation, live guild registration,
+Discord messages, real reports, scoring decisions or host-service changes are authorized here.
+
+## Initial contract and persistence evidence
+
+Observed 33 intended assertion failures and zero JUnit errors before implementing the service
+contracts. Their focused rerun is green. The migration's first valid-row assertion also failed
+before the table existed. The new V29 migration follows the fixed SQL-resource protocol already
+used upstream, retaining UTC values beyond MariaDB's TIMESTAMP range.
+
+The combined focused run passed 34 unit and eight integration cases, four each on H2 and MariaDB,
+with zero failures, errors or skips. It verifies committed history/replay, active/withdrawn cases,
+clock-authoritative closure, exact deadline snapshots after schedule changes, ambiguous legacy
+channel rejection and dates in 2060. This is not final acceptance of backup, identity guards,
+concurrency, native forms or the overall feature.
+
+## Backup checkpoint
+
+The expanded focused run passed 63 unit and 53 integration cases, with zero failures, errors
+or skips. Schema 8 exports all 41 entity tables. H2 and MariaDB both preserve exact report IDs,
+active/withdrawn state, revisions and original request receipts through restore. Malformed
+archives reject during staging and again immediately before execution without wiping live data.
+Supported schema-7 archives restore without incident records or invented reporting windows.
+
+This checkpoint is incomplete. Protected source identities and results imports, concurrency
+witnesses, management forms, documentation, independent review and final verification remain.

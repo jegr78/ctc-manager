@@ -76,6 +76,7 @@ class BackupExportServiceTest {
                 mock(SeasonCarPoolMemberRepository.class), mock(MatchdayPickRepository.class),
                 mock(MatchdayPickRevisionRepository.class), mock(MatchdayPickDecisionRepository.class), mock(TeamPickChannelBindingRepository.class),
                 mock(PickPublicationAttemptRepository.class), mock(PickPublicationSnapshotRepository.class),
+                mock(IncidentMatchContextRepository.class), mock(IncidentReportWindowRepository.class), mock(IncidentReportRepository.class), mock(IncidentReportRevisionRepository.class), mock(IncidentReportEventRepository.class),
 				tempDir.toString()
 		);
 		ReflectionTestUtils.invokeMethod(service, "initialize");

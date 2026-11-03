@@ -1,7 +1,7 @@
-# CTC racing and team picks
+# CTC racing and confidential submissions
 
-CTC seasons organize team races. Home teams provide private race choices for management review
-before any explicit publication.
+CTC seasons organize team races. Home teams provide private race choices for management review.
+Individual reporters retain their own incident cases under a separate reporting deadline.
 
 ## Language
 
@@ -97,3 +97,37 @@ _Avoid_: Unfinished wizard response
 Management's explicit association between a team's private Discord channel and that team in a
 particular season. Current channel access authorizes its members to use that scope.
 _Avoid_: Shared match channel, inherited team role
+
+**Incident match context**:
+The single reporting scope for a real team pairing and its concrete race legs, including a
+playoff pairing that is also shown through a regular-match view.
+_Avoid_: Separate case register per view
+
+**Reporting window**:
+Management's explicitly opened period for incident reports at one pairing, with a confirmed
+cutoff that later schedule changes do not move.
+_Avoid_: Pick deadline, unlimited late opening
+
+**Incident report**:
+A permanent case for one person's confirmed account of an incident in a concrete race.
+It remains a case after withdrawal and after its discussion moves to Discord.
+_Avoid_: Transient form answer, discussion thread
+
+**Reporter**:
+The person who created an incident report and alone may ordinarily edit or withdraw it before
+the reporting cutoff.
+_Avoid_: Any teammate, reporting organization
+
+**Reporting party**:
+The team or shared organization attributed to an incident report, retained as it was at first
+confirmation and distinct from its individual reporter.
+_Avoid_: User-selected side, public reporter identity
+
+**Incident revision**:
+One immutable complete confirmed version of an incident report's facts and evidence references.
+_Avoid_: Unfinished dialog, later Discord discussion
+
+**Incident withdrawal**:
+The reporter's decision before the cutoff to remove a case from active disclosure while
+retaining the case and its confirmed history.
+_Avoid_: Deletion, deadline extension

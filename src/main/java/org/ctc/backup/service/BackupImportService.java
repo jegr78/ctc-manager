@@ -135,16 +135,24 @@ public class BackupImportService {
      * {@code SUPPORTED_SCHEMA_VERSIONS.toString()}, where {@code Set.of(1, 2)} produces
      * a hash-randomised order that breaks message-matching assertions.
      */
-    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6, 7));
+    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6, 7, 8));
 
     /** Tables an older schema version never exported; they may be absent when the manifest announces no rows. */
+    static final Set<String> INCIDENT_TABLES = Set.of("incident_match_contexts", "incident_report_windows", "incident_reports", "incident_report_revisions", "incident_report_events");
     static final Map<Integer, Set<String>> TABLES_ABSENT_IN_SCHEMA = Map.of(
-            1, Set.of("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "discord_global_config", "discord_post", "site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
-            2, Set.of("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
-            3, Set.of("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
-            4, Set.of("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
-            5, Set.of("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings"),
-            6, Set.of("pick_publication_attempts", "pick_publication_snapshots"));
+            1, beforeIncidents("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "discord_global_config", "discord_post", "site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
+            2, beforeIncidents("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
+            3, beforeIncidents("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
+            4, beforeIncidents("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
+            5, beforeIncidents("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings"),
+            6, beforeIncidents("pick_publication_attempts", "pick_publication_snapshots"),
+            7, beforeIncidents());
+
+    private static Set<String> beforeIncidents(String... olderTables) {
+        var tables = new java.util.HashSet<>(INCIDENT_TABLES);
+        tables.addAll(List.of(olderTables));
+        return Set.copyOf(tables);
+    }
 
     /** Batch size for the JSON-stream-to-batchUpdate accumulator. */
     private static final int RESTORE_BATCH_SIZE = 500;
@@ -766,6 +774,7 @@ public class BackupImportService {
     private void validateRestorableRows(Path staged, BackupManifest manifest) throws BackupArchiveException {
         var poolValidator = new org.ctc.backup.schema.CarPoolBackupValidator(manifest.schemaVersion());
         var pickValidator = new org.ctc.backup.schema.PickBackupValidator(manifest.schemaVersion());
+        var incidentValidator = new org.ctc.backup.schema.IncidentBackupValidator(manifest.schemaVersion());
         Map<String, Long> counts = new LinkedHashMap<>();
         long[] inflatedBytes = {0L};
         try (ZipFile zf = new ZipFile(staged.toFile())) {
@@ -776,12 +785,14 @@ public class BackupImportService {
                     counts.put(ref.tableName(), readRows(zf, entry, inflatedBytes, row -> {
                         poolValidator.accept(ref.tableName(), row);
                         pickValidator.accept(ref.tableName(), row);
+                        incidentValidator.accept(ref.tableName(), row);
                     }));
                 }
             }
             poolValidator.validate();
             assertRowCountsMatchManifest(counts, manifest);
             pickValidator.validate();
+            incidentValidator.validate();
             if (pickValidator.hasConfidentialContent() && !pickCollection.isConfidentialityReady()) {
                 throw new BackupArchiveException(Reason.SCHEMA_MISMATCH,
                         "This archive requires a release with confidential pick disclosure support; confidentiality is not available yet.");
@@ -789,6 +800,8 @@ public class BackupImportService {
         } catch (BackupArchiveException ex) {
             throw ex;
         } catch (org.ctc.backup.schema.PickBackupValidator.ValidationException ex) {
+            throw new BackupArchiveException(Reason.DATA_MISMATCH, ex.getMessage(), ex);
+        } catch (org.ctc.backup.schema.IncidentBackupValidator.ValidationException ex) {
             throw new BackupArchiveException(Reason.DATA_MISMATCH, ex.getMessage(), ex);
         } catch (IllegalArgumentException ex) {
             throw new BackupArchiveException(Reason.DATA_MISMATCH, "Invalid category pool data: " + ex.getMessage(), ex);
