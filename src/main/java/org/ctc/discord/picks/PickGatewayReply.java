@@ -11,7 +11,7 @@ import java.util.function.LongSupplier;
 
 public final class PickGatewayReply {
     private static final String RESET = "This interaction was reset. Start again.";
-    private static final String BUSY = "Picks are busy. Try again shortly.";
+    private static final String BUSY = "The bot is busy. Try again shortly.";
     private static final String FAILED = "This request could not be completed. Check your current submission before retrying.";
     private final PickGatewayResponse response;
     private final Clock clock;

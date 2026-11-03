@@ -154,7 +154,7 @@ class PickGatewayReplyTest {
         acknowledged.complete(continuation);
         // then
         assertThat(worked).isFalse();
-        verify(continuation).replyPrivate("Picks are busy. Try again shortly.");
+        verify(continuation).replyPrivate("The bot is busy. Try again shortly.");
         verify(raw, never()).replyPrivate(anyString());
     }
 
