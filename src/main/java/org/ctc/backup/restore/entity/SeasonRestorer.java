@@ -43,7 +43,22 @@ public class SeasonRestorer implements EntityRestorer {
                     ps.setString(12, row.path("carPoolState").asText("DRAFT"));
                     ps.setBoolean(13, row.path("picksCollectionEnabled").asBoolean(false));
                 });
+        for (var row : rows) {
+            restorePool(row, "cars", true, jdbcTemplate);
+            restorePool(row, "tracks", false, jdbcTemplate);
+        }
         log.debug("SeasonRestorer: restored {} rows", rows.size());
+    }
+
+    private static void restorePool(JsonNode row, String field, boolean cars, JdbcTemplate jdbc) {
+        String sql = cars ? "INSERT INTO season_cars (season_id,car_id) VALUES (?,?)" : "INSERT INTO season_tracks (season_id,track_id) VALUES (?,?)";
+        if (!row.hasNonNull(field)) return;
+        var values = row.get(field);
+        if (!values.isArray()) throw new IllegalArgumentException("Season pool references must be arrays");
+        var ids = new java.util.ArrayList<UUID>();
+        for (var value : values) ids.add(UUID.fromString(value.asText()));
+        UUID seasonId = UUID.fromString(row.get("id").asText());
+        jdbc.batchUpdate(sql, ids, 500, (statement, id) -> { statement.setObject(1, seasonId); statement.setObject(2, id); });
     }
 
     private static String nullableString(JsonNode row, String field) {

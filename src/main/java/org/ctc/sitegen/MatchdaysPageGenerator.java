@@ -14,7 +14,7 @@ import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonPhaseGroupRepository;
 import org.ctc.domain.service.SeasonPhaseService;
-import org.ctc.domain.service.RaceCarPresentation;
+import org.ctc.domain.service.PickDisclosureService;
 import org.ctc.sitegen.model.GenerationContext;
 import org.ctc.sitegen.model.SiteSlugs;
 import org.ctc.sitegen.model.GroupSubTabView;
@@ -37,6 +37,7 @@ public class MatchdaysPageGenerator {
     private final RaceLineupRepository raceLineupRepository;
     private final SeasonPhaseService seasonPhaseService;
     private final SeasonPhaseGroupRepository seasonPhaseGroupRepository;
+    private final PickDisclosureService disclosure;
 
     public void generateIndex(GenerationContext ctx, SiteGeneratorService.GenerationResult result) throws IOException {
         var season = ctx.season();
@@ -252,15 +253,14 @@ public class MatchdaysPageGenerator {
         int homeTotal = pointsForTeam(results, homeTeam);
         int awayTotal = pointsForTeam(results, race.getAwayTeam());
 
-        String trackName = race.getTrack() != null ? race.getTrack().getName() : null;
-        var carPresentation = RaceCarPresentation.from(race);
+        var publicPick = disclosure.forPublic(race.getId());
 
         boolean hasResults = !race.getResults().isEmpty();
         boolean homeTeamWon = hasResults && homeTotal > awayTotal;
         boolean awayTeamWon = hasResults && awayTotal > homeTotal;
         return new RaceView(homeShortName, awayShortName,
-                trackName, carPresentation.carName(), homeTotal, awayTotal, hasResults,
-                homeTeamWon, awayTeamWon, results, carPresentation.poolEntryLabel());
+                publicPick.trackName(), publicPick.carName(), homeTotal, awayTotal, hasResults,
+                homeTeamWon, awayTeamWon, results, publicPick.poolEntryLabel());
     }
     private int pointsForTeam(List<RaceView.ResultView> results, Team team) {
         if (team == null) {

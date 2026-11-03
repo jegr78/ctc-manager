@@ -67,6 +67,18 @@ _Avoid_: Publication
 Confirmed disclosure of a particular content version through an explicit management action.
 _Avoid_: Approval, deadline expiry
 
+**Published pick content**:
+One frozen version of a race's choices to which confirmed disclosures belong.
+_Avoid_: Current internal setup, latest submission
+
+**Disclosed field**:
+A choice value from a particular published content version that management has confirmed as public.
+_Avoid_: Approved field, complete payload release
+
+**Publication attempt**:
+One explicit management request to disclose captured race choices, with its confirmed, failed or uncertain outcome.
+_Avoid_: Successful publication, automatic preview edit
+
 **Internal correction**:
 A management change to an approved race setup that retains its original approved submission and team lock.
 It remains private until management explicitly publishes the corrected content.

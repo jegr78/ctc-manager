@@ -325,7 +325,10 @@ class MatchdaysPageGeneratorTest {
         var lineups = org.mockito.Mockito.mock(org.ctc.domain.repository.RaceLineupRepository.class);
         org.mockito.Mockito.when(days.findBySeasonIdOrderBySortIndexAsc(season.getId())).thenReturn(List.of(matchday));
         org.mockito.Mockito.when(races.findByMatchdayId(matchday.getId())).thenReturn(List.of(race));
-        var generator = new MatchdaysPageGenerator(writer, slugger, days, races, lineups, null, null);
+        org.mockito.Mockito.when(races.findById(race.getId())).thenReturn(java.util.Optional.of(race));
+        var generator = new MatchdaysPageGenerator(writer, slugger, days, races, lineups, null, null,
+                new org.ctc.domain.service.PickDisclosureService(races,
+                        org.mockito.Mockito.mock(org.ctc.domain.repository.PickPublicationSnapshotRepository.class)));
         var generation = new org.ctc.sitegen.model.GenerationContext(tempDir, season, "test", "Test display", false,
                 null, new org.ctc.sitegen.model.SiteSlugs(java.util.Map.of(), java.util.Map.of(), List.of()));
         // when
@@ -342,6 +345,49 @@ class MatchdaysPageGeneratorTest {
         assertThat(document.select(".race-card").text()).contains("Test Honda — NSX Gr.3 MR");
         if (category) assertThat(document.select(".race-card").text()).contains("Gr.3 MR + Gr.3 RR");
         else assertThat(document.select(".race-card").text()).doesNotContain("Pool entry", "Gr.3 MR + Gr.3 RR");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void givenManagedUnpublishedRaceWithCollectionDisabled_whenGeneratingDetails_thenWithholdLiveCarTrackAndPoolLabel(boolean category) throws Exception {
+        // given
+        var season = new Season("Test private publication", 2032, 99); season.setId(UUID.randomUUID());
+        season.setPicksCollectionEnabled(false);
+        var day = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Test private choices", 0);
+        day.setId(UUID.randomUUID());
+        var race = new org.ctc.domain.model.Race(); race.setId(UUID.randomUUID()); race.setMatchday(day); race.setPicksManaged(true);
+        race.setHomeTeamOverride(new org.ctc.domain.model.Team("Test home", "T-PHOME"));
+        race.setAwayTeamOverride(new org.ctc.domain.model.Team("Test away", "T-PAWAY"));
+        race.setCar(new org.ctc.domain.model.Car("PRIVATE-MANUFACTURER", "PRIVATE-CAR-7d3a"));
+        race.setTrack(new org.ctc.domain.model.Track("PRIVATE-TRACK-82bf"));
+        if (category) {
+            var entry = new org.ctc.domain.model.SeasonCarPoolEntry(); entry.setLabel("PRIVATE-ENTRY-4fe2"); race.setCarPoolEntry(entry);
+        }
+        var writer = org.mockito.Mockito.mock(TemplateWriter.class);
+        var slugger = org.mockito.Mockito.mock(SiteSlugger.class);
+        org.mockito.Mockito.when(slugger.slugify(anyString())).thenReturn("test-private");
+        var days = org.mockito.Mockito.mock(org.ctc.domain.repository.MatchdayRepository.class);
+        var races = org.mockito.Mockito.mock(org.ctc.domain.repository.RaceRepository.class);
+        var lineups = org.mockito.Mockito.mock(org.ctc.domain.repository.RaceLineupRepository.class);
+        org.mockito.Mockito.when(days.findBySeasonIdOrderBySortIndexAsc(season.getId())).thenReturn(List.of(day));
+        org.mockito.Mockito.when(races.findByMatchdayId(day.getId())).thenReturn(List.of(race));
+        org.mockito.Mockito.when(races.findById(race.getId())).thenReturn(java.util.Optional.of(race));
+        var generator = new MatchdaysPageGenerator(writer, slugger, days, races, lineups, null, null,
+                new org.ctc.domain.service.PickDisclosureService(races,
+                        org.mockito.Mockito.mock(org.ctc.domain.repository.PickPublicationSnapshotRepository.class)));
+        var generation = new org.ctc.sitegen.model.GenerationContext(tempDir, season, "test-private", "Test private", false,
+                null, new org.ctc.sitegen.model.SiteSlugs(java.util.Map.of(), java.util.Map.of(), List.of()));
+        // when
+        generator.generateDetails(generation, new SiteGeneratorService.GenerationResult());
+        var contexts = org.mockito.ArgumentCaptor.forClass(Context.class);
+        org.mockito.Mockito.verify(writer).write(org.mockito.ArgumentMatchers.eq("site/matchday"), contexts.capture(),
+                org.mockito.ArgumentMatchers.any(Path.class), org.mockito.ArgumentMatchers.eq(tempDir),
+                org.mockito.ArgumentMatchers.eq("test-private"), org.mockito.ArgumentMatchers.eq("Test private"));
+        var context = contexts.getValue(); context.setVariable("rootPath", "."); context.setVariable("assetsPath", "assets");
+        var document = Jsoup.parse(templateEngine.process("site/matchday", context));
+        // then
+        assertThat(document.select(".race-card").text()).contains("T-PHOME", "T-PAWAY")
+                .doesNotContain("PRIVATE-CAR-7d3a", "PRIVATE-TRACK-82bf", "PRIVATE-ENTRY-4fe2");
     }
 
     @org.junit.jupiter.params.ParameterizedTest

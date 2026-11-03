@@ -60,6 +60,12 @@ class TimeProgressionGraphicsE2ETest extends PlaywrightConfig {
                 assertThat(ImageIO.read(png.toFile()).getWidth()).isEqualTo(1920);
                 Files.copy(png, output.resolve(name + "-" + mode + ".png"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             }
+            race.setPicksManaged(true);
+            for (var graphic : List.of(settingsService.renderPublication(race), lobbyService.renderPublication(race))) {
+                assertThat(ImageIO.read(new java.io.ByteArrayInputStream(graphic.png())).getWidth()).isEqualTo(1920);
+                assertThat(graphic.fields()).isNotEmpty();
+                Path png = output.resolve("publication-" + graphic.fields().size() + "-" + mode + ".png"); Files.write(png, graphic.png());
+            }
         }
     }
 }

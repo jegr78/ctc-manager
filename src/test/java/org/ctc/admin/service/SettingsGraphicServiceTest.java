@@ -39,6 +39,71 @@ class SettingsGraphicServiceTest {
 		service = new SettingsGraphicService(templateEngine, standingsService, playoffSeedRepository, tempDir.toString());
 	}
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void givenBuiltinPublicationTemplate_whenRendering_thenFreezeProvenFieldsAndBytesOutsideTheInternalCache(boolean equal) throws Exception {
+        // given
+        service = spy(service);
+        var race = createReadyRace(false);
+        when(standingsService.calculateStandings(any(), any())).thenReturn(List.of());
+        race.setPicksManaged(true);
+        race.getSettings().setTimeProgressionMode(equal ? TimeProgressionMode.EQUAL_CONDITIONS : TimeProgressionMode.MULTIPLIER);
+        race.getSettings().setTimeProgressionMultiplier(equal ? null : 0);
+        var renderedPath = new java.util.concurrent.atomic.AtomicReference<Path>();
+        doAnswer(call -> {
+            String html = call.getArgument(0); Path output = call.getArgument(1);
+            java.nio.file.Files.writeString(output, html); renderedPath.set(output); return null;
+        }).when(service).renderScreenshot(anyString(), any(Path.class));
+        // when
+        var graphic = org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> service.renderPublication(race));
+        // then
+        org.assertj.core.api.Assertions.assertThat(graphic).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(graphic.fields()).containsExactlyInAnyOrderElementsOf(org.ctc.domain.model.PickDisclosureField.all());
+        org.assertj.core.api.Assertions.assertThat(graphic.templateHash()).matches("[0-9a-f]{64}");
+        org.assertj.core.api.Assertions.assertThat(new String(graphic.png(), java.nio.charset.StandardCharsets.UTF_8))
+                .contains("Toyota", equal ? "Equal Conditions" : "0x");
+        var document = org.jsoup.Jsoup.parse(new String(graphic.png(), java.nio.charset.StandardCharsets.UTF_8));
+        org.assertj.core.api.Assertions.assertThat(document.select(".setting-value").eachText()).contains(
+                "Nurburgring (5 Laps)", "2x / 2x / 1", "Full / 1 l/s", "Day / " + (equal ? "Equal Conditions" : "0x"), "Clear", "All / Medium");
+        byte[] copy = graphic.png(); java.util.Arrays.fill(copy, (byte) 0);
+        org.assertj.core.api.Assertions.assertThat(new String(graphic.png(), java.nio.charset.StandardCharsets.UTF_8)).contains("Toyota");
+        org.assertj.core.api.Assertions.assertThat(renderedPath.get()).doesNotExist();
+        org.assertj.core.api.Assertions.assertThat(tempDir.resolve("races").resolve(race.getId().toString()).resolve("settings.png")).doesNotExist();
+    }
+
+    @Test
+    void givenManagedRaceAndUnknownCustomTemplate_whenPublishing_thenKeepExplicitOutputWithoutInferringPublicFields() throws Exception {
+        // given
+        service = spy(service);
+        var race = createReadyRace(false);
+        when(standingsService.calculateStandings(any(), any())).thenReturn(List.of());
+        race.setPicksManaged(true); service.saveTemplate("<html><p th:text='${weather}'></p></html>");
+        doAnswer(call -> { java.nio.file.Files.writeString(call.getArgument(1), call.getArgument(0)); return null; })
+                .when(service).renderScreenshot(anyString(), any(Path.class));
+        // when / then
+        var graphic = org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> service.renderPublication(race));
+        org.assertj.core.api.Assertions.assertThat(graphic.fields()).isEmpty();
+        org.assertj.core.api.Assertions.assertThat(new String(graphic.png(), java.nio.charset.StandardCharsets.UTF_8)).contains("Clear");
+    }
+
+    @Test
+    void givenUnenrolledRaceAndCustomTemplate_whenPublishing_thenPreserveLegacyOutputWithoutClaimingAnyDisclosedFields() throws Exception {
+        // given
+        service = spy(service);
+        var race = createReadyRace(false);
+        when(standingsService.calculateStandings(any(), any())).thenReturn(List.of());
+        service.saveTemplate("<html><p>Test legacy custom output</p></html>");
+        doAnswer(call -> {
+            java.nio.file.Files.writeString(call.getArgument(1), call.getArgument(0)); return null;
+        }).when(service).renderScreenshot(anyString(), any(Path.class));
+        // when
+        var graphic = org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> service.renderPublication(race));
+        // then
+        org.assertj.core.api.Assertions.assertThat(graphic).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(graphic.fields()).isEmpty();
+        org.assertj.core.api.Assertions.assertThat(new String(graphic.png(), java.nio.charset.StandardCharsets.UTF_8)).contains("Test legacy custom output");
+    }
+
 	@Test
 	void givenRaceWithoutTeams_whenGenerateSettings_thenThrowsIllegalState() {
 		// given

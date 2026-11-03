@@ -4,6 +4,22 @@ import static org.springframework.util.StringUtils.hasText;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.security.Principal;
+import java.util.UUID;
+import java.util.Map;
+import java.util.Set;
+import java.util.LinkedHashMap;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.ctc.domain.service.PickPublicationService;
+import org.ctc.domain.model.PickPublicationOutput;
+import org.ctc.domain.model.PickDisclosureField;
+import org.ctc.domain.picks.ManagementPickActor;
+import org.ctc.domain.picks.PreparedPickPublication;
+import org.ctc.domain.repository.RaceRepository;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -99,6 +115,10 @@ public class DiscordPostService {
 	private final MatchdayPairingsGraphicService matchdayPairingsGraphicService;
 	private final MatchdayScheduleGraphicService matchdayScheduleGraphicService;
 	private final Path uploadDir;
+    private final PickPublicationService pickPublications;
+    private final RaceRepository publicationRaces;
+    private final Environment environment;
+    private final ObjectMapper publicationJson;
 
 	public static final String DEFAULT_MATCHDAY_PAIRINGS_TEMPLATE =
 			"# {{matchdayNumber}} Pairings\n\n"
@@ -141,6 +161,10 @@ public class DiscordPostService {
 			StandingsGraphicService standingsGraphicService,
 			MatchdayPairingsGraphicService matchdayPairingsGraphicService,
 			MatchdayScheduleGraphicService matchdayScheduleGraphicService,
+            PickPublicationService pickPublications,
+            RaceRepository publicationRaces,
+            Environment environment,
+            ObjectMapper publicationJson,
 			@Value("${app.upload-dir:uploads}") String uploadDir) {
 		this.webhookClient = webhookClient;
 		this.restClient = restClient;
@@ -165,6 +189,8 @@ public class DiscordPostService {
 		this.matchdayPairingsGraphicService = matchdayPairingsGraphicService;
 		this.matchdayScheduleGraphicService = matchdayScheduleGraphicService;
 		this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
+        this.pickPublications = pickPublications; this.publicationRaces = publicationRaces;
+        this.environment = environment; this.publicationJson = publicationJson;
 	}
 
 	public boolean matchCanRenderResults(Match match) {
@@ -270,13 +296,18 @@ public class DiscordPostService {
 		return new MatchPreviewPreFlightResult(true, null);
 	}
 
-	@Transactional
-	public DiscordPost postMatchPreview(Match match) throws DiscordApiException {
+    public DiscordPost postMatchPreview(Match match) throws DiscordApiException {
+        return postMatchPreview(match, null);
+    }
+
+    public DiscordPost postMatchPreview(Match match, Principal principal) throws DiscordApiException {
 		DiscordGlobalConfig config = globalConfigService.getOrInitialize();
 		MatchPreviewPreFlightResult pre = canPostMatchPreview(match);
 		if (!pre.canPost()) {
 			throw new BusinessRuleException("Cannot post Match Preview: " + pre.disabledReason());
 		}
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) return publishPickBundle(match, PickPublicationOutput.MATCH_PREVIEW, principal);
+        requireLegacyTransaction(match);
 		String webhookUrl = config.getAnnouncementWebhookUrl();
 		String channelId = parseWebhookUrl(webhookUrl).id();
 		LocalDateTime firstRaceTime = firstRaceTime(match).orElseThrow();
@@ -309,7 +340,7 @@ public class DiscordPostService {
 			return;
 		}
 		String content = buildMatchPreviewMarkdown(match, config, firstRaceTime.get());
-		List<NamedAttachment> attachments = buildMatchPreviewAttachments(match);
+		List<NamedAttachment> attachments = buildMatchPreviewAttachments(match, false);
 		postOrEdit(
 				channelId,
 				webhookUrl,
@@ -625,15 +656,19 @@ public class DiscordPostService {
 	}
 
 	private List<NamedAttachment> buildMatchPreviewAttachments(Match match) throws DiscordApiException {
-		List<Race> races = match.getRaces();
+        return buildMatchPreviewAttachments(match, true);
+    }
+
+    private List<NamedAttachment> buildMatchPreviewAttachments(Match match, boolean explicit) throws DiscordApiException {
+		List<Race> races = explicit ? match.getRaces() : pickPublications.lockForAutomatic(match.getId());
 		List<NamedAttachment> attachments = new ArrayList<>(races.size() * 2);
 		try {
 			for (int i = 0; i < races.size(); i++) {
 				Race race = races.get(i);
 				int n = i + 1;
-				attachments.add(new NamedAttachment(
-						"settings-md" + n + ".png",
-						readPng(settingsGraphicService.generateSettings(race))));
+                if (explicit || !race.isPicksManaged()) {
+                    attachments.add(new NamedAttachment("settings-md" + n + ".png", readPng(settingsGraphicService.generateSettings(race))));
+                }
 				attachments.add(new NamedAttachment(
 						"lineups-md" + n + ".png",
 						readPng(lineupGraphicService.generateLineup(race))));
@@ -730,26 +765,130 @@ public class DiscordPostService {
 				DiscordPostRef.match(match));
 	}
 
-	@Transactional
-	public DiscordPost postSettings(Match match) throws DiscordApiException {
+    public DiscordPost postSettings(Match match) throws DiscordApiException {
+        return postSettings(match, null);
+    }
+
+    public DiscordPost postSettings(Match match, Principal principal) throws DiscordApiException {
 		if (!matchHasCompleteSettings(match)) {
 			throw new BusinessRuleException("Configure settings for all races first");
 		}
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) return publishPickBundle(match, PickPublicationOutput.SETTINGS, principal);
+        requireLegacyTransaction(match);
 		return postRaceBundle(match, DiscordPostType.SETTINGS, "settings-race-",
 				race -> readRaceGraphic(settingsGraphicService.generateSettings(race)));
 	}
 
-	@Transactional
-	public DiscordPost postLobbySettings(Match match) throws DiscordApiException {
+    public DiscordPost postLobbySettings(Match match) throws DiscordApiException {
+        return postLobbySettings(match, null);
+    }
+
+    public DiscordPost postLobbySettings(Match match, Principal principal) throws DiscordApiException {
 		if (!matchHasCompleteSettings(match)) {
 			throw new BusinessRuleException("Configure settings for all races first");
 		}
 		if (match.getRaces().stream().anyMatch(race -> race.getTrack() == null)) {
 			throw new BusinessRuleException("Configure a track for all races first");
 		}
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) return publishPickBundle(match, PickPublicationOutput.LOBBY_SETTINGS, principal);
+        requireLegacyTransaction(match);
 		return postRaceBundle(match, DiscordPostType.LOBBY_SETTINGS, "lobby-settings-race-",
 				race -> readRaceGraphic(lobbySettingsGraphicService.generateLobbySettings(race)));
 	}
+
+    private void requireLegacyTransaction(Match match) {
+        if (pickPublications.lockForAutomatic(match.getId()).stream().anyMatch(Race::isPicksManaged)) {
+            throw new BusinessRuleException("Managed publication must start outside an existing transaction");
+        }
+    }
+
+    private DiscordPost publishPickBundle(Match match, PickPublicationOutput output, Principal principal) throws DiscordApiException {
+        String name = principal == null ? null : principal.getName();
+        if (principal == null && environment.acceptsProfiles(Profiles.of("dev", "local"))) name = "development-manager";
+        var actor = new ManagementPickActor(name);
+        try {
+            return pickPublications.publish(match.getRaces().stream().map(Race::getId).toList(), output, actor, rows -> {
+                try { return preparePickBundle(match.getId(), rows, output); }
+                catch (IOException failure) { throw new UncheckedIOException(failure); }
+            });
+        } catch (UncheckedIOException failure) { throw DiscordApiExceptionMapper.from(failure.getCause()); }
+        catch (IOException failure) {
+            if (failure instanceof DiscordApiException api && api.category() != DiscordApiException.Category.TRANSIENT) throw api;
+            throw new BusinessRuleException("Publication delivery is unconfirmed; reconcile the pending output before sending again");
+        }
+    }
+
+    private PreparedPickPublication<DiscordPost> preparePickBundle(UUID expectedMatchId, List<Race> races, PickPublicationOutput output) throws IOException {
+        Match match = races.getFirst().getMatch();
+        var selectedIds = races.stream().map(Race::getId).collect(java.util.stream.Collectors.toSet());
+        if (match == null || !expectedMatchId.equals(match.getId())
+                || races.stream().anyMatch(race -> race.getMatch() == null || !expectedMatchId.equals(race.getMatch().getId()))
+                || !publicationRaces.findByMatchId(expectedMatchId).stream().map(Race::getId).collect(java.util.stream.Collectors.toSet()).equals(selectedIds)) {
+            throw new BusinessRuleException("Publication pairing membership changed; reload its current races");
+        }
+        if (races.stream().anyMatch(race -> !race.hasAllSettings())) throw new BusinessRuleException("Configure settings for all races first");
+        boolean preview = output == PickPublicationOutput.MATCH_PREVIEW;
+        boolean lobby = output == PickPublicationOutput.LOBBY_SETTINGS;
+        DiscordPostType type = preview ? DiscordPostType.MATCH_PREVIEW : lobby ? DiscordPostType.LOBBY_SETTINGS : DiscordPostType.SETTINGS;
+        String webhookUrl = preview ? globalConfigService.getOrInitialize().getAnnouncementWebhookUrl() : match.getDiscordChannelWebhookUrl();
+        if (!hasText(webhookUrl)) throw new BusinessRuleException("Configure the publication webhook first");
+        hostValidator.requireAllowed(webhookUrl);
+        WebhookCredentials credentials = parseWebhookUrl(webhookUrl);
+        String channelId = preview ? credentials.id() : match.getDiscordChannelId();
+        if (!hasText(channelId)) throw new BusinessRuleException("Link a Discord channel before publishing");
+        WebhookPayload payload = WebhookPayload.empty();
+        if (preview) {
+            if (!hasText(match.getDiscordTeaser()) || races.stream().anyMatch(race -> raceLineupRepository.findByRaceId(race.getId()).isEmpty())) {
+                throw new BusinessRuleException("Match preview requires a teaser and lineups for every race");
+            }
+            var firstTime = races.stream().map(Race::getDateTime).filter(Objects::nonNull).min(Comparator.naturalOrder())
+                    .orElseThrow(() -> new BusinessRuleException("Set Race date+time first"));
+            payload = new WebhookPayload(buildMatchPreviewMarkdown(match, globalConfigService.getOrInitialize(), firstTime), List.of());
+        }
+        List<NamedAttachment> attachments = new ArrayList<>();
+        Map<UUID, Set<PickDisclosureField>> fields = new LinkedHashMap<>();
+        String templateHash = null;
+        for (int index = 0; index < races.size(); index++) {
+            var race = races.get(index);
+            var graphic = lobby ? lobbySettingsGraphicService.renderPublication(race) : settingsGraphicService.renderPublication(race);
+            if (templateHash != null && !templateHash.equals(graphic.templateHash())) {
+                throw new BusinessRuleException("Publication templates changed while rendering; retry the complete bundle");
+            }
+            templateHash = graphic.templateHash(); fields.put(race.getId(), graphic.fields());
+            String prefix = preview ? "settings-md" : lobby ? "lobby-settings-race-" : "settings-race-";
+            attachments.add(new NamedAttachment(prefix + (index + 1) + ".png", graphic.png()));
+            if (preview) attachments.add(new NamedAttachment("lineups-md" + (index + 1) + ".png", readPng(lineupGraphicService.generateLineup(race))));
+        }
+        if (attachments.size() > 10) throw new BusinessRuleException("This pairing exceeds the ten-attachment limit; publish smaller physical bundles");
+        var existing = discordPostRepository.findByChannelIdAndPostTypeAndMatchId(channelId, type, expectedMatchId).orElse(null);
+        Long existingId = existing == null ? null : existing.getId();
+        String targetMessageId = existing == null ? null : existing.getMessageId();
+        var frozen = List.copyOf(attachments); var frozenPayload = payload;
+        String manifest = publicationManifest(payload, frozen);
+        return new PreparedPickPublication<>(channelId, credentials.id(), targetMessageId, templateHash, manifest, fields, () -> {
+            WebhookMessage response = targetMessageId == null
+                    ? webhookClient.executeMultipart(webhookUrl, frozenPayload, frozen)
+                    : webhookClient.editMessageWithAttachments(webhookUrl, targetMessageId, frozenPayload, frozen);
+            if (response == null || !hasText(response.id()) || (response.flags() & (64 | 128)) != 0 || targetMessageId != null && !targetMessageId.equals(response.id())) {
+                throw new DiscordTransientException("Publication response is uncertain; reconcile the output before retrying", null);
+            }
+            return response.id();
+        }, messageId -> {
+            var current = discordPostRepository.findByChannelIdAndPostTypeAndMatchId(channelId, type, expectedMatchId).orElse(null);
+            if (existingId == null ? current != null : current == null || !existingId.equals(current.getId()) || !Objects.equals(targetMessageId, current.getMessageId())) {
+                throw new BusinessRuleException("Publication mapping changed while sending; reconciliation is required");
+            }
+            var row = current == null ? new DiscordPost() : current;
+            if (current == null) row.setPostedAt(LocalDateTime.now(clock));
+            row.setChannelId(channelId); row.setMessageId(messageId); row.setWebhookId(credentials.id()); row.setWebhookToken(credentials.token());
+            row.setPostType(type); row.setMatchId(expectedMatchId); row.setAttachmentsReplacedAt(LocalDateTime.now(clock));
+            return discordPostRepository.saveAndFlush(row);
+        });
+    }
+
+    private String publicationManifest(WebhookPayload payload, List<NamedAttachment> attachments) {
+        return PickPublicationManifest.capture(payload.content(), attachments, publicationJson);
+    }
 
 	@Transactional
 	public DiscordPost postLineups(Match match) throws DiscordApiException {

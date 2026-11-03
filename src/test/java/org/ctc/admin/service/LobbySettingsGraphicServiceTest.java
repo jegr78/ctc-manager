@@ -16,6 +16,73 @@ import static org.mockito.Mockito.*;
 class LobbySettingsGraphicServiceTest {
     @TempDir Path directory;
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void givenBuiltinPublicationTemplate_whenRendering_thenFreezeProvenFieldsAndBytesOutsideTheInternalCache(boolean equal) throws Exception {
+        // given
+        var service = spy(new LobbySettingsGraphicService(mock(TemplateEngine.class), directory.toString()));
+        var race = readyRace();
+        race.setPicksManaged(true);
+        race.setCar(new Car("Test private lobby car", "Must stay omitted"));
+        race.getSettings().setTimeProgressionMode(equal ? TimeProgressionMode.EQUAL_CONDITIONS : TimeProgressionMode.MULTIPLIER);
+        race.getSettings().setTimeProgressionMultiplier(equal ? null : 0);
+        var renderedPath = new java.util.concurrent.atomic.AtomicReference<Path>();
+        doAnswer(call -> {
+            String html = call.getArgument(0); Path output = call.getArgument(1);
+            java.nio.file.Files.writeString(output, html); renderedPath.set(output); return null;
+        }).when(service).renderScreenshot(anyString(), any(Path.class));
+        // when
+        var graphic = org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> service.renderPublication(race));
+        // then
+        org.assertj.core.api.Assertions.assertThat(graphic).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(graphic.fields()).containsExactlyInAnyOrderElementsOf(org.ctc.domain.model.PickDisclosureField.lobby());
+        org.assertj.core.api.Assertions.assertThat(graphic.templateHash()).matches("[0-9a-f]{64}");
+        org.assertj.core.api.Assertions.assertThat(new String(graphic.png(), java.nio.charset.StandardCharsets.UTF_8))
+                .contains("Test Track", equal ? "Equal Conditions" : "0x").doesNotContain("Test private lobby car", "Must stay omitted");
+        var document = org.jsoup.Jsoup.parse(new String(graphic.png(), java.nio.charset.StandardCharsets.UTF_8));
+        var values = document.select(".row").stream().collect(java.util.stream.Collectors.toMap(
+                row -> row.select(".set-label").text(), row -> row.select(".set-value").text(), (first, next) -> first));
+        assertThat(values).containsEntry("No. of Laps", "5").containsEntry("Tyre Wear Rate", "2×")
+                .containsEntry("Fuel Consumption Rate", "2×").containsEntry("Refuelling Speed", "1 Litre/sec")
+                .containsEntry("Initial Fuel", "Full").containsEntry("Preset Weather", "Clear").containsEntry("Time of the Day", "Day")
+                .containsEntry("Usable Tyre & Types", "RH").containsEntry("Required Tyre Type", "RH");
+        byte[] copy = graphic.png(); java.util.Arrays.fill(copy, (byte) 0);
+        org.assertj.core.api.Assertions.assertThat(new String(graphic.png(), java.nio.charset.StandardCharsets.UTF_8)).contains("Test Track");
+        org.assertj.core.api.Assertions.assertThat(renderedPath.get()).doesNotExist();
+        org.assertj.core.api.Assertions.assertThat(directory.resolve("races").resolve(race.getId().toString()).resolve("lobby-settings.png")).doesNotExist();
+    }
+
+    @Test
+    void givenManagedRaceAndUnknownCustomTemplate_whenPublishing_thenKeepExplicitOutputWithoutInferringPublicFields() throws Exception {
+        // given
+        var service = spy(new LobbySettingsGraphicService(mock(TemplateEngine.class), directory.toString()));
+        var race = readyRace();
+        race.setPicksManaged(true); service.saveTemplate("<html><p th:text='${v.weather}'></p></html>");
+        doAnswer(call -> { java.nio.file.Files.writeString(call.getArgument(1), call.getArgument(0)); return null; })
+                .when(service).renderScreenshot(anyString(), any(Path.class));
+        // when / then
+        var graphic = org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> service.renderPublication(race));
+        assertThat(graphic.fields()).isEmpty();
+        assertThat(new String(graphic.png(), java.nio.charset.StandardCharsets.UTF_8)).contains("Clear");
+    }
+
+    @Test
+    void givenUnenrolledRaceAndCustomTemplate_whenPublishing_thenPreserveLegacyOutputWithoutClaimingAnyDisclosedFields() throws Exception {
+        // given
+        var service = spy(new LobbySettingsGraphicService(mock(TemplateEngine.class), directory.toString()));
+        var race = readyRace();
+        service.saveTemplate("<html><p>Test legacy custom output</p></html>");
+        doAnswer(call -> {
+            java.nio.file.Files.writeString(call.getArgument(1), call.getArgument(0)); return null;
+        }).when(service).renderScreenshot(anyString(), any(Path.class));
+        // when
+        var graphic = org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> service.renderPublication(race));
+        // then
+        org.assertj.core.api.Assertions.assertThat(graphic).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(graphic.fields()).isEmpty();
+        org.assertj.core.api.Assertions.assertThat(new String(graphic.png(), java.nio.charset.StandardCharsets.UTF_8)).contains("Test legacy custom output");
+    }
+
     @Test
     void givenEqualAndZero_whenRendering_thenTemplateReceivesDistinctValues() throws Exception {
         // given
@@ -49,6 +116,7 @@ class LobbySettingsGraphicServiceTest {
         race.setTrack(new Track("Test Track"));
         var settings = new RaceSettings(race);
         settings.setNumberOfLaps(5);
+        settings.setTimeProgressionMultiplier(0);
         settings.setTyreWearMultiplier(2);
         settings.setFuelConsumptionMultiplier(2);
         settings.setRefuelingSpeed(1);

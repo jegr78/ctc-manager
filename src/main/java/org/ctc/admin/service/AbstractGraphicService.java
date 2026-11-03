@@ -29,6 +29,20 @@ public abstract class AbstractGraphicService {
 		this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
 	}
 
+    protected org.ctc.domain.picks.RenderedPickGraphic publicationGraphic(Context context,
+            String customFilename, String builtinSource, java.util.Set<org.ctc.domain.model.PickDisclosureField> builtinFields) throws IOException {
+        Path custom = uploadDir.resolve(customFilename);
+        boolean known = !Files.exists(custom);
+        String source = known ? builtinSource : Files.readString(custom);
+        String html = processStringTemplate(source, context);
+        Path temporary = Files.createTempFile("ctc-pick-publication-", ".png");
+        try {
+            renderScreenshot(html, temporary);
+            return new org.ctc.domain.picks.RenderedPickGraphic(Files.readAllBytes(temporary),
+                    org.ctc.domain.model.PickPublicationAttempt.manifestHash(source), known ? builtinFields : java.util.Set.of());
+        } finally { Files.deleteIfExists(temporary); }
+    }
+
 	protected void renderScreenshot(String html, Path outputFile) throws IOException {
 		SandboxedHtmlRenderer.screenshot(html, 1920, 1080, false, outputFile);
 	}

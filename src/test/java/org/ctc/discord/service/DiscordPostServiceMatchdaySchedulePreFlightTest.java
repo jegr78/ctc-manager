@@ -64,6 +64,9 @@ class DiscordPostServiceMatchdaySchedulePreFlightTest {
 				mock(StandingsGraphicService.class),
 				mock(MatchdayPairingsGraphicService.class),
 				mock(org.ctc.admin.service.MatchdayScheduleGraphicService.class),
+                mock(org.ctc.domain.service.PickPublicationService.class),
+                mock(org.ctc.domain.repository.RaceRepository.class),
+                mock(org.springframework.core.env.Environment.class), new com.fasterxml.jackson.databind.ObjectMapper(),
 				"uploads");
 	}
 

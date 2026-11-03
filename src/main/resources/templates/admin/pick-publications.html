@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/layout :: layout('Unconfirmed publications', ~{::section})}">
+<body><section class="entity-editor pick-review-workspace">
+    <h1>Unconfirmed publications</h1>
+    <p>Check uncertain Discord deliveries before publishing these races again. Viewing this list does not contact Discord or release settings.</p>
+    <div class="card">
+        <p th:if="${publications.isEmpty()}">No publications require reconciliation.</p>
+        <ul th:unless="${publications.isEmpty()}"><li th:each="item : ${publications}">
+            <a th:href="@{/admin/pick-publications/{id}(id=${item.batchId})}" th:text="${item.label}"></a>
+            <span th:text="${item.output + ' / ' + item.state}"></span>
+        </li></ul>
+    </div>
+    <a class="btn btn-secondary" th:href="@{/admin/matchday-picks}">Back to team picks</a>
+</section></body></html>

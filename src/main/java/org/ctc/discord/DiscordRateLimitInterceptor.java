@@ -93,6 +93,13 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 				fiveXxAttempts++;
 				continue;
 			}
+            boolean write = java.util.Set.of(org.springframework.http.HttpMethod.POST, org.springframework.http.HttpMethod.PATCH,
+                    org.springframework.http.HttpMethod.PUT, org.springframework.http.HttpMethod.DELETE).contains(request.getMethod());
+            if (status >= 300 && status < 400 || write && fiveXxAttempts > 0 && status >= 400) {
+                response.close();
+                throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE,
+                        new IOException("The request did not establish a confirmed remote outcome"));
+            }
 			return response;
 		}
 	}

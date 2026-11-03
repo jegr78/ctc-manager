@@ -5,6 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
+import java.time.Duration;
+import java.net.http.HttpClient;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.beans.factory.annotation.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.discord.dto.NamedAttachment;
 import org.ctc.discord.dto.WebhookMessage;
@@ -37,17 +41,58 @@ public class DiscordWebhookClient {
 	private final ObjectMapper objectMapper;
 	private final DiscordHostValidator hostValidator;
 	private final String userAgent;
+    private final JdkClientHttpRequestFactory requestFactory;
+    private final DiscordHostValidator attachmentHosts;
 
 	public DiscordWebhookClient(
 			DiscordRateLimitInterceptor rateLimitInterceptor,
 			ObjectMapper objectMapper,
 			DiscordHostValidator hostValidator,
-			@org.springframework.beans.factory.annotation.Qualifier("discordUserAgent") String userAgent) {
+			@org.springframework.beans.factory.annotation.Qualifier("discordUserAgent") String userAgent,
+            @Value("${app.discord.connect-timeout:5s}") Duration connectTimeout,
+            @Value("${app.discord.read-timeout:30s}") Duration readTimeout,
+            @Value("${app.discord.attachment-hosts:cdn.discordapp.com}") String attachmentHosts) {
 		this.rateLimitInterceptor = rateLimitInterceptor;
 		this.objectMapper = objectMapper;
 		this.hostValidator = hostValidator;
 		this.userAgent = userAgent;
+        requestFactory = new JdkClientHttpRequestFactory(HttpClient.newBuilder().connectTimeout(connectTimeout).build());
+        requestFactory.setReadTimeout(readTimeout);
+        this.attachmentHosts = new DiscordHostValidator(attachmentHosts);
 	}
+
+    public org.ctc.discord.dto.WebhookMessageEvidence getMessageEvidence(String webhookUrl, String messageId) throws DiscordApiException {
+        if (messageId == null || !messageId.matches("[0-9]{1,20}")) throw new org.ctc.domain.exception.BusinessRuleException("A Discord message ID is required");
+        hostValidator.requireAllowed(webhookUrl);
+        try {
+            return execute(() -> forWebhookUrl(webhookUrl).get().uri("/messages/{messageId}", messageId)
+                    .retrieve().body(org.ctc.discord.dto.WebhookMessageEvidence.class));
+        } catch (org.springframework.web.client.RestClientException malformedResponse) {
+            throw new DiscordTransientException("Discord message verification did not complete", null);
+        }
+    }
+
+    public byte[] downloadAttachment(String url, int expectedBytes) throws DiscordApiException {
+        try {
+            var uri = java.net.URI.create(url);
+            attachmentHosts.requireAllowed(url);
+            boolean loopback = "localhost".equalsIgnoreCase(uri.getHost()) || "127.0.0.1".equals(uri.getHost());
+            if ((!"https".equalsIgnoreCase(uri.getScheme()) && !(loopback && "http".equalsIgnoreCase(uri.getScheme())))
+                    || uri.getUserInfo() != null || uri.getFragment() != null || !loopback && uri.getPort() != -1 && uri.getPort() != 443
+                    || uri.getPath() == null || !uri.getPath().startsWith("/attachments/")
+                    || expectedBytes < 1 || expectedBytes > 8 * 1024 * 1024) throw new IllegalArgumentException();
+        } catch (IllegalArgumentException | NullPointerException blocked) {
+            throw new org.ctc.domain.exception.BusinessRuleException("The attachment cannot be verified using an allowed Discord source");
+        }
+        return execute(() -> RestClient.builder().requestFactory(requestFactory).defaultHeader(HttpHeaders.USER_AGENT, userAgent)
+                .requestInterceptor(rateLimitInterceptor).build().get().uri(java.net.URI.create(url))
+                .exchange((request, response) -> {
+                    if (!response.getStatusCode().is2xxSuccessful()) throw new DiscordTransientException("Discord attachment verification failed", null);
+                    byte[] bytes = response.getBody().readNBytes(expectedBytes + 1);
+                    if (bytes.length != expectedBytes) throw new DiscordTransientException("Discord attachment verification failed", null);
+                    return bytes;
+                }));
+    }
 
 	public WebhookMessage execute(String webhookUrl, WebhookPayload payload) throws DiscordApiException {
 		return execute(webhookUrl, payload, null);
@@ -212,6 +257,7 @@ public class DiscordWebhookClient {
 	private RestClient forWebhookUrl(String webhookUrl) {
 		hostValidator.requireAllowed(webhookUrl);
 		return RestClient.builder()
+                .requestFactory(requestFactory)
 				.baseUrl(webhookUrl)
 				.defaultHeader(HttpHeaders.USER_AGENT, userAgent)
 				.requestInterceptor(rateLimitInterceptor)

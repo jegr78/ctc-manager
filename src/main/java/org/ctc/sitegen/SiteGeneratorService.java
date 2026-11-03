@@ -653,6 +653,10 @@ public class SiteGeneratorService {
                 log.warn("Logo file not found, skipping: {}", logoUrl);
                 return null;
             }
+            Path realBase = uploadBase.toRealPath();
+            Path realLogo = logoFile.toRealPath();
+            if (logoFile.startsWith(uploadBase.resolve("races")) || !realLogo.startsWith(realBase)
+                    || realLogo.startsWith(realBase.resolve("races"))) return null;
             // Preserve UUID-prefixed subdirectory to avoid filename collisions
             String relativePart = logoUrl.substring("/uploads/".length());
             Path target = outPath.resolve("assets").resolve("img").resolve("logos").resolve(relativePart);

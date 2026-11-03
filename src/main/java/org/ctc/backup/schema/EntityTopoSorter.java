@@ -1,6 +1,7 @@
 package org.ctc.backup.schema;
 
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.metamodel.Attribute.PersistentAttributeType;
 import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.SingularAttribute;
@@ -64,6 +65,22 @@ class EntityTopoSorter {
 					inDegree.merge(ownerClass, 1, Integer::sum);
 				}
 			}
+        }
+
+        // Owned join tables are restored with their owner, after both referenced catalog tables.
+        for (EntityType<?> owner : entityTypes) {
+            for (var attr : owner.getPluralAttributes()) {
+                if (attr.getPersistentAttributeType() != PersistentAttributeType.MANY_TO_MANY) continue;
+                if (attr.getJavaMember() instanceof Field field) {
+                    var annotation = field.getAnnotation(ManyToMany.class);
+                    if (annotation != null && !annotation.mappedBy().isEmpty()) continue;
+                }
+                Class<?> dependency = attr.getElementType().getJavaType();
+                Class<?> ownerClass = owner.getJavaType();
+                if (byClass.containsKey(dependency) && !dependency.equals(ownerClass) && outgoing.get(dependency).add(ownerClass)) {
+                    inDegree.merge(ownerClass, 1, Integer::sum);
+                }
+            }
         }
 
         Deque<Class<?>> queue = inDegree.entrySet().stream()

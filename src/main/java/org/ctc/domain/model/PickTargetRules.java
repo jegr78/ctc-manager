@@ -8,7 +8,15 @@ public final class PickTargetRules {
     }
 
     public static boolean isScheduledTarget(Race race, Team home, Team away) {
-        if (race.getDateTime() == null || race.getMatchday() == null || race.getMatchday().getSeason() == null
+        return race.getDateTime() != null && isUnfinishedTarget(race, home, away);
+    }
+
+    public static boolean isUnfinishedTarget(Race race) {
+        return isUnfinishedTarget(race, race.getHomeTeam(), race.getAwayTeam());
+    }
+
+    private static boolean isUnfinishedTarget(Race race, Team home, Team away) {
+        if (race.getMatchday() == null || race.getMatchday().getSeason() == null
                 || home == null || away == null || race.isBye()
                 || !race.getResults().isEmpty() || race.getMatch() == null && race.getPlayoffMatchup() == null) return false;
         if (home.getId() == null || home.getId().equals(away.getId())) return false;

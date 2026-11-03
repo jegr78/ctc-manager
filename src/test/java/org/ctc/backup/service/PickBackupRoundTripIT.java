@@ -61,6 +61,10 @@ class PickBackupRoundTripIT {
     @Autowired PickReviewService reviews;
     @Autowired PickReservationService reservations;
     @Autowired PickSessionEpoch epoch;
+    @Autowired PickPublicationService publications;
+    @Autowired PickDisclosureService disclosure;
+    @Autowired PickPublicationAttemptRepository publicationAttempts;
+    @Autowired org.ctc.admin.service.PickIntegrityAuditService integrity;
     @Autowired BackupArchiveService archives;
     @MockitoSpyBean BackupImportService imports;
     @MockitoBean PickCollectionStatus collection;
@@ -234,13 +238,14 @@ class PickBackupRoundTripIT {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {1, 2, 3, 4, 5})
+    @ValueSource(ints = {1, 2, 3, 4, 5, 6})
     void givenSupportedOldBackup_whenRestoring_thenDefaultNewFlagsOffAndLeaveHistoryEmpty(int version) throws Exception {
         // given
         var files = unzip(legacy);
         var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
         manifest.put("schema_version", version);
-        var absent = new ArrayList<>(List.of("team_pick_channel_bindings"));
+        var absent = new ArrayList<>(List.of("pick_publication_attempts", "pick_publication_snapshots"));
+        if (version < 6) absent.add("team_pick_channel_bindings");
         if (version < 5) absent.addAll(List.of("matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"));
         if (version <= 3) absent.addAll(List.of("season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members"));
         if (version <= 2) absent.add("site_slugs");
@@ -284,6 +289,40 @@ class PickBackupRoundTripIT {
             assertThat(bindings.findById(bindingId)).isEmpty();
             assertThat(revisions.findByRequestId(original.requestId()).orElseThrow().receipt()).isEqualTo(original);
         });
+    }
+
+    @Test
+    void givenConfirmedLobbyAndUncertainCorrection_whenRestoring_thenPreservePublicMasksAndPendingReconciliation() throws Exception {
+        // given
+        publications.publish(List.of(fixture.race().getId()), PickPublicationOutput.LOBBY_SETTINGS, manager, rows ->
+                new org.ctc.domain.picks.PreparedPickPublication<>("123456789012345678", "234567890123456789", null,
+                        "a".repeat(64), "{}", Map.of(fixture.race().getId(), PickDisclosureField.lobby()),
+                        () -> "test-lobby-message", message -> message));
+        reviews.correct(fixture.race().getId(), 5, manager, "Later internal unpublished correction", payload(1, "Test private after lobby"));
+        assertThatThrownBy(() -> publications.publish(List.of(fixture.race().getId()), PickPublicationOutput.SETTINGS, manager, rows ->
+                new org.ctc.domain.picks.PreparedPickPublication<>("123456789012345678", "234567890123456789", null,
+                        "b".repeat(64), "{}", Map.of(fixture.race().getId(), PickDisclosureField.all()),
+                        () -> { throw new IOException("Test lost response"); }, message -> message))).isInstanceOf(IOException.class);
+        byte[] archive = export();
+        var before = disclosure.forPublic(fixture.race().getId());
+        assertThat(before.carName()).isNull(); assertThat(before.settings().weather()).isEqualTo(corrected.weather());
+        // when
+        var preview = imports.stage(upload(archive)); imports.execute(preview.stagingId());
+        // then
+        assertThat(disclosure.forPublic(fixture.race().getId())).isEqualTo(before);
+        tx.executeWithoutResult(status -> {
+            var attempt = publicationAttempts.findByActiveRaceId(fixture.race().getId()).orElseThrow();
+            assertThat(attempt.getState()).isEqualTo(PickPublicationState.UNCERTAIN);
+            assertThat(attempt.getContent().weather()).isEqualTo("Test private after lobby");
+            assertThat(attempt.getContentVersion()).isEqualTo(2);
+            assertThat(attempt.getContentHash()).isEqualTo(attempt.getContent().fingerprint());
+        });
+        tx.executeWithoutResult(status -> {
+            var season = seasons.findById(fixture.season().getId()).orElseThrow();
+            assertThat(season.getCars()).extracting(Car::getId).containsExactlyInAnyOrderElementsOf(carIds);
+            assertThat(season.getTracks()).extracting(Track::getId).containsExactlyInAnyOrderElementsOf(trackIds);
+        });
+        assertThat(integrity.inspect()).isEmpty();
     }
 
     private PickPayload payload(int option, String weather) {
