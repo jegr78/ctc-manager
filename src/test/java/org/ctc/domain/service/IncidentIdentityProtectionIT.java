@@ -16,6 +16,8 @@ import org.ctc.domain.repository.DriverRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import static org.assertj.core.api.Assertions.*;
 
@@ -210,6 +212,34 @@ class IncidentIdentityProtectionIT extends IncidentIntegrationFixture {
             assertThat(season.findSeasonTeam(teams.findById(fixture.homeTeam().getId()).orElseThrow()).orElseThrow().getSuccessor().getTeam().getId()).isEqualTo(successor);
             assertThat(matches.findById(fixture.match().getId()).orElseThrow().getHomeTeam().getId()).isEqualTo(fixture.homeTeam().getId());
         });
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void boundRaceDeletionBeforeFirstReportIsRejected(boolean opened) {
+        if (opened) windows.open(contextId, NOW.plusSeconds(3600), 0, manager);
+        assertThatThrownBy(() -> raceService.deleteRace(fixture.race().getId()))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("incident");
+        assertThat(races.existsById(fixture.race().getId())).isTrue();
+        assertThat(windows.previewDeadline(contextId).plannedStartLocal()).isEqualTo(LocalDateTime.of(2035, 1, 1, 20, 0));
+    }
+
+    @Test
+    void standalonePlayoffMatchdayDeletionKeepsItsOpenContext() {
+        var target = tx.execute(status -> {
+            var playoff = helper.createPlayoffInPhase(seasons.findById(fixture.season().getId()).orElseThrow(), "Test retained incident playoff", 2);
+            var matchup = playoff.getRounds().getFirst().getMatchups().getFirst();
+            matchup.setTeam1(teams.findById(fixture.homeTeam().getId()).orElseThrow()); matchup.setTeam2(teams.findById(fixture.awayTeam().getId()).orElseThrow());
+            var day = new org.ctc.domain.model.Matchday(playoff.getPhase(), "Test retained playoff day", 1); em.persist(day);
+            var race = new Race(); race.setMatchday(day); race.setPlayoffMatchup(matchup); race.setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0)); em.persist(race); em.flush();
+            return List.of(matchup.getId(), day.getId(), race.getId());
+        });
+        var id = contexts.bind(org.ctc.domain.incidents.IncidentMatchRef.playoff(target.get(0)), GUILD, "200000000000000099", manager);
+        windows.open(id, NOW.plusSeconds(3600), 0, manager);
+        assertThatThrownBy(() -> matchdayService.deleteMatchday(target.get(1)))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("incident");
+        assertThat(races.existsById(target.get(2))).isTrue();
+        assertThat(windows.previewDeadline(id).plannedStartLocal()).isEqualTo(LocalDateTime.of(2035, 1, 1, 20, 0));
     }
 
     private org.ctc.domain.incidents.IncidentReportReceipt submit() {

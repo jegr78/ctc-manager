@@ -114,6 +114,25 @@ class IncidentBackupValidatorTest {
         }).isInstanceOf(IncidentBackupValidator.ValidationException.class).hasMessageContaining("100000");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"no-races", "bye", "foreign-season", "participants"})
+    void givenContextWithoutReports_whenItsReportableRaceIdentityIsInvalid_thenRejectBeforeRestore(String corruption) {
+        data.get("incident_reports").clear(); data.get("incident_report_revisions").clear();
+        data.get("incident_report_events").removeIf(event -> event.hasNonNull("report"));
+        switch (corruption) {
+            case "no-races" -> data.get("races").clear();
+            case "bye" -> first("matches").put("bye", true);
+            case "foreign-season" -> {
+                String season = id(), phase = id(), day = id(); row("seasons", "id", season);
+                row("season_phases", "id", phase, "season", season); row("matchdays", "id", day, "phase", phase);
+                first("races").put("matchday", day);
+            }
+            case "participants" -> first("races").put("awayTeamOverride", HOME);
+            default -> throw new IllegalArgumentException(corruption);
+        }
+        assertThatThrownBy(() -> validate(8)).isInstanceOf(IncidentBackupValidator.ValidationException.class);
+    }
+
     private void validate(int version) {
         var validator = new IncidentBackupValidator(version);
         data.forEach((table, rows) -> rows.forEach(row -> validator.accept(table, row)));

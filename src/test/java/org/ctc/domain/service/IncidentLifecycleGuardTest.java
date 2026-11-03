@@ -43,6 +43,7 @@ class IncidentLifecycleGuardTest {
         when(contexts.findByMatchIdForUpdate(f.match.getId())).thenReturn(Optional.of(f.context));
         assertThat(guard.protects(f.race)).isTrue();
         assertThat(guard.identityRejection(f.race, f.day.getId(), f.away, f.home)).contains("incident");
+        assertThatThrownBy(() -> guard.requireNoHistory(List.of(f.race))).isInstanceOf(BusinessRuleException.class).hasMessageContaining("incident");
     }
 
     @Test

@@ -116,7 +116,9 @@ public class IncidentWindowService {
             var now = clock.instant();
             if (window.getState() != IncidentWindowState.OPEN || now.isBefore(window.getDeadline())) return false;
             var accepted = now.truncatedTo(ChronoUnit.MICROS);
-            for (var report : reports.findByWindowIdOrderByCaseReferenceAsc(windowId)) report.freeze();
+            for (var report : reports.findByWindowIdForUpdate(windowId)) {
+                entityManager.refresh(report, LockModeType.PESSIMISTIC_WRITE); report.freeze();
+            }
             window.close(accepted);
             events.save(IncidentReportEvent.windowDecision(window, IncidentEventKind.CLOSED, IncidentActorKind.SYSTEM,
                     "incident-deadline", "Reporting deadline reached", accepted, window.getDeadline()));

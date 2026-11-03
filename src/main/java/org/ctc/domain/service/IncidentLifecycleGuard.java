@@ -35,8 +35,8 @@ public class IncidentLifecycleGuard {
         if (reason != null) throw new BusinessRuleException(reason);
     }
     public void requireNoHistory(Collection<Race> races) {
-        if (races.stream().anyMatch(race -> race.getId() != null && fresh(() -> reports.findFirstByRaceIdOrderByIdAsc(race.getId())).isPresent())) {
-            throw new BusinessRuleException("Cannot delete a race with permanent incident report history");
+        if (races.stream().anyMatch(this::protects)) {
+            throw new BusinessRuleException("Cannot delete a race with a permanent incident context or report history");
         }
     }
     public void requireMatchDeletion(Match match) {

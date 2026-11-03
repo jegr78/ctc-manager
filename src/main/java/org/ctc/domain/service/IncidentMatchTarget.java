@@ -10,7 +10,7 @@ import org.ctc.domain.model.Race;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.Team;
 
-@SuppressFBWarnings(value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"}, justification =
+@SuppressFBWarnings(value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"}, matchType = edu.umd.cs.findbugs.annotations.SuppressMatchType.EXACT, justification =
         "Transaction-bound pairing adapter intentionally retains managed JPA entities; its race list is defensively copied. "
                 + "It is not a form or transport payload. See docs/security/sast-acceptance.md.")
 public record IncidentMatchTarget(IncidentMatchRef reference, Match match, PlayoffMatchup playoffMatchup,

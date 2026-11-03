@@ -172,6 +172,18 @@ public final class IncidentBackupValidator {
                 if (!season.equals(reference(phase, "season", "seasons")) || !home.equals(reference(pairing, "team1", "teams"))
                         || !away.equals(reference(pairing, "team2", "teams"))) fail("Incident context contradicts its playoff season or participants");
             }
+            if (pairing.path("bye").asBoolean(false)) fail("Incident context requires a contested pairing");
+            var associated = index("races").values().stream().filter(race -> context.hasNonNull("match")
+                    ? Objects.equals(nullableUuid(race, "match"), uuid(context, "match"))
+                    : Objects.equals(nullableUuid(race, "playoffMatchup"), uuid(context, "playoffMatchup"))).toList();
+            if (associated.isEmpty()) fail("Incident context has no reportable race");
+            for (var race : associated) {
+                String day = reference(race, "matchday", "matchdays");
+                if (!seasonForDay(day).equals(season) || !raceReference(race).equals(target)
+                        || !new HashSet<>(raceParticipants(race)).equals(Set.of(home, away))) {
+                    fail("Incident context race contradicts its season or participants");
+                }
+            }
             for (var match : index("matches").values()) {
                 if (Objects.equals(optionalText(match, "discordChannelId", 32), snowflake(context, "channelId"))
                         && !canonicalMatch(uuid(match, "id")).equals(target)) fail("The incident channel has ambiguous legacy match bindings");
@@ -238,15 +250,20 @@ public final class IncidentBackupValidator {
         String day = reference(race, "matchday", "matchdays");
         if (!reference(report, "originalMatchday", "matchdays").equals(day) || !seasonForDay(day).equals(uuid(context, "season"))
                 || !raceReference(race).equals(contextReference(context))) fail("Incident report belongs to a different pairing, day or season");
+        var participants = raceParticipants(race); String home = participants.get(0), away = participants.get(1);
+        if (home.equals(away) || !reference(report, "originalHomeTeam", "teams").equals(home) || !reference(report, "originalAwayTeam", "teams").equals(away)
+                || !Set.of(uuid(context, "homeTeam"), uuid(context, "awayTeam")).equals(Set.of(home, away))) fail("Incident report no longer identifies its original race participants");
+        var party = report.get("party"); String type = text(party, "type", 16), id = reference(party, "id", "teams");
+        if (!Set.of("TEAM", "ORGANIZATION").contains(type) || type.equals("TEAM") && !Set.of(home, away).contains(id)) fail("Incident reporting party does not match its frozen participants");
+    }
+
+    private List<String> raceParticipants(JsonNode race) {
         var pair = race.hasNonNull("match") ? index("matches").get(reference(race, "match", "matches"))
                 : index("playoff_matchups").get(reference(race, "playoffMatchup", "playoff_matchups"));
         boolean regular = race.hasNonNull("match");
         String home = race.hasNonNull("homeTeamOverride") ? reference(race, "homeTeamOverride", "teams") : reference(pair, regular ? "homeTeam" : "team1", "teams");
         String away = race.hasNonNull("awayTeamOverride") ? reference(race, "awayTeamOverride", "teams") : reference(pair, regular ? "awayTeam" : "team2", "teams");
-        if (home.equals(away) || !reference(report, "originalHomeTeam", "teams").equals(home) || !reference(report, "originalAwayTeam", "teams").equals(away)
-                || !Set.of(uuid(context, "homeTeam"), uuid(context, "awayTeam")).equals(Set.of(home, away))) fail("Incident report no longer identifies its original race participants");
-        var party = report.get("party"); String type = text(party, "type", 16), id = reference(party, "id", "teams");
-        if (!Set.of("TEAM", "ORGANIZATION").contains(type) || type.equals("TEAM") && !Set.of(home, away).contains(id)) fail("Incident reporting party does not match its frozen participants");
+        return List.of(home, away);
     }
 
     private String canonicalMatch(String matchId) {

@@ -241,6 +241,43 @@ class IncidentWindowConcurrencyIT extends IncidentIntegrationFixture {
         });
     }
 
+    @Test
+    void closureIncludesTheFirstReportCommittedWhileWaiting() throws Exception {
+        windows.open(contextId, NOW.plusSeconds(3600), 0, manager);
+        var stored = new CountDownLatch(1); var release = new CountDownLatch(1);
+        intercept(eventSaves, invocation -> {
+            var result = invocation.proceed();
+            if (invocation.getMethod().getName().equals("save") && invocation.getArguments()[0] instanceof IncidentReportEvent event
+                    && event.getKind() == IncidentEventKind.SUBMITTED) { em.flush(); stored.countDown(); await(release); }
+            return result;
+        });
+        var reached = new CountDownLatch(1); var contender = new AtomicReference<Thread>(); observeSeasonAttempt(contender, reached);
+        UUID reportId;
+        try (var workers = Executors.newVirtualThreadPerTaskExecutor()) {
+            var submission = workers.submit(() -> reports.submit(windowId, fixture.race().getId(), 1, UUID.randomUUID(), actor, payload));
+            try {
+                await(stored); clock.set(NOW.plusSeconds(3600));
+                var close = workers.submit(() -> {
+                    contender.set(Thread.currentThread()); return attempt(() -> { assertThat(windows.closeDue(windowId, NOW)).isTrue(); return null; });
+                });
+                await(reached); release.countDown(); reportId = submission.get(10, TimeUnit.SECONDS).reportId();
+                var conflict = close.get(10, TimeUnit.SECONDS);
+                if (conflict != null) {
+                    assertThat(conflict).isInstanceOf(BusinessRuleException.class).hasMessageContaining("changed");
+                    assertThat(windowRows.findById(windowId).orElseThrow().getState()).isEqualTo(IncidentWindowState.OPEN);
+                    assertThat(reportRows.findById(reportId).orElseThrow().getFrozenRevisionNumber()).isNull();
+                    assertThat(windows.closeDue(windowId, NOW)).isTrue();
+                }
+            } finally { release.countDown(); }
+        }
+        final UUID saved = reportId;
+        tx.executeWithoutResult(status -> {
+            var report = reportRows.findById(saved).orElseThrow();
+            assertThat(report.getLatestRevisionNumber()).isEqualTo(1); assertThat(report.getFrozenRevisionNumber()).isEqualTo(1);
+            assertThat(windowRows.findById(windowId).orElseThrow().getState()).isEqualTo(IncidentWindowState.CLOSED);
+        });
+    }
+
     private org.ctc.domain.incidents.IncidentReportReceipt submit() {
         windows.open(contextId, NOW.plusSeconds(3600), 0, manager);
         return reports.submit(windowId, fixture.race().getId(), 1, UUID.randomUUID(), actor, payload);

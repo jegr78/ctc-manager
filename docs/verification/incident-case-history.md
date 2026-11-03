@@ -171,3 +171,26 @@ timezone behavior remains outside this change.
 Implementation is ready for self-review and the independent security pass. Individual semantic
 guard witnesses, committed-head full verification, green CI and the actual merge are still
 required. Wiki publication and tracker/branch cleanup follow the verified merge.
+
+## Review corrections
+
+The independent read-only security pass reviewed base `097d4939` through committed head
+`80da0365`. It identified two introduced blockers. P1: under MariaDB repeatable read, closure
+could miss a first report committed while it waited and close without freezing that report.
+P2: deleting a bound context's last race before its first report stranded the permanent window.
+Four integration assertions reproduced these failures with zero JUnit errors.
+
+Closure now queries reports with a current write lock and refreshes their entities before
+freezing. Bound context dependencies protect race deletion before any report exists, including
+standalone playoff matchday deletion. The shared restore/audit validator also checks reportable
+race ownership for contexts without reports. Its four new malformed-context cases failed before
+implementation and now reject empty, bye, foreign-season and mismatched-participant contexts.
+
+The correction run passed 69 unit and 72 integration cases, with no failures, errors or skips.
+Each database ran sixteen identity and ten concurrency cases plus nine backup cases; the
+read-only audit also passed. The new first-submission witness requires the committed latest
+revision to be frozen, allowing only a domain retry with unchanged state before a fresh attempt.
+
+CI on `ad33866d` cleared the original eleven static findings but reported overlapping default
+prefix suppression for the two representation warnings. Their annotation now uses EXACT matching;
+the detector and all other rules remain enabled. Final full verification still must confirm it.
