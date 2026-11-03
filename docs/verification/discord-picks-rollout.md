@@ -93,3 +93,10 @@ service. The focused controller/service/security/browser regression then passed 
 18 integration and three browser cases. Authentication and CSRF cases remain unchanged.
 The interrupted red run is not final evidence; final canonical verification restarts on the
 corrected committed head.
+
+The complete regression run also identified three old disabled-capability assertions that
+relied on the pre-release real component always returning false. Their fixture now explicitly
+sets unavailable collection/confidentiality capability, preserving the no-history and pre-wipe
+rejection checks. Its focused rerun passed one real-default unit case and all three integration
+cases. The completed red run had no other failures across 2,810 unit, 1,198 integration and
+228 browser cases. It remains diagnostic evidence, not final acceptance.

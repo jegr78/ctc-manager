@@ -10,6 +10,7 @@ import org.ctc.TestHelper;
 import org.ctc.backup.exception.BackupArchiveException;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.service.PickSubmissionService;
+import org.ctc.domain.service.PickCollectionStatus;
 import org.ctc.domain.model.*;
 import org.ctc.domain.picks.AuthorizedPickActor;
 import org.ctc.domain.repository.*;
@@ -20,6 +21,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -38,12 +40,15 @@ class PickCollectionDisabledIT {
     @Autowired PickSubmissionService submissions;
     @Autowired BackupArchiveService archives;
     @MockitoSpyBean BackupImportService imports;
+    @MockitoBean PickCollectionStatus collection;
     TestHelper.SeasonFixture fixture;
     PickPayload payload;
 
     @BeforeEach
     void setUp() {
         // given
+        when(collection.isAvailable()).thenReturn(false);
+        when(collection.isConfidentialityReady()).thenReturn(false);
         tx.executeWithoutResult(status -> {
             fixture = helper.createFullSeasonFixture("TPD" + UUID.randomUUID().toString().substring(0, 7));
             fixture.season().setPicksCollectionEnabled(true);
@@ -71,7 +76,7 @@ class PickCollectionDisabledIT {
     }
 
     @Test
-    void givenDefaultRuntime_whenConfirmingCompletePick_thenKeepCollectorDisabledAndCreateNoHistory() {
+    void givenUnavailableCollectionCapability_whenConfirmingCompletePick_thenCreateNoHistory() {
         // given
         var actor = new AuthorizedPickActor(fixture.race().getId(), fixture.season().getId(), fixture.homeTeam().getId(), "12345");
         // when / then
@@ -85,7 +90,7 @@ class PickCollectionDisabledIT {
 
     @ParameterizedTest
     @ValueSource(strings = {"collection", "marker"})
-    void givenDefaultRuntimeAndConfidentialArchive_whenStaging_thenRequireDisclosureReleaseWithoutWiping(String flag) throws Exception {
+    void givenUnavailableConfidentialityCapabilityAndPrivateArchive_whenStaging_thenRejectBeforeWiping(String flag) throws Exception {
         // given
         tx.executeWithoutResult(status -> {
             seasons.findById(fixture.season().getId()).orElseThrow().setPicksCollectionEnabled(flag.equals("collection"));
