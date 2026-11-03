@@ -43,6 +43,7 @@ public class CsvImportService {
 	private final ScoringService scoringService;
 	private final RaceLineupRepository raceLineupRepository;
 	private final SeasonPhaseService seasonPhaseService;
+    private final org.ctc.domain.service.IncidentLifecycleGuard incidentGuard;
 
 	/**
 	 * Returns all seasons for the import form.
@@ -315,7 +316,7 @@ public class CsvImportService {
         boolean configured = previous.stream().anyMatch(race -> race.getCarPoolEntry() != null
                 || season.getCarPoolMode() == CarPoolMode.CATEGORY_POOL && race.getCar() != null);
         boolean managed = previous.stream().anyMatch(Race::isPicksManaged);
-        if (!configured && !managed) return Map.of();
+        if (!configured && !managed && previous.stream().noneMatch(incidentGuard::protects)) return Map.of();
         if (configured && (season.getCarPoolMode() != CarPoolMode.CATEGORY_POOL || previous.stream()
                 .anyMatch(race -> (race.getCar() == null) != (race.getCarPoolEntry() == null)))) {
             throw new ImportRejectedException(List.of("Cannot overwrite an incomplete category pool selection. Configure or clear it in race setup first."));
@@ -344,7 +345,7 @@ public class CsvImportService {
     }
 
     private static ImportRejectedException ambiguousCategoryOverwrite() {
-        return new ImportRejectedException(List.of("The category pool selection overwrite is ambiguous. For protected selections and private picks, match each leg to a distinct home team or edit its results individually."));
+        return new ImportRejectedException(List.of("The category pool selection overwrite is ambiguous. For protected selections, private picks and incident cases, match each leg to a distinct home team or edit its results individually."));
     }
 
     private record PairingPlan(Match match, Team home, Team away, Map<Integer, List<ImportRow>> rows,

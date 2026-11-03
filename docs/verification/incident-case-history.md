@@ -83,3 +83,18 @@ Supported schema-7 archives restore without incident records or invented reporti
 
 This checkpoint is incomplete. Protected source identities and results imports, concurrency
 witnesses, management forms, documentation, independent review and final verification remain.
+
+## Protected identity checkpoint
+
+The lifecycle guard first produced six intended unit assertion failures. After implementation,
+eight guard tests passed. Before connecting the guard to production callers, the source-path
+fixture produced seven intended assertion failures and zero JUnit errors. The subsequent run
+passed 138 unit and 41 integration cases, without failures, errors or skips.
+
+The eight new source-path cases passed on both H2 and MariaDB. Report-bearing race deletion,
+bound pairing/matchday deletion, participant swaps and matchday moves now reject before mutation.
+Results-only imports preserve the exact incident race ID and withdrawn history. Ambiguous leg
+mappings reject before driver creation. Ordinary setup/schedule edits remain possible and keep
+the confirmed reporting deadline. Existing pick import, CSV transaction and playoff-decision
+fixtures also passed. Standalone playoff imports, channel dependencies and the team-succession
+witness still need their remaining coverage before the identity audit is complete.

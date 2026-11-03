@@ -24,6 +24,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CsvImportServiceTest {
+    @Mock private org.ctc.domain.service.IncidentLifecycleGuard incidentGuard;
 
 	@Mock
 	private DriverMatchingService driverMatchingService;

@@ -47,6 +47,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MatchService {
     private final PickLifecycleGuard pickGuard;
+    private final IncidentLifecycleGuard incidentGuard;
 
 	private final MatchRepository matchRepository;
 	private final MatchdayRepository matchdayRepository;
@@ -365,6 +366,7 @@ public class MatchService {
 		var matchdayId = match.getMatchday().getId();
 		match.getRaces().forEach(PlayoffDecisionGuard::requireOpen);
         pickGuard.requireNoHistory(match.getRaces());
+        incidentGuard.requireMatchDeletion(match);
 		matchRepository.delete(match);
 		log.info("Deleted match: {} vs {}", match.getHomeTeam().getShortName(),
 				match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "bye");

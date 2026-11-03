@@ -20,6 +20,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class RaceServiceTest {
+    @Mock private IncidentLifecycleGuard incidentGuard;
 
     @Mock private RaceRepository raceRepository;
     @Mock private MatchRepository matchRepository;

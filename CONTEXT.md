@@ -47,7 +47,7 @@ _Avoid_: Unfinished draft
 A pending pick's claim on its car or pool entry and track for its effective home team in that season.
 _Avoid_: Publication, approval
 
-**Deadline**:
+**Pick deadline**:
 The ordinary team-submission cutoff for a target. The exact cutoff moment is already closed.
 _Avoid_: Approval deadline, publication time
 

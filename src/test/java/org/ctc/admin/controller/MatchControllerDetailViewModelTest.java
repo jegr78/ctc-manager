@@ -55,6 +55,7 @@ class MatchControllerDetailViewModelTest {
 
 		MatchService service = new MatchService(
                 org.mockito.Mockito.mock(org.ctc.domain.service.PickLifecycleGuard.class),
+                org.mockito.Mockito.mock(org.ctc.domain.service.IncidentLifecycleGuard.class),
 				matchRepository,
 				mock(MatchdayRepository.class),
 				mock(TeamRepository.class),
@@ -117,6 +118,7 @@ class MatchControllerDetailViewModelTest {
 
 		MatchService service = new MatchService(
                 org.mockito.Mockito.mock(org.ctc.domain.service.PickLifecycleGuard.class),
+                org.mockito.Mockito.mock(org.ctc.domain.service.IncidentLifecycleGuard.class),
 				matchRepository,
 				mock(MatchdayRepository.class),
 				mock(TeamRepository.class),

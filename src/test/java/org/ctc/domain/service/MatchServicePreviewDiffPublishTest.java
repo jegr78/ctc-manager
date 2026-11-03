@@ -23,6 +23,7 @@ import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class MatchServicePreviewDiffPublishTest {
+    @Mock private IncidentLifecycleGuard incidentGuard;
 
 	@Mock
 	private MatchRepository matchRepository;
