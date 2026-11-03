@@ -22,9 +22,13 @@ import static org.assertj.core.api.Assertions.*;
 @Tag("integration")
 class IncidentIdentityProtectionIT extends IncidentIntegrationFixture {
     @Autowired RaceService raceService;
+    @Autowired SeasonManagementService seasonManagement;
+    final java.util.List<UUID> successorIds = new java.util.ArrayList<>();
     @Autowired MatchService matchService;
     @Autowired MatchdayService matchdayService;
     @Autowired CsvImportService imports;
+    @Autowired org.ctc.discord.service.DiscordChannelService channels;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean org.ctc.discord.DiscordRestClient discord;
     @org.springframework.test.context.bean.override.mockito.MockitoSpyBean DriverRepository drivers;
     final String firstPsn = "Test_INC_A_" + UUID.randomUUID().toString().substring(0, 12);
     final String secondPsn = "Test_INC_B_" + UUID.randomUUID().toString().substring(0, 12);
@@ -36,6 +40,7 @@ class IncidentIdentityProtectionIT extends IncidentIntegrationFixture {
         tx.executeWithoutResult(status -> {
             drivers.findByPsnId(firstPsn).ifPresent(drivers::delete);
             drivers.findByPsnId(secondPsn).ifPresent(drivers::delete);
+            teams.deleteAllById(successorIds);
         });
     }
 
@@ -118,6 +123,93 @@ class IncidentIdentityProtectionIT extends IncidentIntegrationFixture {
         var result = save(fixture.matchday().getId(), fixture.homeTeam().getId(), fixture.awayTeam().getId());
         assertThat(result.success()).isTrue(); assertHistory(receipt.reportId(), 1);
         tx.executeWithoutResult(status -> assertThat(windowRows.findById(windowId).orElseThrow().getDeadline()).isEqualTo(NOW.plusSeconds(3600)));
+    }
+
+    @Test
+    void anOpenReportingWindowPreventsChannelArchivalBeforeAnyRemoteCall() {
+        var receipt = submit();
+        assertThatThrownBy(() -> channels.moveToArchive(fixture.match().getId(), "500000000000000005"))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("incident");
+        org.mockito.Mockito.verifyNoInteractions(discord);
+        assertHistory(receipt.reportId(), 1);
+    }
+
+    @Test
+    void closedReportingHistorySurvivesExplicitChannelArchival() throws Exception {
+        var receipt = submit(); clock.set(NOW.plusSeconds(3600)); windows.closeDue(windowId, NOW);
+        channels.moveToArchive(fixture.match().getId(), "500000000000000005");
+        org.mockito.Mockito.verify(discord).modifyChannel(org.mockito.ArgumentMatchers.eq(CHANNEL), org.mockito.ArgumentMatchers.any());
+        assertHistory(receipt.reportId(), 1);
+        tx.executeWithoutResult(status -> {
+            assertThat(matches.findById(fixture.match().getId()).orElseThrow().getDiscordChannelArchivedAt()).isNotNull();
+            assertThat(reportRows.findById(receipt.reportId()).orElseThrow().getFrozenRevisionNumber()).isEqualTo(1);
+        });
+    }
+
+    @Test
+    void existingIncidentChannelCannotBeLinkedToAnUnrelatedPairing() {
+        var other = tx.execute(status -> {
+            var data = helper.createFullSeasonFixture("TICLink" + UUID.randomUUID().toString().substring(0, 6));
+            extras.add(data); return data.match();
+        });
+        assertThatThrownBy(() -> channels.linkExistingChannel(other, CHANNEL))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("incident");
+        org.mockito.Mockito.verifyNoInteractions(discord);
+        tx.executeWithoutResult(status -> assertThat(matches.findById(other.getId()).orElseThrow().getDiscordChannelId()).isNull());
+    }
+
+    @Test
+    void standalonePlayoffResultsReuseItsExactReportRaceWithoutCreatingAnAuxiliaryMatch() throws Exception {
+        var target = tx.execute(status -> {
+            var season = seasons.findById(fixture.season().getId()).orElseThrow();
+            var playoff = helper.createPlayoffInPhase(season, "Test incident playoff", 2);
+            var matchup = playoff.getRounds().getFirst().getMatchups().getFirst();
+            matchup.setTeam1(teams.findById(fixture.homeTeam().getId()).orElseThrow());
+            matchup.setTeam2(teams.findById(fixture.awayTeam().getId()).orElseThrow());
+            var phase = playoff.getPhase(); phase.setRaceScoring(fixture.matchday().getPhase().getRaceScoring());
+            var day = new org.ctc.domain.model.Matchday(phase, "Test incident playoff day", 1);
+            em.persist(day);
+            var race = new Race(); race.setMatchday(day); race.setPlayoffMatchup(matchup);
+            race.setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0)); em.persist(race); em.flush();
+            return List.of(matchup.getId(), day.getId(), race.getId());
+        });
+        String channel = "200000000000000099";
+        var context = contexts.bind(org.ctc.domain.incidents.IncidentMatchRef.playoff(target.get(0)), GUILD, channel, manager);
+        windows.open(context, NOW.plusSeconds(3600), 0, manager);
+        UUID window = tx.execute(status -> windowRows.findByContextId(context).orElseThrow().getId());
+        var playoffActor = new org.ctc.domain.incidents.AuthorizedIncidentActor(context, GUILD, channel, actor.userId(), actor.party());
+        var receipt = reports.submit(window, target.get(2), 1, UUID.randomUUID(), playoffActor, payload);
+        var csv = "Team,PSN ID,Position,Quali,FL\n%s,%s,1,1,true\n%s,%s,2,2,false\n".formatted(
+                fixture.homeTeam().getShortName(), firstPsn, fixture.awayTeam().getShortName(), secondPsn);
+        var preview = tx.execute(status -> {
+            try { return imports.parseAndPreview(new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8)),
+                    new CsvImportService.ImportMetadata(fixture.season().getId(), null, null, null, target.get(0), target.get(1))); }
+            catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+        });
+        assertThatCode(() -> imports.executeImport(preview, Map.of(), Set.of(firstPsn, secondPsn), true)).doesNotThrowAnyException();
+        tx.executeWithoutResult(status -> {
+            assertThat(races.findByPlayoffMatchupId(target.get(0))).singleElement().satisfies(race -> {
+                assertThat(race.getId()).isEqualTo(target.get(2)); assertThat(race.getMatch()).isNull(); assertThat(race.getResults()).hasSize(2);
+            });
+            assertThat(reportRows.findById(receipt.reportId()).orElseThrow().getRace().getId()).isEqualTo(target.get(2));
+            assertThat(matches.findByMatchdayId(target.get(1))).isEmpty();
+        });
+    }
+
+    @Test
+    void teamSuccessionPreservesOriginalCaseParticipantsAndParty() {
+        var receipt = submit();
+        UUID successor = tx.execute(status -> {
+            var team = helper.createTeam("Test incident successor " + UUID.randomUUID().toString().substring(0, 7),
+                    "TIS" + UUID.randomUUID().toString().substring(0, 8)); successorIds.add(team.getId()); return team.getId();
+        });
+        seasonManagement.replaceTeam(fixture.season().getId(), fixture.homeTeam().getId(), successor, java.time.LocalDate.of(2026, 11, 3));
+        assertHistory(receipt.reportId(), 1);
+        tx.executeWithoutResult(status -> {
+            var season = seasons.findById(fixture.season().getId()).orElseThrow();
+            assertThat(season.findSeasonTeam(teams.findById(fixture.homeTeam().getId()).orElseThrow()).orElseThrow().getSuccessor().getTeam().getId()).isEqualTo(successor);
+            assertThat(matches.findById(fixture.match().getId()).orElseThrow().getHomeTeam().getId()).isEqualTo(fixture.homeTeam().getId());
+        });
     }
 
     private org.ctc.domain.incidents.IncidentReportReceipt submit() {

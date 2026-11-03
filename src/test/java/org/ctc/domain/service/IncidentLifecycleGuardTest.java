@@ -16,38 +16,38 @@ class IncidentLifecycleGuardTest {
     final IncidentUnitFixture f = new IncidentUnitFixture();
     final IncidentMatchContextRepository contexts = mock(IncidentMatchContextRepository.class);
     final IncidentReportRepository reports = mock(IncidentReportRepository.class);
-    final IncidentLifecycleGuard guard = new IncidentLifecycleGuard(contexts, reports);
+    final IncidentLifecycleGuard guard = new IncidentLifecycleGuard(contexts, reports, mock(org.ctc.domain.repository.IncidentReportWindowRepository.class));
 
     @Test
     void reportedRaceCannotMoveMatchday() {
-        when(reports.existsByRaceId(f.race.getId())).thenReturn(true);
+        when(reports.findFirstByRaceIdOrderByIdAsc(f.race.getId())).thenReturn(Optional.of(mock(org.ctc.domain.model.IncidentReport.class)));
         assertThatThrownBy(() -> guard.requireIdentity(f.race, UUID.randomUUID(), f.home, f.away))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("incident");
     }
 
     @Test
     void reportedRaceCannotSwapItsOriginalParticipants() {
-        when(reports.existsByRaceId(f.race.getId())).thenReturn(true);
+        when(reports.findFirstByRaceIdOrderByIdAsc(f.race.getId())).thenReturn(Optional.of(mock(org.ctc.domain.model.IncidentReport.class)));
         assertThat(guard.identityRejection(f.race, f.day.getId(), f.away, f.home)).contains("incident");
     }
 
     @Test
     void reportedRaceCannotBeDeletedIncludingAfterWithdrawal() {
-        when(reports.existsByRaceId(f.race.getId())).thenReturn(true);
+        when(reports.findFirstByRaceIdOrderByIdAsc(f.race.getId())).thenReturn(Optional.of(mock(org.ctc.domain.model.IncidentReport.class)));
         assertThatThrownBy(() -> guard.requireNoHistory(List.of(f.race)))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("incident");
     }
 
     @Test
     void boundRegularContextProtectsItsRaceIdsBeforeFirstReport() {
-        when(contexts.findByMatchId(f.match.getId())).thenReturn(Optional.of(f.context));
+        when(contexts.findByMatchIdForUpdate(f.match.getId())).thenReturn(Optional.of(f.context));
         assertThat(guard.protects(f.race)).isTrue();
         assertThat(guard.identityRejection(f.race, f.day.getId(), f.away, f.home)).contains("incident");
     }
 
     @Test
     void boundMatchCannotBeDeletedWithAnEmptyDraftWindow() {
-        when(contexts.findByMatchId(f.match.getId())).thenReturn(Optional.of(f.context));
+        when(contexts.findByMatchIdForUpdate(f.match.getId())).thenReturn(Optional.of(f.context));
         assertThatThrownBy(() -> guard.requireMatchDeletion(f.match))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("incident");
     }
@@ -58,7 +58,7 @@ class IncidentLifecycleGuardTest {
         f.race.setPlayoffMatchup(matchup);
         var context = new IncidentMatchContext(null, matchup, f.season, f.home, f.away,
                 IncidentUnitFixture.GUILD, IncidentUnitFixture.CHANNEL, "test-manager", IncidentUnitFixture.NOW);
-        when(contexts.findByPlayoffMatchupId(matchup.getId())).thenReturn(Optional.of(context));
+        when(contexts.findByPlayoffMatchupIdForUpdate(matchup.getId())).thenReturn(Optional.of(context));
         assertThat(guard.protects(f.race)).isTrue();
         assertThatThrownBy(() -> guard.requirePlayoffIdentity(matchup, f.away, f.home))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("incident");
@@ -67,7 +67,7 @@ class IncidentLifecycleGuardTest {
 
     @Test
     void originalRaceIdentityRemainsEditableForResultsAndSchedule() {
-        when(reports.existsByRaceId(f.race.getId())).thenReturn(true);
+        when(reports.findFirstByRaceIdOrderByIdAsc(f.race.getId())).thenReturn(Optional.of(mock(org.ctc.domain.model.IncidentReport.class)));
         assertThatCode(() -> guard.requireIdentity(f.race, f.day.getId(), f.home, f.away)).doesNotThrowAnyException();
     }
 

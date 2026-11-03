@@ -235,12 +235,17 @@ public class MatchService {
 		log.info("Set walkover for match {} — team {}", matchId, walkoverTeamId);
 	}
 
-	@Transactional
-	public void markChannelArchived(UUID id) {
-		Match match = findById(id);
-		match.setDiscordChannelArchivedAt(LocalDateTime.now(clock));
-		matchRepository.save(match);
-	}
+    @Transactional
+    public void markChannelArchived(UUID id) {
+        var match = findById(id);
+        var seasonId = match.getMatchday().getSeason().getId();
+        seasonRepository.findByIdForUpdate(seasonId).orElseThrow();
+        entityManager.refresh(match, LockModeType.PESSIMISTIC_WRITE);
+        if (!seasonId.equals(match.getMatchday().getSeason().getId())) throw new BusinessRuleException("The pairing moved; reload before archiving");
+        incidentGuard.requireChannelArchival(match);
+        match.setDiscordChannelArchivedAt(LocalDateTime.now(clock));
+        matchRepository.save(match);
+    }
 
 	public CreateFormData getCreateFormData(UUID matchdayId) {
 		var matchday = matchdayRepository.findById(matchdayId)

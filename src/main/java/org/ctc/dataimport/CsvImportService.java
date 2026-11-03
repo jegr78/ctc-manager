@@ -184,7 +184,7 @@ public class CsvImportService {
             var awayTeam = plan.away();
             var effectiveAwayTeam = awayTeam != null ? awayTeam : homeTeam;
             var match = plan.match();
-            if (match == null) {
+            if (match == null && plan.reused().isEmpty()) {
                 match = matchRepository.save(new Match(matchday, homeTeam, effectiveAwayTeam));
             } else if (plan.reused().isEmpty()) {
                 for (var race : plan.replaced()) {
@@ -293,6 +293,13 @@ public class CsvImportService {
                 continue;
             }
             var previous = match == null ? List.<Race>of() : raceRepository.findByMatchId(match.getId());
+            if (metadata.isPlayoff()) {
+                var playoffLegs = raceRepository.findByPlayoffMatchupId(metadata.playoffMatchupId());
+                if (playoffLegs.stream().anyMatch(incidentGuard::protects)) {
+                    if (!overwrite) throw new ImportRejectedException(List.of("Incident pairing already has races; confirm results replacement"));
+                    previous = playoffLegs;
+                }
+            }
             rejectOverwriteTarget(previous, metadata);
             var reused = mapProtectedLegs(season, matchday, previous, rows);
             plans.add(new PairingPlan(match, home, away, rows, reused, reused.isEmpty() ? previous : List.of()));
@@ -302,6 +309,10 @@ public class CsvImportService {
     }
 
     private void rejectOverwriteTarget(List<Race> previous, ImportMetadata metadata) {
+        if (previous.stream().anyMatch(race -> incidentGuard.protects(race) && !Objects.equals(
+                race.getPlayoffMatchup() == null ? null : race.getPlayoffMatchup().getId(), metadata.playoffMatchupId()))) {
+            throw new ImportRejectedException(List.of("Preserve the incident race's original regular/playoff identity"));
+        }
         if (previous.stream().anyMatch(race -> race.getPlayoffMatchup() != null && race.getPlayoffMatchup().isComplete())) {
             throw new ImportRejectedException(List.of(PlayoffDecisionGuard.DECIDED));
         }

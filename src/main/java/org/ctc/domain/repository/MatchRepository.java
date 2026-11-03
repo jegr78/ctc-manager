@@ -11,6 +11,8 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
 
     boolean existsByDiscordChannelId(String channelId);
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select m from Match m where m.discordChannelId = :channelId order by m.id")
     List<Match> findByDiscordChannelId(String channelId);
 
 	@EntityGraph(attributePaths = {"homeTeam", "awayTeam"})

@@ -33,6 +33,7 @@ public class TestHelper {
 	private final DriverRepository driverRepository;
 	private final SeasonDriverRepository seasonDriverRepository;
 	private final PlayoffService playoffService;
+    private final org.ctc.domain.repository.PlayoffRepository playoffRepository;
     private final MatchdayPickRepository pickRepository;
     private final MatchdayPickRevisionRepository pickRevisionRepository;
     private final MatchdayPickDecisionRepository pickDecisionRepository;
@@ -59,7 +60,9 @@ public class TestHelper {
 		raceRepository.deleteAll(raceRepository.findByMatchdaySeasonId(seasonId));
 		matchRepository.deleteAll(matchRepository.findByMatchdaySeasonId(seasonId));
 		matchdayRepository.deleteAll(matchdayRepository.findBySeasonIdOrderBySortIndexAsc(seasonId));
-		var phases = seasonPhaseRepository.findBySeasonIdOrderBySortIndex(seasonId);
+		playoffRepository.findBySeasonId(seasonId).ifPresent(playoffRepository::delete);
+        playoffRepository.flush();
+        var phases = seasonPhaseRepository.findBySeasonIdOrderBySortIndex(seasonId);
 		var raceScorings = phases.stream().map(SeasonPhase::getRaceScoring).filter(Objects::nonNull).toList();
 		var matchScorings = phases.stream().map(SeasonPhase::getMatchScoring).filter(Objects::nonNull).toList();
 		seasonRepository.deleteById(seasonId);

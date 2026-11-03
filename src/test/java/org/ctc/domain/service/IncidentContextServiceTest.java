@@ -89,6 +89,14 @@ class IncidentContextServiceTest {
     }
 
     @Test
+    void givenArchivedRegularChannel_whenBinding_thenRejectWithoutCreatingAnIncidentWindow() {
+        f.match.setDiscordChannelArchivedAt(java.time.LocalDateTime.of(2026, 11, 3, 12, 0));
+        assertThatThrownBy(() -> service.bind(f.reference(), IncidentUnitFixture.GUILD, IncidentUnitFixture.CHANNEL,
+                new IncidentManagementActor("test-manager"))).isInstanceOf(BusinessRuleException.class).hasMessageContaining("archived");
+        verify(contexts, never()).saveAndFlush(any());
+    }
+
+    @Test
     void givenWrongGuildOrUnrelatedChannel_whenBinding_thenRejectBeforeCreatingContext() {
         assertThatThrownBy(() -> service.bind(f.reference(), "999", IncidentUnitFixture.CHANNEL, new IncidentManagementActor("test-manager")))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("guild");

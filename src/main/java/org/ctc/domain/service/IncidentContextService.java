@@ -96,6 +96,7 @@ public class IncidentContextService {
                 if (!snowflake(channel)) throw new BusinessRuleException("Enter a valid incident channel ID");
                 var target = resolve(reference);
                 seasons.findByIdForUpdate(target.season().getId()).orElseThrow(() -> new BusinessRuleException("Incident season is unavailable"));
+                lockGuild(guild);
                 target = refresh(target);
                 requireChannel(target, guild, channel);
                 var existing = find(target.reference());
@@ -133,6 +134,7 @@ public class IncidentContextService {
     IncidentMatchContext lock(UUID id) {
         var context = get(id);
         seasons.findByIdForUpdate(context.getSeason().getId()).orElseThrow(() -> new BusinessRuleException("Incident season is unavailable"));
+        lockGuild(context.getGuildId());
         entityManager.flush(); entityManager.refresh(context);
         var target = refresh(resolve(reference(context)));
         requireIdentity(context, target); requireGuild(context.getGuildId());
@@ -153,6 +155,9 @@ public class IncidentContextService {
     }
 
     private void requireChannel(IncidentMatchTarget target, String guild, String channel) {
+        if (target.match() != null && target.match().getDiscordChannelArchivedAt() != null) {
+            throw new BusinessRuleException("An archived match channel cannot open incident reporting");
+        }
         if (target.match() != null && !channel.equals(target.match().getDiscordChannelId())) {
             throw new BusinessRuleException("The incident channel must match the regular match's configured channel");
         }
@@ -161,11 +166,18 @@ public class IncidentContextService {
             try { owner = resolve(IncidentMatchRef.match(legacy.getId())).reference(); }
             catch (BusinessRuleException invalid) { throw new BusinessRuleException("The legacy channel binding is ambiguous; resolve it before opening incident reports"); }
             if (!owner.equals(target.reference())) throw new BusinessRuleException("The legacy channel is shared by unrelated matches and is ambiguous");
+            if (legacy.getDiscordChannelArchivedAt() != null) throw new BusinessRuleException("An archived match channel cannot open incident reporting");
         }
         var context = contexts.findByGuildIdAndChannelId(guild, channel).orElse(null);
         if (context != null && !reference(context).equals(target.reference())) {
             throw new BusinessRuleException("This channel is already bound to another incident context");
         }
+    }
+
+    private void lockGuild(String guild) {
+        var config = configs.findFirstByOrderByIdAsc();
+        if (config != null) { entityManager.flush(); entityManager.refresh(config, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE); }
+        requireGuild(guild);
     }
 
     private void requireGuild(String guild) {

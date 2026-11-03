@@ -9,6 +9,8 @@ import java.util.List;
 public interface IncidentReportRepository extends JpaRepository<IncidentReport, UUID> {
     List<IncidentReport> findByWindowIdOrderByCaseReferenceAsc(UUID windowId);
     boolean existsByRaceId(UUID raceId);
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_READ)
+    Optional<IncidentReport> findFirstByRaceIdOrderByIdAsc(UUID raceId);
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @org.springframework.data.jpa.repository.Query("select e from IncidentReport e where e.id = :id")
     Optional<IncidentReport> findByIdForUpdate(UUID id);
