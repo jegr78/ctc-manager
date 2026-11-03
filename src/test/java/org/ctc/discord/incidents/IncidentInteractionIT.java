@@ -16,6 +16,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class IncidentInteractionIT extends IncidentIntakeIntegrationFixture {
+    @org.springframework.beans.factory.annotation.Autowired org.ctc.domain.service.IncidentPrivateReadService privateReads;
     @Test
     void givenConfirmedPrivateReport_whenReplayingEditingAndWithdrawing_thenKeepOneCaseAndOneFirstReceiptRequest() {
         var client = flow().draft(fixture.race().getId(), PRIVATE); assertThat(rows()).isEmpty();
@@ -126,6 +127,15 @@ class IncidentInteractionIT extends IncidentIntakeIntegrationFixture {
         UUID id = submit(); var owner = flow().command().click("My reports"); String control = owner.message().selection().id();
         var intruder = flow(OTHER, CHANNEL).send(PickGatewayInteraction.Kind.SELECT, control, Map.of("selection", List.of(id.toString())));
         assertThat(intruder.text()).contains("unavailable").doesNotContain(PRIVATE); assertThat(rows().getFirst().getVersion()).isEqualTo(1);
+        var otherActor = access.authorizeChannel(GUILD, CHANNEL, OTHER);
+        assertThatThrownBy(() -> privateReads.load(otherActor, id)).isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class).hasMessageNotContaining(PRIVATE);
+    }
+
+    @Test
+    void givenReportingPartyChangedAfterReview_whenConfirming_thenDoNotStoreAnUnreviewedAttribution() {
+        var client = flow().draft(fixture.race().getId(), PRIVATE); String confirmation = client.button("Confirm report");
+        roles.put(USER, Set.of(AWAY_ROLE)); client.send(PickGatewayInteraction.Kind.BUTTON, confirmation, Map.of());
+        assertThat(rows()).isEmpty(); assertThat(firstRequests()).isZero(); assertThat(client.text()).contains("unavailable");
     }
 
     @Test
@@ -198,8 +208,15 @@ class IncidentInteractionIT extends IncidentIntakeIntegrationFixture {
         assertThat(options.getFirst().label()).isNotEqualTo(options.getLast().label());
     }
 
-    @Test
-    void givenRoleConfigurationCommittedWhileTheWriteWaits_whenConfirming_thenRecheckItsCurrentRoleMapping() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"team", "parent"})
+    void givenRoleConfigurationCommittedWhileTheWriteWaits_whenConfirming_thenRecheckItsCurrentRoleMapping(String roleOwner) throws Exception {
+        UUID configuredTeam = fixture.homeTeam().getId();
+        if (roleOwner.equals("parent")) {
+            var organization = parent(); configuredTeam = organization.getId();
+            tx.executeWithoutResult(status -> { var home = teams.findById(fixture.homeTeam().getId()).orElseThrow(); home.setParentTeam(teams.findById(organization.getId()).orElseThrow()); home.setDiscordRoleId(null); });
+        }
+        UUID changedTeam = configuredTeam;
         var client = flow().draft(fixture.race().getId(), PRIVATE); String confirmation = client.button("Confirm report");
         var locked = new CountDownLatch(1); var preauthorized = new CountDownLatch(1); var once = new java.util.concurrent.atomic.AtomicBoolean();
         when(source.currentRoles(eq(GUILD), eq(CHANNEL), eq(USER))).thenAnswer(call -> {
@@ -213,7 +230,7 @@ class IncidentInteractionIT extends IncidentIntakeIntegrationFixture {
                 seasons.findByIdForUpdate(fixture.season().getId()).orElseThrow(); locked.countDown();
                 try { assertThat(preauthorized.await(5, TimeUnit.SECONDS)).isTrue(); }
                 catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); throw new AssertionError(interrupted); }
-                teams.findById(fixture.homeTeam().getId()).orElseThrow().setDiscordRoleId("700000000000000007");
+                teams.findById(changedTeam).orElseThrow().setDiscordRoleId("700000000000000007");
                 return true;
             }));
             try {
@@ -221,7 +238,7 @@ class IncidentInteractionIT extends IncidentIntakeIntegrationFixture {
                 assertThat(configuration.get(10, TimeUnit.SECONDS)).isTrue();
             } finally { preauthorized.countDown(); }
         }
-        String currentRole = tx.execute(status -> teams.findById(fixture.homeTeam().getId()).orElseThrow().getDiscordRoleId());
+        String currentRole = tx.execute(status -> teams.findById(changedTeam).orElseThrow().getDiscordRoleId());
         assertThat(currentRole).isEqualTo("700000000000000007"); assertThat(rows()).isEmpty(); assertThat(client.text()).contains("unavailable");
     }
 }

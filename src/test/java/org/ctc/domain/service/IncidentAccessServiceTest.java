@@ -78,9 +78,10 @@ class IncidentAccessServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"guild", "channel", "member", "unbound", "legacy", "participants", "season"})
+    @ValueSource(strings = {"guild", "configured-guild", "channel", "member", "unbound", "legacy", "participants", "season"})
     void givenInvalidChannelOrCanonicalOwnership_whenAuthorizing_thenDenyBeforePrivateData(String scenario) {
         switch (scenario) {
+            case "configured-guild" -> { var changed = new DiscordGlobalConfig(); changed.setGuildId("999"); when(configs.findFirstByOrderByIdAsc()).thenReturn(changed); }
             case "unbound" -> when(bindings.findByGuildIdAndChannelId(IncidentUnitFixture.GUILD, IncidentUnitFixture.CHANNEL)).thenReturn(Optional.empty());
             case "legacy" -> { var other = new Match(); other.setId(UUID.randomUUID()); when(matches.findAllByDiscordChannelIdOrderByIdAsc(IncidentUnitFixture.CHANNEL)).thenReturn(List.of(f.match, other)); when(contexts.resolve(IncidentMatchRef.match(other.getId()))).thenThrow(new BusinessRuleException("ambiguous")); }
             case "participants" -> { var other = new Team("Test other", "T-O"); other.setId(UUID.randomUUID()); when(contexts.resolve(f.reference())).thenReturn(new IncidentMatchTarget(f.reference(), f.match, null, f.season, other, f.away, List.of(f.race))); }

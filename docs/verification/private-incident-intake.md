@@ -21,7 +21,7 @@ Selection base: `4a20db629d0e5415b12735b506fa28f70446cebf`.
 - [x] Verify real transaction/restore admission and production-shaped Discord payloads offline.
 - [ ] Falsify the new guards individually from a correct committed checkpoint.
 - [x] Update README, CLAUDE and the user-facing Wiki draft.
-- [ ] Complete code review and an independent read-only security pass.
+- [x] Complete code review and an independent read-only security pass.
 - [ ] Integrate current upstream and run one final committed-head clean verify with E2E and Docker.
 - [ ] Pass all applicable exact-head CI checks, verify merge and reconcile the tracker/Wiki.
 - [ ] Remove the proven landed topic branch and continue the queue.
@@ -139,3 +139,17 @@ and deferred replies, mention suppression, outgoing reconnect/shutdown and resto
 README, CLAUDE, domain vocabulary and operator instructions are updated. Four current Wiki pages
 are prepared for publication after the verified merge. Command registration remains an explicit
 operator API action after #293 acceptance; no live registration or activation was performed.
+
+## Review and authorization boundary checkpoint
+
+The self-review and independent read-only security review of production head
+`1d34f7c3a376cf1917d277382b5f3d290897bb1e` found no outstanding findings. The review
+traced current authorization, creator-scoped private payload reads, transient actions,
+restore admission, final write revalidation and the shared picks permission policy.
+CI configuration was inspected; exact-head results remain required before merge.
+
+Test-only follow-up leaves that production source unchanged. Thirty-eight unit and four
+integration cases passed for current configured-guild denial and team/parent role changes
+during the season-lock wait. Another thirty-eight unit and four integration cases passed
+for direct same-role foreign-creator payload rejection and a changed reporting party after
+review. Both database runs used H2 and MariaDB, with zero failures, errors or skips.
