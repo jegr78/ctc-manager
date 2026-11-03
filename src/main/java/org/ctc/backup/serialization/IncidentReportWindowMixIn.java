@@ -6,6 +6,7 @@ import org.ctc.domain.model.*;
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public abstract class IncidentReportWindowMixIn {
+    @JsonIgnore abstract boolean isDeliveryPaused();
     @JsonIdentityReference(alwaysAsId = true)
     abstract IncidentMatchContext getContext();
 }

@@ -10,7 +10,7 @@ import java.util.*;
 
 public final class IncidentBackupValidator {
     private static final int MAX_VALUES = 100000;
-    private static final Set<String> INCIDENT_TABLES = Set.of("incident_match_contexts", "incident_report_windows", "incident_reports", "incident_report_revisions", "incident_report_events");
+    private static final Set<String> INCIDENT_TABLES = Set.of("incident_match_contexts", "incident_report_windows", "incident_reports", "incident_report_revisions", "incident_report_events", "incident_deliveries");
     private static final Map<String, Set<String>> FIELDS = Map.ofEntries(
             Map.entry("seasons", Set.of("id")), Map.entry("teams", Set.of("id")),
             Map.entry("season_phases", Set.of("id", "season")), Map.entry("matchdays", Set.of("id", "phase")),
@@ -22,6 +22,7 @@ public final class IncidentBackupValidator {
             Map.entry("incident_report_windows", Set.of("id", "context", "version", "state", "plannedStartLocal", "plannedStart", "deadline", "openedAt", "openedBy", "closedAt", "createdAt", "updatedAt")),
             Map.entry("incident_reports", Set.of("id", "window", "race", "originalMatchday", "originalHomeTeam", "originalAwayTeam", "caseReference", "authorId", "party", "state", "version", "latestRevisionNumber", "frozenRevisionNumber", "createdAt", "updatedAt")),
             Map.entry("incident_report_revisions", Set.of("id", "report", "revisionNumber", "reportVersion", "payload", "actorId", "acceptedAt", "requestId", "createdAt", "updatedAt")),
+            Map.entry("incident_deliveries", Set.of("id", "report", "revision", "operation", "operationKey", "guildId", "channelId", "nonce", "caseReference", "partyLabel", "capturedAt", "state", "version", "attempts", "claimToken", "claimGeneration", "leaseUntil", "nextAttemptAt", "completedAt", "messageId", "failureCode", "reconciledBy", "reconciliationReason", "createdAt", "updatedAt")),
             Map.entry("incident_report_events", Set.of("id", "window", "report", "eventKey", "kind", "windowVersion", "reportVersion", "revisionNumber", "actorKind", "actorId", "reason", "acceptedAt", "previousDeadline", "deadline", "requestId", "createdAt", "updatedAt")));
     private final int version;
     private final Map<String, Map<String, JsonNode>> rows = new HashMap<>();
@@ -43,6 +44,7 @@ public final class IncidentBackupValidator {
         if (!supports(table)) return;
         locate(table, row);
         boolean incident = INCIDENT_TABLES.contains(table);
+        if (table.equals("incident_deliveries") && version < 9) fail("Incident delivery requires schema version 9");
         if (version < 8) {
             if (incident) fail("Incident history requires schema version 8");
             return;
@@ -146,6 +148,43 @@ public final class IncidentBackupValidator {
             boolean frozen = !withdrawn && text(window, "state", 16).equals("CLOSED");
             if (frozen ? !report.hasNonNull("frozenRevisionNumber") || positive(report, "frozenRevisionNumber") != latest
                     : report.hasNonNull("frozenRevisionNumber")) fail("Incident frozen revision contradicts the closed window");
+        }
+        validateDeliveries();
+    }
+
+    private void validateDeliveries() {
+        var keys = new HashSet<String>();
+        for (var delivery : index("incident_deliveries").values()) {
+            locate("incident_deliveries", delivery);
+            String reportId = reference(delivery, "report", "incident_reports"); var report = index("incident_reports").get(reportId);
+            var revision = index("incident_report_revisions").get(reference(delivery, "revision", "incident_report_revisions"));
+            if (!uuid(revision, "report").equals(reportId)) fail("Incident delivery references another report's private revision");
+            var window = index("incident_report_windows").get(uuid(report, "window")); var context = index("incident_match_contexts").get(uuid(window, "context"));
+            if (!snowflake(delivery, "guildId").equals(snowflake(context, "guildId")) || !snowflake(delivery, "channelId").equals(snowflake(context, "channelId"))) fail("Incident delivery destination contradicts its original context");
+            String operation = text(delivery, "operation", 16), state = text(delivery, "state", 16);
+            if (!Set.of("RECEIPT", "DISCLOSURE").contains(operation) || !Set.of("PENDING", "CLAIMED", "SENT", "FAILED", "UNCERTAIN", "SUPERSEDED").contains(state)) fail("Invalid incident delivery operation or state");
+            String key = text(delivery, "operationKey", 64);
+            if (!key.equals(reportId + ":" + operation) || !keys.add(key) || !text(delivery, "caseReference", 64).equals(text(report, "caseReference", 64))) fail("Invalid or duplicate incident delivery identity");
+            var id = UUID.fromString(reportId);
+            String nonce = Base64.getUrlEncoder().withoutPadding().encodeToString(java.nio.ByteBuffer.allocate(16).putLong(id.getMostSignificantBits()).putLong(id.getLeastSignificantBits()).array()) + (operation.equals("RECEIPT") ? "R" : "D");
+            if (!nonce.equals(text(delivery, "nonce", 25))) fail("Incident delivery nonce does not identify its stable operation");
+            var captured = instant(delivery, "capturedAt"); instant(delivery, "nextAttemptAt");
+            if (operation.equals("RECEIPT")) {
+                if (positive(revision, "revisionNumber") != 1 || !captured.equals(instant(revision, "acceptedAt")) || delivery.hasNonNull("partyLabel")) fail("A neutral receipt must reference only the first committed submission");
+            } else if (!text(window, "state", 16).equals("CLOSED") || !text(report, "state", 16).equals("ACTIVE")
+                    || positive(report, "frozenRevisionNumber") != positive(revision, "revisionNumber") || !captured.equals(instant(window, "closedAt"))
+                    || !text(delivery, "partyLabel", 255).equals(text(report.get("party"), "label", 255))) fail("Incident disclosure contradicts its final frozen revision");
+            long attempts = nonnegative(delivery, "attempts"); if (nonnegative(delivery, "version") < attempts) fail("Incident delivery version is older than its claim attempts");
+            if (delivery.hasNonNull("claimToken")) uuid(delivery, "claimToken");
+            if (delivery.hasNonNull("claimGeneration")) text(delivery, "claimGeneration", 64);
+            if (delivery.hasNonNull("leaseUntil") && !instant(delivery, "leaseUntil").isAfter(captured)) fail("Incident delivery lease predates its capture");
+            if (delivery.hasNonNull("completedAt") && instant(delivery, "completedAt").isBefore(captured)) fail("Incident delivery completion predates its capture");
+            if (delivery.hasNonNull("messageId")) snowflake(delivery, "messageId");
+            if (delivery.hasNonNull("failureCode") && !text(delivery, "failureCode", 64).matches("[A-Z0-9_]+")) fail("Incident delivery failure code contains untrusted text");
+            if (state.equals("CLAIMED") && (attempts == 0 || !delivery.hasNonNull("claimToken") || !delivery.hasNonNull("claimGeneration") || !delivery.hasNonNull("leaseUntil") || delivery.hasNonNull("completedAt") || delivery.hasNonNull("messageId"))) fail("Incident delivery has an incomplete active claim");
+            if (state.equals("SENT") && (attempts == 0 || !delivery.hasNonNull("messageId") || !delivery.hasNonNull("completedAt") || delivery.hasNonNull("failureCode"))) fail("Incident delivery lacks confirmed remote evidence");
+            if (Set.of("FAILED", "UNCERTAIN").contains(state) && (attempts == 0 || !delivery.hasNonNull("failureCode") || !delivery.hasNonNull("completedAt"))) fail("Incident delivery lacks a recorded failure outcome");
+            optionalText(delivery, "reconciledBy", 128); optionalText(delivery, "reconciliationReason", 1000);
         }
     }
 

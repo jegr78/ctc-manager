@@ -17,6 +17,7 @@ public class IncidentReportWindow extends BaseEntity {
     @OneToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "context_id", nullable = false, unique = true) private IncidentMatchContext context;
     @Column(name = "aggregate_version", nullable = false) private long version;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 16) private IncidentWindowState state = IncidentWindowState.DRAFT;
+    @Column(nullable = false) private boolean deliveryPaused;
     private LocalDateTime plannedStartLocal;
     @Convert(converter = UtcInstantConverter.class) private Instant plannedStart;
     @Convert(converter = UtcInstantConverter.class) private Instant deadline;

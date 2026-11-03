@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class IncidentReportWindowRestorer implements EntityRestorer {
-    private static final String SQL = "INSERT INTO incident_report_windows (id,context_id,aggregate_version,state,planned_start_local,planned_start,deadline,opened_at,opened_by,closed_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
+    private static final String SQL = "INSERT INTO incident_report_windows (id,context_id,aggregate_version,state,planned_start_local,planned_start,deadline,opened_at,opened_by,closed_at,created_at,updated_at,delivery_paused) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,TRUE)";
     @Override public String tableName() { return "incident_report_windows"; }
     @Override public void restore(List<JsonNode> rows, JdbcTemplate jdbc) {
         jdbc.batchUpdate(SQL, rows, 500, (ps, row) -> {

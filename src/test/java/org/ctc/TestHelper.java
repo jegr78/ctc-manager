@@ -40,6 +40,7 @@ public class TestHelper {
     private final IncidentMatchContextRepository incidentContexts;
     private final IncidentReportWindowRepository incidentWindows;
     private final IncidentReportRepository incidentReports;
+    private final org.ctc.domain.repository.IncidentDeliveryRepository incidentDeliveries;
     private final IncidentReportRevisionRepository incidentRevisions;
     private final IncidentReportEventRepository incidentEvents;
 
@@ -76,6 +77,7 @@ public class TestHelper {
             var window = incidentWindows.findByContextId(context.getId()).orElse(null);
             if (window != null) {
                 incidentEvents.deleteAll(incidentEvents.findByWindowIdOrderByAcceptedAtAscIdAsc(window.getId())); incidentEvents.flush();
+                incidentDeliveries.deleteAll(incidentDeliveries.findByReportWindowId(window.getId())); incidentDeliveries.flush();
                 var reports = incidentReports.findByWindowIdOrderByCaseReferenceAsc(window.getId());
                 for (var report : reports) incidentRevisions.deleteAll(incidentRevisions.findByReportIdOrderByRevisionNumberAsc(report.getId()));
                 incidentRevisions.flush(); incidentReports.deleteAll(reports); incidentReports.flush();

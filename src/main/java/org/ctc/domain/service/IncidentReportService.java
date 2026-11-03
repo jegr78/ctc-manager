@@ -39,6 +39,7 @@ public class IncidentReportService {
     private final PickWriteExecutor writes;
     private final Clock clock;
     private final EntityManager entityManager;
+    private final org.springframework.context.ApplicationEventPublisher publisher;
 
     public IncidentReportReceipt submit(UUID windowId, UUID raceId, long expectedWindowVersion, UUID requestId,
                                         AuthorizedIncidentActor actor, IncidentPayload payload) {
@@ -92,9 +93,11 @@ public class IncidentReportService {
     private IncidentReportReceipt append(IncidentReport report, IncidentPayload payload, AuthorizedIncidentActor actor,
                                          UUID request, IncidentEventKind action, Instant now) {
         var accepted = now.truncatedTo(ChronoUnit.MICROS);
-        revisions.save(new IncidentReportRevision(report, report.getLatestRevisionNumber(), report.getVersion(),
+        var revision = revisions.save(new IncidentReportRevision(report, report.getLatestRevisionNumber(), report.getVersion(),
                 payload, actor.userId(), accepted, request));
-        return events.save(IncidentReportEvent.reportDecision(report, action, actor.userId(), accepted, request)).receipt();
+        var event = events.save(IncidentReportEvent.reportDecision(report, action, actor.userId(), accepted, request));
+        if (action == IncidentEventKind.SUBMITTED) publisher.publishEvent(new org.ctc.domain.incidents.IncidentSubmissionAccepted(report, revision));
+        return event.receipt();
     }
 
     private IncidentReport lockReport(UUID id, AuthorizedIncidentActor actor) {

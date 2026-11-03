@@ -77,7 +77,7 @@ class BackupRepositoryEntityGraphIT {
 	void givenAllExportOrderEntities_whenInvokeFindAllForBackup_thenNoLazyInitExceptionOnDeclaredAttributePaths() {
 		// given
 		List<EntityRef> order = backupSchema.getExportOrder();
-		assertThat(order).as("export order must contain 41 entities").hasSize(41);
+		assertThat(order).as("export order must contain 42 entities").hasSize(42);
 
 		Set<String> missingRepositories = new HashSet<>();
 		Set<String> missingFinder = new HashSet<>();
