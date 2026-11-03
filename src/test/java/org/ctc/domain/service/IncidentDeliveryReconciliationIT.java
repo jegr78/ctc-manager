@@ -49,6 +49,20 @@ class IncidentDeliveryReconciliationIT extends IncidentDeliveryDispatchFixture {
         assertThat(delivery.dispatch(id)).isTrue();assertThat(state(id)).isEqualTo(IncidentDeliveryState.SENT);
     }
     @Test
+    void givenRestoredPendingWorkWithoutAFreshReview_whenResuming_thenKeepDeliveryPausedUntilItHasBeenReviewed() {
+        UUID id=receipt();pause();
+        assertThatThrownBy(() -> delivery.resumeWindow(windowId,1,manager,"Test whole-context review alone is insufficient",true,epoch.managementGeneration())).isInstanceOf(BusinessRuleException.class);
+        assertDoesNotThrow(() -> delivery.reconcile(id,0,manager,"Test this pending receipt is verified missing",true,"",epoch.managementGeneration()));
+        assertDoesNotThrow(() -> delivery.resumeWindow(windowId,1,manager,"Test all pending restored work reviewed",true,epoch.managementGeneration()));
+    }
+    @Test
+    void givenRestoredPendingDisclosure_whenVerifyingANeutralReceipt_thenRejectBeforeReadingOrSendingAnyMessage() {
+        UUID id=receipt();clock.set(NOW.plusSeconds(3600));disclosure.freezeDueWindow(windowId);pause();
+        UUID detail=tx.execute(status -> deliveryRows.findByReportWindowId(windowId).stream().filter(row -> row.getOperation()==IncidentDeliveryOperation.DISCLOSURE).findFirst().orElseThrow().getId());
+        assertThatThrownBy(() -> delivery.reconcile(detail,0,manager,"Test disclosure cannot reuse neutral message verification",true,"500",epoch.managementGeneration())).isInstanceOf(BusinessRuleException.class);
+        assertThat(state(detail)).isEqualTo(IncidentDeliveryState.PENDING);verifyNoInteractions(sender);
+    }
+    @Test
     void givenAnotherResolutionDuringRemoteVerification_whenTheFirstResultReturns_thenRejectItsStaleVersion() {
         UUID id=uncertain();when(sender.verify(any(),eq("500"))).thenAnswer(call -> {delivery.reconcile(id,2,manager,"Test intervening missing receipt resolution",true,"",epoch.managementGeneration());return new IncidentSendResult(IncidentSendResult.Disposition.SENT,"500",null);});
         assertThatThrownBy(() -> delivery.reconcile(id,2,manager,"Test first remote verification",true,"500",epoch.managementGeneration())).isInstanceOf(BusinessRuleException.class);assertThat(state(id)).isEqualTo(IncidentDeliveryState.PENDING);

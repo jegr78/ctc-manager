@@ -55,6 +55,8 @@ class IncidentManagementE2ETest extends PlaywrightConfig {
     @Autowired IncidentReportWindowRepository windows;
     @Autowired DiscordGlobalConfigRepository configs;
     @Autowired IncidentReportService reports;
+    @Autowired IncidentDeliveryRepository deliveryRows;
+    @Autowired org.ctc.domain.service.PickSessionEpoch epoch;
     @Autowired IncidentWindowService deadlines;
     @Autowired IncidentTestClock clock;
     @MockitoBean IncidentReportAccess access;
@@ -148,6 +150,37 @@ class IncidentManagementE2ETest extends PlaywrightConfig {
         assertThat(page.getByTestId("incident-window-state")).hasText("Expired");
         assertThat(page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Change deadline").setExact(true))).hasCount(0);
         assertThat(page.locator("body")).containsText("New reports, edits and withdrawals are blocked");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"1440,1000,desktop", "390,844,mobile"})
+    void nativeDeliveryReviewAndRestoreResumptionWorkWithoutJavascript(int width,int height,String viewport) throws Exception {
+        page.setViewportSize(width,height);page.navigate(url("/admin/matches/"+fixture.match().getId()+"/incidents"));openThroughNativeForms();
+        UUID contextId=contextId(),windowId=windowId(contextId);
+        var party=new IncidentParty(IncidentPartyType.TEAM,fixture.homeTeam().getId(),"Test delivery party","300000000000000003");
+        var actor=new AuthorizedIncidentActor(contextId,GUILD,CHANNEL,"400000000000000004",party);
+        var saved=reports.submit(windowId,fixture.race().getId(),1,UUID.randomUUID(),actor,new IncidentPayload("Test PRIVATE driver","00:00","Test PRIVATE facts",""));
+        UUID deliveryId=tx.execute(status -> {var row=deliveryRows.findByOperationKey(saved.reportId()+":RECEIPT").orElseThrow();var token=UUID.randomUUID();row.claim(token,epoch.managementGeneration(),NOW,NOW.plusSeconds(120));row.fail(token,1,epoch.managementGeneration(),NOW,"SEND_UNCERTAIN",true,NOW.plusSeconds(60));return row.getId();});
+        page.getByRole(AriaRole.LINK,new Page.GetByRoleOptions().setName("Public delivery status").setExact(true)).click();
+        assertThat(page.getByText("Outcome unknown",new Page.GetByTextOptions().setExact(true))).isVisible();
+        page.getByRole(AriaRole.LINK,new Page.GetByRoleOptions().setName(java.util.regex.Pattern.compile("Review delivery for"))).click();
+        assertThat(page.getByLabel("Existing receipt message ID")).isVisible();
+        page.getByLabel("Reviewed outcome").selectOption("RETRY_MISSING");page.getByLabel("Reason for delivery decision").fill("Test <script id='delivery-review-probe'>private</script> external check");
+        page.getByLabel("I checked existing public messages and confirm this delivery decision.").check();
+        capture("incident-delivery-review-"+viewport);
+        page.getByRole(AriaRole.BUTTON,new Page.GetByRoleOptions().setName("Save delivery review").setExact(true)).click();
+        assertThat(page.getByText("Waiting",new Page.GetByTextOptions().setExact(true))).isVisible();assertThat(page.locator("#delivery-review-probe")).hasCount(0);
+        tx.executeWithoutResult(status -> {org.springframework.test.util.ReflectionTestUtils.setField(windows.findById(windowId).orElseThrow(),"deliveryPaused",true);org.springframework.test.util.ReflectionTestUtils.setField(deliveryRows.findById(deliveryId).orElseThrow(),"restoreReviewed",false);});page.reload();
+        page.getByLabel("Reason for resuming delivery").fill("Test reviewed restored context");page.getByLabel("I checked existing public messages and reviewed every unresolved delivery in this restored context.").check();
+        page.getByRole(AriaRole.BUTTON,new Page.GetByRoleOptions().setName("Resume delivery").setExact(true)).click();
+        assertThat(page.getByRole(AriaRole.ALERT)).containsText("Review every unresolved restored delivery");
+        page.getByRole(AriaRole.LINK,new Page.GetByRoleOptions().setName(java.util.regex.Pattern.compile("Review delivery for"))).click();
+        page.getByLabel("Reviewed outcome").selectOption("RETRY_MISSING");page.getByLabel("Reason for delivery decision").fill("Test fresh post-restore remote absence review");page.getByLabel("I checked existing public messages and confirm this delivery decision.").check();page.getByRole(AriaRole.BUTTON,new Page.GetByRoleOptions().setName("Save delivery review").setExact(true)).click();
+        page.getByLabel("Reason for resuming delivery").fill("Test all restored operations reviewed");page.getByLabel("I checked existing public messages and reviewed every unresolved delivery in this restored context.").check();
+        org.assertj.core.api.Assertions.assertThat(page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")).isEqualTo(true);capture("incident-delivery-resume-"+viewport);
+        page.getByRole(AriaRole.BUTTON,new Page.GetByRoleOptions().setName("Resume delivery").setExact(true)).click();
+        assertThat(page.getByRole(AriaRole.BUTTON,new Page.GetByRoleOptions().setName("Resume delivery").setExact(true))).hasCount(0);
+        tx.executeWithoutResult(status -> {org.assertj.core.api.Assertions.assertThat(windows.findById(windowId).orElseThrow().isDeliveryPaused()).isFalse();org.assertj.core.api.Assertions.assertThat(deliveryRows.findById(deliveryId).orElseThrow().getState()).isEqualTo(org.ctc.domain.model.IncidentDeliveryState.PENDING);});org.mockito.Mockito.verifyNoInteractions(discord);
     }
 
     private void openThroughNativeForms() {

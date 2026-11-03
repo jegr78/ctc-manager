@@ -9,10 +9,10 @@ release plan is shipped; GitHub defines this dependency order. Selection base: `
 
 - [x] Verify current tracker, dependencies, release order and parallel work.
 - [x] Map production paths, positive/negative cases and real runtime witnesses.
-- [ ] Reproduce intended receipt, cutoff, immutable snapshot and recovery failures.
+- [x] Reproduce intended receipt, cutoff, immutable snapshot and recovery failures.
 - [x] Implement atomic first-submit receipt work and locked deadline/disclosure capture.
-- [ ] Add bounded durable delivery with explicit retry/uncertainty and restore admission.
-- [ ] Align migration, archive round-trip/preflight, audit and operator documentation.
+- [x] Add bounded durable delivery with explicit retry/uncertainty and restore admission.
+- [x] Align migration, archive round-trip/preflight, audit and operator documentation.
 - [ ] Review and independently assess security; falsify new protections individually.
 - [ ] Verify one final committed head locally and in CI, then merge and reconcile the tracker/Wiki.
 - [ ] Clean up the proven landed branch and continue the queue.
@@ -114,3 +114,25 @@ windows and receipts, and prevents overlapping ticks. Its bounded claim lease is
 the existing HTTP timeout and retry settings are unchanged. Final operator recovery controls,
 management status presentation, full archive state/restore witnesses, review and delivery gates
 remain open for this same issue.
+
+
+## Operator recovery and archive outcome witnesses
+
+Existing receipt verification first produced eight intended assertion failures; the original
+management state contract produced sixteen. Its corrected H2/MariaDB run passed 36 integration
+cases. The native controller contract first failed all four cases at the missing routes.
+After implementation, the broader runtime check passed 49 unit and 135 integration cases with
+zero failures, errors or skips. It covers actual H2 and MariaDB archive imports of claimed, sent,
+failed, uncertain and previously reviewed pending work. Business IDs, versions, revisions and
+outcomes remain exact; restored windows pause sends and discard operational review grants.
+Forged review/pause fields are rejected before wipe. A real SQL acknowledgement rejection keeps
+the already committed claim and later quarantines it without another external call.
+
+Native management separates stored cases from public delivery status, validates typed review
+forms, derives managers from the authenticated principal, retains reasons, verifies selected
+existing bot messages through read-only HTTP and binds review forms to version plus restore
+runtime generation. Unresolved restored work must be reviewed individually before a context
+can resume. Production authentication, CSRF and native form tokens are included in the focused
+runtime check. The independent read-only security pass reviewed production through bd675255
+and the test-only f3b70706 delta with no findings. Rebasing onto the release-only master delta
+changes the POM/version history, not the reviewed production implementation.
