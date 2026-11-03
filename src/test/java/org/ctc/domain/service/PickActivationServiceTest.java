@@ -71,6 +71,20 @@ class PickActivationServiceTest {
     }
 
     @Test
+    void givenRestoreDuringTheReviewRead_whenPreparingActivation_thenBindTheFormToTheGenerationBeforeThoseReads() {
+        // given
+        String before = epoch.managementGeneration();
+        when(races.findByMatchdaySeasonId(season.getId())).thenAnswer(call -> { epoch.afterRestore(null); return rows; });
+        // when
+        var review = service.review(season.getId());
+        // then
+        assertThat(review.generation()).isEqualTo(before).isNotEqualTo(epoch.managementGeneration());
+        assertThatThrownBy(() -> service.enable(season.getId(), review.fingerprint(), Map.of(configured.getId(), LegacyPickClassification.WITHHELD),
+                new ManagementPickActor("test-admin", review.generation()))).isInstanceOf(BusinessRuleException.class);
+        assertThat(configured.isPicksManaged()).isFalse();
+    }
+
+    @Test
     void givenCompletedLegacyRace_whenEnabling_thenKeepItsExistingPublicRulesAndRequireNoClassificationForIt() {
         // given
         var completed = race(); completed.setCar(new Car("Test historical", "Test public car")); completed.getMatch().setHomeScore(3); rows.add(completed);

@@ -39,6 +39,7 @@ public class PickPublicationAdminService {
     }
     @Transactional(readOnly = true)
     public Detail detail(UUID batchId) {
+        String generation = epoch.managementGeneration();
         var records = attempts.findByBatchId(batchId);
         if (records.isEmpty()) throw new BusinessRuleException("The publication record is unavailable; reload the list");
         var first = records.getFirst();
@@ -46,7 +47,7 @@ public class PickPublicationAdminService {
                 row.fields().stream().sorted().map(Enum::name).toList(), !row.getContentHash().equals(PickPublicationContent.from(row.getRace()).fingerprint()))).toList();
         boolean open = records.stream().allMatch(row -> row.getState() == PickPublicationState.PREPARED || row.getState() == PickPublicationState.UNCERTAIN);
         return new Detail(batchId, first.getOutput().name(), first.getChannelId(), first.getMessageId(), first.getTargetMessageId(),
-                publications.reconciliationFingerprint(batchId), epoch.managementGeneration(), rows, open, publications.isInFlight(batchId));
+                publications.reconciliationFingerprint(batchId), generation, rows, open, publications.isInFlight(batchId));
     }
     public PickPublicationForm form(Detail detail) {
         var form = new PickPublicationForm(); form.setExpectedFingerprint(detail.fingerprint()); form.setExpectedGeneration(detail.generation());

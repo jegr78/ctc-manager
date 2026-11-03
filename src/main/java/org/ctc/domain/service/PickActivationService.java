@@ -34,8 +34,9 @@ public class PickActivationService {
 
     @Transactional(readOnly = true)
     public Review review(UUID seasonId) {
+        String generation = epoch.managementGeneration();
         var season = seasons.findById(seasonId).orElseThrow(PickActivationService::unavailable);
-        return review(season, races.findByMatchdaySeasonId(seasonId));
+        return review(season, races.findByMatchdaySeasonId(seasonId), generation);
     }
 
     public void enable(UUID seasonId, String fingerprint, Map<UUID, LegacyPickClassification> classifications, ManagementPickActor actor) {
@@ -49,7 +50,7 @@ public class PickActivationService {
                 if (race.getSettings() != null) entities.refresh(race.getSettings(), LockModeType.PESSIMISTIC_WRITE);
                 if (!seasonId.equals(race.getMatchday().getSeason().getId())) throw unavailable();
             }
-            var review = review(season, rows);
+            var review = review(season, rows, epoch.managementGeneration());
             if (season.isPicksCollectionEnabled() || !review.fingerprint().equals(fingerprint)) {
                 throw new BusinessRuleException("The collection review changed; reload before enabling");
             }
@@ -82,7 +83,7 @@ public class PickActivationService {
         });
     }
 
-    private Review review(Season season, List<Race> rows) {
+    private Review review(Season season, List<Race> rows, String generation) {
         var candidates = new ArrayList<Candidate>();
         var canonical = new StringBuilder().append(season.getId()).append(':').append(season.isPicksCollectionEnabled());
         int newTargets = 0, managed = 0, historical = 0, pending = 0;
@@ -102,7 +103,7 @@ public class PickActivationService {
             candidates.add(new Candidate(race.getId(), race.getHomeTeam().getShortName() + " | " + PickTargetService.label(season, race, rows),
                     !evidence.isEmpty(), evidence, content));
         }
-        return new Review(season.getId(), season.getDisplayLabel(), season.isPicksCollectionEnabled(), epoch.managementGeneration(),
+        return new Review(season.getId(), season.getDisplayLabel(), season.isPicksCollectionEnabled(), generation,
                 PickPublicationAttempt.manifestHash(canonical.toString()), List.copyOf(candidates), newTargets, managed, historical, pending);
     }
 

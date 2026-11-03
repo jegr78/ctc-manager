@@ -103,5 +103,16 @@ The final canonical run and exact-head CI evidence are recorded below after revi
 
 ## Guard falsification and final review
 
-Pending the committed checkpoint and individual mutation runs. No live Discord messages, command
+The independent security pass reviewed `cd18a5b6` and found two medium-severity defects:
+
+- V28 membership checks retained the H2 creator connection. The new connection regression test
+  reproduced rejection of valid publication rows after that connection closed. All membership
+  checks in this unreleased migration now use the existing CASE pattern.
+- Activation and reconciliation GETs captured the restore generation after reading their rows.
+  Both services now capture it before the first database read. Two regression tests change the
+  epoch during that read and prove that the form retains its original, invalidated generation.
+
+All three new witnesses first failed at their intended assertions, with zero JUnit errors.
+The correction passed 18 unit and 68 H2/MariaDB integration cases, with no failures/errors/skips.
+Independent re-review and individual guard mutation runs follow on the corrected commit. No live Discord messages, command
 registration or production changes are required or performed by this verification.
