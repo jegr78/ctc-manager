@@ -26,12 +26,22 @@ public final class IncidentBackupValidator {
     private final int version;
     private final Map<String, Map<String, JsonNode>> rows = new HashMap<>();
     private int retained;
+    private String subject = "Permanent incident history";
 
     public IncidentBackupValidator(int version) { this.version = version; }
     public static boolean supports(String table) { return FIELDS.containsKey(table); }
+    public String subject() { return subject; }
+    private void locate(String table, JsonNode row) {
+        subject = table;
+        if (row != null && row.path("id").isTextual()) {
+            try { subject = table + " " + UUID.fromString(row.path("id").textValue()); }
+            catch (IllegalArgumentException invalid) { subject = table + " with an invalid identity"; }
+        }
+    }
 
     public void accept(String table, JsonNode row) {
         if (!supports(table)) return;
+        locate(table, row);
         boolean incident = INCIDENT_TABLES.contains(table);
         if (version < 8) {
             if (incident) fail("Incident history requires schema version 8");
@@ -71,6 +81,7 @@ public final class IncidentBackupValidator {
         var reportEvents = new HashMap<String, SortedMap<Long, JsonNode>>();
         var keys = new HashSet<String>(); var requests = new HashSet<String>();
         for (var event : index("incident_report_events").values()) {
+            locate("incident_report_events", event);
             String window = reference(event, "window", "incident_report_windows");
             long windowVersion = positive(event, "windowVersion"); String kind = text(event, "kind", 24);
             String key = text(event, "eventKey", 120); if (!keys.add(key)) fail("Duplicate incident event key");
@@ -94,6 +105,7 @@ public final class IncidentBackupValidator {
         }
         var byReport = new HashMap<String, SortedMap<Long, JsonNode>>(); var revisionRequests = new HashSet<String>();
         for (var revision : index("incident_report_revisions").values()) {
+            locate("incident_report_revisions", revision);
             String report = reference(revision, "report", "incident_reports"); long number = positive(revision, "revisionNumber");
             positive(revision, "reportVersion"); instant(revision, "acceptedAt"); snowflake(revision, "actorId");
             if (!revisionRequests.add(uuid(revision, "requestId"))) fail("Duplicate incident revision request");
@@ -102,6 +114,7 @@ public final class IncidentBackupValidator {
         validateWindows(windowEvents);
         var references = new HashSet<String>();
         for (var report : index("incident_reports").values()) {
+            locate("incident_reports", report);
             String id = uuid(report, "id"); var window = index("incident_report_windows").get(reference(report, "window", "incident_report_windows"));
             var context = index("incident_match_contexts").get(reference(window, "context", "incident_match_contexts"));
             String caseReference = text(report, "caseReference", 64);
@@ -139,6 +152,7 @@ public final class IncidentBackupValidator {
     private void validateContexts() {
         var targets = new HashSet<String>(); var channels = new HashSet<String>();
         for (var context : index("incident_match_contexts").values()) {
+            locate("incident_match_contexts", context);
             String target = contextReference(context);
             if (!targets.add(target) || !channels.add(snowflake(context, "guildId") + ":" + snowflake(context, "channelId"))) fail("Incident context target or channel is not unique");
             String season = reference(context, "season", "seasons"), home = reference(context, "homeTeam", "teams"), away = reference(context, "awayTeam", "teams");
@@ -168,6 +182,7 @@ public final class IncidentBackupValidator {
     private void validateWindows(Map<String, SortedMap<Long, JsonNode>> histories) {
         var contexts = new HashSet<String>();
         for (var window : index("incident_report_windows").values()) {
+            locate("incident_report_windows", window);
             String context = reference(window, "context", "incident_match_contexts");
             if (!contexts.add(context)) fail("An incident context has multiple reporting windows");
             var history = histories.getOrDefault(uuid(window, "id"), new TreeMap<>());

@@ -12,9 +12,10 @@ excluded.
 - [x] Establish the context, window and report contracts with failing service tests.
 - [x] Implement canonical regular/playoff contexts and explicit management bindings.
 - [x] Implement confirmed deadlines, strict cutoff locking and immutable report history.
-- [ ] Protect incident identities through ordinary edits, deletion and results imports.
+- [x] Protect incident identities through ordinary edits, deletion and results imports.
 - [x] Add the current migration, backup schema, explicit restorers and archive preflight.
-- [ ] Verify H2/MariaDB concurrency, restore and native desktop/mobile management forms.
+- [x] Verify H2/MariaDB concurrency, restore and source identity protection.
+- [ ] Verify native desktop/mobile management forms.
 - [ ] Update README, CLAUDE, domain vocabulary and the user-facing Wiki draft.
 - [ ] Complete focused checks, individual new-guard witnesses and independent review.
 - [ ] Verify the final committed head, pass GitHub CI, merge and reconcile the tracker.
@@ -33,6 +34,7 @@ excluded.
 | Protected incident identities | Incident lifecycle checks beside existing race/match/pairing guards | Results-only edits preserve race/case IDs, history and attribution | Incident-bearing deletion, reparenting, participant changes and channel removal reject before mutation | Service/import integration tests and unchanged database state |
 | Results import remains atomic | CsvImportService protected-leg preflight | Unambiguous result replacement reuses stable incident-bearing race IDs | Ambiguous full imports fail before driver, result or pairing mutations | Synthetic CSV/Sheets and H2/MariaDB import witnesses |
 | Persistence ships with restore | New Flyway migration, BackupSchema, MixIns, explicit restorers and IncidentBackupValidator | Contexts, windows, active/withdrawn cases, sequential revisions and decisions round-trip with exact IDs | Missing/count-mismatched files, wrong owners and forged pointers/history reject before wipe | H2/MariaDB backup round-trips and malformed archive fixtures |
+| Read-only historical integrity | IncidentIntegrityAuditService reusing IncidentBackupValidator | Valid history has no incident finding | A mismatched persisted version reports a safe row locator without private payload or repair | IncidentIntegrityAuditIT plus existing audit regression suites |
 | Legacy compatibility | Explicit supported-schema map | Supported older archives contain no incident state or invented windows | New incident state cannot be disguised as an older archive; unsupported versions stay rejected | Manifest contract and preflight tests |
 | Internal native management | IncidentContextController, IncidentWindowController, versioned DTOs and existing pairing pages | Regular/playoff links reach the canonical section; native desktop/mobile forms retain errors and timezone/offset context | Auth/CSRF, invalid dates, stale versions and private text escaping stay enforced | Controller/security and no-JavaScript browser cases |
 | Delivered foundation stays private | Existing Gateway and public generators remain unchanged | Management can inspect permanent stored cases without public incident publication | No live reports, external URL downloads, announcements, automatic opening or real Discord posts | Offline fixtures, public-output regression and diff review |
@@ -98,3 +100,42 @@ mappings reject before driver creation. Ordinary setup/schedule edits remain pos
 the confirmed reporting deadline. Existing pick import, CSV transaction and playoff-decision
 fixtures also passed. Standalone playoff imports, channel dependencies and the team-succession
 witness still need their remaining coverage before the identity audit is complete.
+
+## Channel and standalone playoff checkpoint
+
+An archived-channel unit test failed at its intended assertion. Four source-path assertions then
+failed without JUnit errors: open-window archival, closed-history archival, unrelated channel
+linking and standalone playoff result identity. After implementation, 77 unit and 45 integration
+cases passed with no failures, errors or skips. The twelve incident source cases passed on both
+H2 and MariaDB; existing channel idempotency, WireMock and playoff selection cases also passed.
+
+Channel changes now share the season/guild lock protocol with incident bindings and check
+dependencies before external calls. Open reporting blocks archival. Closed reporting permits
+explicit archival while retaining frozen revisions and exact attribution. Standalone playoff
+results reuse their existing race without manufacturing an auxiliary regular Match. Concurrent
+binding versus source edits/channel linking still needs its explicit runtime witness.
+
+## Concurrency and audit checkpoint
+
+Eight real-barrier concurrency cases passed on H2. MariaDB first exposed three intended source
+assertion failures: a waiting race edit missed a new context, a waiting channel link missed a new
+binding, and a waiting deletion missed a committed report. Current locking reads now protect
+these paths. MariaDB snapshot conflicts return a domain retry without changing history.
+
+The expanded run passed 64 unit and 89 integration cases with zero failures, errors or skips.
+Each database ran thirteen identity cases and nine concurrency cases. These cover two edits from
+one version, all three mutation types waiting past cutoff, closure after a committed edit, new
+bindings/reports appearing during lock waits, team succession and restore admission through commit.
+The closure witness checks rollback and a fresh explicit retry when MariaDB reports a snapshot
+conflict. It then requires the exact last committed frozen revision.
+
+The read-only incident audit first failed its malformed-version assertion, then passed both valid
+and malformed persisted fixtures without repairing rows or exposing payload text. Existing data
+and private-pick audit suites also passed.
+
+CI on checkpoint `65048e73` passed 2,874 unit, 1,240 integration and 228 browser cases, with only
+the three existing unit skips. Its verify gate failed on eleven static findings: one fixed-resource
+SQL execution and ten managed-entity references in the internal pairing adapter. Their scoped
+annotations and acceptance rationale are tracked in `docs/security/sast-acceptance.md`; a later
+complete verification must confirm that static analysis is green. This earlier run is not final
+acceptance of the changed head or the unfinished native forms.

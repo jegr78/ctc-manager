@@ -1,5 +1,7 @@
 package db.migration;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -17,6 +19,9 @@ public class V29__AddIncidentReporting extends BaseJavaMigration {
     }
 
     @Override
+    @SuppressFBWarnings(value = "SQL_INJECTION_JDBC", justification =
+            "Executes only bundled /db/schema/incident_reporting.sql DDL with a fixed timestamp-token rewrite; "
+                    + "no request, archive or database values enter SQL text. See docs/security/sast-acceptance.md.")
     public void migrate(Context context) throws Exception {
         var connection = context.getConnection();
         // MariaDB's timezone-free datetime supports confirmed deadlines beyond its TIMESTAMP range.
