@@ -12,7 +12,7 @@ registration, messages and production activation remain separate operator action
 - [x] Verify restore, zero/Equal Conditions, rejected archives and read-only audit findings.
 - [x] Complete capability readiness while retaining default-off Gateway and season opt-in.
 - [x] Document the operator rollout checklist and prepare the Wiki update.
-- [ ] Complete focused tests, guard witnesses and independent security review.
+- [x] Complete focused tests, guard witnesses and independent security review.
 - [ ] Run committed-head canonical verification and all GitHub checks, then merge.
 - [ ] Reconcile #286 and #279, publish the Wiki update and remove the landed branch.
 
@@ -71,3 +71,18 @@ was added. Existing history validation remains authoritative before deadline dia
 Live guild registration, operator UAT and production activation were not performed. The
 operations checklist records those separately authorized actions and retains Google Forms
 until the operator explicitly retires it.
+
+## Guard and review evidence
+
+Six independent mutations of the new diagnostic scope each caused exactly one intended
+assertion failure and zero JUnit errors: enrollment, unfinished target, explicit opening,
+explicit closure, approved revision and missing deadline. Each probe restored the exact
+committed source before the next probe. Existing write, authorization, restore and disclosure
+guards are unchanged and retain their owning issues' evidence.
+
+Self-review and an independent read-only security pass reviewed checkpoint
+`44993687df8e351541ea7146f0b216ca7efc5a1c` against
+`321ceff91203f43b687c199efd9aa3f78f98ac69` with no actionable findings. Default-off startup,
+explicit season activation, current channel authorization and pre-wipe restore validation
+remain enforced. Final verification below belongs to the subsequent committed head after
+integrating upstream release/version-only commits.
