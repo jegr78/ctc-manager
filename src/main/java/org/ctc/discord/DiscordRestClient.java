@@ -88,7 +88,12 @@ public class DiscordRestClient {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record BotMessage(String id, @JsonProperty("channel_id") String channelId) { }
+    public record BotMessage(String id, @JsonProperty("channel_id") String channelId, String content, BotUser author, String nonce) {
+        @Override public String toString() { return "BotMessage[opaque]"; }
+    }
+    public BotMessage fetchBotMessage(String channelId,String messageId) throws DiscordApiException {
+        return execute(() -> bot.get().uri("/channels/{channelId}/messages/{messageId}",channelId,messageId).retrieve().body(BotMessage.class));
+    }
 
 	public BotUser fetchBotUser() throws DiscordApiException {
 		return execute(() -> bot.get()

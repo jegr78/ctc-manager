@@ -13,6 +13,20 @@ import static org.mockito.Mockito.*;
 
 @Tag("integration")
 class IncidentWorkerRestoreAdmissionIT extends IncidentDeliveryDispatchFixture {
+    @org.springframework.beans.factory.annotation.Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Test
+    void givenRemoteSuccessButSqlAcknowledgementFailure_whenRecovering_thenKeepAnUncertainClaimWithoutResendingAndReleaseAdmission() {
+        UUID id=receipt();
+        when(sender.send(any())).thenAnswer(call -> {
+            jdbc.execute("ALTER TABLE incident_deliveries ADD CONSTRAINT ctc_test_incident_ack_failure CHECK (state <> 'SENT')");
+            return new IncidentSendResult(IncidentSendResult.Disposition.SENT,"500",null);
+        });
+        try {assertThatThrownBy(() -> delivery.dispatch(id)).isInstanceOf(RuntimeException.class);assertThat(state(id)).isEqualTo(IncidentDeliveryState.CLAIMED);}
+        finally {jdbc.execute("ALTER TABLE incident_deliveries DROP CONSTRAINT ctc_test_incident_ack_failure");}
+        assertThat(imports.tryLock()).isTrue();try {try(var executor=Executors.newVirtualThreadPerTaskExecutor()){org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> executor.submit(() -> {imports.awaitWritersDrained();return true;}).get(5,TimeUnit.SECONDS));}}finally{imports.unlock();}
+        clock.set(NOW.plusSeconds(601));assertThat(delivery.dispatch(id)).isFalse();assertThat(state(id)).isEqualTo(IncidentDeliveryState.UNCERTAIN);verify(sender,times(1)).send(any());
+    }
+
     @Test
     void givenAdmittedHttpDispatch_whenRestoreDrainsWriters_thenWaitThroughTheOutcomeTransactionAndReleaseAdmission() throws Exception {
         UUID id=receipt();var entered=new CountDownLatch(1);var release=new CountDownLatch(1);

@@ -9,6 +9,9 @@ public interface IncidentDeliveryRepository extends JpaRepository<IncidentDelive
     Optional<IncidentDelivery> findByOperationKey(String key);
     java.util.List<IncidentDelivery> findByReportWindowId(UUID windowId);
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select d from IncidentDelivery d where d.report.window.id=:windowId order by d.id")
+    java.util.List<IncidentDelivery> findByWindowForUpdate(UUID windowId);
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @org.springframework.data.jpa.repository.Query("select d from IncidentDelivery d where d.id=:id")
     Optional<IncidentDelivery> findByIdForUpdate(UUID id);
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)

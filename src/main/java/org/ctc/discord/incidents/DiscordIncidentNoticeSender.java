@@ -40,6 +40,21 @@ public class DiscordIncidentNoticeSender implements IncidentReceiptSender {
             return posting ? uncertain("SEND_UNCERTAIN") : rejected("DESTINATION_UNAVAILABLE");
         }
     }
+    @Override public IncidentSendResult verify(IncidentDeliveryClaim claim,String messageId) {
+        if(!outbound.isEnabled()) return rejected("OUTBOUND_DISABLED");
+        if(claim==null || claim.operation()!=IncidentDeliveryOperation.RECEIPT || !snowflake(claim.guildId()) || !snowflake(claim.channelId()) || !snowflake(messageId)) return rejected("INVALID_CLAIM");
+        try {
+            var config=configs.findFirstByOrderByIdAsc();if(config==null || !claim.guildId().equals(config.getGuildId()))return rejected("CONFIGURATION");
+            var channel=discord.fetchAccessChannel(claim.channelId());
+            if(channel==null || !claim.channelId().equals(channel.id()) || !claim.guildId().equals(channel.guildId()) || !Integer.valueOf(0).equals(channel.type()))return rejected("DESTINATION");
+            var bot=discord.fetchBotUser();var message=discord.fetchBotMessage(claim.channelId(),messageId);
+            if(bot==null || !snowflake(bot.id()) || message==null || !messageId.equals(message.id()) || !claim.channelId().equals(message.channelId())
+                    || message.author()==null || !bot.id().equals(message.author().id()) || !IncidentNoticeService.neutralText().equals(message.content())
+                    || message.nonce()!=null && !message.nonce().equals(claim.nonce())) return rejected("VERIFICATION_FAILED");
+            return new IncidentSendResult(IncidentSendResult.Disposition.SENT,message.id(),null);
+        } catch(DiscordApiException | RuntimeException unverified) { return rejected("VERIFICATION_FAILED"); }
+    }
+
     private static boolean snowflake(String id) { return id != null && id.matches("[0-9]{1,32}"); }
     private static IncidentSendResult rejected(String code) { return new IncidentSendResult(IncidentSendResult.Disposition.REJECTED,null,code); }
     private static IncidentSendResult uncertain(String code) { return new IncidentSendResult(IncidentSendResult.Disposition.UNCERTAIN,null,code); }

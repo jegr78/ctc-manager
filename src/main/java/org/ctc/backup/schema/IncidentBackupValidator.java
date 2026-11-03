@@ -184,7 +184,8 @@ public final class IncidentBackupValidator {
             if (state.equals("CLAIMED") && (attempts == 0 || !delivery.hasNonNull("claimToken") || !delivery.hasNonNull("claimGeneration") || !delivery.hasNonNull("leaseUntil") || delivery.hasNonNull("completedAt") || delivery.hasNonNull("messageId"))) fail("Incident delivery has an incomplete active claim");
             if (state.equals("SENT") && (attempts == 0 || !delivery.hasNonNull("messageId") || !delivery.hasNonNull("completedAt") || delivery.hasNonNull("failureCode"))) fail("Incident delivery lacks confirmed remote evidence");
             if (Set.of("FAILED", "UNCERTAIN").contains(state) && (attempts == 0 || !delivery.hasNonNull("failureCode") || !delivery.hasNonNull("completedAt"))) fail("Incident delivery lacks a recorded failure outcome");
-            optionalText(delivery, "reconciledBy", 128); optionalText(delivery, "reconciliationReason", 1000);
+            if(delivery.hasNonNull("reconciledBy") || delivery.hasNonNull("reconciliationReason")) { text(delivery,"reconciledBy",128);text(delivery,"reconciliationReason",1000); }
+            if(state.equals("SUPERSEDED") && (!operation.equals("RECEIPT") || index("incident_deliveries").values().stream().noneMatch(other -> reportId.equals(other.path("report").asText()) && "DISCLOSURE".equals(other.path("operation").asText()) && "SENT".equals(other.path("state").asText()))))fail("A generic receipt was superseded without confirmed disclosure");
         }
     }
 

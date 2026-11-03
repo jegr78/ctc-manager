@@ -59,6 +59,47 @@ public class IncidentDeliveryService {
         } finally { imports.exitWriter(); }
     }
 
+    public void reconcile(UUID id,long expectedVersion,IncidentManagementActor actor,String reason,boolean reviewed,String messageId,String generation) {
+        requireReview(actor,reason,reviewed,generation);
+        if(TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("Incident review admission must precede its transaction");
+        if(!imports.tryEnterWriter())throw unavailable();
+        try {
+            String remote=messageId==null?"":messageId;
+            if(!remote.isEmpty()) {
+                if(!remote.matches("[0-9]{1,32}"))throw unavailable();
+                var claim=transactions.execute(status -> {
+                    requireGeneration(generation);var row=locked(id);if(row==null)throw unavailable();row.requireReview(expectedVersion,now());
+                    if(row.getOperation()!=IncidentDeliveryOperation.RECEIPT || row.getState()==IncidentDeliveryState.PENDING && !row.getReport().getWindow().isDeliveryPaused())throw unavailable();
+                    return new IncidentDeliveryClaim(row.getId(),row.getReport().getWindow().getId(),row.getClaimToken(),row.getVersion(),generation,row.getOperation(),row.getGuildId(),row.getChannelId(),row.getNonce());
+                });
+                IncidentSendResult verified;
+                try {verified=sender.verify(claim,remote);}catch(RuntimeException failed){throw unavailable();}
+                if(verified==null || verified.disposition()!=IncidentSendResult.Disposition.SENT || !remote.equals(verified.messageId()))throw new BusinessRuleException("The existing bot receipt could not be verified; keep its outcome unresolved");
+                transactions.executeWithoutResult(status -> {requireGeneration(generation);var row=locked(id);if(row==null)throw unavailable();row.reconcileDelivered(expectedVersion,actor.id(),reason,now(),remote);});
+            } else transactions.executeWithoutResult(status -> {requireGeneration(generation);var row=locked(id);if(row==null)throw unavailable();row.reconcileMissing(expectedVersion,actor.id(),reason,now());});
+        } finally {imports.exitWriter();}
+    }
+    public void resumeWindow(UUID id,long expectedVersion,IncidentManagementActor actor,String reason,boolean reviewed,String generation) {
+        requireReview(actor,reason,reviewed,generation);
+        if(TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("Incident review admission must precede its transaction");
+        if(!imports.tryEnterWriter())throw unavailable();
+        try {transactions.executeWithoutResult(status -> {
+            requireGeneration(generation);var window=windows.lock(id);window.requireVersion(expectedVersion);
+            for(var row:rows.findByWindowForUpdate(id)) {
+                em.refresh(row,LockModeType.PESSIMISTIC_WRITE);
+                if(row.getState()==IncidentDeliveryState.CLAIMED || row.getState()==IncidentDeliveryState.UNCERTAIN
+                        || (row.getState()==IncidentDeliveryState.PENDING || row.getState()==IncidentDeliveryState.FAILED) && !row.isRestoreReviewed())throw new BusinessRuleException("Review every unresolved restored delivery before resuming this context");
+            }
+            window.resumeDelivery(actor.id(),reason,now());
+        });} finally {imports.exitWriter();}
+    }
+    public String reviewGeneration() { return epoch.managementGeneration(); }
+    private void requireReview(IncidentManagementActor actor,String reason,boolean reviewed,String generation) {
+        IncidentContextService.requireManager(actor);
+        if(!reviewed || reason==null || reason.isBlank() || reason.length()>1000 || generation==null)throw new BusinessRuleException("Confirm your external delivery review and give its reason");
+        requireGeneration(generation);
+    }
+
     private IncidentDeliveryClaim claim(UUID id,String generation) {
         requireGeneration(generation);var row=locked(id);
         if(row==null || row.getOperation()!=IncidentDeliveryOperation.RECEIPT || row.getReport().getWindow().isDeliveryPaused()) return null;

@@ -18,6 +18,9 @@ public class IncidentReportWindow extends BaseEntity {
     @Column(name = "aggregate_version", nullable = false) private long version;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 16) private IncidentWindowState state = IncidentWindowState.DRAFT;
     @Column(nullable = false) private boolean deliveryPaused;
+    @Column(length = 128) private String deliveryResumedBy;
+    @Column(length = 1000) private String deliveryResumeReason;
+    @Convert(converter = UtcInstantConverter.class) private Instant deliveryResumedAt;
     private LocalDateTime plannedStartLocal;
     @Convert(converter = UtcInstantConverter.class) private Instant plannedStart;
     @Convert(converter = UtcInstantConverter.class) private Instant deadline;
@@ -26,6 +29,11 @@ public class IncidentReportWindow extends BaseEntity {
     @Convert(converter = UtcInstantConverter.class) private Instant closedAt;
 
     public IncidentReportWindow(IncidentMatchContext context) { this.context = context; }
+
+    public void resumeDelivery(String actor,String reason,Instant now) {
+        if(!deliveryPaused || actor==null || actor.isBlank() || actor.length()>128 || reason==null || reason.isBlank() || reason.length()>1000 || now==null)throw new org.ctc.domain.exception.BusinessRuleException("A reviewed delivery resumption is required");
+        deliveryPaused=false;deliveryResumedBy=actor;deliveryResumeReason=reason;deliveryResumedAt=now;
+    }
 
     public void requireVersion(long expected) {
         if (version != expected) throw new org.ctc.domain.exception.BusinessRuleException("Reporting window changed; reload its current version");

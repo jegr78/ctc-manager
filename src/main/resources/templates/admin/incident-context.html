@@ -45,6 +45,8 @@
         </fieldset>
     </form>
 
+    <p th:if="${page.bound}"><a class="btn btn-secondary" th:href="@{/admin/incident-contexts/{id}/deliveries(id=${page.contextId})}">Public delivery status</a></p>
+
     <div th:if="${page.bound}" class="card">
         <h2>Saved cases</h2>
         <p th:if="${page.cases.isEmpty()}" class="text-dim">No confirmed reports. Unfinished input never replaces a saved case.</p>

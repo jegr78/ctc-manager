@@ -14,6 +14,12 @@ import static org.mockito.Mockito.*;
 
 @Tag("integration")
 class IncidentDeliveryDispatchIT extends IncidentDeliveryDispatchFixture {
+    @Test
+    void givenSeveralDueReceipts_whenScanningWithABoundedBatch_thenReturnOnlyTheRequestedNumberAndRejectInvalidLimits() {
+        receipt();receipt();receipt();assertThat(delivery.dueReceipts(1)).hasSize(1);
+        for(int limit:new int[]{0,26}){assertThatThrownBy(() -> delivery.dueReceipts(limit)).isInstanceOf(IllegalArgumentException.class);assertThatThrownBy(() -> delivery.dueWindows(limit)).isInstanceOf(IllegalArgumentException.class);}
+    }
+
 
     @Test
     void givenCommittedReport_whenDispatching_thenCommitTheClaimBeforeHttpAndAcknowledgeItsExactRemoteResultOnce() {

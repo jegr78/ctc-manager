@@ -122,7 +122,7 @@ public class IncidentAdminService {
                 local == null ? null : local.toLocalDateTime(), local == null ? "" : local.getOffset().toString(), access.isEmpty(), cases, decisions);
     }
 
-    private IncidentManagementActor actor(Principal principal) {
+    IncidentManagementActor actor(Principal principal) {
         String name = principal == null ? null : principal.getName();
         if (principal == null && environment.acceptsProfiles(Profiles.of("dev", "local"))) name = "development-manager";
         if (name == null || name.isBlank() || name.length() > 128) throw new BusinessRuleException("An authenticated management actor is required");

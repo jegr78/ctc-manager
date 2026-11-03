@@ -92,4 +92,20 @@ class DiscordIncidentNoticeSenderTest {
         assertThat(result.code()).isNotEqualTo("UNIMPLEMENTED");remote.verify();
     }
 
+    @ParameterizedTest
+    @ValueSource(strings={"valid","old-nonce-absent","author","nonce","content","channel","identity","missing"})
+    void givenAnOperatorSelectedExistingMessage_whenVerifying_thenRequireTheConfiguredBotAndExactNeutralDestination(String cause) {
+        channel("100","200",0);
+        server.expect(requestTo("https://discord.com/api/v10/users/@me")).andRespond(withSuccess("{\"id\":\"700\",\"username\":\"Test bot\"}",MediaType.APPLICATION_JSON));
+        var expected=server.expect(requestTo("https://discord.com/api/v10/channels/200/messages/500")).andExpect(method(HttpMethod.GET));
+        if(cause.equals("missing")) expected.andRespond(withStatus(HttpStatus.NOT_FOUND));
+        else {
+            String json="{\"id\":\""+(cause.equals("identity")?"501":"500")+"\",\"channel_id\":\""+(cause.equals("channel")?"999":"200")+"\",\"author\":{\"id\":\""+(cause.equals("author")?"999":"700")+"\"},\"content\":\""+(cause.equals("content")?"Test PRIVATE unrelated message":IncidentNoticeService.neutralText())+"\""+(cause.equals("old-nonce-absent")?"":",\"nonce\":\""+(cause.equals("nonce")?"other-operation":"test-stable-nonce")+"\"")+"}";
+            expected.andRespond(withSuccess(json,MediaType.APPLICATION_JSON));
+        }
+        var result=sender.verify(claim(IncidentDeliveryOperation.RECEIPT),"500");
+        assertThat(result.disposition()).isEqualTo(java.util.Set.of("valid","old-nonce-absent").contains(cause)?IncidentSendResult.Disposition.SENT:IncidentSendResult.Disposition.REJECTED);
+        assertThat(result.code()).isNotEqualTo("VERIFY_UNAVAILABLE");server.verify();
+    }
+
 }

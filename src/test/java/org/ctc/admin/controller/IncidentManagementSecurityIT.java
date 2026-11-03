@@ -33,19 +33,19 @@ class IncidentManagementSecurityIT extends IncidentIntegrationFixture {
     @MockitoBean org.ctc.discord.DiscordRestClient discord;
 
     @ParameterizedTest
-    @ValueSource(strings = {"/admin/incident-contexts/context", "/admin/matches/match/incidents", "/admin/playoffs/matchup/unknown/incidents"})
+    @ValueSource(strings = {"/admin/incident-contexts/context", "/admin/matches/match/incidents", "/admin/playoffs/matchup/unknown/incidents", "/admin/incident-contexts/context/deliveries", "/admin/incident-deliveries/unknown/"})
     void anonymousReadsRequireManagementAuthentication(String route) throws Exception {
         mvc.perform(get(path(route))).andExpect(status().isUnauthorized());
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/admin/incident-contexts/context/window/open", "/admin/incident-contexts/context/window/deadline", "/admin/matches/match/incidents/bind", "/admin/playoffs/matchup/unknown/incidents/bind"})
+    @ValueSource(strings = {"/admin/incident-contexts/context/window/open", "/admin/incident-contexts/context/window/deadline", "/admin/matches/match/incidents/bind", "/admin/playoffs/matchup/unknown/incidents/bind", "/admin/incident-contexts/context/deliveries/resume", "/admin/incident-deliveries/unknown/"})
     void anonymousMutationWithCsrfIsRejectedBeforeManagementServices(String route) throws Exception {
         mvc.perform(post(path(route)).with(csrf())).andExpect(status().isUnauthorized());
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/admin/incident-contexts/context/window/open", "/admin/incident-contexts/context/window/deadline", "/admin/matches/match/incidents/bind", "/admin/playoffs/matchup/unknown/incidents/bind"})
+    @ValueSource(strings = {"/admin/incident-contexts/context/window/open", "/admin/incident-contexts/context/window/deadline", "/admin/matches/match/incidents/bind", "/admin/playoffs/matchup/unknown/incidents/bind", "/admin/incident-contexts/context/deliveries/resume", "/admin/incident-deliveries/unknown/"})
     @WithMockUser("test-manager")
     void authenticatedMutationsRequireCsrf(String route) throws Exception {
         mvc.perform(post(path(route))).andExpect(status().isForbidden());

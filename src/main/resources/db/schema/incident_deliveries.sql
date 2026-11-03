@@ -1,4 +1,7 @@
 ALTER TABLE incident_report_windows ADD COLUMN delivery_paused BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE incident_report_windows ADD COLUMN delivery_resumed_by VARCHAR(128);
+ALTER TABLE incident_report_windows ADD COLUMN delivery_resume_reason VARCHAR(1000);
+ALTER TABLE incident_report_windows ADD COLUMN delivery_resumed_at TIMESTAMP(6);
 ALTER TABLE incident_report_revisions ADD CONSTRAINT uq_incident_revision_owner UNIQUE (id, report_id);
 CREATE TABLE incident_deliveries (
     id UUID PRIMARY KEY,
@@ -22,6 +25,7 @@ CREATE TABLE incident_deliveries (
     completed_at TIMESTAMP(6),
     message_id VARCHAR(32),
     failure_code VARCHAR(64),
+    restore_reviewed BOOLEAN NOT NULL DEFAULT FALSE,
     reconciled_by VARCHAR(128),
     reconciliation_reason VARCHAR(1000),
     created_at TIMESTAMP(6),

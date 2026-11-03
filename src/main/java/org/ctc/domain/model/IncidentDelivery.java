@@ -34,6 +34,7 @@ public class IncidentDelivery extends BaseEntity {
     @Convert(converter = UtcInstantConverter.class) private Instant completedAt;
     @Column(length = 32) private String messageId;
     @Column(length = 64) private String failureCode;
+    @Column(nullable = false) private boolean restoreReviewed;
     @Column(length = 128) private String reconciledBy;
     @Column(length = 1000) private String reconciliationReason;
 
@@ -83,6 +84,26 @@ public class IncidentDelivery extends BaseEntity {
                 || state != IncidentDeliveryState.PENDING && state != IncidentDeliveryState.FAILED) return false;
         if (now == null || now.isBefore(capturedAt)) throw unavailable();
         state = IncidentDeliveryState.SUPERSEDED; completedAt = now; failureCode = null; version++; return true;
+    }
+
+    public void requireReview(long expectedVersion,Instant now) {
+        if(version!=expectedVersion || now==null || now.isBefore(capturedAt) || state==IncidentDeliveryState.SENT || state==IncidentDeliveryState.SUPERSEDED
+                || state==IncidentDeliveryState.CLAIMED && !report.getWindow().isDeliveryPaused() && now.isBefore(leaseUntil)) throw unavailable();
+    }
+    public void reconcileMissing(long expectedVersion,String actor,String reason,Instant now) {
+        requireReview(expectedVersion,now);recordReview(actor,reason);
+        state=IncidentDeliveryState.PENDING;nextAttemptAt=now;completedAt=null;messageId=null;failureCode=null;
+        claimToken=null;claimGeneration=null;leaseUntil=null;version++;
+    }
+    public void reconcileDelivered(long expectedVersion,String actor,String reason,Instant now,String remoteMessageId) {
+        requireReview(expectedVersion,now);
+        if(remoteMessageId==null || !remoteMessageId.matches("[0-9]{1,32}"))throw unavailable();
+        recordReview(actor,reason);state=IncidentDeliveryState.SENT;messageId=remoteMessageId;completedAt=now;failureCode=null;
+        attempts=Math.max(attempts,1);version++;
+    }
+    private void recordReview(String actor,String reason) {
+        if(actor==null || actor.isBlank() || actor.length()>128 || reason==null || reason.isBlank() || reason.length()>1000)throw unavailable();
+        reconciledBy=actor;reconciliationReason=reason;restoreReviewed=true;
     }
 
     private void requireClaim(UUID token, long expectedVersion, String generation, Instant now) {
