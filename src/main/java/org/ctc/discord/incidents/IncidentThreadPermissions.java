@@ -23,7 +23,7 @@ public final class IncidentThreadPermissions {
             Set<String> staff, Set<String> participants, List<String> tags) {
         var inventory = validate(guild, channel, member, roles, botId, guildId, channelId);
         require(channel.type() == 0 || channel.type() == 15);
-        require(staff != null && !staff.isEmpty() && participants != null);
+        if (!(staff != null && !staff.isEmpty() && participants != null)) throw unavailable();
         for (var roleId : staff) {
             require(inventory.containsKey(roleId) && !guildId.equals(roleId) && !participants.contains(roleId));
         }
@@ -40,23 +40,23 @@ public final class IncidentThreadPermissions {
             }
         }
         var permissions = requireBotRights(guild, channel, member, inventory, botId, guildId);
-        require(tags != null && tags.size() <= 5 && new HashSet<>(tags).size() == tags.size());
+        if (!(tags != null && tags.size() <= 5 && new HashSet<>(tags).size() == tags.size())) throw unavailable();
         if (channel.type() == 0) {
             require(tags.isEmpty());
             return;
         }
-        require(channel.flags() != null);
+        if (channel.flags() == null) throw unavailable();
         require((channel.flags() & 16) == 0 || !tags.isEmpty());
         if (!tags.isEmpty()) {
-            require(channel.availableTags() != null);
+            if (channel.availableTags() == null) throw unavailable();
             var available = new HashMap<String, IncidentForumTag>();
             for (var tag : channel.availableTags()) {
-                require(tag != null && id(tag.id()) && available.putIfAbsent(tag.id(), tag) == null);
+                if (!(tag != null && id(tag.id()) && available.putIfAbsent(tag.id(), tag) == null)) throw unavailable();
             }
             for (var tagId : tags) {
                 require(id(tagId));
                 var tag = available.get(tagId);
-                require(tag != null && tag.moderated() != null);
+                if (!(tag != null && tag.moderated() != null)) throw unavailable();
                 require(!tag.moderated() || has(permissions, ADMIN) || has(permissions, MANAGE));
             }
         }
@@ -72,14 +72,14 @@ public final class IncidentThreadPermissions {
     private static Map<String, BigInteger> validate(AccessGuild guild, IncidentChannel channel,
             AccessMember member, List<IncidentRole> roles, String botId, String guildId, String channelId) {
         require(id(botId) && id(guildId) && id(channelId));
-        require(guild != null && guildId.equals(guild.id()) && id(guild.ownerId()));
-        require(channel != null && channelId.equals(channel.id()) && guildId.equals(channel.guildId())
-                && channel.type() != null && channel.permissionOverwrites() != null);
-        require(member != null && member.user() != null && botId.equals(member.user().id()) && member.roles() != null);
-        require(roles != null);
+        if (!(guild != null && guildId.equals(guild.id()) && id(guild.ownerId()))) throw unavailable();
+        if (!(channel != null && channelId.equals(channel.id()) && guildId.equals(channel.guildId())
+                && channel.type() != null && channel.permissionOverwrites() != null)) throw unavailable();
+        if (!(member != null && member.user() != null && botId.equals(member.user().id()) && member.roles() != null)) throw unavailable();
+        if (roles == null) throw unavailable();
         var inventory = new HashMap<String, BigInteger>();
         for (var role : roles) {
-            require(role != null && id(role.id()));
+            if (!(role != null && id(role.id()))) throw unavailable();
             require(inventory.putIfAbsent(role.id(), bits(role.permissions())) == null);
         }
         require(inventory.containsKey(guildId));
@@ -88,7 +88,7 @@ public final class IncidentThreadPermissions {
         }
         var seen = new HashSet<String>();
         for (var overwrite : channel.permissionOverwrites()) {
-            require(overwrite != null && id(overwrite.id()) && (overwrite.type() == 0 || overwrite.type() == 1));
+            if (!(overwrite != null && id(overwrite.id()) && (overwrite.type() == 0 || overwrite.type() == 1))) throw unavailable();
             require(seen.add(overwrite.type() + ":" + overwrite.id()));
             require(overwrite.type() != 0 || inventory.containsKey(overwrite.id()));
             bits(overwrite.allow());
@@ -140,7 +140,7 @@ public final class IncidentThreadPermissions {
     }
 
     private static BigInteger bits(String value) {
-        require(value != null && value.matches("[0-9]{1,128}"));
+        if (!(value != null && value.matches("[0-9]{1,128}"))) throw unavailable();
         return new BigInteger(value);
     }
 
@@ -150,7 +150,11 @@ public final class IncidentThreadPermissions {
 
     private static void require(boolean condition) {
         if (!condition) {
-            throw new BusinessRuleException("Incident destination permissions could not be verified");
+            throw unavailable();
         }
+    }
+
+    private static BusinessRuleException unavailable() {
+        return new BusinessRuleException("Incident destination permissions could not be verified");
     }
 }

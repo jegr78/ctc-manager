@@ -30,14 +30,14 @@ public class IncidentThreadPublication extends BaseEntity {
     @Column(length = 32) private String referenceMessageId;
 
     public static IncidentThreadPublication capture(IncidentDelivery delivery, String privateParent, String staff, String tags, int chunks) {
-        require(delivery != null && delivery.getId() != null && delivery.getOperation() == IncidentDeliveryOperation.DISCLOSURE
+        if (!(delivery != null && delivery.getId() != null && delivery.getOperation() == IncidentDeliveryOperation.DISCLOSURE
                 && delivery.getReport().getState() == IncidentReportState.ACTIVE
                 && delivery.getReport().getWindow().getState() == IncidentWindowState.CLOSED
                 && delivery.getReport().getFrozenRevisionNumber() != null
-                && delivery.getReport().getFrozenRevisionNumber() == delivery.getRevision().getRevisionNumber());
+                && delivery.getReport().getFrozenRevisionNumber() == delivery.getRevision().getRevisionNumber())) throw unavailable();
         require(snowflake(privateParent) && !privateParent.equals(delivery.getChannelId()));
-        require(staff != null && staff.length() <= 2000 && !ids(staff, 60).isEmpty());
-        require(tags != null && tags.length() <= 200);ids(tags, 5);
+        if (!(staff != null && staff.length() <= 2000 && !ids(staff, 60).isEmpty())) throw unavailable();
+        if (!(tags != null && tags.length() <= 200)) throw unavailable();ids(tags, 5);
         require(chunks >= 1 && chunks <= 40);
         var row = new IncidentThreadPublication();row.delivery = delivery;row.stewardsChannelId = privateParent;
         row.staffRoleIds = staff;row.forumTagIds = tags;row.messageChunks = chunks;
@@ -63,7 +63,7 @@ public class IncidentThreadPublication extends BaseEntity {
     }
 
     public void accept(IncidentThreadStage expected, int index, String messageId, String threadId) {
-        require(expected != null && expected == stage() && expected != IncidentThreadStage.COMPLETE && index == chunkIndex());
+        if (!(expected != null && expected == stage() && expected != IncidentThreadStage.COMPLETE && index == chunkIndex())) throw unavailable();
         require(snowflake(messageId) && (threadId == null || snowflake(threadId)));
         switch (expected) {
             case PRIVATE_STARTER -> {privateStarterId = messageId;privateThreadId = threadId;}
@@ -82,7 +82,7 @@ public class IncidentThreadPublication extends BaseEntity {
     public boolean publicComplete() { return publicThreadId != null && publicMessages().size() == messageChunks - 1; }
 
     public static List<String> ids(String value, int maximum) {
-        require(value != null);
+        if (value == null) throw unavailable();
         if (value.isEmpty()) return List.of();
         var ids = List.of(value.split(",", -1));
         require(ids.size() <= maximum && ids.stream().allMatch(IncidentThreadPublication::snowflake) && new HashSet<>(ids).size() == ids.size());

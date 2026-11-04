@@ -123,20 +123,20 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
     }
 
     private void requireLive(IncidentThreadClaim claim) {
-        require(claim!=null && claim.validUntil()!=null && clock.instant().isBefore(claim.validUntil()));
+        if (!(claim!=null && claim.validUntil()!=null && clock.instant().isBefore(claim.validUntil()))) throw unavailable();
     }
 
     private Prepared prepare(IncidentThreadClaim claim) throws DiscordApiException {
-        require(claim != null && claim.destination() != null && claim.work() != null);
+        if (!(claim != null && claim.destination() != null && claim.work() != null)) throw unavailable();
         var target = claim.destination();var work = claim.work();var config = configs.findFirstByOrderByIdAsc();
-        require(config != null && target.guildId().equals(config.getGuildId()) && target.stewardsChannelId().equals(config.getStewardsChannelId())
+        if (!(config != null && target.guildId().equals(config.getGuildId()) && target.stewardsChannelId().equals(config.getStewardsChannelId())
                 && String.join(",", target.staffRoles()).equals(config.getIncidentStaffRoleIds())
-                && String.join(",", target.forumTags()).equals(config.getStewardsForumTagIds()));
-        require(!target.matchChannelId().equals(target.stewardsChannelId()) && work.stage() != null
+                && String.join(",", target.forumTags()).equals(config.getStewardsForumTagIds()))) throw unavailable();
+        if (!(!target.matchChannelId().equals(target.stewardsChannelId()) && work.stage() != null
                 && work.title() != null && !work.title().isBlank() && work.title().length() <= 100
                 && work.content() != null && !work.content().isBlank() && work.content().length() <= 2000
-                && work.starterContent() != null && work.nonce() != null && work.nonce().matches("[A-Za-z0-9_-]{1,25}"));
-        var bot = discord.fetchBotUser();require(bot != null && snowflake(bot.id()));
+                && work.starterContent() != null && work.nonce() != null && work.nonce().matches("[A-Za-z0-9_-]{1,25}"))) throw unavailable();
+        var bot = discord.fetchBotUser();if (!(bot != null && snowflake(bot.id()))) throw unavailable();
         var guild = discord.fetchAccessGuild(target.guildId());var member = discord.fetchAccessMember(target.guildId(), bot.id());
         var roles = discord.fetchIncidentRoles(target.guildId());var stewards = discord.fetchIncidentChannel(target.stewardsChannelId());
         IncidentThreadPermissions.requirePrivate(guild, stewards, member, roles, bot.id(), target.guildId(), target.stewardsChannelId(),
@@ -191,7 +191,7 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
                 for(var message:messages) {requireThread(claim,thread,id);matches.put(id,sent(message.id(),id));}
             } else {
                 var source=discord.fetchBotMessage(parent,id);
-                require(source!=null && id.equals(source.id()) && parent.equals(source.channelId()));
+                if (!(source!=null && id.equals(source.id()) && parent.equals(source.channelId()))) throw unavailable();
                 boolean bot=source.author()!=null && prepared.botId().equals(source.author().id());
                 if(bot && source.content()!=null && source.content().endsWith("\n"+work.marker()) && !work.content().equals(source.content()))throw unavailable();
                 if(bot && work.content().equals(source.content())) {
@@ -216,7 +216,7 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
         for(String id:inventory(target.guildId(),target.matchChannelId())) {
             var thread=discord.fetchIncidentChannel(id);requireInventoryThread(claim,thread,target.matchChannelId(),id);
             var source=discord.fetchBotMessage(target.matchChannelId(),id);
-            require(source!=null && id.equals(source.id()) && target.matchChannelId().equals(source.channelId()));
+            if (!(source!=null && id.equals(source.id()) && target.matchChannelId().equals(source.channelId()))) throw unavailable();
             boolean marker=hasCaseMarker(source.content(),claim.work().caseReference());
             if(hasCaseTitle(claim,thread) || source.author()!=null && botId.equals(source.author().id()) && marker)throw unavailable();
         }
@@ -226,31 +226,31 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
         var ids=new java.util.LinkedHashSet<String>();collectActive(ids,guildId,parentId);java.time.Instant previous=null;String before=null;
         for(int page=0;page<10;page++) {
             var archived=discord.listIncidentArchivedThreads(parentId,before,100);
-            require(archived!=null && archived.threads()!=null && archived.hasMore()!=null && archived.threads().size()<=100);
+            if (!(archived!=null && archived.threads()!=null && archived.hasMore()!=null && archived.threads().size()<=100)) throw unavailable();
             var seen=new HashSet<String>();
             for(var thread:archived.threads()) {
-                require(thread!=null && snowflake(thread.id()) && parentId.equals(thread.parentId()) && seen.add(thread.id()));
+                if (!(thread!=null && snowflake(thread.id()) && parentId.equals(thread.parentId()) && seen.add(thread.id()))) throw unavailable();
                 ids.add(thread.id());require(ids.size()<=50);
             }
             if(!archived.hasMore()) {collectActive(ids,guildId,parentId);return java.util.Set.copyOf(ids);}
             require(!archived.threads().isEmpty());var last=archived.threads().getLast();
-            require(last.threadMetadata()!=null && last.threadMetadata().archiveTimestamp()!=null);
+            if (!(last.threadMetadata()!=null && last.threadMetadata().archiveTimestamp()!=null)) throw unavailable();
             var cursor=java.time.Instant.parse(last.threadMetadata().archiveTimestamp());
             require(previous==null || cursor.isBefore(previous));
-            require(archived.threads().stream().filter(thread -> thread.threadMetadata()!=null && last.threadMetadata().archiveTimestamp().equals(thread.threadMetadata().archiveTimestamp())).count()==1);
+            if (!(archived.threads().stream().filter(thread -> thread.threadMetadata()!=null && last.threadMetadata().archiveTimestamp().equals(thread.threadMetadata().archiveTimestamp())).count()==1)) throw unavailable();
             previous=cursor;before=cursor.toString();
         }
         throw unavailable();
     }
     private void collectActive(java.util.Set<String> ids,String guildId,String parentId) throws DiscordApiException {
-        var active=discord.listIncidentActiveThreads(guildId);require(active!=null && active.threads()!=null && active.threads().size()<=500);
+        var active=discord.listIncidentActiveThreads(guildId);if (!(active!=null && active.threads()!=null && active.threads().size()<=500)) throw unavailable();
         for(var thread:active.threads()) {
-            require(thread!=null && snowflake(thread.id()) && thread.parentId()!=null);
+            if (!(thread!=null && snowflake(thread.id()) && thread.parentId()!=null)) throw unavailable();
             if(parentId.equals(thread.parentId()))ids.add(thread.id());require(ids.size()<=50);
         }
     }
     private static void requireInventoryThread(IncidentThreadClaim claim,IncidentChannel thread,String parent,String id) {
-        require(thread!=null && id.equals(thread.id()) && claim.destination().guildId().equals(thread.guildId()) && parent.equals(thread.parentId()) && Integer.valueOf(11).equals(thread.type()));
+        if (!(thread!=null && id.equals(thread.id()) && claim.destination().guildId().equals(thread.guildId()) && parent.equals(thread.parentId()) && Integer.valueOf(11).equals(thread.type()))) throw unavailable();
     }
     private static boolean hasCaseTitle(IncidentThreadClaim claim,IncidentChannel thread) {return thread.name()!=null && thread.name().contains("Incident "+claim.work().caseReference());}
 
@@ -271,9 +271,9 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
     private void scanMessages(String channelId,java.util.function.Consumer<BotMessage> consumer) throws DiscordApiException {
         var seen=new HashSet<String>();String before=null;
         for(int page=0;page<10;page++) {
-            var messages=discord.listIncidentMessages(channelId,before,100);require(messages!=null && messages.size()<=100);
+            var messages=discord.listIncidentMessages(channelId,before,100);if (!(messages!=null && messages.size()<=100)) throw unavailable();
             for(var message:messages) {
-                require(message!=null && snowflake(message.id()) && channelId.equals(message.channelId()) && seen.add(message.id()));
+                if (!(message!=null && snowflake(message.id()) && channelId.equals(message.channelId()) && seen.add(message.id()))) throw unavailable();
                 consumer.accept(message);
             }
             if(messages.size()<100)return;
@@ -283,15 +283,15 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
     }
 
     private static void requireThread(IncidentThreadClaim claim, IncidentChannel thread, String expectedId) {
-        require(thread != null && snowflake(thread.id()) && (expectedId == null || expectedId.equals(thread.id()))
+        if (!(thread != null && snowflake(thread.id()) && (expectedId == null || expectedId.equals(thread.id()))
                 && claim.destination().guildId().equals(thread.guildId()) && parent(claim).equals(thread.parentId())
                 && Integer.valueOf(11).equals(thread.type()) && claim.work().title().equals(thread.name())
-                && thread.threadMetadata() != null && thread.threadMetadata().archived() != null && thread.threadMetadata().locked() != null);
+                && thread.threadMetadata() != null && thread.threadMetadata().archived() != null && thread.threadMetadata().locked() != null)) throw unavailable();
     }
     private static void requireMessage(BotMessage message, String channel, String id, String content, String botId, String nonce) {
-        require(message != null && snowflake(message.id()) && (id == null || id.equals(message.id())) && channel.equals(message.channelId())
+        if (!(message != null && snowflake(message.id()) && (id == null || id.equals(message.id())) && channel.equals(message.channelId())
                 && content.equals(message.content()) && message.author() != null && botId.equals(message.author().id())
-                && (nonce == null || message.nonce() == null || nonce.equals(message.nonce())));
+                && (nonce == null || message.nonce() == null || nonce.equals(message.nonce())))) throw unavailable();
     }
     private static boolean privateSide(IncidentThreadClaim claim) {
         return switch (claim.work().stage()) {case PUBLIC_STARTER, PUBLIC_THREAD, PUBLIC_BODY -> false;default -> true;};
