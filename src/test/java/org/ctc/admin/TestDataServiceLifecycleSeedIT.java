@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 @ActiveProfiles("dev")
 @Tag("integration")
 @Transactional
-class TestDataServiceLifecycleSeedTest {
+class TestDataServiceLifecycleSeedIT {
 
 	@Autowired
 	private TestDataService testDataService;

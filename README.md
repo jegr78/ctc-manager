@@ -176,6 +176,9 @@ The private Manager remains a single-admin application.
 
 ### Docker
 
+The root `docker-compose.yml` exposes the app on `127.0.0.1:8080` and MariaDB on `127.0.0.1:3307`. Its example credentials are for local development. Remote access requires an explicit binding override and individual credentials. Image replacements retain the old file until the database transaction commits and remove new files when it rolls back. An unknown commit outcome retains both files for review.
+
+
 The Dockerfile installs Chromium with its matching system dependencies and runs a non-root
 screenshot check during the image build.
 

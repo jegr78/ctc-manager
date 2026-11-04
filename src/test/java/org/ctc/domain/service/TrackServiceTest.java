@@ -237,7 +237,7 @@ class TrackServiceTest {
 		}
 
 		@Test
-		void givenExistingImage_whenUploadImage_thenDeletesOldFirst() throws IOException {
+		void givenExistingImage_whenUploadImage_thenDeletesOldAfterCommit() throws IOException {
 			// given
 			var id = UUID.randomUUID();
 			var track = new Track("Fuji", "Japan");
@@ -253,7 +253,7 @@ class TrackServiceTest {
 			trackService.uploadImage(id, image);
 
 			// then
-			verify(fileStorageService).delete("/uploads/tracks/old.png");
+			verify(fileStorageService).deleteAfterCommit("/uploads/tracks/old.png");
 			assertThat(track.getImageUrl()).isEqualTo("/uploads/tracks/new.png");
 		}
 
@@ -293,4 +293,19 @@ class TrackServiceTest {
 					.isNotInstanceOf(BusinessRuleException.class);
 		}
 	}
+	@Test
+	void givenExistingImage_whenReplacementFails_thenOldImageIsRetained() throws IOException {
+		// given
+		var id = UUID.randomUUID();
+		var track = new Track("Test", "Test");
+		track.setId(id);
+		track.setImageUrl("/uploads/tracks/old.png");
+		var image = mock(MultipartFile.class);
+		when(trackRepository.findById(id)).thenReturn(Optional.of(track));
+		when(fileStorageService.storeImage("tracks", id, image)).thenThrow(new IOException("disk full"));
+		// when / then
+		assertThatThrownBy(() -> trackService.uploadImage(id, image)).isInstanceOf(BusinessRuleException.class);
+		verify(fileStorageService, never()).delete("/uploads/tracks/old.png");
+	}
+
 }

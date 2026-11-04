@@ -85,10 +85,9 @@ public class TrackService {
 		var track = trackRepository.findById(id)
 				.orElseThrow(() -> new EntityNotFoundException("Track", id));
 		try {
-			if (track.getImageUrl() != null) {
-				fileStorageService.delete(track.getImageUrl());
-			}
-			String url = fileStorageService.storeImage("tracks", id, image);
+            String previousUrl = track.getImageUrl();
+            String url = fileStorageService.storeImage("tracks", id, image);
+            fileStorageService.deleteAfterCommit(previousUrl);
 			track.setImageUrl(url);
 			trackRepository.save(track);
 			log.info("Updated image for track: {}", track.getName());

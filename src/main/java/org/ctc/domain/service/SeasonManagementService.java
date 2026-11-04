@@ -421,10 +421,9 @@ public class SeasonManagementService {
         seasonTeam.setAccentColor(HexColor.sanitize(accentColor));
 
         if (logoOverride != null && !logoOverride.isEmpty()) {
-            if (seasonTeam.getLogoUrl() != null) {
-                fileStorageService.delete(seasonTeam.getLogoUrl());
-            }
+            String previousUrl = seasonTeam.getLogoUrl();
             String url = fileStorageService.storeImage("season-teams", seasonTeamId, logoOverride);
+            fileStorageService.deleteAfterCommit(previousUrl);
             seasonTeam.setLogoUrl(url);
         }
 

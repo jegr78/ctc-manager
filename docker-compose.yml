@@ -10,7 +10,7 @@ services:
     volumes:
       - ctc-db-data:/var/lib/mysql
     ports:
-      - "3307:3306"
+      - "127.0.0.1:3307:3306"
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
@@ -30,7 +30,7 @@ services:
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
       GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-}
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - ctc-data:/app/data
       - ctc-logs:/app/logs

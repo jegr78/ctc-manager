@@ -268,7 +268,7 @@ class CarServiceTest {
 		}
 
 		@Test
-		void givenExistingImage_whenUploadImage_thenDeletesOldFirst() throws IOException {
+		void givenExistingImage_whenUploadImage_thenDeletesOldAfterCommit() throws IOException {
 			// given
 			var id = UUID.randomUUID();
 			var car = new Car("Honda", "NSX");
@@ -284,7 +284,7 @@ class CarServiceTest {
 			carService.uploadImage(id, image);
 
 			// then
-			verify(fileStorageService).delete("/uploads/cars/old.png");
+			verify(fileStorageService).deleteAfterCommit("/uploads/cars/old.png");
 			assertThat(car.getImageUrl()).isEqualTo("/uploads/cars/new.png");
 		}
 
@@ -324,4 +324,19 @@ class CarServiceTest {
 					.isNotInstanceOf(BusinessRuleException.class);
 		}
 	}
+	@Test
+	void givenExistingImage_whenReplacementFails_thenOldImageIsRetained() throws IOException {
+		// given
+		var id = UUID.randomUUID();
+		var car = new Car("Test", "Test");
+		car.setId(id);
+		car.setImageUrl("/uploads/cars/old.png");
+		var image = mock(MultipartFile.class);
+		when(carRepository.findByIdForUpdate(id)).thenReturn(Optional.of(car));
+		when(fileStorageService.storeImage("cars", id, image)).thenThrow(new IOException("disk full"));
+		// when / then
+		assertThatThrownBy(() -> carService.uploadImage(id, image)).isInstanceOf(BusinessRuleException.class);
+		verify(fileStorageService, never()).delete("/uploads/cars/old.png");
+	}
+
 }
