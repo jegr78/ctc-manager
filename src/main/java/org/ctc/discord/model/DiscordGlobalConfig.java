@@ -53,4 +53,13 @@ public class DiscordGlobalConfig extends BaseEntity {
 
 	@Column(name = "matchday_pairings_template", columnDefinition = "TEXT")
 	private String matchdayPairingsTemplate;
+
+    @Column(length = 32, nullable = false)
+    private String stewardsChannelId = "";
+
+    @Column(length = 2000, nullable = false)
+    private String incidentStaffRoleIds = "";
+
+    @Column(length = 200, nullable = false)
+    private String stewardsForumTagIds = "";
 }

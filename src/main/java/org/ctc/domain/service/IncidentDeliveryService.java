@@ -79,7 +79,7 @@ public class IncidentDeliveryService {
                 try {verified=sender.verify(claim,remote);}catch(RuntimeException failed){throw unavailable();}
                 if(verified==null || verified.disposition()!=IncidentSendResult.Disposition.SENT || !remote.equals(verified.messageId()))throw new BusinessRuleException("The existing bot receipt could not be verified; keep its outcome unresolved");
                 transactions.executeWithoutResult(status -> {requireGeneration(generation);var row=locked(id);if(row==null)throw unavailable();row.reconcileDelivered(expectedVersion,actor.id(),reason,now(),remote);});
-            } else transactions.executeWithoutResult(status -> {requireGeneration(generation);var row=locked(id);if(row==null)throw unavailable();row.reconcileMissing(expectedVersion,actor.id(),reason,now());});
+            } else transactions.executeWithoutResult(status -> {requireGeneration(generation);var row=locked(id);if(row==null || row.getOperation()!=IncidentDeliveryOperation.RECEIPT)throw unavailable();row.reconcileMissing(expectedVersion,actor.id(),reason,now());});
         } finally {imports.exitWriter();}
     }
     public void resumeWindow(UUID id,long expectedVersion,IncidentManagementActor actor,String reason,boolean reviewed,String generation) {
@@ -111,7 +111,11 @@ public class IncidentDeliveryService {
         var detailed=rows.findByOperationKeyForUpdate(row.getReport().getId()+":DISCLOSURE");
         if(detailed.isPresent()) {
             em.refresh(detailed.orElseThrow(),LockModeType.PESSIMISTIC_WRITE);
-            if(detailed.orElseThrow().getState()==IncidentDeliveryState.SENT) {row.supersede(now);return null;}
+            var disclosure=detailed.orElseThrow();
+            var publication=em.createQuery("select p from IncidentThreadPublication p where p.delivery.id=:id",IncidentThreadPublication.class)
+                    .setParameter("id",disclosure.getId()).getResultList().stream().findFirst().orElse(null);
+            if(disclosure.getState()==IncidentDeliveryState.SENT || publication!=null && publication.publicComplete()) {row.supersede(now);return null;}
+            if(disclosure.getState()==IncidentDeliveryState.CLAIMED || disclosure.getState()==IncidentDeliveryState.UNCERTAIN)return null;
         }
         if(row.getState()!=IncidentDeliveryState.PENDING && row.getState()!=IncidentDeliveryState.FAILED || now.isBefore(row.getNextAttemptAt())) return null;
         var token=UUID.randomUUID();row.claim(token,generation,now,now.plusSeconds(600));

@@ -1,0 +1,5 @@
+package org.ctc.domain.model;
+
+public enum IncidentThreadStage {
+    PRIVATE_STARTER, PRIVATE_THREAD, PRIVATE_BODY, PUBLIC_STARTER, PUBLIC_THREAD, PUBLIC_BODY, PRIVATE_REFERENCE, COMPLETE
+}

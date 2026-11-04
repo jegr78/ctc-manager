@@ -1,6 +1,7 @@
 package org.ctc.discord.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -49,4 +50,21 @@ public class DiscordConfigForm {
 
 	@Size(max = 4000, message = "Template must be at most 4000 characters")
 	private String matchdayPairingsTemplate = "";
+
+    @Pattern(regexp = DiscordSnowflake.PATTERN, message = DiscordSnowflake.MESSAGE)
+    private String stewardsChannelId = "";
+    @Size(max = 2000)
+    @Pattern(regexp = "^$|^[0-9]{17,20}(,[0-9]{17,20}){0,59}$", message = "Use comma-separated staff role IDs")
+    private String incidentStaffRoleIds = "";
+    @Size(max = 200)
+    @Pattern(regexp = "^$|^[0-9]{17,20}(,[0-9]{17,20}){0,4}$", message = "Use at most five comma-separated forum tag IDs")
+    private String stewardsForumTagIds = "";
+
+    @AssertTrue(message = "Configure the stewards parent and staff roles together")
+    public boolean isIncidentDestinationComplete() {
+        boolean parent = stewardsChannelId != null && !stewardsChannelId.isEmpty();
+        boolean staff = incidentStaffRoleIds != null && !incidentStaffRoleIds.isEmpty();
+        boolean tags = stewardsForumTagIds != null && !stewardsForumTagIds.isEmpty();
+        return parent == staff && (!tags || parent);
+    }
 }

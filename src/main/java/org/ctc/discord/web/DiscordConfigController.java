@@ -169,6 +169,9 @@ public class DiscordConfigController {
 		form.setBotApplicationId(config.getBotApplicationId());
 		form.setCurrentMatchCategoryId(nullSafe(config.getCurrentMatchCategoryId()));
 		form.setMatchdayPairingsTemplate(nullSafe(config.getMatchdayPairingsTemplate()));
+		form.setStewardsChannelId(nullSafe(config.getStewardsChannelId()));
+		form.setIncidentStaffRoleIds(nullSafe(config.getIncidentStaffRoleIds()));
+		form.setStewardsForumTagIds(nullSafe(config.getStewardsForumTagIds()));
 		return form;
 	}
 

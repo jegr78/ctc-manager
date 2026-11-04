@@ -9,6 +9,9 @@
 <p th:if="${page.entries.isEmpty()}">No public delivery requested.</p>
 <article class="card" th:each="entry : ${page.entries}">
 <h2 th:text="${entry.reference}"></h2><dl><dt>Public operation</dt><dd th:text="${entry.operation}"></dd><dt>Delivery status</dt><dd th:text="${entry.state}"></dd><dt th:if="${entry.messageId != null}">Discord message ID</dt><dd th:if="${entry.messageId != null}" th:text="${entry.messageId}"></dd><dt th:if="${entry.failure != null}">Last delivery result</dt><dd th:if="${entry.failure != null}" th:text="${entry.failure}"></dd><dt th:if="${entry.reviewer != null}">Last reviewed by</dt><dd th:if="${entry.reviewer != null}" th:text="${entry.reviewer}"></dd><dt th:if="${entry.reason != null}">Review reason</dt><dd th:if="${entry.reason != null}" class="incident-text" th:text="${entry.reason}"></dd></dl>
+<p th:if="${entry.step != null}">Current step: <span th:text="${entry.step}"></span></p>
+<p th:if="${entry.privateThreadUrl != null}"><a th:href="${entry.privateThreadUrl}" target="_blank" rel="noopener noreferrer">Private stewards thread</a></p>
+<p th:if="${entry.publicThreadUrl != null}"><a th:href="${entry.publicThreadUrl}" target="_blank" rel="noopener noreferrer">Match discussion thread</a></p>
 <a class="btn btn-secondary" th:if="${entry.editable}" th:href="@{/admin/incident-deliveries/{id}(id=${entry.id})}" th:aria-label="${'Review delivery for ' + entry.reference + ' · ' + entry.operation}">Review delivery</a>
 </article>
 <form th:if="${page.paused}" th:action="@{/admin/incident-contexts/{id}/deliveries/resume(id=${page.contextId})}" th:object="${deliveryResumeForm}" method="post" class="card entity-editor-form">

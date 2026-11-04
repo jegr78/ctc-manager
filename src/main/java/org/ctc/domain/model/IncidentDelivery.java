@@ -67,6 +67,13 @@ public class IncidentDelivery extends BaseEntity {
         state = IncidentDeliveryState.SENT; messageId = remoteMessageId; completedAt = now; failureCode = null; version++;
     }
 
+    public void continueDisclosure(UUID token,long expectedVersion,String generation,Instant now) {
+        requireClaim(token,expectedVersion,generation,now);
+        if(operation!=IncidentDeliveryOperation.DISCLOSURE)throw unavailable();
+        state=IncidentDeliveryState.PENDING;nextAttemptAt=now;completedAt=null;failureCode=null;messageId=null;restoreReviewed=false;
+        claimToken=null;claimGeneration=null;leaseUntil=null;version++;
+    }
+
     public void fail(UUID token, long expectedVersion, String generation, Instant now, String code, boolean uncertain, Instant retryAt) {
         requireClaim(token, expectedVersion, generation, now);
         if (code == null || !code.matches("[A-Z0-9_]{1,64}") || retryAt == null || !retryAt.isAfter(now)) throw unavailable();
@@ -100,6 +107,11 @@ public class IncidentDelivery extends BaseEntity {
         if(remoteMessageId==null || !remoteMessageId.matches("[0-9]{1,32}"))throw unavailable();
         recordReview(actor,reason);state=IncidentDeliveryState.SENT;messageId=remoteMessageId;completedAt=now;failureCode=null;
         attempts=Math.max(attempts,1);version++;
+    }
+    public void reconcileDisclosureStep(long expectedVersion,String actor,String reason,Instant now,String completedPublicThreadId) {
+        if(operation!=IncidentDeliveryOperation.DISCLOSURE)throw unavailable();
+        if(completedPublicThreadId!=null)reconcileDelivered(expectedVersion,actor,reason,now,completedPublicThreadId);
+        else {reconcileMissing(expectedVersion,actor,reason,now);restoreReviewed=false;}
     }
     private void recordReview(String actor,String reason) {
         if(actor==null || actor.isBlank() || actor.length()>128 || reason==null || reason.isBlank() || reason.length()>1000)throw unavailable();

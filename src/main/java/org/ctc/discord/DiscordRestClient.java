@@ -141,6 +141,13 @@ public class DiscordRestClient {
     public record BotMessage(String id, @JsonProperty("channel_id") String channelId, String content, BotUser author, String nonce) {
         @Override public String toString() { return "BotMessage[opaque]"; }
     }
+    public List<BotMessage> listIncidentMessages(String channelId,String before,int limit) throws DiscordApiException {
+        return execute(() -> bot.get().uri(uri -> {
+            var page=uri.path("/channels/{channelId}/messages").queryParam("limit",limit);
+            if(before!=null)page.queryParam("before",before);
+            return page.build(channelId);
+        }).retrieve().body(new ParameterizedTypeReference<List<BotMessage>>() { }));
+    }
     public BotMessage fetchBotMessage(String channelId,String messageId) throws DiscordApiException {
         return execute(() -> bot.get().uri("/channels/{channelId}/messages/{messageId}",channelId,messageId).retrieve().body(BotMessage.class));
     }

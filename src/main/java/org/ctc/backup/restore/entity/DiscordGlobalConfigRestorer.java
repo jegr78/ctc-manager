@@ -14,18 +14,7 @@ import org.ctc.backup.restore.EntityRestorer;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-/**
- * Restores rows into the {@code discord_global_config} table from the
- * {@code data/discord-global-config.json} array in a backup ZIP.
- *
- * <p>Column origins: V8 (10 cols), V9 ({@code current_match_category_id}),
- * V13 ({@code race_results_forum_webhook_url}, {@code standings_forum_webhook_url}),
- * V15 ({@code matchday_pairings_template}). Total: 10 data + 1 id + 2 audit = 13 columns.
- *
- * <p>Auditing bypass: written via {@link JdbcTemplate#batchUpdate} so
- * {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener}
- * does NOT overwrite {@code createdAt}/{@code updatedAt}.
- */
+
 @Slf4j
 @Component
 public class DiscordGlobalConfigRestorer implements EntityRestorer {
@@ -35,8 +24,8 @@ public class DiscordGlobalConfigRestorer implements EntityRestorer {
           + "race_results_forum_channel_id, standings_forum_channel_id, "
           + "race_results_forum_webhook_url, standings_forum_webhook_url, vs_emoji_name, "
           + "bot_application_id, current_match_category_id, matchday_pairings_template, "
-          + "created_at, updated_at) "
-          + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+          + "created_at, updated_at, stewards_channel_id, incident_staff_role_ids, stewards_forum_tag_ids) "
+          + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     @Override
     public String tableName() {
@@ -59,6 +48,9 @@ public class DiscordGlobalConfigRestorer implements EntityRestorer {
             setNullableString(ps, 11, row, "matchdayPairingsTemplate");
             ps.setTimestamp(12, Timestamp.valueOf(LocalDateTime.parse(requireText(row, "createdAt"))));
             ps.setTimestamp(13, Timestamp.valueOf(LocalDateTime.parse(requireText(row, "updatedAt"))));
+            ps.setString(14, row.path("stewardsChannelId").asText(""));
+            ps.setString(15, row.path("incidentStaffRoleIds").asText(""));
+            ps.setString(16, row.path("stewardsForumTagIds").asText(""));
         });
         log.debug("DiscordGlobalConfigRestorer: restored {} rows", rows.size());
     }

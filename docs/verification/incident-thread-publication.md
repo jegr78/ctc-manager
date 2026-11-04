@@ -12,9 +12,9 @@ operator work; verification uses synthetic fixtures and a local fake Discord ser
 
 - [x] Recheck tracker, dependencies, release order and parallel work.
 - [x] Map acceptance criteria to production paths and meaningful failure witnesses.
-- [ ] Observe failing projection, privacy and production-shaped HTTP contracts before implementation.
-- [ ] Implement only the missing thread APIs and current destination/permission preflight.
-- [ ] Persist and recover each successful publication step, with safe unknown-outcome handling.
+- [x] Observe failing projection, privacy and production-shaped HTTP contracts before implementation.
+- [x] Implement only the missing thread APIs and current destination/permission preflight.
+- [x] Persist and recover each successful publication step, with safe unknown-outcome handling.
 - [ ] Expose typed management recovery/status and preserve exact archive/config references.
 - [ ] Falsify new protections individually; complete self-review and independent security review.
 - [ ] Run focused `verify` including static gates before the final expensive clean full run.
@@ -95,3 +95,39 @@ staff allowlist; a shared administrator role stays broad even if the bot also po
 Wrong guild/type/identity, team/everyone/member visibility, missing bot rights, malformed or
 duplicate permission records and unverified/required/moderated forum tags fail closed.
 The policy remains pure; the publication sender must invoke it again before every detailed post.
+
+
+## Durable dispatch and native recovery checkpoint
+
+Twelve intended assertion failures preceded the mapping/configuration behavior; the corrected
+selection passed 93 unit cases. Five intended database assertion failures preceded real dispatch,
+and a separate intended worker assertion failure preceded its disclosure queue. The focused
+selection then passed 98 unit cases. The H2 runtime check passed eight dispatch, fourteen native
+recovery and five failure/concurrency cases, all with zero failures/errors/skips. The subsequent
+transport correction passed 53 selected unit and 26 managed HTTP cases. These are focused
+checkpoints, not the final canonical verification.
+
+The existing DISCLOSURE row owns each claim/lease/version and one permanent publication mapping.
+Each successful starter, bound thread, continuation and private reference commits separately.
+HTTP runs outside SQL while one restore writer admission spans claim through outcome commit.
+Remote success followed by SQL failure preserves prior IDs and leaves the current step claimed,
+then uncertain after expiry. Two actual workers cannot send the same claimed step. Restore waits
+for admitted HTTP and its outcome transaction; sender exceptions, lease expiry and generation
+changes retain uncertainty and release admission. A successful public projection supersedes
+an unsent neutral receipt even while the private reference is still pending.
+
+Native recovery verifies every already recorded remote step before adopting the current result
+or allowing its proven absence. Trusted principals, explicit confirmation, reason and current
+version/generation remain mandatory. Generic receipt recovery cannot reset disclosure state.
+The restored context's existing resume timestamp and per-delivery operational review grant
+gate each later disclosure step separately; a successful step consumes that grant. This also
+covers remote work that may have happened after the restored backup.
+
+The real-client suite covers current privacy changes between posts and while unarchiving.
+A separate failing assertion exposed the latter gap; repeating preflight after reopening fixed
+it. Known archived threads can be adopted without posting, deleted threads are not replaced,
+and ambiguous forum creation remains uncertain without a blind public fallback.
+
+New V31 DDL and schema-10 serializer/restorer wiring are present. Strict publication/configuration
+archive preflight, backup round-trip/audit witnesses and bounded forum absence reconciliation
+remain to be completed before final review and release.

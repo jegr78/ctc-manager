@@ -78,4 +78,10 @@ class DiscordIncidentThreadRestIT {
         wm.stubFor(post(urlEqualTo("/api/v10/channels/200/messages")).inScenario("Test legacy retry").whenScenarioStateIs("available").willReturn(okJson("{\"id\":\"600\",\"channel_id\":\"200\"}")));
         var sent=assertDoesNotThrow(() -> client.createBotMessage("200","test-existing-nonce","Test existing neutral message"));assertThat(sent.id()).isEqualTo("600");wm.verify(2,postRequestedFor(urlEqualTo("/api/v10/channels/200/messages")));
     }
+    @Test void givenPagedIncidentMessages_whenReading_thenRetainExactContentAuthorNonceAndCursorParameters() {
+        wm.stubFor(get(urlPathEqualTo("/api/v10/channels/800/messages")).withQueryParam("limit",equalTo("100")).withQueryParam("before",equalTo("850"))
+                .willReturn(okJson("[{\"id\":\"801\",\"channel_id\":\"800\",\"content\":\"Test frozen marker\",\"author\":{\"id\":\"700\"},\"nonce\":\"test-nonce\"}]")));
+        var messages=assertDoesNotThrow(() -> client.listIncidentMessages("800","850",100));
+        assertThat(messages).hasSize(1);assertThat(messages.getFirst().content()).isEqualTo("Test frozen marker");assertThat(messages.getFirst().author().id()).isEqualTo("700");assertThat(messages.getFirst().nonce()).isEqualTo("test-nonce");
+    }
 }
