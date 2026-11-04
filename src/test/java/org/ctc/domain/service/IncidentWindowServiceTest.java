@@ -46,7 +46,7 @@ class IncidentWindowServiceTest {
         when(windows.findByIdForUpdate(f.window.getId())).thenReturn(Optional.of(f.window));
         when(contexts.lock(f.context.getId())).thenReturn(f.context);
         when(writes.execute(any())).thenAnswer(inv -> ((Supplier<?>) inv.getArgument(0)).get());
-        service = new IncidentWindowService(windows, events, reports, contexts, writes, em, clock);
+        service = new IncidentWindowService(windows, events, reports, contexts, writes, em, clock, mock(org.springframework.context.ApplicationEventPublisher.class));
     }
 
     @ParameterizedTest

@@ -11,6 +11,7 @@ public class BackupSerializationModule extends SimpleModule {
 
     public BackupSerializationModule() {
         super("BackupSerializationModule");
+        setMixInAnnotation(IncidentDelivery.class, IncidentDeliveryMixIn.class);
         setMixInAnnotation(IncidentMatchContext.class, IncidentMatchContextMixIn.class);
         setMixInAnnotation(IncidentReportWindow.class, IncidentReportWindowMixIn.class);
         setMixInAnnotation(IncidentReport.class, IncidentReportMixIn.class);

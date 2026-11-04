@@ -2902,3 +2902,7 @@ body:has(.archive-dialog[open]) { overflow: hidden; }
 .incident-workspace .incident-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .incident-workspace h3, .incident-workspace code { overflow-wrap: anywhere; }
 .incident-workspace .incident-case + .incident-case { margin-top: 1.5rem; }
+
+.incident-workspace .form-check { display: flex; align-items: start; gap: 10px; }
+.incident-workspace .form-check input[type="checkbox"] { width: 18px; height: 18px; min-height: 18px; flex: 0 0 18px; padding: 0; margin-top: 3px; accent-color: var(--accent); }
+.incident-workspace .form-check label { margin: 0; cursor: pointer; }

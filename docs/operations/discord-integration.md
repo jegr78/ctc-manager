@@ -880,7 +880,7 @@ per captured image. No live Discord messages or command registration are needed 
 
 Current schema 8 exports all 41 entity tables, including immutable publication attempts, confirmed
 snapshots and permanent incident history. Schemas 1 through 6 may omit publication files; schema 7
-requires them but has no incident tables. Schema 8 requires all five incident files even when empty. Restore preserves exact masks,
+requires them but has no incident tables. Schema 8 requires all five incident history files even when empty. Schema 9 adds incident deliveries and requires all 42 entity tables; schema 8 may omit delivery operations. Restore preserves exact masks,
 versions, unresolved outcomes and season catalog memberships without querying Discord or resending
 messages. Legacy-only publication receipts remain restorable without enabling collection. Archives
 with valid private enrollment and history restore after the complete preflight. Invalid references,
@@ -1046,3 +1046,45 @@ out of logs, screenshots and saved command lines. An authorized operator can use
 API tooling already used for guild commands. Gateway reconnect/start never registers commands.
 Keep the existing Forms until the complete incident workflow is accepted and deliberately
 activated. Notices, closure delivery, linked threads and rulings are completed by #290–#293.
+
+
+### Durable incident receipts and recovery
+
+The first confirmed submission atomically queues one public receipt in the pairing channel.
+Edits, withdrawal and repeated confirmations do not create another signal. The public text is:
+
+> An incident report has been received. Details remain private until the reporting deadline.
+
+The worker defaults off. After the complete incident rollout acceptance, explicitly configure
+`app.discord.incidents.delivery-enabled=true` together with enabled outbound integrations.
+The worker does not require a connected Gateway or browser and never opens reporting windows.
+Every five seconds after its previous run, it discovers up to ten due windows and ten receipts
+from the database. It closes due windows under their current stored deadline and captures each
+active report's final immutable revision. Withdrawn reports are excluded. Detailed thread
+publication is a separate operation and is not performed by the neutral receipt sender.
+
+Strict cutoff checks run in every report mutation, independently of worker availability.
+A manual deadline change invalidates the old scheduled assumption because closure reads the
+current locked window. After restart, persisted pending work and safely rejected attempts remain
+discoverable. Known rejection retries after a minute. Each claimed send has a ten-minute lease;
+an expired claim becomes an unknown outcome. A transport timeout, ambiguous server error or
+unconfirmed response never becomes successful delivery and never retries blindly. Discord nonce
+deduplication covers only recent messages, so it is not a permanent exactly-once guarantee.
+
+Open **Incident reports**, then **Public delivery status**. Saved cases remain available when
+public delivery is waiting, rejected or unknown. For an unresolved delivery choose **Review
+delivery**, check the original pairing channel, select the reviewed outcome, give a reason and
+confirm the external review. **Existing neutral receipt** additionally requires its message ID;
+the server verifies the channel, current bot author, neutral text and available nonce without
+posting anything. Use **Confirmed missing** only after checking no corresponding message exists.
+The retry keeps the same operation identity and original revision. Active sends and stale forms
+cannot be overwritten. The authenticated manager and reason are retained.
+
+Every restored reporting context persistently pauses external delivery, including newly queued
+work in that context. Archives preserve exact operation IDs, claims, failure/unknown states,
+confirmed message identities and frozen revisions. Historical review records remain history;
+operational approval flags and context resumption grants are never imported. Check Discord and
+review every unresolved restored operation afresh. Then use **Resume this reporting context**
+with a reason and confirmation. A stale form from before restore cannot authorize resumption.
+Restarting the application does not remove the pause. Recovery-check and outbound-disabled mode
+continue to block external calls regardless of the worker switch.

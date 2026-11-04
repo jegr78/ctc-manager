@@ -46,6 +46,8 @@ class IncidentBackupRoundTripIT extends IncidentIntegrationFixture {
         properties.add("ctc.site.output-dir", () -> ROOT.resolve("site").toString());
     }
     @Autowired BackupArchiveService archives;
+    @Autowired org.ctc.domain.service.IncidentDeliveryService delivery;
+    @Autowired org.ctc.domain.repository.IncidentDeliveryRepository deliveryRows;
     @MockitoSpyBean BackupImportService imports;
     @MockitoBean DiscordRestClient discord;
     UUID activeReport;
@@ -67,6 +69,7 @@ class IncidentBackupRoundTripIT extends IncidentIntegrationFixture {
 
     @Test
     void givenActiveAndWithdrawnCasesWithMultipleRevisions_whenRestoring_thenPreserveExactIdsPartiesHistoryAndReceipts() throws Exception {
+        var operationIds = tx.execute(status -> deliveryRows.findByReportWindowId(windowId).stream().map(org.ctc.domain.model.IncidentDelivery::getId).sorted().toList());
         byte[] archive = export();
         var revisionIds = tx.execute(status -> revisionRows.findByReportIdOrderByRevisionNumberAsc(activeReport).stream().map(row -> row.getId()).toList());
         reports.edit(activeReport, 1, 2, UUID.randomUUID(), actor, new IncidentPayload("Test newer value", "02:00", "Test newer state after export", ""));
@@ -85,13 +88,40 @@ class IncidentBackupRoundTripIT extends IncidentIntegrationFixture {
             assertThat(revisions.getLast().getPayload().getDescription()).isEqualTo("Test private correction");
             assertThat(reportRows.findById(withdrawnReport).orElseThrow().getState()).isEqualTo(IncidentReportState.WITHDRAWN);
             assertThat(windowRows.findById(windowId).orElseThrow().getDeadline()).isEqualTo(NOW.plusSeconds(3600));
+            assertThat(windowRows.findById(windowId).orElseThrow().isDeliveryPaused()).isTrue();
+            assertThat(deliveryRows.findByReportWindowId(windowId)).extracting(org.ctc.domain.model.IncidentDelivery::getId).containsExactlyInAnyOrderElementsOf(operationIds);
+            assertThat(deliveryRows.findByReportWindowId(windowId)).allSatisfy(row -> { assertThat(row.getState()).isEqualTo(org.ctc.domain.model.IncidentDeliveryState.PENDING); assertThat(row.getRevision().getRevisionNumber()).isEqualTo(1); });
         });
         assertThat(reports.submit(windowId, fixture.race().getId(), 0, firstRequest, actor, null)).isEqualTo(firstReceipt);
         verifyNoInteractions(discord);
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"version", "request", "owner", "fields", "missing-revisions", "count", "disguised-v7"})
+    @ValueSource(strings={"CLAIMED","SENT","FAILED","UNCERTAIN","REVIEWED_PENDING"})
+    void givenEveryDurableDeliveryOutcome_whenRestoring_thenRetainExactBusinessStateButDiscardPriorExternalReviewGrants(String outcome) throws Exception {
+        UUID id=tx.execute(status -> deliveryRows.findByOperationKey(activeReport+":RECEIPT").orElseThrow().getId());
+        tx.executeWithoutResult(status -> {
+            var row=deliveryRows.findById(id).orElseThrow();var token=UUID.randomUUID();row.claim(token,"test-runtime:0",NOW,NOW.plusSeconds(600));
+            if(outcome.equals("SENT"))row.acknowledge(token,1,"test-runtime:0",NOW,"500");
+            else if(!outcome.equals("CLAIMED")) {
+                row.fail(token,1,"test-runtime:0",NOW,"TEST_REJECTION",outcome.equals("UNCERTAIN"),NOW.plusSeconds(60));
+                if(outcome.equals("REVIEWED_PENDING"))row.reconcileMissing(2,"test-previous-manager","Test previous review must not authorize restored work",NOW);
+            }
+        });
+        clock.set(NOW.plusSeconds(3600));windows.closeDue(windowId,null);
+        var before=tx.execute(status -> {var row=deliveryRows.findById(id).orElseThrow();return java.util.List.of(row.getState().name(),row.getVersion(),row.getRevision().getId(),row.getOperationKey());});
+        var preview=imports.stage(upload(export()));imports.execute(preview.stagingId());
+        tx.executeWithoutResult(status -> {
+            var row=deliveryRows.findById(id).orElseThrow();assertThat(java.util.List.of(row.getState().name(),row.getVersion(),row.getRevision().getId(),row.getOperationKey())).isEqualTo(before);
+            assertThat(row.isRestoreReviewed()).isFalse();assertThat(row.getReport().getWindow().isDeliveryPaused()).isTrue();assertThat(row.getReport().getFrozenRevisionNumber()).isEqualTo(2);
+            var disclosure=deliveryRows.findByOperationKey(activeReport+":DISCLOSURE").orElseThrow();assertThat(disclosure.getRevision().getRevisionNumber()).isEqualTo(2);assertThat(disclosure.getState()).isEqualTo(org.ctc.domain.model.IncidentDeliveryState.PENDING);
+            if(outcome.equals("REVIEWED_PENDING"))assertThat(row.getReconciledBy()).isEqualTo("test-previous-manager");
+        });
+        assertThat(delivery.dispatch(id)).isFalse();verifyNoInteractions(discord);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"version", "request", "owner", "fields", "missing-revisions", "count", "disguised-v7", "delivery-owner", "delivery-destination", "delivery-revision", "delivery-claim", "delivery-review-grant", "window-pause", "window-review"})
     void givenMalformedHistory_whenStagingAndExecuting_thenRejectBeforeWipe(String corruption) throws Exception {
         byte[] valid = export(), broken = malformed(valid, corruption);
         assertThatThrownBy(() -> imports.stage(upload(broken))).isInstanceOfSatisfying(BackupArchiveException.class,
@@ -110,7 +140,7 @@ class IncidentBackupRoundTripIT extends IncidentIntegrationFixture {
     void givenSupportedSchemaSevenWithoutIncidentFiles_whenRestoring_thenKeepAllIncidentStateAbsentWithoutOpeningWindows() throws Exception {
         var files = unzip(export()); var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
         manifest.put("schema_version", 7); var counts = (ObjectNode) manifest.get("table_counts");
-        for (String table : java.util.List.of("incident_match_contexts", "incident_report_windows", "incident_reports", "incident_report_revisions", "incident_report_events")) {
+        for (String table : java.util.List.of("incident_match_contexts", "incident_report_windows", "incident_reports", "incident_report_revisions", "incident_report_events", "incident_deliveries")) {
             files.remove("data/" + table.replace('_', '-') + ".json"); counts.remove(table);
         }
         files.put("manifest.json", JSON.writeValueAsBytes(manifest));
@@ -129,7 +159,24 @@ class IncidentBackupRoundTripIT extends IncidentIntegrationFixture {
         else if (corruption.equals("count")) {
             var counts = (ObjectNode) manifest.get("table_counts"); counts.put("incident_reports", counts.path("incident_reports").asLong() + 1);
         } else if (corruption.equals("disguised-v7")) manifest.put("schema_version", 7);
-        else if (corruption.equals("request")) {
+        else if (corruption.startsWith("window-")) {
+            var rows=(ArrayNode) JSON.readTree(files.get("data/incident-report-windows.json"));
+            ((ObjectNode)rows.get(0)).put(corruption.equals("window-pause")?"deliveryPaused":"deliveryResumedBy",corruption.equals("window-pause")?"false":"forged-reviewer");
+            files.put("data/incident-report-windows.json",JSON.writeValueAsBytes(rows));
+        }
+        else if (corruption.startsWith("delivery-")) {
+            var rows = (ArrayNode) JSON.readTree(files.get("data/incident-deliveries.json")); var delivery = (ObjectNode) rows.get(0);
+            if (corruption.equals("delivery-owner")) delivery.put("report", UUID.randomUUID().toString());
+            else if (corruption.equals("delivery-destination")) delivery.put("channelId", "999");
+            else if(corruption.equals("delivery-review-grant")) delivery.put("restoreReviewed",true);
+            else if (corruption.equals("delivery-claim")) delivery.put("state", "CLAIMED");
+            else {
+                for (var revision : JSON.readTree(files.get("data/incident-report-revisions.json"))) {
+                    if (!revision.path("report").asText().equals(delivery.path("report").asText())) { delivery.put("revision", revision.path("id").asText()); break; }
+                }
+            }
+            files.put("data/incident-deliveries.json", JSON.writeValueAsBytes(rows));
+        } else if (corruption.equals("request")) {
             var rows = (ArrayNode) JSON.readTree(files.get("data/incident-report-revisions.json"));
             ((ObjectNode) rows.get(1)).put("requestId", rows.get(0).path("requestId").asText());
             files.put("data/incident-report-revisions.json", JSON.writeValueAsBytes(rows));

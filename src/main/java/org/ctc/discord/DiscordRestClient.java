@@ -80,6 +80,21 @@ public class DiscordRestClient {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record PermissionRole(String id, String permissions) { }
 
+    public BotMessage createBotMessage(String channelId, String nonce, String content) throws DiscordApiException {
+        return execute(() -> bot.post().uri("/channels/{channelId}/messages", channelId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("content", content, "allowed_mentions", Map.of("parse", List.of()), "nonce", nonce, "enforce_nonce", true))
+                .retrieve().body(BotMessage.class));
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record BotMessage(String id, @JsonProperty("channel_id") String channelId, String content, BotUser author, String nonce) {
+        @Override public String toString() { return "BotMessage[opaque]"; }
+    }
+    public BotMessage fetchBotMessage(String channelId,String messageId) throws DiscordApiException {
+        return execute(() -> bot.get().uri("/channels/{channelId}/messages/{messageId}",channelId,messageId).retrieve().body(BotMessage.class));
+    }
+
 	public BotUser fetchBotUser() throws DiscordApiException {
 		return execute(() -> bot.get()
 				.uri("/users/@me")

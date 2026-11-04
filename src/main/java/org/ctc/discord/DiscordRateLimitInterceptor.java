@@ -66,14 +66,14 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 					response.close();
 					throw new DiscordTransientException(
 							DiscordApiExceptionMapper.TRANSIENT_MESSAGE,
-							new IOException("Rate-limit exhausted after " + MAX_429_RETRIES + " retries"));
+							new IOException("Rate-limit exhausted after " + MAX_429_RETRIES + " retries"), fiveXxAttempts == 0);
 				}
 				long retryAfterMs = parseRetryAfterMs(response.getHeaders());
 				response.close();
 				if (retryAfterMs > maxRetryAfterMs) {
 					throw new DiscordTransientException(
 							DiscordApiExceptionMapper.TRANSIENT_MESSAGE,
-							new IOException("Retry-After of " + retryAfterMs + " ms exceeds " + maxRetryAfterMs + " ms"));
+							new IOException("Retry-After of " + retryAfterMs + " ms exceeds " + maxRetryAfterMs + " ms"), fiveXxAttempts == 0);
 				}
 				long sleepMs = retryAfterMs + jitterMs();
 				sleep(sleepMs);

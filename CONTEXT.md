@@ -138,3 +138,21 @@ _Avoid_: Unfinished dialog, later Discord discussion
 The reporter's decision before the cutoff to remove a case from active disclosure while
 retaining the case and its confirmed history.
 _Avoid_: Deletion, deadline extension
+
+
+**Neutral incident receipt**:
+A detail-free public signal that a person's first confirmed report was stored. It reveals no
+reporter, party, drivers, replay time, description or evidence. Edits and withdrawal do not
+produce another receipt; an earlier receipt remains historical after withdrawal.
+_Avoid_: Active-case count, disclosure starter
+
+**Incident delivery operation**:
+One permanent request to publish either the neutral receipt or the final post-cutoff disclosure
+for a report, retaining its own immutable revision and destination. A saved report and successful
+public delivery are separate outcomes. Unknown remote results require reviewed reconciliation.
+_Avoid_: Exactly-once Discord guarantee, transient job
+
+**Frozen incident disclosure**:
+The final active revision captured when a reporting window closes under its stored cutoff.
+It remains separate from the earlier neutral receipt and excludes withdrawn reports.
+_Avoid_: Live report projection, unfinished draft

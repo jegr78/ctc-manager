@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/layout :: layout('Review incident delivery', ~{::section})}"><body>
+<section class="entity-editor incident-workspace">
+<a class="back-link" th:href="@{/admin/incident-contexts/{id}/deliveries(id=${page.contextId})}">Back to delivery status</a><h1>Review incident delivery</h1>
+<p><span th:text="${page.entry.reference}"></span> · <span th:text="${page.entry.operation}"></span> · <span th:text="${page.entry.state}"></span></p>
+<p>Check the captured pairing channel in Discord before deciding. Unknown outcomes never retry automatically. Saving this review retains the report and the delivery identity.</p>
+<form th:if="${page.entry.editable}" th:action="@{/admin/incident-deliveries/{id}(id=${page.entry.id})}" th:object="${deliveryReviewForm}" method="post" class="card entity-editor-form">
+<fieldset><legend>Confirm your external review</legend>
+<div class="field-error" role="alert" th:if="${#fields.hasGlobalErrors()}"><p th:each="error : ${#fields.globalErrors()}" th:text="${error}"></p></div>
+<input type="hidden" th:field="*{expectedVersion}"><span class="field-error" th:errors="*{expectedVersion}"></span><input type="hidden" th:field="*{generation}"><span class="field-error" th:errors="*{generation}"></span>
+<div class="form-group"><label for="delivery-decision">Reviewed outcome</label><select id="delivery-decision" th:field="*{decision}" required><option value="">Choose an outcome</option><option value="RETRY_MISSING">Confirmed missing, allow a retry</option><option th:if="${page.entry.receipt}" value="CONFIRM_SENT">Existing neutral receipt, verify its message</option></select><span class="field-error" th:errors="*{decision}"></span></div>
+<div class="form-group" th:if="${page.entry.receipt}"><label for="delivery-message">Existing receipt message ID</label><input id="delivery-message" th:field="*{messageId}" inputmode="numeric" maxlength="32"><span class="field-error" th:errors="*{messageId}"></span><small>Required when confirming an existing receipt. The server verifies its channel, bot author and neutral content without sending a message.</small></div>
+<div class="form-group"><label for="delivery-reason">Reason for delivery decision</label><textarea id="delivery-reason" th:field="*{reason}" maxlength="1000" required></textarea><span class="field-error" th:errors="*{reason}"></span></div>
+<div class="form-group form-check"><input id="delivery-reviewed" type="checkbox" th:field="*{reviewed}" required><label for="delivery-reviewed">I checked existing public messages and confirm this delivery decision.</label><span class="field-error" th:errors="*{reviewed}"></span></div>
+<div class="actions"><button class="btn btn-primary" type="submit">Save delivery review</button><a class="btn btn-secondary" th:href="@{/admin/incident-deliveries/{id}(id=${page.entry.id})}">Reload current delivery</a></div>
+</fieldset></form>
+</section></body></html>

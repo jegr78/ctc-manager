@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/layout :: layout('Incident delivery', ~{::section})}"><body>
+<section class="entity-editor incident-workspace">
+<a class="back-link" th:href="@{/admin/incident-contexts/{id}(id=${page.contextId})}">Back to incident reporting</a>
+<h1>Incident delivery</h1><p th:text="${page.pairing}"></p>
+<p>Saved reports remain stored even when a public message fails. Only the neutral receipt is sent before cutoff. Detailed publication is a separate operation.</p>
+<p th:if="${page.paused}" role="status">External delivery is paused after restore. Check existing Discord messages and review each unresolved delivery before resuming this context.</p>
+<p th:if="${!page.paused}" class="text-dim">Delivery also requires the outbound integration and incident worker to be enabled in the server configuration.</p>
+<p th:if="${page.entries.isEmpty()}">No public delivery requested.</p>
+<article class="card" th:each="entry : ${page.entries}">
+<h2 th:text="${entry.reference}"></h2><dl><dt>Public operation</dt><dd th:text="${entry.operation}"></dd><dt>Delivery status</dt><dd th:text="${entry.state}"></dd><dt th:if="${entry.messageId != null}">Discord message ID</dt><dd th:if="${entry.messageId != null}" th:text="${entry.messageId}"></dd><dt th:if="${entry.failure != null}">Last delivery result</dt><dd th:if="${entry.failure != null}" th:text="${entry.failure}"></dd><dt th:if="${entry.reviewer != null}">Last reviewed by</dt><dd th:if="${entry.reviewer != null}" th:text="${entry.reviewer}"></dd><dt th:if="${entry.reason != null}">Review reason</dt><dd th:if="${entry.reason != null}" class="incident-text" th:text="${entry.reason}"></dd></dl>
+<a class="btn btn-secondary" th:if="${entry.editable}" th:href="@{/admin/incident-deliveries/{id}(id=${entry.id})}" th:aria-label="${'Review delivery for ' + entry.reference + ' · ' + entry.operation}">Review delivery</a>
+</article>
+<form th:if="${page.paused}" th:action="@{/admin/incident-contexts/{id}/deliveries/resume(id=${page.contextId})}" th:object="${deliveryResumeForm}" method="post" class="card entity-editor-form">
+<fieldset><legend>Resume this reporting context</legend>
+<div class="field-error" role="alert" th:if="${#fields.hasGlobalErrors()}"><p th:each="error : ${#fields.globalErrors()}" th:text="${error}"></p></div>
+<input type="hidden" th:field="*{expectedVersion}"><span class="field-error" th:errors="*{expectedVersion}"></span><input type="hidden" th:field="*{generation}"><span class="field-error" th:errors="*{generation}"></span>
+<div class="form-group"><label for="resume-reason">Reason for resuming delivery</label><textarea id="resume-reason" th:field="*{reason}" maxlength="1000" required></textarea><span class="field-error" th:errors="*{reason}"></span></div>
+<div class="form-group form-check"><input id="resume-reviewed" type="checkbox" th:field="*{reviewed}" required><label for="resume-reviewed">I checked existing public messages and reviewed every unresolved delivery in this restored context.</label><span class="field-error" th:errors="*{reviewed}"></span></div>
+<button class="btn btn-primary" type="submit">Resume delivery</button>
+</fieldset></form>
+</section></body></html>

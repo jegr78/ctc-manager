@@ -38,6 +38,7 @@ public class IncidentWindowService {
     private final PickWriteExecutor writes;
     private final EntityManager entityManager;
     private final Clock clock;
+    private final org.springframework.context.ApplicationEventPublisher publisher;
 
     @Transactional(readOnly = true)
     public DeadlinePreview previewDeadline(UUID contextId) {
@@ -116,12 +117,14 @@ public class IncidentWindowService {
             var now = clock.instant();
             if (window.getState() != IncidentWindowState.OPEN || now.isBefore(window.getDeadline())) return false;
             var accepted = now.truncatedTo(ChronoUnit.MICROS);
-            for (var report : reports.findByWindowIdForUpdate(windowId)) {
+            var finalReports = reports.findByWindowIdForUpdate(windowId);
+            for (var report : finalReports) {
                 entityManager.refresh(report, LockModeType.PESSIMISTIC_WRITE); report.freeze();
             }
             window.close(accepted);
             events.save(IncidentReportEvent.windowDecision(window, IncidentEventKind.CLOSED, IncidentActorKind.SYSTEM,
                     "incident-deadline", "Reporting deadline reached", accepted, window.getDeadline()));
+            publisher.publishEvent(new org.ctc.domain.incidents.IncidentWindowClosed(window, finalReports));
             return true;
         });
     }
@@ -143,6 +146,9 @@ public class IncidentWindowService {
     public IncidentReportWindow getForContext(UUID contextId) {
         return windows.findByContextId(contextId).orElseThrow(() -> new BusinessRuleException("Incident window is unavailable"));
     }
+
+    @Transactional(readOnly = true)
+    public java.util.List<UUID> dueWindowIds(Instant now, org.springframework.data.domain.Pageable page) { return windows.findDueWindowIds(now, page); }
 
     private static Instant future(Instant deadline, Instant now) {
         var normalized = deadline == null ? null : deadline.truncatedTo(ChronoUnit.MICROS);

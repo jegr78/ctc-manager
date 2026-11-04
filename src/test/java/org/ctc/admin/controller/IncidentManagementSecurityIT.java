@@ -30,22 +30,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Tag("integration")
 class IncidentManagementSecurityIT extends IncidentIntegrationFixture {
     @Autowired MockMvc mvc;
+    @Autowired org.ctc.domain.repository.IncidentDeliveryRepository deliveryRows;
     @MockitoBean org.ctc.discord.DiscordRestClient discord;
 
     @ParameterizedTest
-    @ValueSource(strings = {"/admin/incident-contexts/context", "/admin/matches/match/incidents", "/admin/playoffs/matchup/unknown/incidents"})
+    @ValueSource(strings = {"/admin/incident-contexts/context", "/admin/matches/match/incidents", "/admin/playoffs/matchup/unknown/incidents", "/admin/incident-contexts/context/deliveries", "/admin/incident-deliveries/unknown"})
     void anonymousReadsRequireManagementAuthentication(String route) throws Exception {
         mvc.perform(get(path(route))).andExpect(status().isUnauthorized());
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/admin/incident-contexts/context/window/open", "/admin/incident-contexts/context/window/deadline", "/admin/matches/match/incidents/bind", "/admin/playoffs/matchup/unknown/incidents/bind"})
+    @ValueSource(strings = {"/admin/incident-contexts/context/window/open", "/admin/incident-contexts/context/window/deadline", "/admin/matches/match/incidents/bind", "/admin/playoffs/matchup/unknown/incidents/bind", "/admin/incident-contexts/context/deliveries/resume", "/admin/incident-deliveries/unknown"})
     void anonymousMutationWithCsrfIsRejectedBeforeManagementServices(String route) throws Exception {
         mvc.perform(post(path(route)).with(csrf())).andExpect(status().isUnauthorized());
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/admin/incident-contexts/context/window/open", "/admin/incident-contexts/context/window/deadline", "/admin/matches/match/incidents/bind", "/admin/playoffs/matchup/unknown/incidents/bind"})
+    @ValueSource(strings = {"/admin/incident-contexts/context/window/open", "/admin/incident-contexts/context/window/deadline", "/admin/matches/match/incidents/bind", "/admin/playoffs/matchup/unknown/incidents/bind", "/admin/incident-contexts/context/deliveries/resume", "/admin/incident-deliveries/unknown"})
     @WithMockUser("test-manager")
     void authenticatedMutationsRequireCsrf(String route) throws Exception {
         mvc.perform(post(path(route))).andExpect(status().isForbidden());
@@ -80,7 +81,22 @@ class IncidentManagementSecurityIT extends IncidentIntegrationFixture {
         assertThat(contextRows.count()).isEqualTo(count);
     }
 
+    @Test
+    @WithMockUser("test-manager")
+    void authenticatedDeliveryFormsContainCsrfWithoutChangingQueueState() throws Exception {
+        windows.open(contextId,NOW.plusSeconds(3600),0,manager);
+        var saved=reports.submit(windowId,fixture.race().getId(),1,UUID.randomUUID(),actor,payload);
+        UUID id=tx.execute(status -> deliveryRows.findByOperationKey(saved.reportId()+":RECEIPT").orElseThrow().getId());
+        String review=mvc.perform(get("/admin/incident-deliveries/"+id)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(Jsoup.parse(review).select("form input[name=_csrf]")).hasSize(1);
+        tx.executeWithoutResult(status -> org.springframework.test.util.ReflectionTestUtils.setField(windowRows.findById(windowId).orElseThrow(),"deliveryPaused",true));
+        String overview=mvc.perform(get("/admin/incident-contexts/"+contextId+"/deliveries")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(Jsoup.parse(overview).select("form input[name=_csrf]")).hasSize(1);
+        tx.executeWithoutResult(status -> assertThat(deliveryRows.findById(id).orElseThrow().getState()).isEqualTo(org.ctc.domain.model.IncidentDeliveryState.PENDING));
+        org.mockito.Mockito.verifyNoInteractions(discord);
+    }
+
     private String path(String route) {
-        return route.replace("/context", "/" + contextId).replace("/match/", "/" + fixture.match().getId() + "/").replace("/unknown/", "/" + UUID.randomUUID() + "/");
+        return route.replace("/context", "/" + contextId).replace("/match/", "/" + fixture.match().getId() + "/").replace("/unknown", "/" + UUID.randomUUID());
     }
 }
