@@ -65,7 +65,7 @@ class IncidentDeliveryDispatchIT extends IncidentDeliveryDispatchFixture {
 
     @Test
     void givenPendingWorkAndANewServiceInstance_whenRecoveringAfterRestart_thenUsePersistedWorkInsteadOfAnInMemoryQueue() {
-        UUID id=receipt();var restarted=new IncidentDeliveryService(deliveryRows,windows,imports,transactionManager,em,clock,new PickSessionEpoch(),sender);
+        UUID id=receipt();var restarted=new IncidentDeliveryService(deliveryRows,windows,imports,transactionManager,em,clock,new PickSessionEpoch(),sender,rulingPublications);
         assertThat(restarted.dueReceipts(10)).contains(id);assertThat(restarted.dispatch(id)).isTrue();assertThat(state(id)).isEqualTo(IncidentDeliveryState.SENT);
     }
 

@@ -72,6 +72,24 @@ class DiscordIncidentThreadSenderIT {
         wm.verify(1,postRequestedFor(urlEqualTo("/api/v10/channels/300/messages")).withRequestBody(matchingJsonPath("$.allowed_mentions.parse",equalToJson("[]"))).withRequestBody(matchingJsonPath("$.nonce",equalTo("test-stable-nonce"))).withRequestBody(matchingJsonPath("$.content",equalTo(content(true,0)))));
         wm.verify(0,postRequestedFor(urlMatching(".*/messages/777/threads")));
     }
+    @Test void capturedPairingAndConcreteRaceReachTheRealBotRequest() {
+        var race = UUID.randomUUID();
+        var payload = org.ctc.domain.service.IncidentThreadProjection.render("INC-TEST", "Test party",
+                new org.ctc.domain.model.IncidentPayload("Test drivers", "Lap 2", "Test accepted facts", ""),
+                "Test original home vs Test original away", "Leg 2 · Test original round · Race " + race);
+        var original = claim(IncidentThreadStage.PUBLIC_STARTER, 0); var old = original.work();
+        String body = payload.messages().getFirst() + "\n" + old.marker();
+        var work = new IncidentThreadClaim.Work(old.stage(), old.chunkIndex(), old.caseReference(), old.marker(), payload.title(), body,
+                body, old.nonce(), old.starterId(), old.threadId());
+        var captured = new IncidentThreadClaim(original.id(), original.windowId(), original.token(), original.version(), original.generation(), original.validUntil(), original.destination(), work);
+        wm.stubFor(post(urlEqualTo("/api/v10/channels/200/messages")).willReturn(okJson(json(message("801", "200", body)))));
+        var result = sender.send(captured); assertThat(result.disposition()).isEqualTo(IncidentSendResult.Disposition.SENT);
+        wm.verify(1, postRequestedFor(urlEqualTo("/api/v10/channels/200/messages"))
+                .withRequestBody(matchingJsonPath("$.content", equalTo(body)))
+                .withRequestBody(matchingJsonPath("$.allowed_mentions.parse", equalToJson("[]"))));
+        assertThat(body).contains("Pairing: Test original home vs Test original away", "Race: Leg 2", race.toString());
+    }
+
     @Test void givenAConfiguredPrivateForum_whenSending_thenUseItsActualTypeTagsAndNestedStarter() {
         config.setStewardsForumTagIds("900");wm.stubFor(get(urlEqualTo("/api/v10/channels/300")).willReturn(okJson(parent(15,false))));
         var body=new ObjectMapper().createObjectNode();assertDoesNotThrow(() -> body.setAll((com.fasterxml.jackson.databind.node.ObjectNode)new ObjectMapper().readTree(thread("600","300",false))));body.set("message",new ObjectMapper().valueToTree(message("602","600",content(true,0))));

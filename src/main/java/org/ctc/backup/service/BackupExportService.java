@@ -98,6 +98,9 @@ public class BackupExportService {
     private final IncidentReportEventRepository incidentEvents;
     private final IncidentDeliveryRepository incidentDeliveries;
     private final IncidentThreadPublicationRepository incidentThreads;
+    private final IncidentRulingRepository incidentRulings;
+    private final IncidentRulingRevisionRepository rulingRevisions;
+    private final IncidentRulingPublicationRepository rulingPublications;
 
 
 	private final String uploadDirRaw;
@@ -150,6 +153,7 @@ public class BackupExportService {
             IncidentReportEventRepository incidentEvents,
             IncidentDeliveryRepository incidentDeliveries,
             IncidentThreadPublicationRepository incidentThreads,
+            IncidentRulingRepository incidentRulings, IncidentRulingRevisionRepository rulingRevisions, IncidentRulingPublicationRepository rulingPublications,
 			@Value("${app.upload-dir:data/dev/uploads}") String uploadDirRaw
 	) {
 		this.backupSchema = backupSchema;
@@ -196,6 +200,7 @@ public class BackupExportService {
         this.incidentEvents = incidentEvents;
         this.incidentDeliveries = incidentDeliveries;
         this.incidentThreads = incidentThreads;
+        this.incidentRulings = incidentRulings; this.rulingRevisions = rulingRevisions; this.rulingPublications = rulingPublications;
 		this.uploadDirRaw = uploadDirRaw;
 	}
 
@@ -246,6 +251,9 @@ public class BackupExportService {
         this.repositoriesByEntityClass.put(IncidentReportEvent.class, incidentEvents);
         this.repositoriesByEntityClass.put(IncidentDelivery.class, incidentDeliveries);
         this.repositoriesByEntityClass.put(IncidentThreadPublication.class, incidentThreads);
+        this.repositoriesByEntityClass.put(IncidentRuling.class, incidentRulings);
+        this.repositoriesByEntityClass.put(IncidentRulingRevision.class, rulingRevisions);
+        this.repositoriesByEntityClass.put(IncidentRulingPublication.class, rulingPublications);
 		log.info("BackupExportService initialized: uploadRoot={}, repositoryCount={}",
 				uploadRoot, repositoriesByEntityClass.size());
 	}

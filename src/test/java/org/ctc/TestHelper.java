@@ -42,6 +42,9 @@ public class TestHelper {
     private final IncidentReportRepository incidentReports;
     private final org.ctc.domain.repository.IncidentDeliveryRepository incidentDeliveries;
     private final org.ctc.domain.repository.IncidentThreadPublicationRepository incidentThreads;
+    private final org.ctc.domain.repository.IncidentRulingRepository incidentRulings;
+    private final org.ctc.domain.repository.IncidentRulingPublicationRepository rulingPublications;
+    private final org.ctc.domain.repository.IncidentRulingRevisionRepository rulingRevisions;
     private final IncidentReportRevisionRepository incidentRevisions;
     private final IncidentReportEventRepository incidentEvents;
 
@@ -78,9 +81,20 @@ public class TestHelper {
             var window = incidentWindows.findByContextId(context.getId()).orElse(null);
             if (window != null) {
                 incidentEvents.deleteAll(incidentEvents.findByWindowIdOrderByAcceptedAtAscIdAsc(window.getId())); incidentEvents.flush();
+                for (var report : incidentReports.findByWindowIdOrderByCaseReferenceAsc(window.getId())) {
+                    incidentRulings.findByReportId(report.getId()).ifPresent(ruling -> {
+                        rulingPublications.deleteAll(rulingPublications.findByRevisionRulingIdOrderByRequestedAtAscIdAsc(ruling.getId())); rulingPublications.flush();
+                    });
+                }
                 incidentThreads.deleteAll(incidentThreads.findByDeliveryReportWindowId(window.getId())); incidentThreads.flush();
                 incidentDeliveries.deleteAll(incidentDeliveries.findByReportWindowId(window.getId())); incidentDeliveries.flush();
                 var reports = incidentReports.findByWindowIdOrderByCaseReferenceAsc(window.getId());
+                for (var report : reports) {
+                    incidentRulings.findByReportId(report.getId()).ifPresent(ruling -> {
+                        rulingRevisions.deleteAll(rulingRevisions.findByRulingIdOrderByRevisionNumberAsc(ruling.getId())); rulingRevisions.flush();
+                        incidentRulings.delete(ruling); incidentRulings.flush();
+                    });
+                }
                 for (var report : reports) incidentRevisions.deleteAll(incidentRevisions.findByReportIdOrderByRevisionNumberAsc(report.getId()));
                 incidentRevisions.flush(); incidentReports.deleteAll(reports); incidentReports.flush();
                 incidentWindows.delete(window); incidentWindows.flush();

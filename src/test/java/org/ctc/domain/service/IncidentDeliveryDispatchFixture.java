@@ -15,6 +15,7 @@ import static org.mockito.Mockito.*;
 abstract class IncidentDeliveryDispatchFixture extends IncidentIntegrationFixture {
     @Autowired IncidentDeliveryService delivery;
     @Autowired IncidentDeliveryRepository deliveryRows;
+    @Autowired org.ctc.domain.repository.IncidentRulingPublicationRepository rulingPublications;
     @Autowired IncidentDisclosureService disclosure;
     @Autowired PickSessionEpoch epoch;
     @Autowired ImportLockService imports;

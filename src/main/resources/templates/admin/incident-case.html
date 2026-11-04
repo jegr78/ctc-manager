@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/layout :: layout('Incident case', ~{::section})}">
+<body>
+<section class="entity-editor incident-workspace">
+    <a class="back-link" th:href="@{/admin/incident-contexts/{id}(id=${page.contextId})}">Back to pairing incidents</a>
+    <h1 th:text="${page.reference}"></h1>
+    <p th:text="${page.pairing}"></p>
+    <p th:if="${page.paused}" class="text-dim">External delivery is paused after restore. Review unresolved ruling delivery on this case, then <a th:href="@{/admin/incident-contexts/{id}/deliveries(id=${page.contextId})}">review and resume the reporting context</a>.</p>
+    <div class="card">
+        <h2>Permanent case</h2>
+        <dl>
+            <dt>Stored report</dt><dd th:text="${page.state}"></dd>
+            <dt>Reporting party</dt><dd th:text="${page.party}"></dd>
+            <dt>Original creator Discord ID</dt><dd th:text="${page.author}"></dd>
+            <dt>Original race</dt><dd><span th:text="${page.matchday}"></span> · <a th:href="@{/admin/races/{id}(id=${page.raceId})}">View original race</a></dd>
+            <dt>Reporting deadline</dt><dd th:text="${page.deadline}"></dd>
+            <dt>Frozen report revision</dt><dd th:text="${page.frozenRevision}"></dd>
+            <dt>Thread delivery</dt><dd th:text="${page.threadState}"></dd>
+            <dt>Confirmed ruling</dt><dd th:text="${page.rulingState}"></dd>
+        </dl>
+        <div class="actions">
+            <a th:if="${page.privateThreadUrl != null}" th:href="${page.privateThreadUrl}" class="btn btn-secondary" rel="noreferrer">Private stewards thread</a>
+            <a th:if="${page.publicThreadUrl != null}" th:href="${page.publicThreadUrl}" class="btn btn-secondary" rel="noreferrer">Match incident thread</a>
+            <a th:if="${page.rulingUrl != null}" th:href="${page.rulingUrl}" class="btn btn-secondary" rel="noreferrer">Confirmed ruling on Discord</a>
+        </div>
+        <p class="text-dim">The Manager stores reports and explicit rulings. Discord discussion and footage remain in their original locations. These actions never change results, penalties or standings.</p>
+    </div>
+
+    <form th:action="@{/admin/incidents/{id}/ruling/save(id=${page.reportId})}" th:object="${rulingDraftForm}" method="post" class="card entity-editor-form">
+        <fieldset>
+            <legend>Ruling draft</legend>
+            <p class="text-dim">Save a new internal version, then review its public preview. Saving sends no Discord message.</p>
+            <div th:if="${#fields.hasGlobalErrors()}" class="field-error" role="alert"><p th:each="error : ${#fields.globalErrors()}" th:text="${error}"></p></div>
+            <input type="hidden" th:field="*{expectedVersion}"><span th:errors="*{expectedVersion}" class="field-error" role="alert"></span>
+            <input type="hidden" th:field="*{generation}"><span th:errors="*{generation}" class="field-error" role="alert"></span>
+            <div class="form-group"><label for="ruling-text">Public ruling text</label><textarea id="ruling-text" th:field="*{text}" maxlength="1800" rows="8" required></textarea><span th:errors="*{text}" class="field-error" role="alert"></span></div>
+            <div class="form-group"><label for="ruling-reason">Reason for this version</label><textarea id="ruling-reason" th:field="*{reason}" maxlength="1000" rows="3" aria-describedby="ruling-reason-help"></textarea><span th:errors="*{reason}" class="field-error" role="alert"></span><small id="ruling-reason-help" class="text-dim">A correction to a published ruling requires a reason. The reason and management author stay internal.</small></div>
+            <div class="actions"><button type="submit" class="btn btn-primary">Save draft version</button><a th:href="@{/admin/incidents/{id}(id=${page.reportId})}" class="btn btn-secondary">Reload current case</a></div>
+        </fieldset>
+    </form>
+
+    <div th:if="${page.latestRulingVersion > 0}" class="card">
+        <h2>Public preview</h2>
+        <p>Saved ruling version <span th:text="${page.latestRulingVersion}"></span>. Publication uses this saved version, including its case reference.</p>
+        <pre class="incident-text" data-testid="ruling-public-preview" th:text="${page.preview}"></pre>
+        <form th:action="@{/admin/incidents/{id}/ruling/publish(id=${page.reportId})}" th:object="${rulingPublishForm}" method="post" class="entity-editor-form">
+            <fieldset>
+                <legend>Publish saved ruling</legend>
+                <div th:if="${#fields.hasGlobalErrors()}" class="field-error" role="alert"><p th:each="error : ${#fields.globalErrors()}" th:text="${error}"></p></div>
+                <input type="hidden" th:field="*{expectedVersion}"><span th:errors="*{expectedVersion}" class="field-error" role="alert"></span>
+                <input type="hidden" th:field="*{rulingVersion}"><span th:errors="*{rulingVersion}" class="field-error" role="alert"></span>
+                <input type="hidden" th:field="*{generation}"><span th:errors="*{generation}" class="field-error" role="alert"></span>
+                <p class="text-dim">This explicitly queues the saved preview for the stored match incident thread. Corrections edit the known ruling message. Delivery confirmation appears separately.</p>
+                <p th:if="${!page.publishable}" class="text-dim">Publication needs a new saved version, a known match incident thread and a resumed context. Review any uncertain ruling delivery first.</p>
+                <p th:if="${!publicationCurrent}" class="field-error">Reload the current case before approving its latest preview.</p>
+                <button type="submit" class="btn btn-primary" th:disabled="${!page.publishable or !publicationCurrent}">Publish saved ruling version</button>
+            </fieldset>
+        </form>
+    </div>
+
+    <div th:if="${page.publication != null}" class="card">
+        <h2>Ruling delivery</h2>
+        <dl><dt>Approved ruling version</dt><dd th:text="${page.publication.rulingVersion}"></dd><dt>Delivery state</dt><dd th:text="${page.publication.state}"></dd><dt>Approved by</dt><dd th:text="${page.publication.author}"></dd><dt>Approved at</dt><dd th:text="${page.publication.at}"></dd></dl>
+        <p th:if="${!#strings.isEmpty(page.publication.reviewReason)}" class="incident-text" th:text="${page.publication.reviewReason}"></p>
+        <form th:if="${page.publication.unresolved or reviewingAttempt}" th:action="@{/admin/incidents/{id}/ruling/reconcile(id=${page.reportId})}" th:object="${rulingReviewForm}" method="post" class="entity-editor-form">
+            <fieldset>
+                <legend>Review ruling delivery</legend>
+                <p class="text-dim">Check the exact approved ruling in the known match incident thread. Confirming an existing result records it locally. A verified missing operation queues its retry. Corrections keep the same known message.</p>
+                <div th:if="${#fields.hasGlobalErrors()}" class="field-error" role="alert"><p th:each="error : ${#fields.globalErrors()}" th:text="${error}"></p></div>
+                <input type="hidden" th:field="*{expectedVersion}"><span th:errors="*{expectedVersion}" class="field-error" role="alert"></span>
+                <input type="hidden" th:field="*{publicationId}"><span th:errors="*{publicationId}" class="field-error" role="alert"></span>
+                <input type="hidden" th:field="*{publicationVersion}"><span th:errors="*{publicationVersion}" class="field-error" role="alert"></span>
+                <input type="hidden" th:field="*{generation}"><span th:errors="*{generation}" class="field-error" role="alert"></span>
+                <div class="form-group"><label for="ruling-review-decision">Reviewed ruling outcome</label><select id="ruling-review-decision" th:field="*{decision}" required><option value="">Choose the verified outcome</option><option value="CONFIRM_SENT">Confirm the exact existing ruling</option><option value="RETRY_MISSING">Verify missing operation and queue retry</option></select><span th:errors="*{decision}" class="field-error" role="alert"></span></div>
+                <div class="form-group"><label for="ruling-review-message">Existing ruling message ID</label><input id="ruling-review-message" th:field="*{messageId}" inputmode="numeric" aria-describedby="ruling-review-message-help"><span th:errors="*{messageId}" class="field-error" role="alert"></span><small id="ruling-review-message-help" class="text-dim">Use the known bot ruling ID to confirm it, or leave empty for bounded verification. Leave empty when verifying a missing operation.</small></div>
+                <div class="form-group"><label for="ruling-review-reason">Reason for delivery review</label><textarea id="ruling-review-reason" th:field="*{reason}" maxlength="1000" rows="3" required></textarea><span th:errors="*{reason}" class="field-error" role="alert"></span></div>
+                <div class="form-group form-check"><input id="ruling-reviewed" type="checkbox" th:field="*{reviewed}" required><label for="ruling-reviewed">I reviewed the approved ruling in the known match incident thread.</label><span th:errors="*{reviewed}" class="field-error" role="alert"></span></div>
+                <p th:if="${!reviewCurrent}" class="field-error">The displayed delivery changed. Reload the current case before submitting this review.</p>
+                <div class="actions"><button type="submit" class="btn btn-primary" th:disabled="${!reviewCurrent or !page.publication.reviewable}">Save ruling delivery review</button><a th:href="@{/admin/incidents/{id}(id=${page.reportId})}" class="btn btn-secondary">Reload delivery state</a></div>
+            </fieldset>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Report history</h2>
+        <article th:each="revision : ${page.reportHistory}" class="incident-case">
+            <h3>Report revision <span th:text="${revision.number}"></span></h3>
+            <p><span th:text="${revision.at}"></span> · <span th:text="${revision.actor}"></span></p>
+            <dl><dt>Involved drivers</dt><dd class="incident-text" th:text="${revision.drivers}"></dd><dt>Replay timestamp</dt><dd class="incident-text" th:text="${revision.timestamp}"></dd><dt>Description</dt><dd class="incident-text" th:text="${revision.description}"></dd><dt>Evidence references</dt><dd class="incident-text" th:text="${revision.evidence}"></dd></dl>
+        </article>
+        <h3>Report decisions</h3>
+        <p th:each="decision : ${page.decisions}"><span th:text="${decision.action}"></span> · <span th:text="${decision.at}"></span> · <span th:text="${decision.actor}"></span></p>
+    </div>
+    <div class="card">
+        <h2>Ruling history</h2>
+        <p th:if="${page.rulingHistory.isEmpty()}" class="text-dim">No ruling draft saved.</p>
+        <article th:each="revision : ${page.rulingHistory}" class="incident-case">
+            <h3>Ruling version <span th:text="${revision.number}"></span><span th:if="${revision.published}"> · Confirmed on Discord</span></h3>
+            <p><span th:text="${revision.at}"></span> · <span th:text="${revision.actor}"></span></p>
+            <p th:text="${revision.publicationState}"></p><p class="incident-text" th:text="${revision.text}"></p><p class="incident-text" th:text="${revision.reason}"></p>
+        </article>
+    </div>
+</section>
+</body>
+</html>

@@ -12,8 +12,11 @@ import org.ctc.domain.service.IncidentThreadProjection;
 
 public final class IncidentBackupValidator {
     private static final int MAX_VALUES = 100000;
-    private static final Set<String> INCIDENT_TABLES = Set.of("incident_match_contexts", "incident_report_windows", "incident_reports", "incident_report_revisions", "incident_report_events", "incident_deliveries", "incident_thread_publications");
+    private static final Set<String> INCIDENT_TABLES = Set.of("incident_match_contexts", "incident_report_windows", "incident_reports", "incident_report_revisions", "incident_report_events", "incident_deliveries", "incident_thread_publications", "incident_rulings", "incident_ruling_revisions", "incident_ruling_publications");
     private static final Map<String, Set<String>> FIELDS = Map.ofEntries(
+            Map.entry("incident_ruling_publications", Set.of("id", "revision", "threadPublication", "guildId", "channelId", "content", "previousContent", "previousRevisionNumber", "previousMessageId", "nonce", "requestedBy", "requestedAt", "state", "version", "attempts", "claimToken", "claimGeneration", "leaseUntil", "nextAttemptAt", "completedAt", "messageId", "failureCode", "reconciledBy", "reconciliationReason", "createdAt", "updatedAt")),
+            Map.entry("incident_rulings", Set.of("id", "report", "version", "latestRevisionNumber", "requestedRevisionNumber", "publishedRevisionNumber", "publishedMessageId", "createdAt", "updatedAt")),
+            Map.entry("incident_ruling_revisions", Set.of("id", "ruling", "revisionNumber", "text", "reason", "actorId", "acceptedAt", "createdAt", "updatedAt")),
             Map.entry("seasons", Set.of("id")), Map.entry("teams", Set.of("id")),
             Map.entry("season_phases", Set.of("id", "season")), Map.entry("matchdays", Set.of("id", "phase")),
             Map.entry("playoffs", Set.of("id", "phase")), Map.entry("playoff_rounds", Set.of("id", "playoff")),
@@ -24,7 +27,7 @@ public final class IncidentBackupValidator {
             Map.entry("incident_report_windows", Set.of("id", "context", "version", "state", "plannedStartLocal", "plannedStart", "deadline", "openedAt", "openedBy", "closedAt", "createdAt", "updatedAt")),
             Map.entry("incident_reports", Set.of("id", "window", "race", "originalMatchday", "originalHomeTeam", "originalAwayTeam", "caseReference", "authorId", "party", "state", "version", "latestRevisionNumber", "frozenRevisionNumber", "createdAt", "updatedAt")),
             Map.entry("incident_report_revisions", Set.of("id", "report", "revisionNumber", "reportVersion", "payload", "actorId", "acceptedAt", "requestId", "createdAt", "updatedAt")),
-            Map.entry("incident_deliveries", Set.of("id", "report", "revision", "operation", "operationKey", "guildId", "channelId", "nonce", "caseReference", "partyLabel", "capturedAt", "state", "version", "attempts", "claimToken", "claimGeneration", "leaseUntil", "nextAttemptAt", "completedAt", "messageId", "failureCode", "reconciledBy", "reconciliationReason", "createdAt", "updatedAt")),
+            Map.entry("incident_deliveries", Set.of("id", "report", "revision", "operation", "operationKey", "guildId", "channelId", "nonce", "caseReference", "partyLabel", "pairingLabel", "raceLabel", "capturedAt", "state", "version", "attempts", "claimToken", "claimGeneration", "leaseUntil", "nextAttemptAt", "completedAt", "messageId", "failureCode", "reconciledBy", "reconciliationReason", "createdAt", "updatedAt")),
             Map.entry("discord_global_config",Set.of("stewardsChannelId","incidentStaffRoleIds","stewardsForumTagIds")),
             Map.entry("incident_thread_publications",Set.of("id","delivery","stewardsChannelId","staffRoleIds","forumTagIds","messageChunks","privateStarterId","privateThreadId","privateMessageIds","publicStarterId","publicThreadId","publicMessageIds","referenceMessageId","createdAt","updatedAt")),
             Map.entry("incident_report_events", Set.of("id", "window", "report", "eventKey", "kind", "windowVersion", "reportVersion", "revisionNumber", "actorKind", "actorId", "reason", "acceptedAt", "previousDeadline", "deadline", "requestId", "createdAt", "updatedAt")));
@@ -49,6 +52,7 @@ public final class IncidentBackupValidator {
         locate(table, row);
         if(table.equals("discord_global_config")){validateConfig(row);return;}
         if(table.equals("incident_thread_publications") && version<10)fail("Incident thread publication requires schema version 10");
+        if (Set.of("incident_rulings", "incident_ruling_revisions", "incident_ruling_publications").contains(table) && version < 11) fail("Incident rulings require schema version 11");
         boolean incident = INCIDENT_TABLES.contains(table);
         if (table.equals("incident_deliveries") && version < 9) fail("Incident delivery requires schema version 9");
         if (version < 8) {
@@ -58,7 +62,8 @@ public final class IncidentBackupValidator {
         if (row == null || !row.isObject()) fail("An incident reference row must be an object");
         if (incident) {
             row.fieldNames().forEachRemaining(field -> { if (!FIELDS.get(table).contains(field)) fail("Unexpected incident history field"); });
-            for (String field : FIELDS.get(table)) if (!row.has(field)) fail("Missing incident history field " + field);
+            for (String field : FIELDS.get(table)) if (!row.has(field)
+                    && !(table.equals("incident_deliveries") && version < 11 && Set.of("pairingLabel", "raceLabel").contains(field))) fail("Missing incident history field " + field);
             for (String audit : List.of("createdAt", "updatedAt")) if (row.hasNonNull(audit)) local(row, audit);
         }
         var projected = JsonNodeFactory.instance.objectNode();
@@ -72,7 +77,7 @@ public final class IncidentBackupValidator {
                 text(value, "type", 16); uuid(value, "id"); text(value, "label", 255); snowflake(value, "roleId");
                 retained += value.size();
             } else if (!value.isNull() && !(value.isBoolean() || value.isIntegralNumber()
-                    || value.isTextual() && value.textValue().length() <= (table.equals("incident_thread_publications") && Set.of("staffRoleIds","privateMessageIds","publicMessageIds").contains(field)?2000:1000))) {
+                    || value.isTextual() && value.textValue().length() <= (table.equals("incident_ruling_publications") && Set.of("content", "previousContent").contains(field) ? 2000 : table.equals("incident_ruling_revisions") && field.equals("text") ? 1800 : table.equals("incident_thread_publications") && Set.of("staffRoleIds","privateMessageIds","publicMessageIds").contains(field)?2000:1000))) {
                 fail("Invalid incident retained scalar " + field);
             }
             projected.set(field, value.deepCopy());
@@ -157,6 +162,153 @@ public final class IncidentBackupValidator {
         }
         validatePublications();
         validateDeliveries();
+        validateRulings();
+        validateRulingPublications();
+    }
+
+    private void validateRulings() {
+        var histories = new HashMap<String, SortedMap<Long, JsonNode>>();
+        for (var revision : index("incident_ruling_revisions").values()) {
+            locate("incident_ruling_revisions", revision);
+            String owner = reference(revision, "ruling", "incident_rulings");
+            long number = positive(revision, "revisionNumber");
+            if (number > Integer.MAX_VALUE || histories.computeIfAbsent(owner, ignored -> new TreeMap<>()).putIfAbsent(number, revision) != null) {
+                fail("Duplicate or invalid ruling revision number");
+            }
+            text(revision, "actorId", 128); instant(revision, "acceptedAt");
+            if (optionalText(revision, "reason", 1000) == null) fail("Missing ruling revision reason");
+            try { org.ctc.domain.model.IncidentRulingRevision.acceptedText(text(revision, "text", 1800)); }
+            catch (org.ctc.domain.exception.BusinessRuleException invalid) { throw new ValidationException("Invalid ruling text"); }
+        }
+        var owners = new HashSet<String>();
+        for (var ruling : index("incident_rulings").values()) {
+            locate("incident_rulings", ruling);
+            String reportId = reference(ruling, "report", "incident_reports");
+            if (!owners.add(reportId)) fail("A permanent case has duplicate ruling histories");
+            var history = histories.getOrDefault(uuid(ruling, "id"), new TreeMap<>());
+            long latest = positive(ruling, "latestRevisionNumber");
+            if (latest > Integer.MAX_VALUE || history.size() != latest || nonnegative(ruling, "version") < latest) fail("Ruling pointers contradict immutable history");
+            long expected = 0;
+            for (var entry : history.entrySet()) {
+                if (entry.getKey() != ++expected) fail("Ruling history is not sequential");
+            }
+            Long requested = ruling.hasNonNull("requestedRevisionNumber") ? positive(ruling, "requestedRevisionNumber") : null;
+            Long published = ruling.hasNonNull("publishedRevisionNumber") ? positive(ruling, "publishedRevisionNumber") : null;
+            if (requested != null && requested > latest || published != null && (requested == null || published > requested)) fail("Ruling publication points outside immutable history");
+            String message = optionalSnowflake(ruling, "publishedMessageId");
+            if ((published == null) != (message == null)) fail("Confirmed ruling is missing its known Discord message");
+            if (published != null && !hasPublicDetails(reportId)) fail("Confirmed ruling has no known incident thread");
+            var publications = index("incident_ruling_publications").values().stream().filter(publication -> {
+                var revision = index("incident_ruling_revisions").get(publication.path("revision").asText());
+                return revision != null && uuid(ruling, "id").equals(revision.path("ruling").asText());
+            }).toList();
+            var sent = publications.stream().filter(publication -> "SENT".equals(publication.path("state").asText())).toList();
+            if (nonnegative(ruling, "version") != latest + publications.size() + sent.size()) fail("Ruling aggregate version contradicts its recorded decisions");
+            long highestRequest = publications.stream().mapToLong(publication -> positive(index("incident_ruling_revisions").get(publication.path("revision").asText()), "revisionNumber")).max().orElse(0);
+            long highestSent = sent.stream().mapToLong(publication -> positive(index("incident_ruling_revisions").get(publication.path("revision").asText()), "revisionNumber")).max().orElse(0);
+            if ((requested == null ? 0 : requested) != highestRequest || (published == null ? 0 : published) != highestSent) fail("Ruling confirmation contradicts durable publication evidence");
+            if (published != null && sent.stream().noneMatch(publication ->
+                    positive(index("incident_ruling_revisions").get(publication.path("revision").asText()), "revisionNumber") == published
+                            && Objects.equals(message, optionalSnowflake(publication, "messageId")))) fail("Ruling confirmed message contradicts its exact publication");
+            var orderedSent = sent.stream().sorted(Comparator.comparingLong(publication ->
+                    positive(index("incident_ruling_revisions").get(publication.path("revision").asText()), "revisionNumber"))).toList();
+            JsonNode previousSent = null;
+            for (var confirmation : orderedSent) {
+                if (previousSent == null) {
+                    if (confirmation.hasNonNull("previousRevisionNumber") || confirmation.hasNonNull("previousContent") || confirmation.hasNonNull("previousMessageId")) fail("The initial confirmed ruling cannot claim a prior confirmation");
+                } else {
+                    long previousNumber = positive(index("incident_ruling_revisions").get(previousSent.path("revision").asText()), "revisionNumber");
+                    if (!confirmation.hasNonNull("previousRevisionNumber") || positive(confirmation, "previousRevisionNumber") != previousNumber
+                            || !Objects.equals(optionalSnowflake(confirmation, "previousMessageId"), optionalSnowflake(previousSent, "messageId"))
+                            || !Objects.equals(optionalText(confirmation, "previousContent", 2000), text(previousSent, "content", 2000))) fail("Confirmed ruling correction does not preserve the preceding confirmed ruling");
+                }
+                previousSent = confirmation;
+            }
+        }
+    }
+
+    private void validateRulingPublications() {
+        var revisions = new HashSet<String>(); var remoteOwners = new HashMap<String, String>();
+        var occupied = new HashSet<String>();
+        for (var delivery : index("incident_deliveries").values()) if (delivery.hasNonNull("messageId")) occupied.add(text(delivery, "messageId", 32));
+        for (var thread : index("incident_thread_publications").values()) {
+            for (String field : List.of("privateStarterId", "privateThreadId", "publicStarterId", "publicThreadId", "referenceMessageId"))
+                if (thread.hasNonNull(field)) occupied.add(text(thread, field, 32));
+            occupied.addAll(ids(thread, "privateMessageIds", 2000, 39, 1)); occupied.addAll(ids(thread, "publicMessageIds", 2000, 39, 1));
+        }
+        for (var publication : index("incident_ruling_publications").values()) {
+            locate("incident_ruling_publications", publication);
+            String revisionId = reference(publication, "revision", "incident_ruling_revisions");
+            if (!revisions.add(revisionId)) fail("A ruling revision has duplicate publication work");
+            var revision = index("incident_ruling_revisions").get(revisionId);
+            var root = index("incident_rulings").get(reference(revision, "ruling", "incident_rulings"));
+            String reportId = reference(root, "report", "incident_reports"); var report = index("incident_reports").get(reportId);
+            var window = index("incident_report_windows").get(reference(report, "window", "incident_report_windows"));
+            var thread = index("incident_thread_publications").get(reference(publication, "threadPublication", "incident_thread_publications"));
+            var delivery = index("incident_deliveries").get(reference(thread, "delivery", "incident_deliveries"));
+            if (!reportId.equals(uuid(delivery, "report")) || !"ACTIVE".equals(text(report, "state", 16))
+                    || !"CLOSED".equals(text(window, "state", 16)) || !hasPublicDetails(reportId)
+                    || !snowflake(publication, "guildId").equals(snowflake(delivery, "guildId"))
+                    || !snowflake(publication, "channelId").equals(optionalSnowflake(thread, "publicThreadId"))) fail("Ruling publication contradicts its original incident destination");
+            String content = text(publication, "content", 2000);
+            if (!org.ctc.domain.service.IncidentRulingProjection.render(UUID.fromString(reportId), text(report, "caseReference", 64), text(revision, "text", 1800)).equals(content)
+                    || !org.ctc.domain.model.IncidentRulingPublication.nonce(UUID.fromString(reportId), content).equals(text(publication, "nonce", 25))) fail("Ruling publication differs from its approved version");
+            text(publication, "requestedBy", 128); var requested = instant(publication, "requestedAt");
+            if (requested.isBefore(instant(revision, "acceptedAt")) || requested.isBefore(instant(window, "closedAt"))
+                    || instant(publication, "nextAttemptAt").isBefore(requested)) fail("Ruling publication predates its confirmed source");
+            String previousMessage = optionalSnowflake(publication, "previousMessageId");
+            if (publication.hasNonNull("previousRevisionNumber")) {
+                long previous = positive(publication, "previousRevisionNumber");
+                var prior = index("incident_ruling_revisions").values().stream().filter(row -> uuid(row, "ruling").equals(uuid(root, "id"))
+                        && positive(row, "revisionNumber") == previous).findFirst().orElseThrow(() -> new ValidationException("Missing previous ruling revision"));
+                if (previous >= positive(revision, "revisionNumber") || previousMessage == null || text(revision, "reason", 1000).isBlank()
+                        || !org.ctc.domain.service.IncidentRulingProjection.render(UUID.fromString(reportId), text(report, "caseReference", 64), text(prior, "text", 1800))
+                        .equals(text(publication, "previousContent", 2000))) fail("Ruling correction does not preserve its prior confirmed content");
+                boolean confirmed = index("incident_ruling_publications").values().stream().anyMatch(row -> uuid(prior, "id").equals(row.path("revision").asText())
+                        && "SENT".equals(row.path("state").asText()) && previousMessage.equals(optionalSnowflake(row, "messageId")));
+                if (!confirmed) fail("Ruling correction lacks prior message confirmation");
+            } else if (previousMessage != null || publication.hasNonNull("previousContent")) fail("Initial ruling has correction-only metadata");
+            String state = text(publication, "state", 16); long attempts = nonnegative(publication, "attempts");
+            if (!Set.of("PENDING", "CLAIMED", "SENT", "FAILED", "UNCERTAIN", "SUPERSEDED").contains(state)
+                    || attempts > Integer.MAX_VALUE || nonnegative(publication, "version") < attempts) fail("Invalid ruling delivery state or version");
+            String message = optionalSnowflake(publication, "messageId"), code = optionalText(publication, "failureCode", 64);
+            if (Set.of("PENDING", "CLAIMED", "FAILED", "UNCERTAIN").contains(state)) {
+                boolean samePrevious = root.hasNonNull("publishedRevisionNumber") == publication.hasNonNull("previousRevisionNumber")
+                        && (!root.hasNonNull("publishedRevisionNumber") || positive(root, "publishedRevisionNumber") == positive(publication, "previousRevisionNumber"));
+                if (positive(root, "requestedRevisionNumber") != positive(revision, "revisionNumber") || !samePrevious
+                        || !Objects.equals(optionalSnowflake(root, "publishedMessageId"), previousMessage)) fail("Unresolved ruling work contradicts the current approved or confirmed version");
+            }
+            if (message != null && occupied.contains(message)) fail("Ruling confirmation reuses an existing incident message or thread identity");
+            if (code != null && !code.matches("[A-Z0-9_]{1,64}")) fail("Invalid ruling failure code");
+            boolean claim = publication.hasNonNull("claimToken");
+            if (claim) uuid(publication, "claimToken");
+            if (claim != publication.hasNonNull("claimGeneration") || claim != publication.hasNonNull("leaseUntil")) fail("Incomplete ruling claim evidence");
+            if (claim && (text(publication, "claimGeneration", 64).isBlank() || !instant(publication, "leaseUntil").isAfter(requested))) fail("Invalid ruling lease");
+            if (publication.hasNonNull("completedAt") && instant(publication, "completedAt").isBefore(requested)) fail("Ruling completion predates its request");
+            if (state.equals("CLAIMED") && (!claim || attempts == 0 || publication.hasNonNull("completedAt") || message != null || code != null)
+                    || state.equals("SENT") && (attempts == 0 || !publication.hasNonNull("completedAt") || message == null || code != null || previousMessage != null && !previousMessage.equals(message))
+                    || Set.of("FAILED", "UNCERTAIN").contains(state) && (attempts == 0 || !publication.hasNonNull("completedAt") || code == null || message != null)
+                    || state.equals("PENDING") && (publication.hasNonNull("completedAt") || message != null || code != null)
+                    || state.equals("SUPERSEDED") && (!publication.hasNonNull("completedAt") || message != null || code != null)) fail("Ruling delivery outcome contradicts its evidence");
+            if (message != null) {
+                var owner = remoteOwners.putIfAbsent(message, reportId);
+                if (owner != null && !owner.equals(reportId)) fail("Ruling message belongs to another case");
+            }
+            boolean reviewed = publication.hasNonNull("reconciledBy");
+            if (reviewed != publication.hasNonNull("reconciliationReason")) fail("Incomplete ruling management review");
+            if (reviewed) { text(publication, "reconciledBy", 128); text(publication, "reconciliationReason", 1000); }
+        }
+    }
+
+    private void validateDisclosureIdentity(JsonNode delivery) {
+        String pairing = optionalText(delivery, "pairingLabel", 1000), race = optionalText(delivery, "raceLabel", 1000);
+        if ((pairing == null) != (race == null)) fail("Incomplete frozen disclosure identity");
+        if (pairing != null) {
+            if (race == null) throw new ValidationException("Missing frozen race identity");
+            if (version < 11 || !"DISCLOSURE".equals(text(delivery, "operation", 16)) || pairing.isBlank() || race.isBlank()) fail("Invalid frozen disclosure identity format");
+            var report = index("incident_reports").get(reference(delivery, "report", "incident_reports"));
+            if (!race.startsWith("Leg ") || !race.endsWith(" · Race " + uuid(report, "race"))) fail("Frozen disclosure identity belongs to another race");
+        }
     }
 
     private void validateDeliveries() {
@@ -168,6 +320,7 @@ public final class IncidentBackupValidator {
             if (!uuid(revision, "report").equals(reportId)) fail("Incident delivery references another report's private revision");
             var window = index("incident_report_windows").get(uuid(report, "window")); var context = index("incident_match_contexts").get(uuid(window, "context"));
             if (!snowflake(delivery, "guildId").equals(snowflake(context, "guildId")) || !snowflake(delivery, "channelId").equals(snowflake(context, "channelId"))) fail("Incident delivery destination contradicts its original context");
+            validateDisclosureIdentity(delivery);
             String operation = text(delivery, "operation", 16), state = text(delivery, "state", 16);
             if (!Set.of("RECEIPT", "DISCLOSURE").contains(operation) || !Set.of("PENDING", "CLAIMED", "SENT", "FAILED", "UNCERTAIN", "SUPERSEDED").contains(state)) fail("Invalid incident delivery operation or state");
             String key = text(delivery, "operationKey", 64);
@@ -228,8 +381,10 @@ public final class IncidentBackupValidator {
             ids(publication,"forumTagIds",200,5,1);
             long chunks=positive(publication,"messageChunks");
             var revision=index("incident_report_revisions").get(reference(delivery,"revision","incident_report_revisions"));var payload=revision.get("payload");
+            validateDisclosureIdentity(delivery);
             var projection=IncidentThreadProjection.render(text(delivery,"caseReference",64),text(delivery,"partyLabel",255),
-                    new IncidentPayload(text(payload,"involvedDrivers",2000),text(payload,"replayTimestamp",200),text(payload,"description",20000),optionalText(payload,"evidenceLinks",8000)));
+                    new IncidentPayload(text(payload,"involvedDrivers",2000),text(payload,"replayTimestamp",200),text(payload,"description",20000),optionalText(payload,"evidenceLinks",8000)),
+                    optionalText(delivery,"pairingLabel",1000),optionalText(delivery,"raceLabel",1000));
             if(chunks>40 || chunks!=projection.messages().size())fail("Incident thread chunks contradict their frozen source facts");
             String privateStarter=optionalSnowflake(publication,"privateStarterId"),privateThread=optionalSnowflake(publication,"privateThreadId");
             String publicStarter=optionalSnowflake(publication,"publicStarterId"),publicThread=optionalSnowflake(publication,"publicThreadId"),reference=optionalSnowflake(publication,"referenceMessageId");

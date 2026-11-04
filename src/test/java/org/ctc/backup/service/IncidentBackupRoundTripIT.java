@@ -46,6 +46,11 @@ class IncidentBackupRoundTripIT extends IncidentIntegrationFixture {
         properties.add("ctc.site.output-dir", () -> ROOT.resolve("site").toString());
     }
     @Autowired BackupArchiveService archives;
+    @Autowired org.ctc.domain.service.IncidentRulingService rulings;
+    @Autowired org.ctc.domain.service.PickSessionEpoch epoch;
+    @Autowired org.ctc.domain.repository.IncidentRulingRepository rulingRows;
+    @Autowired org.ctc.domain.repository.IncidentRulingRevisionRepository rulingRevisions;
+    @Autowired org.ctc.domain.repository.IncidentRulingPublicationRepository rulingPublications;
     @Autowired org.ctc.domain.service.IncidentDeliveryService delivery;
     @Autowired org.ctc.domain.repository.IncidentDeliveryRepository deliveryRows;
     @Autowired org.ctc.domain.repository.IncidentThreadPublicationRepository threadRows;
@@ -70,6 +75,33 @@ class IncidentBackupRoundTripIT extends IncidentIntegrationFixture {
         withdrawnReport = reports.submit(windowId, fixture.race().getId(), 1, UUID.randomUUID(), actor, payload).reportId();
         reports.withdraw(withdrawnReport, 1, 1, UUID.randomUUID(), actor);
         clearInvocations(imports, discord);
+    }
+
+    @Test
+    void givenPermanentRulingVersions_whenRestoring_thenPreserveExactIdsTextsAuthorsAndPausedCase() throws Exception {
+        rulings.saveDraft(activeReport, 0, "Test first steward ruling", "", manager, epoch.managementGeneration());
+        rulings.saveDraft(activeReport, 1, "Test second steward ruling", "Test changed decision", manager, epoch.managementGeneration());
+        var before = tx.execute(status -> {
+            var root = rulingRows.findByReportId(activeReport).orElseThrow();
+            return rulingRevisions.findByRulingIdOrderByRevisionNumberAsc(root.getId()).stream().map(row -> row.getId()).toList();
+        });
+        String staleGeneration = epoch.managementGeneration();
+        byte[] archive = export();
+        rulings.saveDraft(activeReport, 2, "Test later unsaved-in-archive ruling", "", manager, staleGeneration);
+        var preview = imports.stage(upload(archive)); imports.execute(preview.stagingId());
+        tx.executeWithoutResult(status -> {
+            var root = rulingRows.findByReportId(activeReport).orElseThrow();
+            var revisions = rulingRevisions.findByRulingIdOrderByRevisionNumberAsc(root.getId());
+            assertThat(revisions).extracting(row -> row.getId()).containsExactlyElementsOf(before);
+            assertThat(revisions).extracting(row -> row.getText()).containsExactly("Test first steward ruling", "Test second steward ruling");
+            assertThat(revisions).allSatisfy(row -> assertThat(row.getActorId()).isEqualTo(manager.id()));
+            assertThat(root.getReport().getId()).isEqualTo(activeReport); assertThat(root.getVersion()).isEqualTo(2);
+            assertThat(root.getReport().getWindow().isDeliveryPaused()).isTrue();
+            assertThat(root.getPublishedMessageId()).isNull();
+        });
+        assertThatThrownBy(() -> rulings.saveDraft(activeReport, 2, "Test stale restore form", "", manager, staleGeneration))
+                .isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class).hasMessageContaining("changed");
+        verifyNoInteractions(discord);
     }
 
     @Test
@@ -197,6 +229,109 @@ class IncidentBackupRoundTripIT extends IncidentIntegrationFixture {
         var configs=(ArrayNode)JSON.readTree(files.get("data/discord-global-config.json"));for(var config:configs)((ObjectNode)config).remove(java.util.List.of("stewardsChannelId","incidentStaffRoleIds","stewardsForumTagIds"));files.put("data/discord-global-config.json",JSON.writeValueAsBytes(configs));files.put("manifest.json",JSON.writeValueAsBytes(manifest));
         var preview=imports.stage(upload(zip(files)));imports.execute(preview.stagingId());assertThat(threadRows.count()).isZero();
         tx.executeWithoutResult(status -> {assertThat(windowRows.findById(windowId).orElseThrow().isDeliveryPaused()).isTrue();assertThat(this.configs.findById(configId).orElseThrow().getStewardsChannelId()).isEmpty();});verifyNoInteractions(discord);
+    }
+
+    UUID queuedRuling() {
+        linkedPublication(); rulings.saveDraft(activeReport, 0, "Test public ruling one", "", manager, epoch.managementGeneration());
+        return rulings.publish(activeReport, 1, 1, manager, epoch.managementGeneration());
+    }
+    void confirmRuling(UUID id) {
+        tx.executeWithoutResult(status -> {
+            var row = rulingPublications.findById(id).orElseThrow(); var token = UUID.randomUUID();
+            row.claim(token, epoch.managementGeneration(), clock.instant(), clock.instant().plusSeconds(600));
+            row.acknowledge(token, 1, epoch.managementGeneration(), clock.instant(), "950");
+            row.getRevision().getRuling().confirmPublication(row.getRevision().getRevisionNumber(), row.getPreviousRevisionNumber(), "950");
+        });
+    }
+    @ParameterizedTest @ValueSource(strings = {"SENT", "UNCERTAIN_CORRECTION", "REVIEWED_PENDING"})
+    void rulingPublicationEvidenceRoundTripsExactlyAndLosesPriorResumeGrants(String outcome) throws Exception {
+        UUID id = queuedRuling();
+        if (!outcome.equals("REVIEWED_PENDING")) confirmRuling(id);
+        if (outcome.equals("UNCERTAIN_CORRECTION")) {
+            clock.set(clock.instant().plusSeconds(1));
+            rulings.saveDraft(activeReport, 3, "Test public corrected ruling", "Test explicit correction reason", manager, epoch.managementGeneration());
+            id = rulings.publish(activeReport, 2, 4, manager, epoch.managementGeneration());
+        }
+        UUID selected = id;
+        if (!outcome.equals("SENT")) tx.executeWithoutResult(status -> {
+            var row = rulingPublications.findById(selected).orElseThrow(); var token = UUID.randomUUID();
+            row.claim(token, epoch.managementGeneration(), clock.instant(), clock.instant().plusSeconds(600));
+            row.fail(token, 1, epoch.managementGeneration(), clock.instant(), "TEST_DELIVERY", outcome.equals("UNCERTAIN_CORRECTION"), clock.instant().plusSeconds(60));
+            if (outcome.equals("REVIEWED_PENDING")) row.reconcileMissing(2, "test-previous-manager", "Test earlier remote review", clock.instant());
+        });
+        byte[] archive = export(); var before = unzip(archive);
+        var preview = imports.stage(upload(archive)); imports.execute(preview.stagingId()); var after = unzip(export());
+        for (String table : java.util.List.of("incident-rulings", "incident-ruling-revisions", "incident-ruling-publications"))
+            assertThat(after.get("data/" + table + ".json")).isEqualTo(before.get("data/" + table + ".json"));
+        tx.executeWithoutResult(status -> {
+            var row = rulingPublications.findById(selected).orElseThrow(); assertThat(row.isRestoreReviewed()).isFalse();
+            assertThat(row.getRevision().getRuling().getReport().getId()).isEqualTo(activeReport);
+            assertThat(row.getRevision().getRuling().getReport().getWindow().isDeliveryPaused()).isTrue();
+            if (outcome.equals("UNCERTAIN_CORRECTION")) {
+                assertThat(row.getState()).isEqualTo(org.ctc.domain.model.IncidentDeliveryState.UNCERTAIN);
+                assertThat(row.getPreviousMessageId()).isEqualTo("950"); assertThat(row.getRevision().getRuling().getPublishedRevisionNumber()).isEqualTo(1);
+            }
+        });
+        assertThat(rulings.dispatch(selected)).isFalse(); verifyNoInteractions(discord);
+    }
+    @ParameterizedTest @ValueSource(strings = {"owner", "destination", "content", "review-grant", "stale-previous", "message-owner"})
+    void malformedRulingPublicationEvidenceRejectsAtStageAndExecuteBeforeWiping(String cause) throws Exception {
+        UUID id = queuedRuling();
+        if (cause.equals("message-owner")) confirmRuling(id);
+        if (cause.equals("stale-previous")) {
+            confirmRuling(id); clock.set(clock.instant().plusSeconds(1));
+            rulings.saveDraft(activeReport, 3, "Test public ruling two", "Test correction two", manager, epoch.managementGeneration());
+            UUID second = rulings.publish(activeReport, 2, 4, manager, epoch.managementGeneration()); confirmRuling(second);
+            clock.set(clock.instant().plusSeconds(1)); rulings.saveDraft(activeReport, 6, "Test public ruling three", "Test correction three", manager, epoch.managementGeneration());
+            id = rulings.publish(activeReport, 3, 7, manager, epoch.managementGeneration());
+        }
+        var valid = export(); var files = unzip(valid); var rows = (ArrayNode) JSON.readTree(files.get("data/incident-ruling-publications.json"));
+        ObjectNode selected = null; for (var row : rows) if (row.path("id").asText().equals(id.toString())) selected = (ObjectNode) row;
+        assertThat(selected).isNotNull();
+        switch (cause) {
+            case "owner" -> selected.put("revision", UUID.randomUUID().toString());
+            case "destination" -> selected.put("channelId", "999");
+            case "content" -> selected.put("content", "Test unapproved substituted judgment");
+            case "review-grant" -> selected.put("restoreReviewed", true);
+            case "message-owner" -> {
+                selected.put("messageId", "801");
+                var roots = (ArrayNode) JSON.readTree(files.get("data/incident-rulings.json"));
+                ((ObjectNode) roots.get(0)).put("publishedMessageId", "801"); files.put("data/incident-rulings.json", JSON.writeValueAsBytes(roots));
+            }
+            case "stale-previous" -> {
+                String firstText = org.ctc.domain.service.IncidentRulingProjection.render(activeReport, firstReceipt.caseReference(), "Test public ruling one");
+                selected.put("previousRevisionNumber", 1); selected.put("previousContent", firstText);
+            }
+            default -> throw new AssertionError(cause);
+        }
+        files.put("data/incident-ruling-publications.json", JSON.writeValueAsBytes(rows)); byte[] broken = zip(files);
+        clearInvocations(imports);
+        assertThatThrownBy(() -> imports.stage(upload(broken))).isInstanceOfSatisfying(BackupArchiveException.class,
+                error -> assertThat(error.reason()).isEqualTo(BackupArchiveException.Reason.DATA_MISMATCH));
+        verify(imports, never()).wipeAllTables(anyMap());
+        var preview = imports.stage(upload(valid)); Files.write(ROOT.resolve("staging/upload-" + preview.stagingId() + ".zip"), broken); clearInvocations(imports);
+        assertThatThrownBy(() -> imports.execute(preview.stagingId())).isInstanceOf(BackupImportException.class).cause()
+                .isInstanceOfSatisfying(BackupArchiveException.class, error -> assertThat(error.reason()).isEqualTo(BackupArchiveException.Reason.DATA_MISMATCH));
+        verify(imports, never()).wipeAllTables(anyMap()); imports.deleteStagingFile(preview.stagingId()); verifyNoInteractions(discord);
+    }
+    @Test void realSchemaTenArchivePreservesLegacyKnownThreadsAndInventsNoRulingsOrNewCaptionProof() throws Exception {
+        UUID mappingId = linkedPublication(); var files = unzip(export()); var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
+        manifest.put("schema_version", 10); var counts = (ObjectNode) manifest.get("table_counts");
+        for (String table : java.util.List.of("incident_rulings", "incident_ruling_revisions", "incident_ruling_publications")) {
+            counts.remove(table); files.remove("data/" + table.replace('_', '-') + ".json");
+        }
+        var deliveries = (ArrayNode) JSON.readTree(files.get("data/incident-deliveries.json"));
+        for (var row : deliveries) ((ObjectNode) row).remove(java.util.List.of("pairingLabel", "raceLabel"));
+        files.put("data/incident-deliveries.json", JSON.writeValueAsBytes(deliveries)); files.put("manifest.json", JSON.writeValueAsBytes(manifest));
+        var preview = imports.stage(upload(zip(files))); imports.execute(preview.stagingId());
+        assertThat(rulingRows.count()).isZero(); assertThat(rulingRevisions.count()).isZero(); assertThat(rulingPublications.count()).isZero();
+        tx.executeWithoutResult(status -> {
+            var mapping = threadRows.findById(mappingId).orElseThrow(); assertThat(mapping.getPublicThreadId()).isEqualTo("801");
+            assertThat(mapping.getDelivery().getPairingLabel()).isNull(); assertThat(mapping.getDelivery().getRaceLabel()).isNull();
+            String body = String.join("", org.ctc.domain.service.IncidentThreadProjection.capture(mapping.getDelivery()).messages());
+            assertThat(body).contains("Test private correction").doesNotContain("Pairing:", "Race:");
+            assertThat(mapping.getDelivery().getReport().getWindow().isDeliveryPaused()).isTrue();
+        }); verifyNoInteractions(discord);
     }
 
     private byte[] export() throws Exception {

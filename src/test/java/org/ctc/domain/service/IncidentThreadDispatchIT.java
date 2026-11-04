@@ -52,9 +52,11 @@ class IncidentThreadDispatchIT extends IncidentThreadDispatchFixture {
         doAnswer(call -> {sent.add(call.getArgument(0,IncidentThreadClaim.class).work());return new IncidentThreadResult(IncidentSendResult.Disposition.REJECTED,null,null,"TEST_NOT_POSTED");}).when(threadSender).send(any());
         assertThat(publication.dispatch(id)).isTrue();
         var replacement=tx.execute(status -> {
-            var previous=deliveryRows.findById(id).orElseThrow();var report=previous.getReport();var revision=previous.getRevision();var at=previous.getCapturedAt();
+            var previous=deliveryRows.findById(id).orElseThrow();var report=previous.getReport();var revision=previous.getRevision();var at=previous.getCapturedAt();var pairingLabel=previous.getPairingLabel();var raceLabel=previous.getRaceLabel();
             threadRows.delete(threadRows.findByDeliveryId(id).orElseThrow());threadRows.flush();deliveryRows.delete(previous);deliveryRows.flush();
-            return deliveryRows.saveAndFlush(IncidentDelivery.capture(report,revision,IncidentDeliveryOperation.DISCLOSURE,at)).getId();
+            var recreated=IncidentDelivery.capture(report,revision,IncidentDeliveryOperation.DISCLOSURE,at);
+            if(pairingLabel!=null)recreated.freezePublicIdentity(pairingLabel,raceLabel);
+            return deliveryRows.saveAndFlush(recreated).getId();
         });
         assertThat(replacement).isNotEqualTo(id);assertThat(publication.dispatch(replacement)).isTrue();assertThat(sent).hasSize(2);
         assertThat(sent.get(1).nonce()).isEqualTo(sent.get(0).nonce());assertThat(sent.get(1).content()).isEqualTo(sent.get(0).content());

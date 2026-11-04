@@ -85,5 +85,11 @@ Every finding was triaged by hand. Two led to source changes; the rest are struc
 | Rule | Location | Count | Bucket | Rationale |
 |------|----------|-------|--------|-----------|
 | SQL_INJECTION_JDBC | `db.migration.V31__AddIncidentThreads.migrate` | 1 | suppressed | Executes fixed bundled `/db/schema/incident_threads.sql` DDL with the existing literal timestamp type replacement for MariaDB. No request, archive or database values enter SQL text. The source annotation follows V29/V30. Reevaluate if the resource source or rewrite becomes input-controlled. |
-
 | EI_EXPOSE_REP2 | `IncidentThreadPublicationService` constructor | 1 | suppressed | Retains Spring's shared transaction-scoped EntityManager proxy for current locking refreshes under the window/delivery locks. Copying it would break persistence-context identity. The EXACT constructor-scoped annotation excludes only this representation warning; other rules remain enabled. Reevaluate if the constructor starts accepting caller-owned mutable data. |
+
+## Incident ruling persistence, 2026-11-04
+
+| Rule | Location | Count | Bucket | Rationale |
+|------|----------|-------|--------|-----------|
+| SQL_INJECTION_JDBC | `db.migration.V32__AddIncidentRulings.migrate` | 1 | suppressed | Executes only bundled `/db/schema/incident_rulings.sql` DDL with the literal MariaDB timestamp-token rewrite, following V31. No request, archive or stored values enter SQL text. Reevaluate if the resource source or rewrite becomes input-controlled. |
+| EI_EXPOSE_REP2 | `IncidentRulingService` constructor | 1 | suppressed | Retains Spring's shared transaction-scoped EntityManager proxy for current report/ruling/publication reads under the reporting-window lock. Copying it would break persistence-context identity. The EXACT constructor annotation follows `IncidentThreadPublicationService`; other rules remain enabled. Reevaluate if caller-owned mutable data is accepted. |

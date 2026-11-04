@@ -34,19 +34,19 @@ class IncidentManagementSecurityIT extends IncidentIntegrationFixture {
     @MockitoBean org.ctc.discord.DiscordRestClient discord;
 
     @ParameterizedTest
-    @ValueSource(strings = {"/admin/incident-contexts/context", "/admin/matches/match/incidents", "/admin/playoffs/matchup/unknown/incidents", "/admin/incident-contexts/context/deliveries", "/admin/incident-deliveries/unknown"})
+    @ValueSource(strings = {"/admin/incident-contexts/context", "/admin/matches/match/incidents", "/admin/playoffs/matchup/unknown/incidents", "/admin/incident-contexts/context/deliveries", "/admin/incident-deliveries/unknown", "/admin/incidents/unknown"})
     void anonymousReadsRequireManagementAuthentication(String route) throws Exception {
         mvc.perform(get(path(route))).andExpect(status().isUnauthorized());
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/admin/incident-contexts/context/window/open", "/admin/incident-contexts/context/window/deadline", "/admin/matches/match/incidents/bind", "/admin/playoffs/matchup/unknown/incidents/bind", "/admin/incident-contexts/context/deliveries/resume", "/admin/incident-deliveries/unknown"})
+    @ValueSource(strings = {"/admin/incident-contexts/context/window/open", "/admin/incident-contexts/context/window/deadline", "/admin/matches/match/incidents/bind", "/admin/playoffs/matchup/unknown/incidents/bind", "/admin/incident-contexts/context/deliveries/resume", "/admin/incident-deliveries/unknown", "/admin/incidents/unknown/ruling/save", "/admin/incidents/unknown/ruling/publish", "/admin/incidents/unknown/ruling/reconcile"})
     void anonymousMutationWithCsrfIsRejectedBeforeManagementServices(String route) throws Exception {
         mvc.perform(post(path(route)).with(csrf())).andExpect(status().isUnauthorized());
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/admin/incident-contexts/context/window/open", "/admin/incident-contexts/context/window/deadline", "/admin/matches/match/incidents/bind", "/admin/playoffs/matchup/unknown/incidents/bind", "/admin/incident-contexts/context/deliveries/resume", "/admin/incident-deliveries/unknown"})
+    @ValueSource(strings = {"/admin/incident-contexts/context/window/open", "/admin/incident-contexts/context/window/deadline", "/admin/matches/match/incidents/bind", "/admin/playoffs/matchup/unknown/incidents/bind", "/admin/incident-contexts/context/deliveries/resume", "/admin/incident-deliveries/unknown", "/admin/incidents/unknown/ruling/save", "/admin/incidents/unknown/ruling/publish", "/admin/incidents/unknown/ruling/reconcile"})
     @WithMockUser("test-manager")
     void authenticatedMutationsRequireCsrf(String route) throws Exception {
         mvc.perform(post(path(route))).andExpect(status().isForbidden());
@@ -93,6 +93,25 @@ class IncidentManagementSecurityIT extends IncidentIntegrationFixture {
         String overview=mvc.perform(get("/admin/incident-contexts/"+contextId+"/deliveries")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         assertThat(Jsoup.parse(overview).select("form input[name=_csrf]")).hasSize(1);
         tx.executeWithoutResult(status -> assertThat(deliveryRows.findById(id).orElseThrow().getState()).isEqualTo(org.ctc.domain.model.IncidentDeliveryState.PENDING));
+        org.mockito.Mockito.verifyNoInteractions(discord);
+    }
+
+    @Test
+    @WithMockUser("test-authenticated-steward")
+    void rulingFormsRequireCsrfAndRecordOnlyTheAuthenticatedAuthor() throws Exception {
+        windows.open(contextId, NOW.plusSeconds(3600), 0, manager);
+        UUID report = reports.submit(windowId, fixture.race().getId(), 1, UUID.randomUUID(), actor, payload).reportId();
+        String route = "/admin/incidents/" + report;
+        var response = mvc.perform(get(route)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        var html = Jsoup.parse(response);
+        assertThat(html.select("form[action='" + route + "/ruling/save'] input[name=_csrf]")).hasSize(1);
+        String generation = html.selectFirst("input[name=generation]").val();
+        mvc.perform(post(route + "/ruling/save").with(csrf()).param("expectedVersion", "0").param("generation", generation)
+                .param("text", "Test authenticated ruling").param("reason", "").param("actorId", "forged-team-role"))
+                .andExpect(status().is3xxRedirection());
+        String saved = mvc.perform(get(route)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(Jsoup.parse(saved).text()).contains("test-authenticated-steward").doesNotContain("forged-team-role");
+        assertThat(Jsoup.parse(saved).select("form[action='" + route + "/ruling/publish'] input[name=_csrf]")).hasSize(1);
         org.mockito.Mockito.verifyNoInteractions(discord);
     }
 
