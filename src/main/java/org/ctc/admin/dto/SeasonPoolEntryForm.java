@@ -13,19 +13,26 @@ import org.ctc.domain.service.SeasonCarPoolService;
 @Getter
 @Setter
 public class SeasonPoolEntryForm {
+    public enum EntryType { CATEGORY, ONE_MAKE }
+    public interface CategoryDefinition {}
+    public interface OneMakeDefinition {}
     private UUID entryId;
+    @NotNull
+    private EntryType entryType = EntryType.CATEGORY;
+    @NotNull(groups = OneMakeDefinition.class)
+    private UUID oneMakeCarId;
     @NotBlank
     @Size(max = 120)
     private String label;
     @Valid
-    @NotEmpty
+    @NotEmpty(groups = CategoryDefinition.class)
     @Size(max = 32)
     private List<ClauseForm> clauses = new ArrayList<>(List.of(new ClauseForm()));
 
     @Getter
     @Setter
     public static class ClauseForm {
-        @NotNull
+        @NotNull(groups = CategoryDefinition.class)
         private CarCategory category;
         private Drivetrain drivetrain;
         @Min(1000)
@@ -41,6 +48,8 @@ public class SeasonPoolEntryForm {
         var form = new SeasonPoolEntryForm();
         form.setEntryId(entry.getId());
         form.setLabel(entry.getLabel());
+        form.setEntryType(entry.getOneMakeCar() == null ? EntryType.CATEGORY : EntryType.ONE_MAKE);
+        form.setOneMakeCarId(entry.getOneMakeCar() == null ? null : entry.getOneMakeCar().getId());
         form.getClauses().clear();
         for (var clause : entry.getClauses()) {
             var input = new ClauseForm();

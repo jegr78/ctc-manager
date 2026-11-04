@@ -21,6 +21,47 @@ import static org.assertj.core.api.Assertions.*;
 @CtcDevSpringBootContext
 @Tag("integration")
 class SeasonCarPoolPersistenceIT {
+    @Autowired RaceCarSelectionService selections;
+
+    @Test
+    @Transactional
+    void givenMixedPool_whenSelectingOneMake_thenRequireConcreteCarAndOncePerHomeUsage() {
+        // given
+        var fixture = helper.createFullSeasonFixture("MixedPool " + UUID.randomUUID().toString().substring(0, 8));
+        pools.changeMode(fixture.season().getId(), CarPoolMode.CATEGORY_POOL);
+        var oneMake = car("One-Make", CarCategory.GR_X, 9997);
+        var categoryCar = car("Category", CarCategory.GR_2, 9998);
+        var oneMakeId = pools.saveOneMakeEntry(fixture.season().getId(), null, "One-Make", oneMake.getId());
+        var categoryId = pools.saveEntry(fixture.season().getId(), null, "Category", List.of(new SeasonCarPoolService.ClauseInput(CarCategory.GR_2, null, 9998)));
+
+        // when
+        pools.freeze(fixture.season().getId());
+        var seasonId = fixture.season().getId();
+
+        // then
+        assertThat(selections.validate(seasonId, fixture.homeTeam().getId(), null, oneMakeId, categoryCar.getId()).valid()).isFalse();
+        assertThat(selections.validate(seasonId, fixture.homeTeam().getId(), null, oneMakeId, oneMake.getId()).valid()).isTrue();
+        fixture.race().setCarPoolEntry(entries.findById(oneMakeId).orElseThrow());
+        fixture.race().setCar(oneMake);
+        races.saveAndFlush(fixture.race());
+        assertThat(selections.validate(seasonId, fixture.homeTeam().getId(), null, oneMakeId, oneMake.getId()).valid()).isFalse();
+        assertThat(selections.validate(seasonId, fixture.awayTeam().getId(), null, oneMakeId, oneMake.getId()).valid()).isTrue();
+        assertThat(selections.validate(seasonId, fixture.homeTeam().getId(), null, categoryId, categoryCar.getId()).valid()).isTrue();
+        assertThat(selections.validate(seasonId, fixture.homeTeam().getId(), fixture.race().getId(), oneMakeId, oneMake.getId()).valid()).isTrue();
+    }
+
+    @Test
+    @Transactional
+    void givenDraftOneMakeReference_whenDeletingCar_thenReject() {
+        // given
+        var season = newSeason();
+        var selected = car("Draft one-make", null, 9999);
+        pools.saveOneMakeEntry(season.getId(), null, "Selected model", selected.getId());
+
+        // when / then
+        assertThatThrownBy(() -> carService.delete(selected.getId())).isInstanceOf(BusinessRuleException.class).hasMessageContaining("season pool");
+    }
+
     @org.springframework.test.context.bean.override.mockito.MockitoSpyBean SeasonRepository seasons;
     @Autowired CarRepository cars;
     @Autowired RaceRepository races;

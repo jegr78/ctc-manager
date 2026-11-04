@@ -299,7 +299,7 @@ public class SeasonController {
                 throw new org.ctc.domain.exception.ValidationException("A pool entry supports at most 32 clauses.");
             }
         }
-        binder.setAllowedFields("entryId", "label", "clauses[*].category", "clauses[*].drivetrain", "clauses[*].modelYear");
+        binder.setAllowedFields("entryId", "label", "entryType", "oneMakeCarId", "clauses[*].category", "clauses[*].drivetrain", "clauses[*].modelYear");
         binder.setAutoGrowCollectionLimit(32);
     }
 
@@ -316,6 +316,7 @@ public class SeasonController {
     public String savePoolEntry(@PathVariable UUID id, @ModelAttribute("poolEntryForm") SeasonPoolEntryForm form,
                                BindingResult result, @RequestParam(defaultValue = "save") String action,
                                Model model, RedirectAttributes redirect) {
+        if (action.equals("change-type")) return edit(id, model);
         if (action.equals("add-clause")) {
             if (form.getClauses().size() < SeasonCarPoolService.MAX_CLAUSES) form.getClauses().add(new SeasonPoolEntryForm.ClauseForm());
             else result.reject("pool", "An entry supports at most 32 clauses.");
@@ -332,8 +333,15 @@ public class SeasonController {
         }
         if (!action.equals("save")) result.reject("pool", "Unknown pool action.");
         validator.validate(form).forEach(violation -> result.rejectValue(violation.getPropertyPath().toString(), "pool", violation.getMessage()));
+        Class<?> definitionGroup = form.getEntryType() == SeasonPoolEntryForm.EntryType.ONE_MAKE
+                ? SeasonPoolEntryForm.OneMakeDefinition.class : SeasonPoolEntryForm.CategoryDefinition.class;
+        validator.validate(form, definitionGroup).forEach(violation -> result.rejectValue(violation.getPropertyPath().toString(), "pool", violation.getMessage()));
         if (!result.hasErrors()) {
-            try { carPoolService.saveEntry(id, form.getEntryId(), form.getLabel(), form.toInputs()); }
+            try {
+                if (form.getEntryType() == SeasonPoolEntryForm.EntryType.ONE_MAKE) {
+                    carPoolService.saveOneMakeEntry(id, form.getEntryId(), form.getLabel(), form.getOneMakeCarId());
+                } else carPoolService.saveEntry(id, form.getEntryId(), form.getLabel(), form.toInputs());
+            }
             catch (BusinessRuleException e) { result.reject("pool", e.getMessage()); }
         }
         if (result.hasErrors()) return edit(id, model);

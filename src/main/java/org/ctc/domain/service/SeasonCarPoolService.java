@@ -30,9 +30,21 @@ public class SeasonCarPoolService {
 
     @Transactional
     public UUID saveEntry(UUID seasonId, UUID entryId, String label, List<ClauseInput> clauses) {
+        return saveDefinition(seasonId, entryId, label, clauses, null);
+    }
+
+    @Transactional
+    public UUID saveOneMakeEntry(UUID seasonId, UUID entryId, String label, UUID carId) {
+        if (carId == null) throw new BusinessRuleException("Choose a car for the one-make entry.");
+        return saveDefinition(seasonId, entryId, label, List.of(), carId);
+    }
+
+    private UUID saveDefinition(UUID seasonId, UUID entryId, String label, List<ClauseInput> clauses, UUID carId) {
         var season = locked(seasonId);
         requireEditable(season);
-        validateDefinition(label, clauses);
+        validateDefinition(label, clauses, carId);
+        var oneMakeCar = carId == null ? null : cars.findById(carId)
+                .orElseThrow(() -> new BusinessRuleException("The selected one-make car no longer exists."));
         var entry = entryId == null ? new SeasonCarPoolEntry() : ownedEntry(season, entryId);
         if (entryId == null) {
             entry.setSeason(season);
@@ -42,6 +54,7 @@ public class SeasonCarPoolService {
             season.getCarPoolEntries().add(entry);
         }
         entry.setLabel(label.trim());
+        entry.setOneMakeCar(oneMakeCar);
         entry.getClauses().clear();
         for (int i = 0; i < clauses.size(); i++) {
             var input = clauses.get(i);
@@ -125,10 +138,15 @@ public class SeasonCarPoolService {
         if (season.getCarPoolEntries().isEmpty()) problems.add("Add at least one entry before freezing.");
         for (var entry : season.getCarPoolEntries()) {
             var clauses = entry.getClauses().stream().map(c -> new ClauseInput(c.getCategory(), c.getDrivetrain(), c.getModelYear())).toList();
-            try { validateDefinition(entry.getLabel(), clauses); }
+            UUID oneMakeId = entry.getOneMakeCar() == null ? null : entry.getOneMakeCar().getId();
+            try { validateDefinition(entry.getLabel(), clauses, oneMakeId); }
             catch (BusinessRuleException e) { problems.add(entry.getLabel() + ": " + e.getMessage()); }
             List<Car> matching = frozen ? entry.getMembers().stream().map(SeasonCarPoolMember::getCar).toList()
-                    : catalog.stream().filter(car -> clauses.stream().anyMatch(clause -> matches(car, clause))).toList();
+                    : catalog.stream().filter(car -> oneMakeId != null ? oneMakeId.equals(car.getId())
+                            : clauses.stream().anyMatch(clause -> matches(car, clause))).toList();
+            if (frozen && oneMakeId != null && (matching.size() != 1 || !oneMakeId.equals(matching.getFirst().getId()))) {
+                problems.add("One-make entry '" + entry.getLabel() + "' must contain exactly its selected car.");
+            }
             var choices = matching.stream().map(car -> new CarOption(car.getId(), car.getManufacturer() + " — " + car.getName()))
                     .distinct().toList();
             result.add(new EntryPreview(entry.getId(), entry.getLabel(), choices));
@@ -165,8 +183,12 @@ public class SeasonCarPoolService {
                 && (clause.modelYear() == null || clause.modelYear().equals(car.getModelYear()));
     }
 
-    private static void validateDefinition(String label, List<ClauseInput> clauses) {
+    private static void validateDefinition(String label, List<ClauseInput> clauses, UUID oneMakeCarId) {
         if (label == null || label.isBlank() || label.trim().length() > 120) throw new BusinessRuleException("Entry label must contain 1 to 120 characters.");
+        if (oneMakeCarId != null) {
+            if (clauses == null || !clauses.isEmpty()) throw new BusinessRuleException("A one-make entry cannot also have category clauses.");
+            return;
+        }
         if (clauses == null || clauses.isEmpty() || clauses.size() > MAX_CLAUSES) throw new BusinessRuleException("An entry requires 1 to " + MAX_CLAUSES + " clauses.");
         var unique = new HashSet<ClauseInput>();
         for (var clause : clauses) {

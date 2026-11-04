@@ -16,13 +16,14 @@ public class SeasonCarPoolEntryRestorer implements EntityRestorer {
 
     @Override
     public void restore(List<JsonNode> rows, JdbcTemplate jdbc) {
-        jdbc.batchUpdate("INSERT INTO season_car_pool_entries (id, season_id, label, sort_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", rows, 500, (ps, row) -> {
+        jdbc.batchUpdate("INSERT INTO season_car_pool_entries (id, season_id, label, sort_index, created_at, updated_at, one_make_car_id) VALUES (?, ?, ?, ?, ?, ?, ?)", rows, 500, (ps, row) -> {
             ps.setObject(1, UUID.fromString(row.get("id").asText()));
             ps.setObject(2, UUID.fromString(row.get("season").asText()));
             ps.setString(3, row.get("label").asText());
             ps.setInt(4, row.get("sortIndex").intValue());
             ps.setTimestamp(5, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
             ps.setTimestamp(6, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
+            ps.setObject(7, row.hasNonNull("oneMakeCar") ? UUID.fromString(row.get("oneMakeCar").asText()) : null);
         });
     }
 }

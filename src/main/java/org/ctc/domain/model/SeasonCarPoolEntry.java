@@ -25,6 +25,10 @@ public class SeasonCarPoolEntry extends BaseEntity {
     @Column(nullable = false, length = 120)
     private String label;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "one_make_car_id")
+    private Car oneMakeCar;
+
     @Column(name = "sort_index", nullable = false)
     private int sortIndex;
 

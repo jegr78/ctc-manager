@@ -8,4 +8,6 @@ import org.ctc.domain.model.*;
 public abstract class SeasonCarPoolEntryMixIn {
     @JsonIdentityReference(alwaysAsId = true)
     abstract Season getSeason();
+    @JsonIdentityReference(alwaysAsId = true)
+    abstract Car getOneMakeCar();
 }

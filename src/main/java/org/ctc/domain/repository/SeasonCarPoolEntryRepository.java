@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface SeasonCarPoolEntryRepository extends JpaRepository<SeasonCarPoolEntry, UUID> {
-    @EntityGraph(attributePaths = {"season"})
+    @EntityGraph(attributePaths = {"season", "oneMakeCar"})
     @Query("select e from SeasonCarPoolEntry e")
     List<SeasonCarPoolEntry> findAllForBackup();
 }

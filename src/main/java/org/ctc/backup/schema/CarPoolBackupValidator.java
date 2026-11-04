@@ -10,7 +10,7 @@ public final class CarPoolBackupValidator {
     private static final Map<String, Set<String>> FIELDS = Map.of(
             "seasons", Set.of("id", "carPoolMode", "carPoolState"),
             "cars", Set.of("id"),
-            "season_car_pool_entries", Set.of("id", "season", "label", "sortIndex"),
+            "season_car_pool_entries", Set.of("id", "season", "label", "sortIndex", "oneMakeCar"),
             "season_car_pool_clauses", Set.of("id", "entry", "category", "drivetrain", "modelYear", "sortIndex"),
             "season_car_pool_members", Set.of("id", "entry", "car"),
             "races", Set.of("id", "matchday", "carPoolEntry", "car", "match", "playoffMatchup", "homeTeamOverride"),
@@ -27,6 +27,9 @@ public final class CarPoolBackupValidator {
 
     public void accept(String table, JsonNode row) {
         if (!FIELDS.containsKey(table)) return;
+        if (version < 12 && table.equals("season_car_pool_entries") && row.hasNonNull("oneMakeCar")) {
+            fail("One-make pool definitions require backup schema version 12.");
+        }
         if (version < 4) {
             validateLegacyRow(table, row);
             return;
@@ -86,6 +89,7 @@ public final class CarPoolBackupValidator {
             String label = text(row, "label");
             if (label.isBlank()) fail("Invalid pool entry label.");
             nonnegativeInt(row, "sortIndex");
+            if (row.hasNonNull("oneMakeCar")) reference(row, "oneMakeCar", cars);
             bySeason.computeIfAbsent(season, ignored -> new ArrayList<>()).add(item.getKey());
         }
         var definitions = new HashMap<String, Set<List<String>>>();
@@ -115,9 +119,15 @@ public final class CarPoolBackupValidator {
         }
         for (var item : entries.entrySet()) {
             var entry = item.getKey();
-            if (!definitions.containsKey(entry)) fail("Pool entry has no clauses.");
+            boolean oneMake = item.getValue().hasNonNull("oneMakeCar");
+            if (oneMake && definitions.containsKey(entry)) fail("A one-make entry cannot also have category clauses.");
+            if (!oneMake && !definitions.containsKey(entry)) fail("Pool entry has no clauses.");
             var season = uuid(item.getValue(), "season");
             if (states.get(season) == CarPoolState.FROZEN && !memberships.containsKey(entry)) fail("Frozen pool entry is empty.");
+            if (oneMake && states.get(season) == CarPoolState.FROZEN
+                    && !memberships.getOrDefault(entry, Set.of()).equals(Set.of(uuid(item.getValue(), "oneMakeCar")))) {
+                fail("Frozen one-make entry must contain exactly its selected car.");
+            }
         }
         for (var season : seasons.keySet()) {
             if (states.get(season) == CarPoolState.FROZEN && !bySeason.containsKey(season)) fail("Frozen pool is empty.");

@@ -44,7 +44,8 @@ class SeasonCarPoolE2ETest extends PlaywrightConfig {
             var rr = new Car("Test Pool Browser", "RR " + UUID.randomUUID());
             rr.setCategory(CarCategory.GR_3);
             rr.setDrivetrain(Drivetrain.RR);
-            return cars.saveAllAndFlush(List.of(mr, rr)).stream().map(Car::getId).toList();
+            var oneMake = new Car("Test Pool Browser", "One-Make " + UUID.randomUUID());
+            return cars.saveAllAndFlush(List.of(mr, rr, oneMake)).stream().map(Car::getId).toList();
         });
         try {
             // when
@@ -62,6 +63,13 @@ class SeasonCarPoolE2ETest extends PlaywrightConfig {
             page.locator("#pool-drive-1").selectOption("RR");
             page.locator("button[value='save']").click();
             assertThat(page.locator("#pool-preview summary").first()).containsText(entryLabel + " · 2 eligible car(s)");
+            page.locator("#pool-entry-type").selectOption("ONE_MAKE");
+            page.locator("button[value='change-type']").click();
+            page.locator("#pool-label").fill("Selected One-Make");
+            page.locator("#pool-one-make-car").selectOption(ids.get(2).toString());
+            page.locator("button[value='save']").click();
+            assertThat(page.locator("#pool-preview summary").nth(1)).containsText("Selected One-Make · 1 eligible car(s)");
+            assertThat(page.locator("#carPool")).containsText("One-Makes");
             page.locator("#freeze-pool").click();
             assertThat(page.locator("#carPool")).containsText("Frozen category pool");
             assertThat(page.locator("#pool-entry-editor")).hasCount(0);

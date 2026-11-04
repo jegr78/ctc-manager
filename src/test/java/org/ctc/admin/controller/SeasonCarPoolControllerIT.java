@@ -23,6 +23,33 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 @Tag("integration")
 class SeasonCarPoolControllerIT {
+    @Test
+    void givenNativeOneMakeSubmission_whenSaving_thenValidateCarAndRetainErrors() throws Exception {
+        // given
+        var season = helper.createSeason("Test OneMake " + UUID.randomUUID());
+        pools.changeMode(season.getId(), CarPoolMode.CATEGORY_POOL);
+        var car = cars.saveAndFlush(new Car("Test OneMake", "Selected " + UUID.randomUUID()));
+
+        // when
+        mvc.perform(post(base(season) + "/entries/save").param("entryType", "ONE_MAKE").param("label", "Selected model")
+                .param("action", "change-type"))
+                .andExpect(status().isOk()).andExpect(content().string(containsString("pool-one-make-car")));
+        mvc.perform(post(base(season) + "/entries/save").param("entryType", "ONE_MAKE").param("label", "Selected model"))
+                .andExpect(status().isOk()).andExpect(model().attributeHasFieldErrors("poolEntryForm", "oneMakeCarId"));
+        mvc.perform(post(base(season) + "/entries/save").param("entryType", "ONE_MAKE").param("label", "Selected model")
+                .param("oneMakeCarId", car.getId().toString()))
+                .andExpect(status().is3xxRedirection());
+
+        // then
+        var entry = season.getCarPoolEntries().getFirst();
+        assertThat(entry.getOneMakeCar()).isEqualTo(car);
+        assertThat(entry.getClauses()).isEmpty();
+        pools.freeze(season.getId());
+        mvc.perform(get(base(season) + "/entries/" + entry.getId() + "/edit"))
+                .andExpect(status().isOk()).andExpect(content().string(containsString("One-Makes")));
+        assertThat(pools.preview(season.getId()).entries().getFirst().carIds()).containsExactly(car.getId());
+    }
+
     @Autowired MockMvc mvc;
     @Autowired TestHelper helper;
     @Autowired SeasonCarPoolService pools;

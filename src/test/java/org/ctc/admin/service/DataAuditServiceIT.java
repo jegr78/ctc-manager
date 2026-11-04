@@ -65,6 +65,41 @@ import org.springframework.transaction.annotation.Transactional;
 @Tag("integration")
 @Transactional
 class DataAuditServiceIT {
+    @Test
+    void givenInconsistentOneMakeSnapshot_whenAudited_thenReportWithoutRepair() {
+        // given
+        var selected = new org.ctc.domain.model.Car("Test One-Make audit", "Selected " + UUID.randomUUID());
+        var wrong = new org.ctc.domain.model.Car("Test One-Make audit", "Wrong " + UUID.randomUUID());
+        entityManager.persist(selected);
+        entityManager.persist(wrong);
+        season.setCarPoolMode(org.ctc.domain.model.CarPoolMode.CATEGORY_POOL);
+        season.setCarPoolState(org.ctc.domain.model.CarPoolState.FROZEN);
+        var entry = new org.ctc.domain.model.SeasonCarPoolEntry();
+        entry.setSeason(season);
+        entry.setLabel("Historical one-make");
+        entry.setOneMakeCar(selected);
+        season.getCarPoolEntries().add(entry);
+        entityManager.persist(entry);
+        var member = new org.ctc.domain.model.SeasonCarPoolMember();
+        member.setEntry(entry);
+        member.setCar(wrong);
+        entry.getMembers().add(member);
+        entityManager.persist(member);
+        entityManager.flush();
+        entityManager.clear();
+
+        // when
+        var findings = dataAuditService.audit().sections().stream().filter(section -> section.category() == Category.CAR_POOL)
+                .flatMap(section -> section.findings().stream()).toList();
+
+        // then
+        assertThat(findings).anySatisfy(finding -> {
+            assertThat(finding.subject()).contains(season.getId().toString());
+            assertThat(finding.evidence()).contains("exactly its selected car");
+        });
+        assertThat(entityManager.find(org.ctc.domain.model.SeasonCarPoolMember.class, member.getId()).getCar().getId()).isEqualTo(wrong.getId());
+    }
+
 
 	@Autowired private DataAuditService dataAuditService;
 	@Autowired private TestHelper testHelper;
