@@ -17,7 +17,7 @@ operator work; verification uses synthetic fixtures and a local fake Discord ser
 - [x] Persist and recover each successful publication step, with safe unknown-outcome handling.
 - [x] Expose typed management recovery/status and preserve exact archive/config references.
 - [x] Falsify new protections individually; complete self-review and independent security review.
-- [ ] Run focused `verify` including static gates before the final expensive clean full run.
+- [x] Run focused `verify` including static gates before the final expensive clean full run.
 - [ ] Verify the final committed head locally and in CI; merge and reconcile hierarchy/Wiki/branches.
 
 ## Requirements matrix
@@ -211,3 +211,29 @@ assertion rather than at a database or compilation error.
 The final independent read-only review of the same checkpoint confirmed the receipt lookup
 hardening and reported no additional findings. Self-review and all validated security findings
 are complete. Static gates and the canonical clean verification remain release requirements.
+
+## Static gates and native configuration checks
+
+The clean pre-E2E run passed 3,133 unit tests and 1,589 recorded integration cases, with zero
+failures/errors and the same three previously disabled unit tests. SpotBugs then stopped that
+run with nineteen null-flow reports in three new classes. Their boolean validation helpers
+already threw on invalid input; explicit local throws now make that control flow visible to
+the analyzer. Conditions, short-circuit evaluation, side effects and exception types/messages
+remain identical. No suppression was added. Independent review of `77a51e7e..afc38f75`
+confirmed that equivalence and reported no findings.
+
+The corrected focused `verify` passed all 62 selected unit and 69 integration/real-client
+cases, with zero failures/errors/skips. SpotBugs reported zero bugs and the detector-pack guard
+confirmed active FindSecBugs. Cumulative preflight line coverage was 92.545%; this is a focused
+static-gate checkpoint, not a replacement for the final clean E2E verification.
+
+An isolated dev/H2 instance with outbound integrations and delivery disabled served the actual
+configuration page to Chromium. At 1440-pixel desktop and 390-pixel mobile widths, with application
+JavaScript disabled, native save/reload preserved staff roles and tags. Incomplete destinations
+and duplicate roles showed inline errors while retaining rejected values. Keyboard Tab visited
+the staff and tag inputs in order, and the mobile page had no horizontal overflow. Desktop and
+mobile error screenshots were inspected; local captures are in the ignored `.screenshots/`
+directory. The temporary app and browser processes were stopped afterwards.
+
+The remaining release gate is the canonical committed-head command, followed by PR/CI/merge
+and post-merge reconciliation: `./mvnw clean verify -Pe2e -Ddocker.available=true`.
