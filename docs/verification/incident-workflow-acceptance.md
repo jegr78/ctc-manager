@@ -16,8 +16,9 @@ dashboard remains user-owned. The local v1.17 roadmap is shipped.
 - [x] Complete explicit H2/MariaDB and native desktop/mobile targeted coverage; retain restore-admission coverage in the canonical suite.
 - [x] Document setup, recovery, retained history and a separately authorized future rollout.
 - [x] Complete self-review and independent security review; fix validated findings directly.
-- [ ] Falsify any new production guards individually; record not applicable if none are introduced.
-- [ ] Integrate current upstream and run canonical clean verification on the committed final head.
+- [x] Falsify the five new audit rules individually and restore the correct checkpoint exactly.
+- [x] Integrate current upstream and prepare canonical clean verification on the committed final head.
+- [ ] Observe the canonical result and matching external checks on that exact head.
 - [ ] Require matching green CI, verify merge and reconcile #293 through the full parent chain.
 - [ ] Publish Wiki updates and remove the delivered own topic branch before fresh selection.
 
@@ -136,3 +137,18 @@ findings and the coverage gate passed. All selected integration/E2E cases ran wi
 Three unchanged unit skips remain: the deferred `SeasonPhaseControllerTest` empty-state fixture
 and the two manual `StandingsGraphicPreviewTest` image regenerators. They are unrelated to this
 incident acceptance contract. The canonical clean suite remains the authoritative final check.
+
+
+## Individual audit-rule counterchecks
+
+After committing the correct implementation as `41d23998`, each of the five new diagnostics was
+individually disabled: overdue window, ambiguous role, receipt outcome, ruling outcome and partial
+thread pair. The selected witnesses produced seven intended empty-finding assertion failures,
+zero errors and zero skips. FAILED and UNCERTAIN each ran for both receipt/ruling checks. After
+every probe the source was restored byte-for-byte, and the final worktree matched the checkpoint.
+No mutation was committed. There are no new write-admission guards, schema changes or API routes.
+
+The external-result boxes remain unchecked in this pre-merge source artifact. The closing record
+in [issue #293](https://github.com/jegr78/ctc-manager/issues/293) and its merged PR carry the final
+canonical/CI, Wiki, tracker and branch-cleanup evidence. The future operator checklist remains
+separate from automated acceptance.

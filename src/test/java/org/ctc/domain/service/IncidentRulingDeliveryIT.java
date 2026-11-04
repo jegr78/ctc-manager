@@ -59,10 +59,13 @@ class IncidentRulingDeliveryIT extends IncidentIntegrationFixture {
     @ParameterizedTest
     @ValueSource(strings = {"FAILED", "UNCERTAIN"})
     void givenUnresolvedRulingDelivery_whenAuditing_thenReportReviewWithoutChangingEvidence(String outcome) {
+        // given
         var work = queued();
         when(sender.send(any())).thenReturn(new IncidentSendResult(outcome.equals("UNCERTAIN")
                 ? IncidentSendResult.Disposition.UNCERTAIN : IncidentSendResult.Disposition.REJECTED, null, "TEST_REJECTION"));
+        // when
         assertThat(rulings.dispatch(work.publication())).isTrue();
+        // then
         assertThat(audit.audit().findings(org.ctc.admin.dto.DataAuditFinding.Category.INCIDENT_REPORTS)).singleElement().satisfies(finding -> {
             assertThat(finding.subject()).contains(work.publication().toString());
             assertThat(finding.evidence()).contains(outcome).doesNotContain(payload.getDescription(), actor.userId(), "Test explicitly approved ruling");

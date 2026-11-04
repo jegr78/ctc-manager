@@ -82,8 +82,10 @@ class IncidentIntegrityAuditIT extends IncidentIntegrationFixture {
 
     @Test
     void givenAnExpiredOpenWindow_whenAuditing_thenReportTheDueClosureWithoutChangingHistory() {
+        // given
         UUID report = submit();
         clock.set(NOW.plusSeconds(3600));
+        // when / then
         assertThat(audit.audit().findings(Category.INCIDENT_REPORTS)).singleElement().satisfies(finding -> {
             assertThat(finding.subject()).contains(windowId.toString());
             assertThat(finding.evidence()).contains("OPEN", "deadline").doesNotContain(payload.getDescription(), actor.userId());
@@ -97,6 +99,7 @@ class IncidentIntegrityAuditIT extends IncidentIntegrationFixture {
     @ParameterizedTest
     @ValueSource(strings = {"FAILED", "UNCERTAIN"})
     void givenAnUnresolvedReceipt_whenAuditing_thenReportReviewWithoutChangingDeliveryEvidence(String outcome) {
+        // given
         UUID report = submit();
         UUID id = tx.execute(status -> {
             var row = deliveries.findByOperationKey(report + ":RECEIPT").orElseThrow();
@@ -105,6 +108,7 @@ class IncidentIntegrityAuditIT extends IncidentIntegrationFixture {
             row.fail(token, 1, "test-audit-generation", NOW, "TEST_REJECTION", outcome.equals("UNCERTAIN"), NOW.plusSeconds(60));
             return row.getId();
         });
+        // when / then
         assertThat(audit.audit().findings(Category.INCIDENT_REPORTS)).singleElement().satisfies(finding -> {
             assertThat(finding.subject()).contains(id.toString());
             assertThat(finding.evidence()).contains(outcome).doesNotContain(payload.getDescription(), actor.userId());
@@ -120,6 +124,7 @@ class IncidentIntegrityAuditIT extends IncidentIntegrationFixture {
 
     @Test
     void givenAPartialThreadPair_whenAuditing_thenLocateItsRetainedStepWithoutPublishingOrRepairing() {
+        // given
         UUID report = submit(); clock.set(NOW.plusSeconds(3600)); windows.closeDue(windowId, null);
         UUID id = tx.execute(status -> {
             var row = deliveries.findByOperationKey(report + ":DISCLOSURE").orElseThrow();
@@ -130,6 +135,7 @@ class IncidentIntegrityAuditIT extends IncidentIntegrationFixture {
             row.continueDisclosure(token, 1, "test-audit-generation", clock.instant());
             return publications.saveAndFlush(mapping).getId();
         });
+        // when / then
         assertThat(audit.audit().findings(Category.INCIDENT_REPORTS)).singleElement().satisfies(finding -> {
             assertThat(finding.subject()).contains(id.toString());
             assertThat(finding.evidence()).contains("PARTIAL").doesNotContain(payload.getDescription(), actor.userId());
@@ -145,11 +151,13 @@ class IncidentIntegrityAuditIT extends IncidentIntegrationFixture {
 
     @Test
     void givenAnAmbiguousSharedRole_whenAuditing_thenReportItButAcceptOneCommonOrganization() {
+        // given
         submit();
         tx.executeWithoutResult(status -> {
             teams.findById(fixture.homeTeam().getId()).orElseThrow().setDiscordRoleId("300");
             teams.findById(fixture.awayTeam().getId()).orElseThrow().setDiscordRoleId("300");
         });
+        // when / then
         assertThat(audit.audit().findings(Category.INCIDENT_REPORTS)).singleElement().satisfies(finding -> {
             assertThat(finding.subject()).contains(contextId.toString());
             assertThat(finding.evidence()).contains("role").doesNotContain(payload.getDescription(), actor.userId());
