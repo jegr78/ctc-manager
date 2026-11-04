@@ -237,3 +237,15 @@ directory. The temporary app and browser processes were stopped afterwards.
 
 The remaining release gate is the canonical committed-head command, followed by PR/CI/merge
 and post-merge reconciliation: `./mvnw clean verify -Pe2e -Ddocker.available=true`.
+
+## Native receipt review compatibility
+
+The first canonical E2E run passed all units and integrations but exposed two native receipt
+review lookups waiting for the previous receipt-specific checkbox label. The expanded private/
+public wording now applies only to disclosure reviews; receipts retain their original label.
+The existing browser tests were kept unchanged, and no timeout increased. Independent review
+confirmed the server-derived discriminator, unchanged binding/validation and escaped rendering.
+Focused `verify -Pe2e` then passed nine unit, nineteen integration and all six incident-management
+browser cases, including desktop/mobile delivery review and restored-context resumption without
+JavaScript. SpotBugs remained at zero with active FindSecBugs. Fresh delivery-review screenshots
+were inspected. A corrected canonical clean full run is still required on the final commit.
