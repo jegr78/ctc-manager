@@ -31,6 +31,7 @@ class IncidentRulingDeliveryIT extends IncidentIntegrationFixture {
     @Autowired IncidentDeliveryRepository deliveries;
     @Autowired IncidentThreadPublicationRepository threads;
     @Autowired PickSessionEpoch epoch;
+    @Autowired org.ctc.admin.service.DataAuditService audit;
     @Autowired ImportLockService imports;
     @MockitoBean IncidentRulingSender sender;
 
@@ -54,6 +55,28 @@ class IncidentRulingDeliveryIT extends IncidentIntegrationFixture {
         return new Work(report, rulings.publish(report, 1, 1, manager, epoch.managementGeneration()));
     }
     IncidentDeliveryState state(UUID id) { return tx.execute(status -> publications.findById(id).orElseThrow().getState()); }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"FAILED", "UNCERTAIN"})
+    void givenUnresolvedRulingDelivery_whenAuditing_thenReportReviewWithoutChangingEvidence(String outcome) {
+        // given
+        var work = queued();
+        when(sender.send(any())).thenReturn(new IncidentSendResult(outcome.equals("UNCERTAIN")
+                ? IncidentSendResult.Disposition.UNCERTAIN : IncidentSendResult.Disposition.REJECTED, null, "TEST_REJECTION"));
+        // when
+        assertThat(rulings.dispatch(work.publication())).isTrue();
+        // then
+        assertThat(audit.audit().findings(org.ctc.admin.dto.DataAuditFinding.Category.INCIDENT_REPORTS)).singleElement().satisfies(finding -> {
+            assertThat(finding.subject()).contains(work.publication().toString());
+            assertThat(finding.evidence()).contains(outcome).doesNotContain(payload.getDescription(), actor.userId(), "Test explicitly approved ruling");
+        });
+        assertThat(state(work.publication()).name()).isEqualTo(outcome);
+        tx.executeWithoutResult(status -> {
+            var row = publications.findById(work.publication()).orElseThrow();
+            assertThat(row.getVersion()).isEqualTo(2); assertThat(row.isRestoreReviewed()).isFalse();
+            assertThat(rulingRows.findByReportId(work.report()).orElseThrow().getPublishedMessageId()).isNull();
+        });
+    }
 
     @Test void committedClaimPrecedesHttpAndOnlyItsAcknowledgedResultChangesTheConfirmedRuling() {
         var work = queued();
