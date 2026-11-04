@@ -91,6 +91,22 @@ class DataAuditServiceIT {
 	private Team bravo;
 	private Team charlie;
 
+    @Test
+    void givenHistoricalPointsThatDisagreeWithTheScheme_whenAudited_thenReportWithoutRepairing() {
+        // given
+        var graph = testHelper.createFullSeasonFixture("TSP" + id);
+        var driver = testHelper.createDriver("TSP_D_" + id, "Test scoring audit driver");
+        raceService.saveResults(graph.race().getId(), List.of(new RaceService.RaceResultData(driver.getId(), null, null, 1, 1, false)));
+        var result = raceRepository.findById(graph.race().getId()).orElseThrow().getResults().getFirst();
+        result.setPointsTotal(999);
+        entityManager.flush();
+        // when
+        var findings = dataAuditService.audit().findings(Category.RESULT_POINTS);
+        // then
+        assertThat(findings).anySatisfy(finding -> assertThat(finding.subject()).contains(result.getId().toString()));
+        assertThat(result.getPointsTotal()).isEqualTo(999);
+    }
+
 	@BeforeEach
 	void createSeasonWithRoster() {
 		season = testHelper.createSeason("Test_Audit_" + id);

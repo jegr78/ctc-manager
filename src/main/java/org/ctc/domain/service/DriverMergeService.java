@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class DriverMergeService {
+    private final ScoreWriteLockService scoreLocks;
 
 	private final DriverRepository driverRepository;
 	private final SeasonDriverRepository seasonDriverRepository;
@@ -83,6 +84,7 @@ public class DriverMergeService {
 
 	@Transactional
 	public MergeResult merge(UUID sourceId, UUID targetId) {
+        scoreLocks.lockAllSeasons();
 		if (sourceId.equals(targetId)) {
 			throw new BusinessRuleException("Cannot merge driver with itself");
 		}
@@ -102,6 +104,8 @@ public class DriverMergeService {
 			if (conflict.isPresent()) {
 				log.info("Dropping duplicate SeasonDriver for season '{}' during merge of driver [{}] into [{}]",
 						sanitize(sd.getSeason().getName()), sourceId, targetId);
+				sd.getSeason().getSeasonDrivers().remove(sd);
+                source.getSeasonDrivers().remove(sd);
 				seasonDriverRepository.delete(sd);
 				seasonDriversDropped++;
 			} else {

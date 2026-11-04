@@ -53,7 +53,7 @@ class MatchControllerDetailViewModelTest {
 		DiscordPostRepository discordPostRepository = mock(DiscordPostRepository.class);
 		DiscordGlobalConfigService discordGlobalConfigService = mock(DiscordGlobalConfigService.class);
 
-		MatchService service = new MatchService(
+		MatchService service = new MatchService(mock(org.ctc.domain.service.ScoreWriteLockService.class),
                 org.mockito.Mockito.mock(org.ctc.domain.service.PickLifecycleGuard.class),
                 org.mockito.Mockito.mock(org.ctc.domain.service.IncidentLifecycleGuard.class),
 				matchRepository,
@@ -116,7 +116,7 @@ class MatchControllerDetailViewModelTest {
 		DiscordPostRepository discordPostRepository = mock(DiscordPostRepository.class);
 		DiscordGlobalConfigService discordGlobalConfigService = mock(DiscordGlobalConfigService.class);
 
-		MatchService service = new MatchService(
+		MatchService service = new MatchService(mock(org.ctc.domain.service.ScoreWriteLockService.class),
                 org.mockito.Mockito.mock(org.ctc.domain.service.PickLifecycleGuard.class),
                 org.mockito.Mockito.mock(org.ctc.domain.service.IncidentLifecycleGuard.class),
 				matchRepository,

@@ -46,6 +46,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class MatchService {
+    private final ScoreWriteLockService scoreLocks;
     private final PickLifecycleGuard pickGuard;
     private final IncidentLifecycleGuard incidentGuard;
 
@@ -199,8 +200,10 @@ public class MatchService {
 
 	@Transactional
 	public void updateWalkover(UUID matchId, UUID walkoverTeamId) {
+        scoreLocks.lockMatch(matchId);
 		Match match = findById(matchId);
 		if (walkoverTeamId == null) {
+            if (match.getWalkoverTeam() == null) return;
 			match.setWalkoverTeam(null);
 			List<Race> legs = raceRepository.findByMatchId(matchId);
 			boolean hasResults = legs.stream().anyMatch(race -> !race.getResults().isEmpty());

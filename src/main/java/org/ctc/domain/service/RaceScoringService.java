@@ -16,8 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class RaceScoringService {
+    private final ScoreWriteLockService scoreLocks;
 
 	private final RaceScoringRepository raceScoringRepository;
+    private final org.ctc.domain.repository.RaceResultRepository results;
 
 	@Transactional(readOnly = true)
 	public List<RaceScoring> findAll() {
@@ -40,7 +42,14 @@ public class RaceScoringService {
 
 		try {
 			if (id != null) {
-				var existing = findById(id);
+				scoreLocks.lockAllSeasons();
+                var existing = findById(id);
+                boolean pointsChanged = !java.util.Arrays.equals(existing.getRacePointsArray(), scoring.getRacePointsArray())
+                        || !java.util.Arrays.equals(existing.getQualiPointsArray(), scoring.getQualiPointsArray())
+                        || existing.getFastestLapPoints() != fastestLapPoints;
+                if (pointsChanged && results.findFirstByRaceMatchdayPhaseRaceScoringId(id).isPresent()) {
+                    throw new BusinessRuleException("This scoring has results. Create a new scoring scheme instead of changing its points.");
+                }
 				existing.setName(name);
 				existing.setRacePoints(racePoints);
 				existing.setQualiPoints(qualiPoints);

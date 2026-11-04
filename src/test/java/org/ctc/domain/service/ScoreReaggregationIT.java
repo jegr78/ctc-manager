@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.ctc.TestHelper;
+import org.ctc.admin.dto.MatchForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Match;
@@ -48,6 +49,8 @@ class ScoreReaggregationIT {
 	@Autowired private RaceRepository raceRepository;
 	@Autowired private RaceLineupRepository raceLineupRepository;
 	@Autowired private EntityManager entityManager;
+	@Autowired private RaceScoringService raceScoringService;
+	@Autowired private SeasonPhaseService phaseService;
 
 	private final String id = UUID.randomUUID().toString().substring(0, 8);
 	private Team home;
@@ -212,6 +215,62 @@ class ScoreReaggregationIT {
 		assertThat(stored()).extracting(Match::getHomeScore, Match::getAwayScore)
 				.as("a merge touching only lineups must not reset a quick score").containsExactly(3, 1);
 	}
+
+	@Test
+	void givenQuickScoredMatch_whenOnlyMetadataChanges_thenTheQuickScoreStays() {
+		// given
+		var leg = createMatchWithLegs(1).getFirst();
+		raceService.quickScore(leg.getId(), 3, 1);
+		var form = new MatchForm();
+		form.setStreamLink("https://example.com/test-stream");
+		// when
+		matchService.updateMatchEdit(match.getId(), form);
+		// then
+		assertThat(stored()).extracting(Match::getHomeScore, Match::getAwayScore)
+				.containsExactly(3, 1);
+	}
+
+	@Test
+	void givenScoredRace_whenItsScoringPointsChange_thenRejectWithoutChangingHistory() {
+		// given
+		var leg = createMatchWithLegs(1).getFirst();
+		score(leg);
+		var scoring = raceRepository.findById(leg.getId()).orElseThrow().getMatchday().getPhase().getRaceScoring();
+		var previous = scoring.getRacePoints();
+		// when / then
+		assertThatThrownBy(() -> raceScoringService.save(scoring.getId(), scoring.getName(), "100,90,80", null, 0))
+				.isInstanceOf(BusinessRuleException.class).hasMessageContaining("results");
+		assertThat(scoring.getRacePoints()).isEqualTo(previous);
+	}
+
+	@Test
+	void givenScoredPhase_whenItsRaceScoringIsReplaced_thenRejectWithoutChangingHistory() {
+		// given
+		var leg = createMatchWithLegs(1).getFirst();
+		score(leg);
+		var phase = raceRepository.findById(leg.getId()).orElseThrow().getMatchday().getPhase();
+		// when / then
+		assertThatThrownBy(() -> phaseService.update(phase.getId(), phase.getLayout(), phase.getFormat(),
+				null, null, phase.getStartDate(), phase.getEndDate(), phase.getTotalRounds(), phase.getLegs(),
+				phase.getEventDurationMinutes(), phase.getLabel(), phase.getSortIndex()))
+				.isInstanceOf(BusinessRuleException.class).hasMessageContaining("results");
+	}
+
+
+    @Test
+    void givenUsedScoring_whenOnlyItsNameChanges_thenPreserveThePoints() {
+        // given
+        var leg = createMatchWithLegs(1).getFirst();
+        score(leg);
+        var scoring = raceRepository.findById(leg.getId()).orElseThrow().getMatchday().getPhase().getRaceScoring();
+        var previousPoints = scoring.getRacePoints();
+        // when
+        var saved = raceScoringService.save(scoring.getId(), "Test renamed " + id, scoring.getRacePoints(),
+                scoring.getQualiPoints(), scoring.getFastestLapPoints());
+        // then
+        assertThat(saved.getName()).isEqualTo("Test renamed " + id);
+        assertThat(saved.getRacePoints()).isEqualTo(previousPoints);
+    }
 
 	private List<Race> createMatchWithLegs(int legs) {
 		Season season = testHelper.createSeason("Test_Reagg_" + id);
