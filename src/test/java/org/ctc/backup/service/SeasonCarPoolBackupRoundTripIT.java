@@ -81,6 +81,7 @@ class SeasonCarPoolBackupRoundTripIT {
     UUID rr;
     UUID unknown;
     UUID entry;
+    UUID oneMakeEntry;
     UUID foreignSeason;
     UUID foreignEntry;
     List<UUID> memberIds;
@@ -100,6 +101,7 @@ class SeasonCarPoolBackupRoundTripIT {
             entry = pools.saveEntry(category.season().getId(), null, "Gr.3 MR + Gr.3 RR", List.of(
                     new SeasonCarPoolService.ClauseInput(CarCategory.GR_3, Drivetrain.MR, 9891),
                     new SeasonCarPoolService.ClauseInput(CarCategory.GR_3, Drivetrain.RR, 9891)));
+            oneMakeEntry = pools.saveOneMakeEntry(category.season().getId(), null, "Specific model", unknown);
             pools.freeze(category.season().getId());
             var frozen = entries.findById(entry).orElseThrow();
             memberIds = frozen.getMembers().stream().map(SeasonCarPoolMember::getId).toList();
@@ -147,6 +149,10 @@ class SeasonCarPoolBackupRoundTripIT {
         verify(imports).wipeAllTables(anyMap());
         tx.executeWithoutResult(status -> {
             var restored = entries.findById(entry).orElseThrow();
+            var restoredOneMake = entries.findById(oneMakeEntry).orElseThrow();
+            assertThat(restoredOneMake.getOneMakeCar().getId()).isEqualTo(unknown);
+            assertThat(restoredOneMake.getClauses()).isEmpty();
+            assertThat(restoredOneMake.getMembers()).extracting(member -> member.getCar().getId()).containsExactly(unknown);
             assertThat(restored.getSeason().getId()).isEqualTo(category.season().getId());
             assertThat(restored.getLabel()).isEqualTo("Gr.3 MR + Gr.3 RR");
             assertThat(restored.getMembers()).extracting(SeasonCarPoolMember::getId).containsExactlyInAnyOrderElementsOf(memberIds);
@@ -186,7 +192,7 @@ class SeasonCarPoolBackupRoundTripIT {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"missing-entry-file", "missing-clause-file", "missing-member-file", "foreign-entry", "dangling-member", "duplicate-use", "wrong-count", "unsupported-version", "multiple-active-seasons"})
+    @ValueSource(strings = {"missing-entry-file", "missing-clause-file", "missing-member-file", "foreign-entry", "dangling-member", "duplicate-use", "wrong-count", "unsupported-version", "dangling-one-make-car", "wrong-one-make-member", "multiple-active-seasons"})
     void givenMalformedCategoryArchive_whenStagedOrExecuted_thenRejectBeforeAnyWipe(String kind) throws Exception {
         // given
         if (kind.equals("foreign-entry")) {
@@ -207,6 +213,8 @@ class SeasonCarPoolBackupRoundTripIT {
             case "missing-member-file" -> "Frozen pool entry is empty";
             case "foreign-entry" -> "Race pool entry belongs to a different season";
             case "dangling-member" -> "Missing car reference";
+            case "dangling-one-make-car" -> "Missing oneMakeCar reference";
+            case "wrong-one-make-member" -> "Frozen entries overlap";
             case "duplicate-use" -> "Duplicate entry consumption";
             case "wrong-count" -> "season_car_pool_members: manifest announces";
             case "multiple-active-seasons" -> "more than one active season";
@@ -277,6 +285,7 @@ class SeasonCarPoolBackupRoundTripIT {
             for (var year : List.of(999, 10000)) rejects(connection, "UPDATE season_car_pool_clauses SET model_year=? WHERE entry_id=?",
                     "chk_car_pool_clause_year", year, entry);
             rejects(connection, "DELETE FROM season_car_pool_entries WHERE id=?", "foreign key", entry);
+            rejects(connection, "UPDATE season_car_pool_entries SET one_make_car_id=? WHERE id=?", "fk_car_pool_entry_one_make", UUID.randomUUID(), oneMakeEntry);
             rejects(connection, "DELETE FROM cars WHERE id=?", "foreign key", mr);
             try (var query = connection.prepareStatement("SELECT car_id FROM season_car_pool_members WHERE entry_id=?")) {
                 query.setObject(1, entry);
@@ -349,6 +358,16 @@ class SeasonCarPoolBackupRoundTripIT {
             ((ObjectNode) rows.get(0)).put("active", true);
             ((ObjectNode) rows.get(1)).put("active", true);
             files.put("data/seasons.json", JSON.writeValueAsBytes(rows));
+        } else if (kind.equals("dangling-one-make-car") || kind.equals("wrong-one-make-member")) {
+            boolean definition = kind.equals("dangling-one-make-car");
+            String file = definition ? "data/season-car-pool-entries.json" : "data/season-car-pool-members.json";
+            var rows = (ArrayNode) JSON.readTree(files.get(file));
+            for (var row : rows) {
+                if (row.path(definition ? "id" : "entry").asText().equals(oneMakeEntry.toString())) {
+                    ((ObjectNode) row).put(definition ? "oneMakeCar" : "car", definition ? UUID.randomUUID().toString() : mr.toString());
+                }
+            }
+            files.put(file, JSON.writeValueAsBytes(rows));
         } else if (kind.equals("wrong-count")) {
             var counts = (ObjectNode) manifest.get("table_counts");
             counts.put("season_car_pool_members", counts.path("season_car_pool_members").asLong() + 1);

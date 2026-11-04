@@ -878,12 +878,12 @@ per captured image. No live Discord messages or command registration are needed 
 
 ### Publication backup and recovery
 
-Current schema 11 exports all 46 entity tables, including immutable publication attempts,
+Current schema 12 exports all 46 entity tables, including immutable publication attempts,
 confirmed snapshots, permanent incident reports/revisions, exact linked-thread references and
 versioned rulings with their approved delivery evidence. Schemas 1 through 6 may omit publication
 files; schema 7 requires them but has no incident tables. Schema 8 adds the five incident-history
 files; schema 9 adds deliveries, schema 10 linked-thread mappings and schema 11 the three ruling
-files. Files announced by that schema are required even when empty. Supported earlier archives
+files. Schema 12 adds explicit One-Make definitions to existing seasonal pool entries. Files announced by that schema are required even when empty. Supported earlier archives
 remain importable without inventing windows, decisions, thread mappings or historical sends.
 
 Restore preserves original IDs, authors, accepted parties, planned-start/deadline snapshots,

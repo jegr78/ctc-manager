@@ -5,12 +5,12 @@
     <form th:action="@{/admin/seasons/{id}/car-pool/mode(id=${season.id})} + '#carPool'" th:object="${poolModeForm}" method="post">
         <fieldset>
             <legend>Car pool mode</legend>
-            <p>Fixed cars keep the existing individual choices. Category pools combine local car metadata into named entries.</p>
+            <p>Build a season pool from filtered categories and selected one-make cars. The home team chooses one concrete car for every driver in the race. Each entry is available once per home team for the entire season, including playoffs.</p>
             <div class="form-group">
                 <label for="carPoolMode">Mode</label>
                 <select id="carPoolMode" th:field="*{carPoolMode}" required>
                     <option value="FIXED_CARS">Fixed cars</option>
-                    <option value="CATEGORY_POOL">Category pool</option>
+                    <option value="CATEGORY_POOL">Categories and One-Makes</option>
                 </select>
             </div>
             <div class="field-error" th:if="${#fields.hasAnyErrors()}">
@@ -26,8 +26,11 @@
         <ul class="field-error" th:if="${!poolPreview.problems.isEmpty()}" id="pool-problems">
             <li th:each="problem : ${poolPreview.problems}" th:text="${problem}"></li>
         </ul>
-        <div th:each="entry : ${season.carPoolEntries}" class="card mt-md pool-entry">
+        <th:block th:each="oneMake : ${ {false, true} }">
+        <h3 th:text="${oneMake ? 'One-Makes' : 'Categories'}"></h3>
+        <div th:each="entry : ${season.carPoolEntries}" th:if="${(entry.oneMakeCar != null) == oneMake}" class="card mt-md pool-entry">
             <h4 th:text="${entry.label}"></h4>
+            <p th:if="${entry.oneMakeCar != null}" th:text="${entry.oneMakeCar.displayName}"></p>
             <ul>
                 <li th:each="clause : ${entry.clauses}" th:text="${clause.category.label + (clause.drivetrain != null ? ' · ' + clause.drivetrain.label : ' · any drivetrain') + (clause.modelYear != null ? ' · ' + clause.modelYear : ' · any year')}"></li>
             </ul>
@@ -38,6 +41,7 @@
                 </form>
             </div>
         </div>
+        </th:block>
         <div class="mt-md" id="pool-preview">
             <h3 th:text="${poolPreview.frozen ? 'Frozen membership' : 'Local eligibility preview'}">Preview</h3>
             <details th:each="entry : ${poolPreview.entries}">
@@ -55,6 +59,14 @@
             <fieldset>
                 <legend th:text="*{entryId != null ? 'Edit pool entry' : 'Add pool entry'}">Pool entry</legend>
                 <input type="hidden" th:field="*{entryId}">
+                <div class="form-group">
+                    <label for="pool-entry-type">Entry type</label>
+                    <select id="pool-entry-type" th:field="*{entryType}" required>
+                        <option value="CATEGORY">Category</option>
+                        <option value="ONE_MAKE">One-Make</option>
+                    </select>
+                    <button type="submit" name="action" value="change-type" class="btn btn-secondary btn-sm" formnovalidate>Change entry type</button>
+                </div>
                 <div class="field-error" th:if="${#fields.hasAnyErrors()}" id="pool-entry-errors" role="alert">
                     <p th:each="error : ${#fields.allErrors()}" th:text="${error}"></p>
                 </div>
@@ -62,6 +74,14 @@
                     <label for="pool-label">Entry label</label>
                     <input id="pool-label" type="text" th:field="*{label}" required maxlength="120">
                 </div>
+                <div class="form-group" th:if="*{entryType != null and entryType.name() == 'ONE_MAKE'}">
+                    <label for="pool-one-make-car">One-Make car</label>
+                    <select id="pool-one-make-car" th:field="*{oneMakeCarId}" required>
+                        <option value="">Choose a car</option>
+                        <option th:each="car : ${allCars}" th:value="${car.id}" th:text="${car.displayName}"></option>
+                    </select>
+                </div>
+                <th:block th:if="*{entryType != null and entryType.name() == 'CATEGORY'}">
                 <fieldset th:each="clause, row : *{clauses}" class="pool-clause">
                     <legend th:text="${'Alternative clause ' + (row.index + 1)}">Clause</legend>
                     <div class="form-row">
@@ -86,8 +106,9 @@
                     </div>
                     <button type="submit" name="action" th:value="${'remove-clause:' + row.index}" class="btn btn-danger btn-sm" formnovalidate th:attr="aria-label=${'Remove clause ' + (row.index + 1)}">Remove clause</button>
                 </fieldset>
+                </th:block>
                 <div class="inline-form mt-md">
-                    <button type="submit" name="action" value="add-clause" class="btn btn-secondary btn-sm" formnovalidate>Add alternative clause</button>
+                    <button th:if="*{entryType != null and entryType.name() == 'CATEGORY'}" type="submit" name="action" value="add-clause" class="btn btn-secondary btn-sm" formnovalidate>Add alternative clause</button>
                     <button type="submit" name="action" value="save" class="btn btn-primary btn-sm">Save entry</button>
                     <a th:if="*{entryId != null}" class="btn btn-secondary btn-sm" th:href="@{/admin/seasons/{id}/edit(id=${season.id})} + '#pool-entry-editor'">New entry</a>
                 </div>

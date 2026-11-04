@@ -87,7 +87,8 @@ public class CarService {
         }
 
 		boolean usedInPool = seasonRepository.findAll().stream()
-				.anyMatch(s -> s.getCars().contains(car));
+				.anyMatch(s -> s.getCars().contains(car) || s.getCarPoolEntries().stream()
+                        .anyMatch(entry -> entry.getOneMakeCar() != null && id.equals(entry.getOneMakeCar().getId())));
 		if (usedInPool) {
 			throw new BusinessRuleException("Cannot delete: car is in a season pool");
 		}

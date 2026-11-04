@@ -17,6 +17,67 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SeasonCarPoolServiceTest {
+    @Test
+    void givenMixedPool_whenFrozen_thenKeepFilteredCategoriesAndExactOneMakes() {
+        // given
+        var categoryCar = car("Category", CarCategory.GR_3, Drivetrain.FR, 2016);
+        var oneMake = car("Alpine", null, null, null);
+        when(cars.findById(oneMake.getId())).thenReturn(Optional.of(oneMake));
+        when(cars.findAllByOrderByManufacturerAscNameAsc()).thenReturn(List.of(categoryCar, oneMake));
+        save("Gr.3 FRs", clause(CarCategory.GR_3, Drivetrain.FR, null));
+        service.saveOneMakeEntry(season.getId(), null, "Alpine A110 '17", oneMake.getId());
+
+        // when
+        service.freeze(season.getId());
+
+        // then
+        assertThat(service.preview(season.getId()).problems()).isEmpty();
+        assertThat(service.preview(season.getId()).entries().get(0).carIds()).containsExactly(categoryCar.getId());
+        assertThat(service.preview(season.getId()).entries().get(1).carIds()).containsExactly(oneMake.getId());
+        assertThat(season.getCarPoolEntries().get(1).getClauses()).isEmpty();
+        assertThatThrownBy(() -> service.saveOneMakeEntry(season.getId(), null, "Another", oneMake.getId()))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("frozen");
+    }
+
+    @Test
+    void givenOverlappingOneMakeAndCategory_whenFreezing_thenReject() {
+        // given
+        var selected = car("Shared", CarCategory.GR_3, Drivetrain.FR, 2016);
+        when(cars.findById(selected.getId())).thenReturn(Optional.of(selected));
+        when(cars.findAllByOrderByManufacturerAscNameAsc()).thenReturn(List.of(selected));
+        save("Category", clause(CarCategory.GR_3, null, null));
+        service.saveOneMakeEntry(season.getId(), null, "One-Make", selected.getId());
+
+        // when / then
+        assertThatThrownBy(() -> service.freeze(season.getId())).isInstanceOf(BusinessRuleException.class).hasMessageContaining("overlap");
+        assertThat(season.getCarPoolState()).isEqualTo(CarPoolState.DRAFT);
+    }
+
+    @Test
+    void givenDraftEntry_whenChangingType_thenReplaceDefinitionAndRejectMissingCars() {
+        // given
+        var selected = car("Selected", null, null, null);
+        when(cars.findById(selected.getId())).thenReturn(Optional.of(selected));
+        var id = service.saveEntry(season.getId(), null, "Category", List.of(clause(CarCategory.GR_3, null, null)));
+
+        // when
+        service.saveOneMakeEntry(season.getId(), id, "One-Make", selected.getId());
+        var entry = season.getCarPoolEntries().getFirst();
+
+        // then
+        assertThat(entry.getClauses()).isEmpty();
+        assertThat(entry.getOneMakeCar()).isSameAs(selected);
+
+        service.saveEntry(season.getId(), id, "Category again", List.of(clause(CarCategory.GR_4, null, null)));
+        assertThat(entry.getOneMakeCar()).isNull();
+        assertThat(entry.getClauses()).hasSize(1);
+        assertThatThrownBy(() -> service.saveOneMakeEntry(season.getId(), id, "Invalid", UUID.randomUUID()))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("no longer exists");
+        assertThatThrownBy(() -> service.saveOneMakeEntry(season.getId(), id, "Invalid", null))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Choose a car");
+        assertThat(entry.getLabel()).isEqualTo("Category again");
+    }
+
     @Mock private PickHistoryReferences pickHistory;
     @Mock SeasonRepository seasons;
     @Mock CarRepository cars;

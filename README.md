@@ -41,7 +41,7 @@ The active season is unique. Deactivate the current season before activating ano
 - **Race Attachments** — Upload files or link external resources to races
 - **Docker** — Local development and production deployment with MariaDB
 - **Season car pools** — Keep fixed car choices or build named category entries from local metadata. Combine alternative category/drivetrain/year clauses, preview eligible cars and overlaps, then freeze exact membership. Catalog changes preserve frozen choices; used pools cannot be reopened. Race setup selects an entry and one concrete frozen member. Saving consumes the whole entry for the effective home team that season. Native forms retain invalid inputs, concurrent selections serialize through the season, and unambiguous CSV/Sheets overwrites preserve configured race identities. Admin race summaries, public matchdays and settings graphics show the concrete car with its saved pool-entry label. Custom settings templates keep `carName` and can use optional `poolEntryLabel`.
-- **Backup & Restore** — Export a full ZIP backup of all 46 entity tables, including exact seasonal pool snapshots, Discord state and public URL slugs; restore via a preview-and-confirm import flow that accepts schema versions 1 through 11, so older backups remain restorable
+- **Backup & Restore** — Export a full ZIP backup of all 46 entity tables, including exact seasonal pool snapshots, Discord state and public URL slugs; restore via a preview-and-confirm import flow that accepts schema versions 1 through 12, so older backups remain restorable
 - **Channel Archive Dialog** — Labeled destination categories with channel counts, disabled full categories, keyboard focus and Escape/cancel support. A native inline form remains available without JavaScript.
 - **Backup Workspace** — Separate export and restore panels, labeled current and backup row counts, a neutral archive preview and a clear replacement confirmation.
 - **Data Audit** — Read-only check at `/admin/data-audit` for historical aggregates, pairings, phases, succession, playoffs, public URLs, race settings and seasonal pool references. Separate eligibility information explains unknown car metadata and exact-year exclusions. Unknown years remain valid; opening the audit changes no record. See the [Data Audit wiki page](../../wiki/Data-Audit).
@@ -78,7 +78,7 @@ v1.10 introduces a full database backup/restore feature accessible via `/admin/b
 2. Review the preview: per-table row counts (current vs. backup) and schema-version match indicator.
 3. Check the **I understand** confirmation and click **Execute Import**. The database is replaced atomically.
 
-> **Schema-Version lock:** The import rejects a backup whose schema version is outside versions 1 through 11 before it
+> **Schema-Version lock:** The import rejects a backup whose schema version is outside versions 1 through 12 before it
 > writes anything. Schema 4 also validates pool references and limits preflight to 100,000 retained reference rows.
 
 ### Recovery
@@ -94,6 +94,31 @@ for step-by-step recovery from `data/<profile>/import-backups/<ts>/` (containers
 
 See the [Backup & Restore wiki page](../../wiki/Backup-and-Restore) for the step-by-step export
 workflow, import workflow, schema-version explanation, and recovery procedures.
+
+## Seasonal categories and one-makes
+
+In the season editor, select **Categories and One-Makes**. Add a category with the existing
+category, drivetrain and exact-year filters, or choose **One-Make**, apply the entry type,
+and select a specific catalog car. Both types share the same season pool. The editor lists
+**Categories** and **One-Makes** separately.
+
+For the 2027 example, create eleven category entries: Gr.1 Hypercars with five alternative
+year clauses for 2021–2025; Gr.1 LMPs for 2016; Gr.2 Super GTs separately for 2016 and 2008;
+Gr.3 FR and MR; Gr.4 AWD, FF, FR and MR; and Gr.B. Each alternative still requires its GT
+category. The labels “Hypercars”, “LMPs” and “Super GTs” describe the intended pool; review
+the matching models in the preview because those labels are not additional catalog filters.
+Add the ten individual models from the season rules as One-Make entries using their car IDs.
+
+Review the preview and freeze the complete pool before accepting picks. Each entry must have
+at least one car and entries cannot overlap. A One-Make snapshot contains exactly its selected
+car, including when that car has no category metadata. Later catalog changes do not replace the
+snapshot. The home team selects one concrete member car, and every driver uses that same car.
+Each category or One-Make entry is available once per home team across the entire season,
+including playoffs. Pending picks retain the existing reservation rules.
+
+Backup schema 12 preserves One-Make definitions and their exact frozen members. Schemas 1–11
+remain importable; older entries keep their category definitions. Import rejects missing cars,
+mixed definitions and inconsistent One-Make snapshots before any database wipe.
 
 ## Quick Start
 
