@@ -52,3 +52,15 @@ Primary references: [Discord channels](https://docs.discord.com/developers/resou
 [messages](https://docs.discord.com/developers/resources/message). Verify the exact endpoint,
 permission, tag and pagination contracts before wiring the adapter. Do not infer a destination
 from a channel name or assume that thread type alone proves confidentiality.
+
+
+## Frozen projection checkpoint
+
+The first complete projection contract produced three intended assertion failures across eight
+cases, with zero errors/skips. Its implementation then passed all thirteen selected unit cases,
+including the existing notice/disclosure contracts. The projection reads the immutable delivery
+revision and captured party label, keeps all four facts across ordered bounded chunks, preserves
+Unicode pairs, normalizes malformed Unicode and escapes the display label. Open, withdrawn,
+unfrozen, mismatched-frozen and receipt operations cannot produce a detailed payload. Personal
+author metadata is never added. Transport-specific stable step markers will reserve the remaining
+message space; this checkpoint does not create messages or threads.
