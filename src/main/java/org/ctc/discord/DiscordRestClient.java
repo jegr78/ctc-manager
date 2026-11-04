@@ -80,6 +80,48 @@ public class DiscordRestClient {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record PermissionRole(String id, String permissions) { }
 
+    public IncidentChannel fetchIncidentChannel(String channelId) throws DiscordApiException {
+        return execute(() -> bot.get().uri("/channels/{channelId}",channelId).retrieve().body(IncidentChannel.class));
+    }
+    public IncidentChannel startIncidentMessageThread(String channelId,String starterId,String name) throws DiscordApiException {
+        return execute(() -> bot.post().uri("/channels/{channelId}/messages/{messageId}/threads",channelId,starterId)
+                .attribute(DiscordRateLimitInterceptor.UNCERTAIN_CREATION,true).contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("name",name,"auto_archive_duration",1440)).retrieve().body(IncidentChannel.class));
+    }
+    public IncidentChannel startIncidentForumThread(String channelId,String name,String content,List<String> tags) throws DiscordApiException {
+        return execute(() -> bot.post().uri("/channels/{channelId}/threads",channelId)
+                .attribute(DiscordRateLimitInterceptor.UNCERTAIN_CREATION,true).contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("name",name,"auto_archive_duration",1440,"applied_tags",List.copyOf(tags),
+                        "message",Map.of("content",content,"allowed_mentions",Map.of("parse",List.of()))))
+                .retrieve().body(IncidentChannel.class));
+    }
+    public IncidentThreadPage listIncidentArchivedThreads(String channelId,String before,int limit) throws DiscordApiException {
+        return execute(() -> bot.get().uri(uri -> {
+            var page=uri.path("/channels/{channelId}/threads/archived/public").queryParam("limit",limit);
+            if(before!=null)page.queryParam("before",before);
+            return page.build(channelId);
+        }).retrieve().body(IncidentThreadPage.class));
+    }
+    @JsonIgnoreProperties(ignoreUnknown=true)
+    public record IncidentChannel(String id,@JsonProperty("guild_id") String guildId,Integer type,@JsonProperty("parent_id") String parentId,String name,
+            @JsonProperty("permission_overwrites") List<PermissionOverwrite> permissionOverwrites,Integer flags,@JsonProperty("available_tags") List<IncidentForumTag> availableTags,
+            @JsonProperty("thread_metadata") IncidentThreadMetadata threadMetadata,BotMessage message) {
+        public IncidentChannel {
+            permissionOverwrites=permissionOverwrites==null?null:List.copyOf(permissionOverwrites);
+            availableTags=availableTags==null?null:List.copyOf(availableTags);
+        }
+        @Override public String toString(){return "IncidentChannel[opaque]";}
+    }
+    @JsonIgnoreProperties(ignoreUnknown=true)
+    public record IncidentForumTag(String id,String name,Boolean moderated) { }
+    @JsonIgnoreProperties(ignoreUnknown=true)
+    public record IncidentThreadMetadata(Boolean archived,Boolean locked,@JsonProperty("archive_timestamp") String archiveTimestamp) { }
+    @JsonIgnoreProperties(ignoreUnknown=true)
+    public record IncidentThreadPage(List<IncidentChannel> threads,@JsonProperty("has_more") Boolean hasMore) {
+        public IncidentThreadPage {threads=threads==null?null:List.copyOf(threads);}
+        @Override public String toString(){return "IncidentThreadPage[opaque]";}
+    }
+
     public BotMessage createBotMessage(String channelId, String nonce, String content) throws DiscordApiException {
         return execute(() -> bot.post().uri("/channels/{channelId}/messages", channelId)
                 .contentType(MediaType.APPLICATION_JSON)

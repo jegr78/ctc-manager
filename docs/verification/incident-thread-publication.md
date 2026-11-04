@@ -64,3 +64,21 @@ Unicode pairs, normalizes malformed Unicode and escapes the display label. Open,
 unfrozen, mismatched-frozen and receipt operations cannot produce a detailed payload. Personal
 author metadata is never added. Transport-specific stable step markers will reserve the remaining
 message space; this checkpoint does not create messages or threads.
+
+
+## Real-client HTTP checkpoint
+
+Seven intended WireMock assertion failures, zero errors/skips, preceded the missing thread APIs.
+The corrected managed RestClient check passed 35 selected unit and 17 integration cases, including
+the existing rate-limit suite. Text publication creates a new detailed starter and starts its
+thread from that known ID. Forum creation sends a nested message and selected tags, retains the
+returned starter/thread identities independently and does not invent unsupported nonce fields.
+Current channel/tag metadata and bounded archived-page cursor information are available without
+changing the legacy listing methods.
+
+The official forum message parameter list has no nonce/enforce_nonce contract. Both new creation
+calls therefore use an internal request attribute to stop automatic replay after an ambiguous
+5xx. A confirmed 429 remains safely retryable. WireMock proves one POST on server failure or
+request timeout, safe retry after pure rate-limit rejection and the unchanged retry behavior of
+existing nonce-backed messages. This checkpoint does not yet authorize or dispatch a real case;
+current private-parent permissions, durable step mapping and management recovery remain in scope.
