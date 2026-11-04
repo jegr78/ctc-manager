@@ -30,7 +30,7 @@ class BackupSchemaGuardTest {
         // when / then
         assertThat(BackupSchema.SCHEMA_VERSION)
                 .as("BackupSchema.SCHEMA_VERSION changed from 9; this is a wire contract bump")
-                .isEqualTo(9);
+                .isEqualTo(10);
     }
 
     @Test

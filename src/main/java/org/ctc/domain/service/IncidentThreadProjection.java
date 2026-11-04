@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.IncidentDelivery;
+import org.ctc.domain.model.IncidentPayload;
 import org.ctc.domain.model.IncidentDeliveryOperation;
 import org.ctc.domain.model.IncidentReportState;
 import org.ctc.domain.model.IncidentWindowState;
@@ -19,9 +20,13 @@ public final class IncidentThreadProjection {
                 || report.getFrozenRevisionNumber()!=revision.getRevisionNumber()
                 || !report.getId().equals(revision.getReport().getId()) || operation.getPartyLabel()==null || operation.getPartyLabel().isBlank())throw unavailable();
         var facts=revision.getPayload();if(facts==null)throw unavailable();
-        String label=validText(operation.getPartyLabel()).replace('\r',' ').replace('\n',' ');
-        String title=bounded("Incident "+operation.getCaseReference()+" · "+label,100);
-        String body=validText("Incident "+operation.getCaseReference()+"\nReporting party: "+escapedLabel(label)
+        return render(operation.getCaseReference(),operation.getPartyLabel(),facts);
+    }
+    public static Payload render(String caseReference,String partyLabel,IncidentPayload facts) {
+        if(caseReference==null || caseReference.isBlank() || partyLabel==null || partyLabel.isBlank() || facts==null)throw unavailable();
+        String label=validText(partyLabel).replace('\r',' ').replace('\n',' ');
+        String title=bounded("Incident "+caseReference+" · "+label,100);
+        String body=validText("Incident "+caseReference+"\nReporting party: "+escapedLabel(label)
                 +"\n\nInvolved drivers\n"+facts.getInvolvedDrivers()+"\n\nReplay timestamp\n"+facts.getReplayTimestamp()
                 +"\n\nDescription\n"+facts.getDescription()+"\n\nEvidence references\n"+facts.getEvidenceLinks());
         var messages=new ArrayList<String>();

@@ -97,4 +97,9 @@ class IncidentThreadRecoveryIT extends IncidentThreadDispatchFixture {
         assertThat(publication.dispatch(id)).isTrue();assertThat(stage(id)).isEqualTo(IncidentThreadStage.PRIVATE_THREAD);
         assertThat(publication.dispatch(id)).isFalse();assertThat(publication.dueDisclosures(10)).doesNotContain(id);
     }
+    @Test void givenAnUnattemptedRestoredSnapshotWithAnExistingPrivateStarter_whenAdopting_thenRecordItsRemoteSuccessProvenance() {
+        var id=disclosure();tx.executeWithoutResult(status -> ReflectionTestUtils.setField(windowRows.findById(windowId).orElseThrow(),"deliveryPaused",true));
+        assertDoesNotThrow(() -> publication.reconcile(id,version(id),manager,"Test existing starter was created after the backup",true,"701",epoch.managementGeneration()));
+        tx.executeWithoutResult(status -> assertThat(deliveryRows.findById(id).orElseThrow().getAttempts()).isPositive());assertThat(stage(id)).isEqualTo(IncidentThreadStage.PRIVATE_THREAD);
+    }
 }

@@ -111,7 +111,7 @@ public class IncidentDelivery extends BaseEntity {
     public void reconcileDisclosureStep(long expectedVersion,String actor,String reason,Instant now,String completedPublicThreadId) {
         if(operation!=IncidentDeliveryOperation.DISCLOSURE)throw unavailable();
         if(completedPublicThreadId!=null)reconcileDelivered(expectedVersion,actor,reason,now,completedPublicThreadId);
-        else {reconcileMissing(expectedVersion,actor,reason,now);restoreReviewed=false;}
+        else {reconcileMissing(expectedVersion,actor,reason,now);attempts=Math.max(attempts,1);restoreReviewed=false;}
     }
     private void recordReview(String actor,String reason) {
         if(actor==null || actor.isBlank() || actor.length()>128 || reason==null || reason.isBlank() || reason.length()>1000)throw unavailable();

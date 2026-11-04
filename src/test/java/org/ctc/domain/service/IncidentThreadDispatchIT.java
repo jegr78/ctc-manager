@@ -47,4 +47,16 @@ class IncidentThreadDispatchIT extends IncidentThreadDispatchFixture {
     @Test void givenRestoredPausedWork_whenDispatching_thenKeepTheOriginalStateAndDoNotSend() {
         var id=disclosure();tx.executeWithoutResult(status -> ReflectionTestUtils.setField(windowRows.findById(windowId).orElseThrow(),"deliveryPaused",true));assertThat(publication.dispatch(id)).isFalse();assertThat(publication.dueDisclosures(10)).isEmpty();verifyNoInteractions(threadSender);
     }
+    @Test void givenTheSameFrozenCaseWithARecreatedDeliveryRow_whenPlanningAgain_thenKeepItsPermanentStepNonceAndMarker() {
+        var id=disclosure();var sent=new java.util.ArrayList<IncidentThreadClaim.Work>();
+        doAnswer(call -> {sent.add(call.getArgument(0,IncidentThreadClaim.class).work());return new IncidentThreadResult(IncidentSendResult.Disposition.REJECTED,null,null,"TEST_NOT_POSTED");}).when(threadSender).send(any());
+        assertThat(publication.dispatch(id)).isTrue();
+        var replacement=tx.execute(status -> {
+            var previous=deliveryRows.findById(id).orElseThrow();var report=previous.getReport();var revision=previous.getRevision();var at=previous.getCapturedAt();
+            threadRows.delete(threadRows.findByDeliveryId(id).orElseThrow());threadRows.flush();deliveryRows.delete(previous);deliveryRows.flush();
+            return deliveryRows.saveAndFlush(IncidentDelivery.capture(report,revision,IncidentDeliveryOperation.DISCLOSURE,at)).getId();
+        });
+        assertThat(replacement).isNotEqualTo(id);assertThat(publication.dispatch(replacement)).isTrue();assertThat(sent).hasSize(2);
+        assertThat(sent.get(1).nonce()).isEqualTo(sent.get(0).nonce());assertThat(sent.get(1).content()).isEqualTo(sent.get(0).content());
+    }
 }

@@ -21,23 +21,25 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
     private final DiscordRestClient discord;
     private final DiscordGlobalConfigRepository configs;
     private final OutboundPolicy outbound;
+    private final java.time.Clock clock;
 
     @Override public IncidentThreadResult send(IncidentThreadClaim claim) {
         if (!outbound.isEnabled()) return rejected("OUTBOUND_DISABLED");
         boolean posting = false;
         try {
+            requireLive(claim);
             var prepared = prepare(claim);var work = claim.work();var target = claim.destination();
             String parent = parent(claim);
             switch (work.stage()) {
                 case PRIVATE_STARTER, PUBLIC_STARTER -> {
-                    posting = true;
+                    requireLive(claim);posting = true;
                     if (privateSide(claim) && prepared.parent().type() == 15) {
-                        var thread = discord.startIncidentForumThread(parent, work.title(), work.content(), target.forumTags());
+                        var thread = discord.startIncidentForumThread(parent, work.title(), work.content(), target.forumTags(),claim.validUntil());
                         requireThread(claim, thread, null);
                         requireMessage(thread.message(), thread.id(), null, work.content(), prepared.botId(), null);
                         return sent(thread.message().id(), thread.id());
                     }
-                    var message = discord.createBotMessage(parent, work.nonce(), work.content());
+                    var message = discord.createBotMessage(parent, work.nonce(), work.content(),claim.validUntil());
                     requireMessage(message, parent, null, work.content(), prepared.botId(), work.nonce());
                     return sent(message.id(), null);
                 }
@@ -48,8 +50,8 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
                         var existing = discord.fetchIncidentChannel(work.starterId());requireThread(claim, existing, work.starterId());
                         return sent(work.starterId(), existing.id());
                     } catch (DiscordNotFoundException missing) {
-                        posting = true;
-                        var created = discord.startIncidentMessageThread(parent, work.starterId(), work.title());
+                        requireLive(claim);posting = true;
+                        var created = discord.startIncidentMessageThread(parent, work.starterId(), work.title(),claim.validUntil());
                         requireThread(claim, created, work.starterId());
                         return sent(work.starterId(), created.id());
                     }
@@ -59,13 +61,13 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
                     verifyStarter(claim, prepared.botId(), prepared.parent().type() == 15 ? thread.id() : null);
                     require(!thread.threadMetadata().locked());
                     if (thread.threadMetadata().archived()) {
-                        discord.modifyChannel(thread.id(), ChannelModifyRequest.unarchive());
+                        requireLive(claim);discord.modifyChannel(thread.id(), ChannelModifyRequest.unarchive(),claim.validUntil());
                         thread = discord.fetchIncidentChannel(work.threadId());requireThread(claim, thread, work.threadId());
                         require(!thread.threadMetadata().archived() && !thread.threadMetadata().locked());
                         prepared = prepare(claim);
                     }
-                    posting = true;
-                    var message = discord.createBotMessage(thread.id(), work.nonce(), work.content());
+                    requireLive(claim);posting = true;
+                    var message = discord.createBotMessage(thread.id(), work.nonce(), work.content(),claim.validUntil());
                     requireMessage(message, thread.id(), null, work.content(), prepared.botId(), work.nonce());
                     return sent(message.id(), null);
                 }
@@ -88,7 +90,7 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
                 case PRIVATE_STARTER -> {
                     if (prepared.parent().type() == 15) {
                         var thread = discord.fetchIncidentChannel(remoteId);requireThread(claim, thread, remoteId);
-                        var matches = matchingMessages(thread.id(), work.content(), prepared.botId());
+                        var matches = matchingMessages(thread.id(), work.content(), prepared.botId(),work.marker());
                         require(matches.size() == 1);
                         return sent(matches.getFirst().id(), thread.id());
                     }
@@ -118,6 +120,10 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
                 default -> {return rejected("VERIFICATION_FAILED");}
             }
         } catch (DiscordApiException | RuntimeException failure) {return rejected("VERIFICATION_FAILED");}
+    }
+
+    private void requireLive(IncidentThreadClaim claim) {
+        require(claim!=null && claim.validUntil()!=null && clock.instant().isBefore(claim.validUntil()));
     }
 
     private Prepared prepare(IncidentThreadClaim claim) throws DiscordApiException {
@@ -161,27 +167,100 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
             case PRIVATE_BODY, PUBLIC_BODY, PRIVATE_REFERENCE -> {
                 var thread = discord.fetchIncidentChannel(work.threadId());requireThread(claim, thread, work.threadId());
                 verifyStarter(claim, prepared.botId(), prepared.parent().type() == 15 ? thread.id() : null);
-                var matches = matchingMessages(thread.id(), work.content(), prepared.botId());
+                var matches = matchingMessages(thread.id(), work.content(), prepared.botId(),work.marker());
                 require(matches.size() <= 1);
                 return matches.isEmpty() ? rejected("PROVEN_MISSING") : sent(matches.getFirst().id(), null);
             }
             case PRIVATE_STARTER, PUBLIC_STARTER -> {
-                if (prepared.parent().type() == 15) return uncertain("FORUM_REVIEW_REQUIRED");
-                var matches = matchingMessages(parent(claim), work.content(), prepared.botId());
-                require(matches.size() <= 1);
-                return matches.isEmpty() ? rejected("PROVEN_MISSING") : sent(matches.getFirst().id(), null);
+                return reconcileStarter(claim,prepared);
             }
             default -> {return rejected("VERIFICATION_FAILED");}
         }
     }
 
-    private List<BotMessage> matchingMessages(String channelId, String content, String botId) throws DiscordApiException {
+    private IncidentThreadResult reconcileStarter(IncidentThreadClaim claim,Prepared prepared) throws DiscordApiException {
+        var work=claim.work();String parent=parent(claim);boolean forum=prepared.parent().type()==15;
+        var matches=new java.util.LinkedHashMap<String,IncidentThreadResult>();
+        if(!forum)for(var message:matchingMessages(parent,work.content(),prepared.botId(),work.marker()))matches.put(message.id(),sent(message.id(),null));
+        for(String id:inventory(claim.destination().guildId(),parent)) {
+            var thread=discord.fetchIncidentChannel(id);requireInventoryThread(claim,thread,parent,id);
+            if(forum) {
+                var messages=matchingMessages(id,work.content(),prepared.botId(),work.marker());
+                if(hasCaseTitle(claim,thread) && messages.isEmpty())throw unavailable();
+                for(var message:messages) {requireThread(claim,thread,id);matches.put(id,sent(message.id(),id));}
+            } else {
+                var source=discord.fetchBotMessage(parent,id);
+                require(source!=null && id.equals(source.id()) && parent.equals(source.channelId()));
+                boolean bot=source.author()!=null && prepared.botId().equals(source.author().id());
+                if(bot && source.content()!=null && source.content().endsWith("\n"+work.marker()) && !work.content().equals(source.content()))throw unavailable();
+                if(bot && work.content().equals(source.content())) {
+                    requireThread(claim,thread,id);
+                    matches.put(id,sent(id,privateSide(claim)?id:null));
+                } else if(hasCaseTitle(claim,thread))throw unavailable();
+            }
+        }
+        require(matches.size()<=1);
+        if(!matches.isEmpty())return matches.values().iterator().next();
+        if(work.stage()==org.ctc.domain.model.IncidentThreadStage.PRIVATE_STARTER)requireNoLaterPublicCase(claim,prepared.botId());
+        return rejected("PROVEN_MISSING");
+    }
+
+    private void requireNoLaterPublicCase(IncidentThreadClaim claim,String botId) throws DiscordApiException {
+        var target=claim.destination();var guild=discord.fetchAccessGuild(target.guildId());var member=discord.fetchAccessMember(target.guildId(),botId);
+        var roles=discord.fetchIncidentRoles(target.guildId());var channel=discord.fetchIncidentChannel(target.matchChannelId());
+        IncidentThreadPermissions.requirePublic(guild,channel,member,roles,botId,target.guildId(),target.matchChannelId());
+        for(String id:inventory(target.guildId(),target.matchChannelId())) {
+            var thread=discord.fetchIncidentChannel(id);requireInventoryThread(claim,thread,target.matchChannelId(),id);
+            var source=discord.fetchBotMessage(target.matchChannelId(),id);
+            require(source!=null && id.equals(source.id()) && target.matchChannelId().equals(source.channelId()));
+            String content=source.content();int line=content==null?-1:content.lastIndexOf('\n');
+            boolean marker=line>=0 && content.substring(line+1).startsWith("[CTC "+claim.work().caseReference()+" ");
+            if(hasCaseTitle(claim,thread) || source.author()!=null && botId.equals(source.author().id()) && marker)throw unavailable();
+        }
+    }
+
+    private java.util.Set<String> inventory(String guildId,String parentId) throws DiscordApiException {
+        var ids=new java.util.LinkedHashSet<String>();collectActive(ids,guildId,parentId);java.time.Instant previous=null;String before=null;
+        for(int page=0;page<10;page++) {
+            var archived=discord.listIncidentArchivedThreads(parentId,before,100);
+            require(archived!=null && archived.threads()!=null && archived.hasMore()!=null && archived.threads().size()<=100);
+            var seen=new HashSet<String>();
+            for(var thread:archived.threads()) {
+                require(thread!=null && snowflake(thread.id()) && parentId.equals(thread.parentId()) && seen.add(thread.id()));
+                ids.add(thread.id());require(ids.size()<=50);
+            }
+            if(!archived.hasMore()) {collectActive(ids,guildId,parentId);return java.util.Set.copyOf(ids);}
+            require(!archived.threads().isEmpty());var last=archived.threads().getLast();
+            require(last.threadMetadata()!=null && last.threadMetadata().archiveTimestamp()!=null);
+            var cursor=java.time.Instant.parse(last.threadMetadata().archiveTimestamp());
+            require(previous==null || cursor.isBefore(previous));
+            require(archived.threads().stream().filter(thread -> thread.threadMetadata()!=null && last.threadMetadata().archiveTimestamp().equals(thread.threadMetadata().archiveTimestamp())).count()==1);
+            previous=cursor;before=cursor.toString();
+        }
+        throw unavailable();
+    }
+    private void collectActive(java.util.Set<String> ids,String guildId,String parentId) throws DiscordApiException {
+        var active=discord.listIncidentActiveThreads(guildId);require(active!=null && active.threads()!=null && active.threads().size()<=500);
+        for(var thread:active.threads()) {
+            require(thread!=null && snowflake(thread.id()) && thread.parentId()!=null);
+            if(parentId.equals(thread.parentId()))ids.add(thread.id());require(ids.size()<=50);
+        }
+    }
+    private static void requireInventoryThread(IncidentThreadClaim claim,IncidentChannel thread,String parent,String id) {
+        require(thread!=null && id.equals(thread.id()) && claim.destination().guildId().equals(thread.guildId()) && parent.equals(thread.parentId()) && Integer.valueOf(11).equals(thread.type()));
+    }
+    private static boolean hasCaseTitle(IncidentThreadClaim claim,IncidentChannel thread) {return thread.name()!=null && thread.name().contains("Incident "+claim.work().caseReference());}
+
+    private List<BotMessage> matchingMessages(String channelId, String content, String botId,String marker) throws DiscordApiException {
         var matches = new ArrayList<BotMessage>();var seen = new HashSet<String>();String before = null;
         for (int page = 0; page < 10; page++) {
             var messages = discord.listIncidentMessages(channelId, before, 100);require(messages != null && messages.size() <= 100);
             for (var message : messages) {
                 require(message != null && snowflake(message.id()) && channelId.equals(message.channelId()) && seen.add(message.id()));
-                if (content.equals(message.content()) && message.author() != null && botId.equals(message.author().id())) matches.add(message);
+                if(message.author()!=null && botId.equals(message.author().id())) {
+                    require(message.content()==null || !message.content().endsWith("\n"+marker) || content.equals(message.content()));
+                    if(content.equals(message.content()))matches.add(message);
+                }
             }
             if (messages.size() < 100) return List.copyOf(matches);
             String next = messages.getLast().id();require(!Objects.equals(next, before));before = next;

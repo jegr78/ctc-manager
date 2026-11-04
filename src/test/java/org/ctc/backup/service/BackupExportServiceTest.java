@@ -56,6 +56,7 @@ class BackupExportServiceTest {
 	@Mock private DiscordPostRepository discordPostRepository;
 	@Mock private SiteSlugRepository siteSlugRepository;
 
+    @Mock private IncidentThreadPublicationRepository incidentThreads;
 	private BackupExportService service;
 	private Path uploadRoot;
 
@@ -76,11 +77,17 @@ class BackupExportServiceTest {
                 mock(SeasonCarPoolMemberRepository.class), mock(MatchdayPickRepository.class),
                 mock(MatchdayPickRevisionRepository.class), mock(MatchdayPickDecisionRepository.class), mock(TeamPickChannelBindingRepository.class),
                 mock(PickPublicationAttemptRepository.class), mock(PickPublicationSnapshotRepository.class),
-                mock(IncidentMatchContextRepository.class), mock(IncidentReportWindowRepository.class), mock(IncidentReportRepository.class), mock(IncidentReportRevisionRepository.class), mock(IncidentReportEventRepository.class), mock(IncidentDeliveryRepository.class),
+                mock(IncidentMatchContextRepository.class), mock(IncidentReportWindowRepository.class), mock(IncidentReportRepository.class), mock(IncidentReportRevisionRepository.class), mock(IncidentReportEventRepository.class), mock(IncidentDeliveryRepository.class), incidentThreads,
 				tempDir.toString()
 		);
 		ReflectionTestUtils.invokeMethod(service, "initialize");
 	}
+
+    @Test void givenPermanentThreadMappings_whenExporting_thenReadTheirTypedRepositoryAndKeepTheSameRecords() {
+        var mapping=mock(IncidentThreadPublication.class);lenient().when(incidentThreads.findAllForBackup()).thenReturn(List.of(mapping));
+        var exported=org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> service.fetchAllForBackup(IncidentThreadPublication.class));
+        assertThat(exported).isEqualTo(List.of(mapping));org.mockito.Mockito.verify(incidentThreads).findAllForBackup();
+    }
 
 	@Test
 	void givenStubbedRepositories_whenCountRowsPerTable_thenReturnsLinkedHashMapKeyedByTableNameInExportOrder() {

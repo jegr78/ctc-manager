@@ -84,4 +84,8 @@ class DiscordIncidentThreadRestIT {
         var messages=assertDoesNotThrow(() -> client.listIncidentMessages("800","850",100));
         assertThat(messages).hasSize(1);assertThat(messages.getFirst().content()).isEqualTo("Test frozen marker");assertThat(messages.getFirst().author().id()).isEqualTo("700");assertThat(messages.getFirst().nonce()).isEqualTo("test-nonce");
     }
+    @Test void givenCurrentGuildThreads_whenReadingTheIncidentInventory_thenPreserveTypedParentsWithoutInventingAHasMoreFlag() {
+        wm.stubFor(get(urlEqualTo("/api/v10/guilds/100/threads/active")).willReturn(okJson("{\"threads\":["+thread("800","300",false)+"],\"members\":[]}")));
+        var page=assertDoesNotThrow(() -> client.listIncidentActiveThreads("100"));assertThat(page.threads()).hasSize(1);assertThat(page.threads().getFirst().parentId()).isEqualTo("300");assertThat(page.hasMore()).isNull();
+    }
 }

@@ -131,3 +131,36 @@ and ambiguous forum creation remains uncertain without a blind public fallback.
 New V31 DDL and schema-10 serializer/restorer wiring are present. Strict publication/configuration
 archive preflight, backup round-trip/audit witnesses and bounded forum absence reconciliation
 remain to be completed before final review and release.
+
+
+## Archive and transport authority checkpoint
+
+Strict schema-10 preflight now validates the mapping's frozen source, ordered steps, distinct
+private/public targets, ownership and remote IDs, configuration types/IDs and complete text
+chunk counts. It rejects forged operational grants and publication rows disguised as schema 9.
+The real H2 archive check passed four new cases: byte-exact mapping/configuration recovery,
+owner/configuration rejection before wipe at both stage and execution, and a real schema-9
+archive with no invented publication. The previous generic-receipt supersession invariant now
+accepts separately stored public completion while the private reference remains pending.
+
+The independent read-only core audit at f9f53185 found one medium issue: preflight reads could
+outlast a claim and still permit a late POST. Claims now carry the captured deadline into every
+detailed mutating request; the interceptor checks it before each initial attempt and retry.
+Clock-controlled tests prove zero POSTs after expiry during permission reads and one attempt
+when a 429 crosses expiry, while preserving uncertainty after a prior 5xx. SQL acknowledgement
+still checks token, version, generation and live lease. Per-step nonces now use the permanent
+report ID, including when a restored OPEN-window snapshot recreates a DISCLOSURE row later.
+Verified adoption from an unattempted snapshot also records remote-success provenance.
+
+A test-only 500 ms limit caused reproducible cold first-GET HttpTimeoutException failures in
+the functional sender fixture. Its diagnostic captured the full exception-type chain and zero
+received requests. Functional cases now use the existing production timeout; the dedicated
+500 ms delayed-response timeout contract remains unchanged. No production timeout increased.
+
+Five intended assertions preceded bounded marker reconciliation. The corrected selection passed
+80 unit and 34 real-client integration cases. Unknown forum creation can reconcile actual active
+and archived target records or prove a complete absence; missing completeness/cursor evidence,
+limits, deleted starters and a conflicting bot marker keep the outcome unresolved. A matching
+case whose remotely published facts differ from the restored revision is not treated as absent.
+The current limits are fifty target threads, ten archive pages and ten 100-message pages per
+channel. They are explicit review bounds; hitting one never authorizes a retry.

@@ -167,9 +167,9 @@ public class IncidentThreadPublicationService {
             marker="[CTC "+row.getCaseReference()+" REFERENCE]";
             content="Incident "+row.getCaseReference()+"\nMatch discussion: https://discord.com/channels/"+row.getGuildId()+"/"+mapping.getPublicThreadId()+"\n"+marker;
         }
-        var work=new IncidentThreadClaim.Work(stage,index,projection.title(),content,projection.messages().getFirst()+"\n"+marker(row,privateSide,0),
-                nonce(row.getId(),marker),privateSide?mapping.getPrivateStarterId():mapping.getPublicStarterId(),privateSide?mapping.getPrivateThreadId():mapping.getPublicThreadId());
-        return new IncidentThreadClaim(row.getId(),row.getReport().getWindow().getId(),row.getClaimToken(),row.getVersion(),generation,destination,work);
+        var work=new IncidentThreadClaim.Work(stage,index,row.getCaseReference(),marker,projection.title(),content,projection.messages().getFirst()+"\n"+marker(row,privateSide,0),
+                nonce(row.getReport().getId(),marker),privateSide?mapping.getPrivateStarterId():mapping.getPublicStarterId(),privateSide?mapping.getPrivateThreadId():mapping.getPublicThreadId());
+        return new IncidentThreadClaim(row.getId(),row.getReport().getWindow().getId(),row.getClaimToken(),row.getVersion(),generation,row.getLeaseUntil(),destination,work);
     }
 
     private IncidentDelivery locked(UUID id) {
