@@ -113,7 +113,7 @@ public class IncidentDeliveryService {
             em.refresh(detailed.orElseThrow(),LockModeType.PESSIMISTIC_WRITE);
             var disclosure=detailed.orElseThrow();
             var publication=em.createQuery("select p from IncidentThreadPublication p where p.delivery.id=:id",IncidentThreadPublication.class)
-                    .setParameter("id",disclosure.getId()).getResultList().stream().findFirst().orElse(null);
+                    .setParameter("id",disclosure.getId()).setLockMode(LockModeType.PESSIMISTIC_READ).getResultList().stream().findFirst().orElse(null);
             if(disclosure.getState()==IncidentDeliveryState.SENT || publication!=null && publication.publicComplete()) {row.supersede(now);return null;}
             if(disclosure.getState()==IncidentDeliveryState.CLAIMED || disclosure.getState()==IncidentDeliveryState.UNCERTAIN)return null;
         }

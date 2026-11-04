@@ -186,3 +186,10 @@ private fact leakage. Schema topology and repository graph checks cover all 43 e
 
 Implementation is complete. Individual guard falsification, the final exact-head review delta,
 static gates, canonical verification, CI, merge and post-merge Wiki/hierarchy cleanup remain.
+
+
+The final independent delta review at 4d51fb34 confirmed both discovery fixes, current publication
+locking/translation and native validation, with no further validated findings. One additional
+consistency hardening applies a current PESSIMISTIC_READ to the receipt supersession lookup.
+The existing nine H2 and nine MariaDB receipt dispatch cases both pass. No stale receipt was
+claimed as reproduced; this keeps the touched lookup consistent with the surrounding lock order.
