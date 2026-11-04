@@ -42,6 +42,10 @@ class PlayoffControllerTest {
 
     @BeforeEach
     void setUp() {
+        seasonRepository.findByActiveTrue().ifPresent(previous -> {
+            previous.setActive(false);
+            seasonRepository.saveAndFlush(previous);
+        });
         season = testHelper.createSeason("Playoff Controller Test " + UUID.randomUUID().toString().substring(0, 8));
         season.setActive(true);
 

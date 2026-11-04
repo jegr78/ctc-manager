@@ -79,6 +79,23 @@ class DriverRankingServiceTest {
 	}
 
 	@Test
+	void givenPlayoffOnlyDriver_whenCalculateUnfilteredAlltimeRanking_thenIncludesTheirPoints() {
+		// given
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		race.setPlayoffMatchup(new PlayoffMatchup());
+		when(raceResultRepository.findAll()).thenReturn(List.of(createResult(race, panicpotato, 25, 1)));
+		when(seasonDriverRepository.findAll()).thenReturn(List.of(new SeasonDriver(season, panicpotato, tnr)));
+		// when
+		var rankings = driverRankingService.calculateAlltimeRanking();
+		// then
+		assertThat(rankings).singleElement().satisfies(ranking -> {
+			assertThat(ranking.getTotalPoints()).isEqualTo(25);
+			assertThat(ranking.getRacesCount()).isEqualTo(1);
+		});
+	}
+
+	@Test
 	void givenTwoDriversWithDifferentPoints_whenCalculateRanking_thenSortedByTotalPoints() {
 		// given
 		var race = new Race();
@@ -208,7 +225,7 @@ class DriverRankingServiceTest {
 		var result1 = createResult(race1, panicpotato, 23, 1);
 		var result2 = createResult(race2, panicpotato, 17, 2);
 
-		when(raceResultRepository.findByRacePlayoffMatchupIsNull())
+		when(raceResultRepository.findAll())
 				.thenReturn(List.of(result1, result2));
 		when(seasonDriverRepository.findAll())
 				.thenReturn(List.of(sd1, sd2));
@@ -240,7 +257,7 @@ class DriverRankingServiceTest {
 		race.setId(UUID.randomUUID());
 		var result = createResult(race, panicpotato, 23, 1);
 
-		when(raceResultRepository.findByRacePlayoffMatchupIsNull())
+		when(raceResultRepository.findAll())
 				.thenReturn(List.of(result));
 		when(seasonDriverRepository.findAll())
 				.thenReturn(List.of(sd1, sd2));
@@ -267,7 +284,7 @@ class DriverRankingServiceTest {
 		race.setId(UUID.randomUUID());
 		var result = createResult(race, panicpotato, 23, 1);
 
-		when(raceResultRepository.findByRacePlayoffMatchupIsNull())
+		when(raceResultRepository.findAll())
 				.thenReturn(List.of(result));
 		when(seasonDriverRepository.findAll())
 				.thenReturn(List.of(sd));
@@ -653,7 +670,7 @@ class DriverRankingServiceTest {
 		var result = createResult(race, levitius, 12, 3);
 		var lineup = new RaceLineup(race, levitius, subTeam, true);
 
-		when(raceResultRepository.findByRacePlayoffMatchupIsNull()).thenReturn(List.of(result));
+		when(raceResultRepository.findAll()).thenReturn(List.of(result));
 		when(seasonDriverRepository.findAll()).thenReturn(List.of());
 		when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), levitius.getId()))
 				.thenReturn(java.util.Optional.of(lineup));

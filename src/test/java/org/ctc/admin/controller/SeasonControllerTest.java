@@ -49,6 +49,24 @@ class SeasonControllerTest {
 	@Autowired
 	private TestHelper testHelper;
 
+    @Test
+    void givenAnActiveSeason_whenSavingAnotherActiveSeason_thenReturnConflictWithoutCreatingIt() throws Exception {
+        // given
+        var active = seasonRepository.findByActiveTrue().orElseGet(() -> {
+            var created = testHelper.createSeason("Test active conflict fixture");
+            created.setActive(true);
+            return seasonRepository.saveAndFlush(created);
+        });
+        long before = seasonRepository.count();
+        // when / then
+        mockMvc.perform(post("/admin/seasons/save").param("name", "Test second active rejected")
+                        .param("year", "2031").param("number", "2").param("active", "true"))
+                .andExpect(status().isConflict())
+                .andExpect(content().string(containsString("Another season is active")));
+        assertThat(seasonRepository.count()).isEqualTo(before);
+        assertThat(seasonRepository.findByActiveTrue().orElseThrow().getId()).isEqualTo(active.getId());
+    }
+
 	@Test
 	void givenInvalidRoundCount_whenGenerate_thenFormAndReturnContextRemainAvailable() throws Exception {
 		// given
@@ -93,6 +111,11 @@ class SeasonControllerTest {
 
 	@Test
 	void givenSlimForm_whenSaveSeason_thenRedirectsAndSeasonPersistedWithoutScoringFields() throws Exception {
+        // given
+        seasonRepository.findByActiveTrue().ifPresent(previous -> {
+            previous.setActive(false);
+            seasonRepository.saveAndFlush(previous);
+        });
 		// when
 		mockMvc.perform(post("/admin/seasons/save")
 						.param("name", "T-Phase60-Slim Save")

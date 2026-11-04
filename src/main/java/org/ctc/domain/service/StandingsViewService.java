@@ -104,7 +104,7 @@ public class StandingsViewService {
 		boolean groupSelected = group != null;
 		boolean combinedView = isGroupsLayout && !groupSelected;
 		boolean showGroupColumn = combinedView;
-		boolean showBuchholz = resolvedPhase.getFormat() == SeasonFormat.SWISS && groupSelected;
+		boolean showBuchholz = resolvedPhase.getFormat() == SeasonFormat.SWISS && (!isGroupsLayout || groupSelected);
 
 		var standings = showBuchholz
 				? standingsService.calculateStandingsWithBuchholz(resolvedPhase.getId(), group)

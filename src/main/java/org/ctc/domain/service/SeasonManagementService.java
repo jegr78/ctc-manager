@@ -163,6 +163,9 @@ public class SeasonManagementService {
      */
     @Transactional
     public Season save(UUID id, String name, int year, int number, String description, boolean active) {
+        if (active && seasonRepository.findByActiveTrue().filter(current -> !current.getId().equals(id)).isPresent()) {
+            throw new BusinessRuleException("Another season is active. Deactivate it before activating this season.");
+        }
         Season season;
         boolean isNew = id == null;
         if (isNew) {
@@ -176,7 +179,13 @@ public class SeasonManagementService {
         season.setNumber(number);
         season.setDescription(description);
         season.setActive(active);
-        var saved = seasonRepository.save(season);
+        Season saved;
+        try {
+            saved = seasonRepository.save(season);
+            seasonRepository.flush();
+        } catch (org.springframework.dao.DataIntegrityViolationException failure) {
+            throw new BusinessRuleException("The season could not be saved. Check that only one season is active and reload before trying again.");
+        }
 
         if (isNew) {
             seasonPhaseService.findByType(saved.getId(), PhaseType.REGULAR)

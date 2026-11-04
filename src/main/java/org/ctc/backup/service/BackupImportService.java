@@ -775,6 +775,7 @@ public class BackupImportService {
      * so the manifest check cannot pass on bytes the restore never reads.
      */
     private void validateRestorableRows(Path staged, BackupManifest manifest) throws BackupArchiveException {
+        var activeSeasonValidator = new org.ctc.backup.schema.ActiveSeasonBackupValidator();
         var poolValidator = new org.ctc.backup.schema.CarPoolBackupValidator(manifest.schemaVersion());
         var pickValidator = new org.ctc.backup.schema.PickBackupValidator(manifest.schemaVersion());
         var incidentValidator = new org.ctc.backup.schema.IncidentBackupValidator(manifest.schemaVersion());
@@ -786,6 +787,7 @@ public class BackupImportService {
                 ZipEntry entry = zf.getEntry(ref.fileName());
                 if (entry != null) {
                     counts.put(ref.tableName(), readRows(zf, entry, inflatedBytes, row -> {
+                        activeSeasonValidator.accept(ref.tableName(), row);
                         poolValidator.accept(ref.tableName(), row);
                         pickValidator.accept(ref.tableName(), row);
                         incidentValidator.accept(ref.tableName(), row);
@@ -802,6 +804,8 @@ public class BackupImportService {
             }
         } catch (BackupArchiveException ex) {
             throw ex;
+        } catch (org.ctc.backup.schema.ActiveSeasonBackupValidator.ValidationException ex) {
+            throw new BackupArchiveException(Reason.DATA_MISMATCH, ex.getMessage(), ex);
         } catch (org.ctc.backup.schema.PickBackupValidator.ValidationException ex) {
             throw new BackupArchiveException(Reason.DATA_MISMATCH, ex.getMessage(), ex);
         } catch (org.ctc.backup.schema.IncidentBackupValidator.ValidationException ex) {

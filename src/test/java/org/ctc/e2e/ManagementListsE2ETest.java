@@ -28,6 +28,7 @@ class ManagementListsE2ETest extends PlaywrightConfig {
     private final List<Driver> drivers = new ArrayList<>();
     private final List<Team> teams = new ArrayList<>();
     private final List<Season> seasons = new ArrayList<>();
+    private Season previousActive;
 
     @BeforeEach
     void setUp() { setupPage(); }
@@ -36,6 +37,10 @@ class ManagementListsE2ETest extends PlaywrightConfig {
     void tearDown() {
         teardownPage();
         seasons.forEach(helper::deleteSeasonCascade);
+        if (previousActive != null) {
+            previousActive.setActive(true);
+            seasonRepository.saveAndFlush(previousActive);
+        }
         driverRepository.deleteAll(drivers);
         for (int index = teams.size() - 1; index >= 0; index--) teamRepository.delete(teams.get(index));
     }
@@ -106,6 +111,11 @@ class ManagementListsE2ETest extends PlaywrightConfig {
     void givenActiveAndInactiveSeasons_whenCombineFilters_thenOnlyMatchingSeasonIsShown() {
         var prefix = "Test-Directory " + UUID.randomUUID().toString().substring(0, 8);
         var active = helper.createSeason(prefix + " Active");
+        previousActive = seasonRepository.findByActiveTrue().orElse(null);
+        if (previousActive != null) {
+            previousActive.setActive(false);
+            seasonRepository.saveAndFlush(previousActive);
+        }
         active.setActive(true);
         seasons.add(seasonRepository.save(active));
         var inactive = helper.createSeason(prefix + " Inactive");

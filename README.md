@@ -2,6 +2,8 @@
 
 **CTC Manager** is a Gran Turismo Team vs. Team League Manager — an admin application for managing racing leagues across multiple seasons.
 
+The active season is unique. Deactivate the current season before activating another. Upgrading from a database with several active seasons keeps the newest by year and season number, with UUID as the final tie-breaker. Restore preview rejects archives with several active seasons before replacing data. Swiss leagues and individual Swiss groups use Buchholz; admin and public alltime driver rankings both include playoff results.
+
 ## Tech Stack
 
 - Java 25, Spring Boot 4.x, Maven

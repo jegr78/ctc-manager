@@ -638,6 +638,26 @@ class DataAuditServiceIT {
 				"site_slugs", jdbcTemplate.queryForList("SELECT id, kind, slug, entity_id FROM site_slugs ORDER BY id"));
 	}
 
+    @Test
+    void givenSyntheticLegacyActiveSeasons_whenAudited_thenReportTheAmbiguityWithoutChangingFlags() {
+        // given
+        var first = new Season("Test first legacy active");
+        first.setId(UUID.randomUUID());
+        first.setActive(true);
+        var second = new Season("Test second legacy active");
+        second.setId(UUID.randomUUID());
+        second.setActive(true);
+        // when
+        var findings = DataAuditService.auditActiveSeasons(List.of(first, second));
+        // then
+        assertThat(findings).singleElement().satisfies(finding -> {
+            assertThat(finding.category()).isEqualTo(Category.SEASON_CONFIGURATION);
+            assertThat(finding.subject()).contains(first.getId().toString(), second.getId().toString());
+        });
+        assertThat(first.isActive()).isTrue();
+        assertThat(second.isActive()).isTrue();
+    }
+
 	private List<DataAuditFinding> findings(Category category, Object subjectPart) {
 		return dataAuditService.audit().findings(category).stream()
 				.filter(finding -> finding.subject().contains(subjectPart.toString()))

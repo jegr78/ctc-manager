@@ -186,7 +186,7 @@ class SeasonCarPoolBackupRoundTripIT {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"missing-entry-file", "missing-clause-file", "missing-member-file", "foreign-entry", "dangling-member", "duplicate-use", "wrong-count", "unsupported-version"})
+    @ValueSource(strings = {"missing-entry-file", "missing-clause-file", "missing-member-file", "foreign-entry", "dangling-member", "duplicate-use", "wrong-count", "unsupported-version", "multiple-active-seasons"})
     void givenMalformedCategoryArchive_whenStagedOrExecuted_thenRejectBeforeAnyWipe(String kind) throws Exception {
         // given
         if (kind.equals("foreign-entry")) {
@@ -209,6 +209,7 @@ class SeasonCarPoolBackupRoundTripIT {
             case "dangling-member" -> "Missing car reference";
             case "duplicate-use" -> "Duplicate entry consumption";
             case "wrong-count" -> "season_car_pool_members: manifest announces";
+            case "multiple-active-seasons" -> "more than one active season";
             default -> "999";
         };
         // when / then
@@ -343,6 +344,11 @@ class SeasonCarPoolBackupRoundTripIT {
                 default -> "season-car-pool-members";
             };
             files.remove("data/" + table + ".json");
+        } else if (kind.equals("multiple-active-seasons")) {
+            var rows = (ArrayNode) JSON.readTree(files.get("data/seasons.json"));
+            ((ObjectNode) rows.get(0)).put("active", true);
+            ((ObjectNode) rows.get(1)).put("active", true);
+            files.put("data/seasons.json", JSON.writeValueAsBytes(rows));
         } else if (kind.equals("wrong-count")) {
             var counts = (ObjectNode) manifest.get("table_counts");
             counts.put("season_car_pool_members", counts.path("season_car_pool_members").asLong() + 1);
