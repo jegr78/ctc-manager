@@ -32,6 +32,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("dev")
 @Transactional
 class TeamCardControllerTest {
+    @Autowired private org.ctc.domain.repository.SeasonRepository seasonRepository;
+
+    @org.junit.jupiter.api.BeforeEach
+    void deactivateSeededSeason() {
+        seasonRepository.findByActiveTrue().ifPresent(previous -> {
+            previous.setActive(false);
+            seasonRepository.saveAndFlush(previous);
+        });
+    }
+
 
 	@Autowired
 	private MockMvc mockMvc;

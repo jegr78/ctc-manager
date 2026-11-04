@@ -68,6 +68,10 @@ class PlayoffServiceTest {
 
 	@BeforeEach
 	void setUp() {
+        seasonRepository.findByActiveTrue().ifPresent(previous -> {
+            previous.setActive(false);
+            seasonRepository.saveAndFlush(previous);
+        });
 		// Create unique scoring presets for this test run
 		var uniqueSuffix = UUID.randomUUID().toString().substring(0, 4);
 		raceScoring = raceScoringRepository.save(

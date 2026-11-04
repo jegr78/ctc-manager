@@ -1077,4 +1077,17 @@ class SeasonManagementServiceTest {
         s.setNumber(number);
         return s;
     }
+    @Test
+    void givenAnotherActiveSeason_whenSavingAnActiveSeason_thenRejectBeforeMutation() {
+        // given
+        var active = new Season("Test already active");
+        active.setId(UUID.randomUUID());
+        active.setActive(true);
+        when(seasonRepository.findByActiveTrue()).thenReturn(Optional.of(active));
+        // when / then
+        assertThatThrownBy(() -> service.save(null, "Test second active", 2031, 2, "", true))
+                .isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class).hasMessageContaining("Another season is active");
+        verify(seasonRepository, never()).save(any());
+    }
+
 }

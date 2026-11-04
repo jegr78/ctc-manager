@@ -99,18 +99,10 @@ public class DriverRankingService {
 		return rankings;
 	}
 
-	/**
-	 * Calculates alltime driver ranking across all seasons.
-	 *
-	 * <p>Uses {@code seasonDriverRepository.findAll()} intentionally — alltime rankings
-	 * by definition span all seasons; a scoped alternative would require N+1 queries.
-	 * Alltime only covers REGULAR-phase results (via {@code findByRacePlayoffMatchupIsNull}),
-	 * so SeasonDriver is sufficient for team attribution.
-	 */
 	@Transactional(readOnly = true)
 	public List<DriverRanking> calculateAlltimeRanking() {
 		return calculateAlltimeRanking(
-				raceResultRepository.findByRacePlayoffMatchupIsNull(),
+				raceResultRepository.findAll(),
 				seasonDriverRepository.findAll());
 	}
 

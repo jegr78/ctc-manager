@@ -68,6 +68,9 @@ docker compose build
 docker compose -f docker-compose.prod.yml up -d
 ```
 
+* **Standings consistency:** Swiss LEAGUE and individual Swiss groups use Buchholz; a combined GROUPS view uses the existing points/difference ordering. Both alltime driver-ranking entry points include playoff results.
+* **Active season:** At most one season may be active. V33 keeps the newest legacy active season by year, number and UUID, then adds a nullable generated unique slot. Activation rejects an existing different active season and the database rejects concurrent activation conflicts. Backup preflight rejects multiple active season flags before any wipe; the archive wire schema remains 11. Tests selecting an active fixture must deactivate and restore the previous active fixture.
+
 ## Spring Profiles
 
 * `dev` — H2 In-Memory, Port 9090 (Development, Testing)

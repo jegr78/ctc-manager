@@ -104,10 +104,10 @@ public class StandingsPageGenerator {
         var seasonSlug = siteSlugger.slugify(season.getDisplayLabel());
         boolean isGroupsLayout = phase.getLayout() == PhaseLayout.GROUPS;
         boolean isCombinedView = groupId == null;
-        boolean isSwissPerGroup = !isCombinedView && phase.getFormat() == SeasonFormat.SWISS;
+        boolean useBuchholz = phase.getFormat() == SeasonFormat.SWISS && (!isGroupsLayout || !isCombinedView);
 
-        // Calculate standings; choose Buchholz variant for per-group + Swiss
-        List<StandingsService.TeamStanding> standings = isSwissPerGroup
+        // A combined view across groups cannot compare opponent strength.
+        List<StandingsService.TeamStanding> standings = useBuchholz
                 ? standingsService.calculateStandingsWithBuchholz(phase.getId(), groupId)
                 : standingsService.calculateStandings(phase.getId(), groupId);
 
@@ -150,7 +150,7 @@ public class StandingsPageGenerator {
                 : List.of();
 
         boolean showGroupColumn = isGroupsLayout && isCombinedView;
-        boolean showBuchholz = isSwissPerGroup;
+        boolean showBuchholz = useBuchholz;
 
         // Build Thymeleaf context
         var tplCtx = new Context(Locale.ENGLISH);

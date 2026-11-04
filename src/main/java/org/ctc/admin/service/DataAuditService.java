@@ -108,6 +108,7 @@ public class DataAuditService {
 		auditPairings(matches, findings.get(PAIRING));
 		auditLegs(races, findings);
 		auditPhaseGroups(matches, phaseTeams, findings.get(PHASE_GROUP));
+        findings.get(Category.SEASON_CONFIGURATION).addAll(auditActiveSeasons(seasonRepository.findAll()));
 		auditSuccession(seasonTeamRepository.findAllForBackup(), phaseTeams, findings.get(SUCCESSION));
 		auditPlayoffs(matchups, legs, findings.get(PLAYOFF));
 		auditPublicUrls(findings.get(PUBLIC_URL));
@@ -277,6 +278,15 @@ public class DataAuditService {
 					"Confirm the result and enter its race results, or clear the stored totals"));
 		}
 	}
+
+    static List<DataAuditFinding> auditActiveSeasons(List<org.ctc.domain.model.Season> seasons) {
+        var active = seasons.stream().filter(org.ctc.domain.model.Season::isActive).toList();
+        if (active.size() <= 1) return List.of();
+        return List.of(new DataAuditFinding(Category.SEASON_CONFIGURATION, AMBIGUOUS,
+                "Active seasons " + active.stream().map(season -> season.getId().toString()).toList(),
+                "More than one season is active; the current season cannot be selected uniquely.",
+                "Review which season should be current and deactivate the other seasons."));
+    }
 
 	private void auditPairings(List<Match> matches, List<DataAuditFinding> out) {
 		Map<String, List<Match>> byPairing = new LinkedHashMap<>();
