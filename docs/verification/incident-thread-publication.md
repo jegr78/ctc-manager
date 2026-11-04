@@ -82,3 +82,16 @@ calls therefore use an internal request attribute to stop automatic replay after
 request timeout, safe retry after pure rate-limit rejection and the unchanged retry behavior of
 existing nonce-backed messages. This checkpoint does not yet authorize or dispatch a real case;
 current private-parent permissions, durable step mapping and management recovery remain in scope.
+
+
+## Current destination policy checkpoint
+
+Four intended positive-path assertion failures preceded the pure destination policy. Its 42 cases
+then passed, alongside eight projection cases. A separate intended HTTP assertion failure
+preceded the bot-managed role metadata read; the corrected real-client suite passed all nine
+cases, with all nine existing rate-limit cases also green. Privacy uses actual current role and
+member overwrites. Only this bot's own integration-managed role is exempt from the configured
+staff allowlist; a shared administrator role stays broad even if the bot also possesses it.
+Wrong guild/type/identity, team/everyone/member visibility, missing bot rights, malformed or
+duplicate permission records and unverified/required/moderated forum tags fail closed.
+The policy remains pure; the publication sender must invoke it again before every detailed post.

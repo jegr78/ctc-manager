@@ -69,6 +69,10 @@ class DiscordIncidentThreadRestIT {
         wm.stubFor(post(urlEqualTo("/api/v10/channels/300/threads")).inScenario("Test quota").whenScenarioStateIs("available").willReturn(okJson(forum())));
         var created=assertDoesNotThrow(() -> client.startIncidentForumThread("300","Test INC-case marker","Test controlled snapshot",List.of()));assertThat(created.id()).isEqualTo("800");wm.verify(2,postRequestedFor(urlEqualTo("/api/v10/channels/300/threads")));
     }
+    @Test void givenManagedBotRoles_whenReadingCurrentPermissions_thenRetainTheExactBotOwnershipTag() {
+        wm.stubFor(get(urlEqualTo("/api/v10/guilds/100/roles")).willReturn(okJson("[{\"id\":\"701\",\"permissions\":\"8\",\"managed\":true,\"tags\":{\"bot_id\":\"700\"}}]")));
+        var roles=assertDoesNotThrow(() -> client.fetchIncidentRoles("100"));assertThat(roles.getFirst().managed()).isTrue();assertThat(roles.getFirst().tags().botId()).isEqualTo("700");
+    }
     @Test void givenExistingNonceBackedMessages_whenTransientFailureOccurs_thenKeepTheExistingClientRetryContract() {
         wm.stubFor(post(urlEqualTo("/api/v10/channels/200/messages")).inScenario("Test legacy retry").whenScenarioStateIs("Started").willReturn(serverError()).willSetStateTo("available"));
         wm.stubFor(post(urlEqualTo("/api/v10/channels/200/messages")).inScenario("Test legacy retry").whenScenarioStateIs("available").willReturn(okJson("{\"id\":\"600\",\"channel_id\":\"200\"}")));

@@ -80,6 +80,14 @@ public class DiscordRestClient {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record PermissionRole(String id, String permissions) { }
 
+    public List<IncidentRole> fetchIncidentRoles(String guildId) throws DiscordApiException {
+        return execute(() -> bot.get().uri("/guilds/{guildId}/roles", guildId).retrieve()
+                .body(new ParameterizedTypeReference<List<IncidentRole>>() { }));
+    }
+    @JsonIgnoreProperties(ignoreUnknown=true)
+    public record IncidentRole(String id,String permissions,Boolean managed,IncidentRoleTags tags) { }
+    @JsonIgnoreProperties(ignoreUnknown=true)
+    public record IncidentRoleTags(@JsonProperty("bot_id") String botId) { }
     public IncidentChannel fetchIncidentChannel(String channelId) throws DiscordApiException {
         return execute(() -> bot.get().uri("/channels/{channelId}",channelId).retrieve().body(IncidentChannel.class));
     }
