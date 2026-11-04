@@ -137,3 +137,20 @@ cases and all ten incident-management E2Es. Maven coverage, SpotBugs and the Fin
 guard passed, with zero static findings. The preceding broad run completed all 238 E2Es green;
 its two stale error-message assertions are now corrected. This is pre-commit evidence, not
 final clean verification of the eventual committed head.
+
+## CI migration-session regression
+
+The first PR CI run found a valid publication rejected by H2 after the migration session
+closed. Its cause was `ConditionInConstantSet` retaining that closed session, not an invalid
+ruling state. V32 had missed the repository's existing CASE-membership convention. A new
+direct-JDBC V32 witness closes the migration connection before inserting a valid publication;
+it first failed at the intended valid-write assertion, with one failure and zero errors.
+The unreleased V32 constraint now uses the same CASE form as V30. The witness also checks all
+six supported states and rejects unknown/lowercase/empty values from the new connection.
+No released migration, schema version, supported state or application behavior is relaxed.
+
+The corrective targeted verify passed the new JDBC case, 23 ruling-model cases, six case
+management cases, 27 H2 ruling delivery cases, ten native E2Es and Maven static gates.
+An explicit `-Ddocker.available=true` run also passed all 27 MariaDB ruling delivery cases
+with zero skips. The independent read-only delta review found no weakening or remaining
+finding. The final clean verification and CI must still pass on the fixed committed head.

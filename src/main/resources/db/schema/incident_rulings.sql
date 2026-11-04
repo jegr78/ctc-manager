@@ -59,7 +59,7 @@ CREATE TABLE incident_ruling_publications (
     CONSTRAINT fk_incident_ruling_publication_revision FOREIGN KEY (revision_id) REFERENCES incident_ruling_revisions(id),
     CONSTRAINT fk_incident_ruling_publication_thread FOREIGN KEY (thread_publication_id) REFERENCES incident_thread_publications(id),
     CONSTRAINT ck_incident_ruling_publication_version CHECK (aggregate_version >= attempts AND attempts >= 0),
-    CONSTRAINT ck_incident_ruling_publication_state CHECK (state IN ('PENDING','CLAIMED','SENT','FAILED','UNCERTAIN','SUPERSEDED')),
+    CONSTRAINT ck_incident_ruling_publication_state CHECK (CASE state WHEN 'PENDING' THEN 1 WHEN 'CLAIMED' THEN 1 WHEN 'SENT' THEN 1 WHEN 'FAILED' THEN 1 WHEN 'UNCERTAIN' THEN 1 WHEN 'SUPERSEDED' THEN 1 ELSE 0 END = 1),
     CONSTRAINT ck_incident_ruling_publication_destination CHECK (guild_id REGEXP '^[0-9]{1,20}$' AND channel_id REGEXP '^[0-9]{1,20}$'),
     CONSTRAINT ck_incident_ruling_publication_previous CHECK ((previous_revision_number IS NULL AND previous_content IS NULL AND previous_message_id IS NULL) OR
         (previous_revision_number IS NOT NULL AND previous_revision_number >= 1 AND previous_content IS NOT NULL AND previous_message_id IS NOT NULL))
