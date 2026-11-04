@@ -74,16 +74,19 @@ abstract class IncidentIntakeIntegrationFixture {
         tx.executeWithoutResult(status -> {
             fixture = helper.createFullSeasonFixture("TIR" + UUID.randomUUID().toString().substring(0, 7));
             fixture.homeTeam().setDiscordRoleId(HOME_ROLE); fixture.awayTeam().setDiscordRoleId(AWAY_ROLE);
-            fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0)); fixture.match().setDiscordChannelId(CHANNEL);
+            fixture.race().setDateTime(plannedRaceStart()); fixture.match().setDiscordChannelId(CHANNEL);
             var config = configs.findFirstByOrderByIdAsc(); createdConfig = config == null;
             if (config == null) config = new DiscordGlobalConfig();
             originalGuild = config.getGuildId(); config.setGuildId(GUILD); configId = configs.saveAndFlush(config).getId();
         });
         contextId = contexts.bind(IncidentMatchRef.match(fixture.match().getId()), GUILD, CHANNEL, manager);
-        windows.open(contextId, NOW.plusSeconds(60), 0, manager);
+        windows.open(contextId, openingDeadline(), 0, manager);
         windowId = tx.execute(status -> windowRows.findByContextId(contextId).orElseThrow().getId());
         dispatcher.start();
     }
+
+    LocalDateTime plannedRaceStart() { return LocalDateTime.of(2035, 1, 1, 20, 0); }
+    Instant openingDeadline() { return NOW.plusSeconds(60); }
 
     @AfterEach
     void cleanUpIntake() {

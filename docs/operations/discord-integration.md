@@ -878,13 +878,21 @@ per captured image. No live Discord messages or command registration are needed 
 
 ### Publication backup and recovery
 
-Current schema 8 exports all 41 entity tables, including immutable publication attempts, confirmed
-snapshots and permanent incident history. Schemas 1 through 6 may omit publication files; schema 7
-requires them but has no incident tables. Schema 8 requires all five incident history files even when empty. Schema 9 adds incident deliveries and requires all 42 entity tables; schema 8 may omit delivery operations. Restore preserves exact masks,
-versions, unresolved outcomes and season catalog memberships without querying Discord or resending
-messages. Legacy-only publication receipts remain restorable without enabling collection. Archives
-with valid private enrollment and history restore after the complete preflight. Invalid references,
-pointers or publication evidence are rejected before any database wipe.
+Current schema 11 exports all 46 entity tables, including immutable publication attempts,
+confirmed snapshots, permanent incident reports/revisions, exact linked-thread references and
+versioned rulings with their approved delivery evidence. Schemas 1 through 6 may omit publication
+files; schema 7 requires them but has no incident tables. Schema 8 adds the five incident-history
+files; schema 9 adds deliveries, schema 10 linked-thread mappings and schema 11 the three ruling
+files. Files announced by that schema are required even when empty. Supported earlier archives
+remain importable without inventing windows, decisions, thread mappings or historical sends.
+
+Restore preserves original IDs, authors, accepted parties, planned-start/deadline snapshots,
+frozen revisions, known Discord references and unresolved outcomes without querying Discord or
+resending messages. Invalid ownership, pointers, counts, destinations or publication evidence are
+rejected before any database wipe. All restored incident contexts pause external delivery and
+require fresh management review; prior operational grants are discarded. Reports and explicit
+rulings are permanent case records. Discord discussion and footage are not copied into the ZIP;
+evidence links remain references, whose continued availability depends on their original host.
 
 
 ### Running one internal consumer
@@ -1045,7 +1053,7 @@ The current management registration button continues to register `/picks` only. 
 out of logs, screenshots and saved command lines. An authorized operator can use the Discord
 API tooling already used for guild commands. Gateway reconnect/start never registers commands.
 Keep the existing Forms until the complete incident workflow is accepted and deliberately
-activated. Notices, closure delivery, linked threads and rulings are completed by #290–#293.
+activated. The delivered receipt, linked-thread and ruling workflows remain disabled until the operator completes the incident rollout checklist below.
 
 
 ### Durable incident receipts and recovery
@@ -1058,7 +1066,7 @@ Edits, withdrawal and repeated confirmations do not create another signal. The p
 The worker defaults off. After the complete incident rollout acceptance, explicitly configure
 `app.discord.incidents.delivery-enabled=true` together with enabled outbound integrations.
 The worker does not require a connected Gateway or browser and never opens reporting windows.
-Every five seconds after its previous run, it discovers up to ten due windows and ten receipts
+Every five seconds after its previous run, it discovers up to ten due windows, ten receipts, ten disclosures and ten ruling publications
 from the database. It closes due windows under their current stored deadline and captures each
 active report's final immutable revision. Withdrawn reports are excluded. Detailed thread
 publication is a separate operation and is not performed by the neutral receipt sender.
@@ -1084,7 +1092,84 @@ Every restored reporting context persistently pauses external delivery, includin
 work in that context. Archives preserve exact operation IDs, claims, failure/unknown states,
 confirmed message identities and frozen revisions. Historical review records remain history;
 operational approval flags and context resumption grants are never imported. Check Discord and
-review every unresolved restored operation afresh. Then use **Resume this reporting context**
+review every unresolved restored operation afresh. Then use **Resume delivery** in **Resume this reporting context**
 with a reason and confirmation. A stale form from before restore cannot authorize resumption.
 Restarting the application does not remove the pause. Recovery-check and outbound-disabled mode
 continue to block external calls regardless of the worker switch.
+
+
+### Linked incident threads and permanent rulings
+
+In **Discord Config**, explicitly save the **Stewards parent channel ID**, **Stewards and management role
+IDs** and, for a forum destination that requires tags, **Stewards forum tag IDs**. The destination
+must belong to the configured guild. Its effective audience must exclude both participant roles,
+including inherited organization roles, and unrelated readers. Grant only the intended staff.
+The bot needs View Channel, Read Message History, Send Messages, Create Public Threads and Send
+Messages in Threads for the relevant text/thread destinations, plus the permissions required to
+post in the selected forum. Confirm current channel overwrites and required forum tags. The sender
+checks the actual destination and audience before each detailed post and fails closed when it
+cannot prove them. A changed configuration cannot silently redirect an existing captured case.
+
+At cutoff, only the final active revision is captured. Public discussion identifies the reporting
+team or shared organization and includes involved drivers, replay notation, description and evidence
+references. It does not append the submitting account or management's internal version reason.
+Review free-text report/ruling fields for intentionally supplied personal information before an
+operator trial; the system cannot promise that user-authored text contains no personal data.
+Withdrawn cases and earlier edits remain in the Manager without being disclosed. The private
+stewards thread and match discussion retain stable case markers, references and step identities.
+A partially created pair resumes through its stored evidence, rather than starting a second pair.
+
+Open a case from **Incident reports** to read its original report revisions, withdrawal decision,
+thread links and ruling history. **Save draft version** stores a local version. Review its public
+preview before **Publish saved ruling version** explicitly approves that version into the known match thread.
+A correction requires a reason and keeps the last confirmed ruling until its replacement is
+confirmed. Unknown ruling results require review against that exact thread and case marker;
+never assume a timeout means no message exists. Archived or inaccessible targets fail closed.
+Drafting, publication and recovery never alter race results, penalties or standings.
+
+For a partial or uncertain disclosure, use **Public delivery status** and **Review delivery**.
+Inspect both captured destinations and every known step. An existing case message/thread can be
+adopted only after server verification. Confirm a missing step only after checking the full known
+pair, then retry that step. Review unresolved ruling publications on their permanent case as well
+as receipts/disclosures before **Resume delivery** after restore. Restarting or toggling the worker
+is not reconciliation. A disabled worker or archived season must not release unpublished material.
+
+The read-only **Data audit** reports structural incident inconsistencies and operational work
+requiring review: overdue open windows, unrelated participants sharing one role, failed/unknown
+receipts or rulings and partial thread pairs. Findings contain record locators and fixed status
+text, not private report contents. Audit does not close windows, send messages or repair records.
+Use the relevant management/recovery workflow after inspecting authoritative records.
+
+### Incident rollout checklist
+
+The automated acceptance uses synthetic teams and fake Discord. The implementation does not
+register a command, activate production intake, post a real report/decision or retire Forms.
+The following live actions belong to a separately authorized operator rollout:
+
+- [ ] Review the [offline acceptance evidence](../verification/incident-workflow-acceptance.md),
+  current data audit and a protected, restorable backup. Backups contain confidential material;
+  restrict their storage and access accordingly.
+- [ ] In an isolated authorized guild, configure the existing bot and exact guild/match/private
+  destinations. Verify current staff-only audience, participant/organization roles, thread
+  permissions and required forum tags using synthetic participants.
+- [ ] Explicitly register `/incidents` using the payload above. Enable only the existing single
+  Gateway consumer and outbound policy for this approved trial. Keep production intake closed.
+- [ ] Bind a synthetic regular or playoff pairing. Check the planned-start-plus-24-elapsed-hour
+  default in Europe/Berlin, then confirm an explicit future deadline. Missing/ambiguous starts
+  require an explicit deadline. Schedule edits do not change an already confirmed cutoff.
+- [ ] Exercise private submission, creator-only retrieval, edit and withdrawal. Confirm one
+  detail-free receipt per first submission and no facts or reporter identity in public previews,
+  site output, logs or errors before cutoff. A shared organization role attributes that organization.
+- [ ] Enable the incident delivery worker for the approved trial. At the exact cutoff confirm
+  only active final versions disclose into the intended linked threads. Verify the complete facts,
+  reporting party and absence of appended reporter identity. Publish one explicitly reviewed
+  synthetic ruling; verify scores remain unchanged.
+- [ ] Rehearse unknown/partial delivery reconciliation and isolated backup restore. Confirm permanent
+  case history and original IDs survive, sends remain paused and no blind duplicate is posted.
+  Review unresolved work afresh before explicitly resuming delivery.
+- [ ] Obtain the operational decision for production activation, then repeat destination/audience
+  checks and deliberately open only the intended real windows. Keep monitoring delivery status
+  and the audit. Disabling intake or delivery preserves stored history and requires no deletion.
+- [ ] Retire the manual Google Forms process only through an explicit operator decision after
+  successful acceptance. Preserve historical Forms and responses; do not migrate or delete them
+  automatically.

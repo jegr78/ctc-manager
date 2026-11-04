@@ -15,7 +15,7 @@ public record DataAuditFinding(Category category, Resolution resolution, String 
         CAR_ELIGIBILITY("Car eligibility information", "#278"),
         CAR_POOL("Inconsistent seasonal car pools", "#275, #276, #278"),
         PRIVATE_PICKS("Inconsistent confidential pick history", "#281"),
-        INCIDENT_REPORTS("Inconsistent incident report history", "#288");
+        INCIDENT_REPORTS("Incident history and delivery review", "#288, #293");
 
 		private final String label;
 		private final String relatedIssues;
