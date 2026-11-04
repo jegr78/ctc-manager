@@ -37,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class SeasonPhaseService {
+    private final ScoreWriteLockService scoreLocks;
 
     private final SeasonPhaseRepository seasonPhaseRepository;
     private final SeasonPhaseGroupRepository seasonPhaseGroupRepository;
@@ -47,6 +48,7 @@ public class SeasonPhaseService {
     private final RaceScoringRepository raceScoringRepository;
     private final MatchScoringRepository matchScoringRepository;
     private final PlayoffRepository playoffRepository;
+    private final RaceResultRepository results;
 
     /**
      * Input record for {@link #assignTeamsToPhase} bulk diff logic.
@@ -200,8 +202,13 @@ public class SeasonPhaseService {
                               Integer eventDurationMinutes,
                               String label,
                               Integer sortIndex) {
+        scoreLocks.lockAllSeasons();
         var phase = seasonPhaseRepository.findById(phaseId)
                 .orElseThrow(() -> new EntityNotFoundException("SeasonPhase", phaseId));
+        UUID currentScoringId = phase.getRaceScoring() == null ? null : phase.getRaceScoring().getId();
+        if (!Objects.equals(currentScoringId, raceScoringId) && results.findFirstByRaceMatchdayPhaseId(phaseId).isPresent()) {
+            throw new BusinessRuleException("This phase has results. Keep its race scoring and use a new phase for a different scheme.");
+        }
 
         var matchdays = matchdayRepository.findByPhaseId(phaseId);
         if (!matchdays.isEmpty() && phase.getLayout() != layout) {

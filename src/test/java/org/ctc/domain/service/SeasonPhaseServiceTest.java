@@ -21,6 +21,8 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SeasonPhaseServiceTest {
+    @org.mockito.Mock private org.ctc.domain.repository.RaceResultRepository results;
+    @org.mockito.Mock private ScoreWriteLockService scoreLocks;
 
     @Mock
     private SeasonPhaseRepository seasonPhaseRepository;

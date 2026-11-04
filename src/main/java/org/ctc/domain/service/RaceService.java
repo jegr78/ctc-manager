@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class RaceService {
+    private final ScoreWriteLockService scoreLocks;
 
 	static final String NO_RACE_SCORING = "This phase has no race scoring. Set one on the phase before entering results.";
 
@@ -293,6 +294,7 @@ public class RaceService {
 
 	@Transactional
 	public String saveResults(UUID raceId, List<RaceResultData> results) {
+        scoreLocks.lockRace(raceId);
 		var race = raceRepository.findById(raceId).orElseThrow();
 		PlayoffDecisionGuard.requireOpen(race);
 		if (race.getMatchday().getPhase().getRaceScoring() == null && results.stream().anyMatch(r -> r.driverId() != null)) {
@@ -331,6 +333,7 @@ public class RaceService {
 
 	@Transactional
 	public String quickScore(UUID raceId, int homeScore, int awayScore) {
+        scoreLocks.lockRace(raceId);
 		var race = raceRepository.findById(raceId).orElseThrow();
 		if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
 			throw new BusinessRuleException("A walkover match has no score");

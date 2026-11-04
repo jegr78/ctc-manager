@@ -21,6 +21,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class DriverMergeServiceTest {
+    @org.mockito.Mock private ScoreWriteLockService scoreLocks;
 
 	@Mock
 	private DriverRepository driverRepository;

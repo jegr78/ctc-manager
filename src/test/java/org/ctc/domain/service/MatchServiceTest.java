@@ -25,6 +25,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class MatchServiceTest {
+    @org.mockito.Mock private ScoreWriteLockService scoreLocks;
     @Mock private IncidentLifecycleGuard incidentGuard;
     @Mock private PickLifecycleGuard pickGuard;
 

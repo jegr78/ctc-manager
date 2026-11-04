@@ -5,6 +5,7 @@ public record DataAuditFinding(Category category, Resolution resolution, String 
 
 	public enum Category {
 		STALE_AGGREGATE("Stale match and matchup aggregates", "#191"),
+        RESULT_POINTS("Race points inconsistent with their scoring scheme", ""),
 		PAIRING("Duplicate and reversed pairings", "#199"),
 		PHASE_GROUP("Phase and group inconsistencies", "#190"),
 		SUCCESSION("Succession collisions and cycles", "#190"),

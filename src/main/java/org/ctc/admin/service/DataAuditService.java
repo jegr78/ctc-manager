@@ -102,6 +102,7 @@ public class DataAuditService {
 		List<Race> races = raceRepository.findAllForBackup();
 		Legs legs = new Legs(races, raceLineupRepository.findAllForBackup());
 
+		auditResultPoints(races, findings.get(Category.RESULT_POINTS));
 		auditMatchAggregates(matches, legs, findings.get(STALE_AGGREGATE));
 		auditPlayoffAggregates(matchups, legs, findings.get(STALE_AGGREGATE));
 		auditPairings(matches, findings.get(PAIRING));
@@ -122,6 +123,24 @@ public class DataAuditService {
 		log.info("Data audit found {} findings", report.total());
 		return report;
 	}
+
+    private void auditResultPoints(List<Race> races, List<DataAuditFinding> findings) {
+        for (var race : races) {
+            var scoring = race.getMatchday().getPhase().getRaceScoring();
+            for (var result : race.getResults()) {
+                var expected = new org.ctc.domain.model.RaceResult(race, result.getDriver(), result.getPosition(),
+                        result.getQualiPosition(), result.isFastestLap());
+                if (scoring != null && scoring.canParse()) scoringService.calculatePoints(expected, scoring);
+                boolean differs = scoring == null || !scoring.canParse() || expected.getPointsRace() != result.getPointsRace()
+                        || expected.getPointsQuali() != result.getPointsQuali() || expected.getPointsFl() != result.getPointsFl()
+                        || expected.getPointsTotal() != result.getPointsTotal();
+                if (differs) findings.add(new DataAuditFinding(Category.RESULT_POINTS, AMBIGUOUS,
+                        "Race " + race.getId() + " result " + result.getId(),
+                        "Stored result points do not match the phase's current race scoring.",
+                        "Review the historical scoring before correcting points. Reopen a decided playoff before changing its results."));
+            }
+        }
+    }
 
     private void auditCarPools(List<Race> races, List<DataAuditFinding> findings) {
         for (var season : seasonRepository.findAll()) {

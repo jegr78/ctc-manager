@@ -24,6 +24,7 @@ import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 class RaceLineupServiceTest {
+    @org.mockito.Mock private ScoreWriteLockService scoreLocks;
 
 	@Mock
 	private RaceRepository raceRepository;

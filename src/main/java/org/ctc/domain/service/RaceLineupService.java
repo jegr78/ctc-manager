@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class RaceLineupService {
+    private final ScoreWriteLockService scoreLocks;
 
 	private final RaceRepository raceRepository;
 	private final RaceLineupRepository raceLineupRepository;
@@ -91,6 +92,7 @@ public class RaceLineupService {
 
 	@Transactional
 	public int saveLineup(UUID raceId, Map<UUID, UUID> rosterAssignments, Map<UUID, UUID> guestAssignments) {
+        scoreLocks.lockRace(raceId);
 		var race = raceRepository.findById(raceId)
 				.orElseThrow(() -> new EntityNotFoundException("Race", raceId));
 		PlayoffDecisionGuard.requireOpen(race);

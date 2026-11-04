@@ -9,6 +9,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface RaceResultRepository extends JpaRepository<RaceResult, UUID> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    Optional<RaceResult> findFirstByRaceMatchdayPhaseRaceScoringId(UUID scoringId);
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    Optional<RaceResult> findFirstByRaceMatchdayPhaseId(UUID phaseId);
 
 	@EntityGraph(attributePaths = {"driver"})
 	List<RaceResult> findByRaceId(UUID raceId);
