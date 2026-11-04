@@ -3,6 +3,7 @@
 <section class="entity-editor incident-workspace">
 <a class="back-link" th:href="@{/admin/incident-contexts/{id}(id=${page.contextId})}">Back to incident reporting</a>
 <h1>Incident delivery</h1><p th:text="${page.pairing}"></p>
+<p>Review ruling delivery on each <a th:href="@{/admin/incident-contexts/{id}(id=${page.contextId})}">permanent incident case</a> before resuming a restored context.</p>
 <p>Saved reports remain stored even when a public message fails. Only the neutral receipt is sent before cutoff. Detailed publication is a separate operation.</p>
 <p th:if="${page.paused}" role="status">External delivery is paused after restore. Check existing Discord messages and review each unresolved delivery before resuming this context.</p>
 <p th:if="${!page.paused}" class="text-dim">Delivery also requires the outbound integration and incident worker to be enabled in the server configuration.</p>

@@ -51,7 +51,7 @@
         <h2>Saved cases</h2>
         <p th:if="${page.cases.isEmpty()}" class="text-dim">No confirmed reports. Unfinished input never replaces a saved case.</p>
         <article th:each="case : ${page.cases}" class="incident-case">
-            <h3 th:text="${case.reference}"></h3><p><span th:text="${case.state}"></span> · Revision <span th:text="${case.revision}"></span></p>
+            <h3><a th:href="@{/admin/incidents/{id}(id=${case.reportId})}" th:text="${case.reference}"></a></h3><p><span th:text="${case.state}"></span> · Revision <span th:text="${case.revision}"></span></p>
             <dl><dt>Original reporting party</dt><dd th:text="${case.party}"></dd><dt>Original creator Discord ID</dt><dd th:text="${case.authorId}"></dd><dt>Race context</dt><dd><span th:text="${case.matchday}"></span> · <a th:href="@{/admin/races/{id}(id=${case.raceId})}">View original race</a></dd><dt>Involved drivers</dt><dd class="incident-text" th:text="${case.drivers}"></dd><dt>Replay timestamp</dt><dd class="incident-text" th:text="${case.replayTimestamp}"></dd><dt>Description</dt><dd class="incident-text" th:text="${case.description}"></dd><dt>Evidence references</dt><dd class="incident-text" th:text="${case.evidence}"></dd></dl>
         </article>
     </div>

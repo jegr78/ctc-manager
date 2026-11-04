@@ -191,6 +191,150 @@ class IncidentBackupValidatorTest {
         assertThatThrownBy(() -> validate(cause.equals("legacy")?9:10)).isInstanceOf(IncidentBackupValidator.ValidationException.class);
     }
 
+    @Test
+    void givenPermanentRulingDraft_whenValidating_thenRetainExactTextAndTrustedAuthor() {
+        rulingDraft();
+        assertThatCode(() -> validate(11)).doesNotThrowAnyException();
+        assertThat(first("incident_ruling_revisions").path("text").asText()).isEqualTo("Test steward decision <script>literal</script>");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"legacy", "foreign-report", "duplicate-owner", "foreign-root", "gap", "pointer", "version", "blank-text", "oversized", "actor", "future-pointer", "unknown-field"})
+    void givenMalformedRulingArchive_whenValidating_thenRejectBeforeRestoreWithoutLeakingTheDecision(String corruption) {
+        rulingDraft();
+        var ruling = first("incident_rulings"); var revision = first("incident_ruling_revisions");
+        switch (corruption) {
+            case "legacy" -> { }
+            case "foreign-report" -> ruling.put("report", id());
+            case "duplicate-owner" -> { var copy = ruling.deepCopy(); copy.put("id", id()); data.get("incident_rulings").add(copy); }
+            case "foreign-root" -> revision.put("ruling", id());
+            case "gap" -> revision.put("revisionNumber", 2);
+            case "pointer" -> ruling.put("latestRevisionNumber", 2);
+            case "version" -> ruling.put("version", 0);
+            case "blank-text" -> revision.put("text", " ");
+            case "oversized" -> revision.put("text", "x".repeat(1801));
+            case "actor" -> revision.put("actorId", " ");
+            case "future-pointer" -> ruling.put("requestedRevisionNumber", 2);
+            case "unknown-field" -> revision.put("forgedAuthority", true);
+            default -> throw new AssertionError(corruption);
+        }
+        assertThatThrownBy(() -> validate(corruption.equals("legacy") ? 10 : 11))
+                .isInstanceOf(IncidentBackupValidator.ValidationException.class)
+                .hasMessageNotContaining("Test steward decision");
+    }
+
+    @Test
+    void givenExactApprovedRulingWork_whenValidating_thenRetainTheCapturedVersionAndKnownThread() {
+        rulingPublication(); assertThatCode(() -> validate(11)).doesNotThrowAnyException();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"revision", "thread", "guild", "channel", "content", "nonce", "claimed", "sent", "state", "review-grant", "aggregate", "duplicate"})
+    void givenForgedRulingPublicationEvidence_whenValidating_thenRejectBeforeWiping(String corruption) {
+        var publication = rulingPublication();
+        switch (corruption) {
+            case "revision" -> publication.put("revision", id());
+            case "thread" -> publication.put("threadPublication", id());
+            case "guild" -> publication.put("guildId", "999");
+            case "channel" -> publication.put("channelId", "999");
+            case "content" -> publication.put("content", "Test substituted public judgment");
+            case "nonce" -> publication.put("nonce", "forged-nonce");
+            case "claimed" -> publication.put("state", "CLAIMED");
+            case "sent" -> publication.put("state", "SENT");
+            case "state" -> publication.put("state", "UNKNOWN");
+            case "review-grant" -> publication.put("restoreReviewed", true);
+            case "aggregate" -> first("incident_rulings").put("version", 20);
+            case "duplicate" -> { var copy = publication.deepCopy(); copy.put("id", id()); data.get("incident_ruling_publications").add(copy); first("incident_rulings").put("version", 3); }
+            default -> throw new AssertionError(corruption);
+        }
+        assertThatThrownBy(() -> validate(11)).isInstanceOf(IncidentBackupValidator.ValidationException.class)
+                .hasMessageNotContaining("Test steward decision");
+    }
+
+    @Test void aCurrentCorrectionCanCaptureTheLatestConfirmedRulingInAThreeVersionHistory() {
+        threeRulingVersions(); assertThatCode(() -> validate(11)).doesNotThrowAnyException();
+    }
+    @Test void firstConfirmationMaySkipSupersededWorkAndEarlierDrafts() {
+        threeRulingVersions(); var work = data.get("incident_ruling_publications");
+        var superseded = work.getFirst(); superseded.put("state", "SUPERSEDED"); superseded.put("version", 3); superseded.putNull("messageId");
+        superseded.put("completedAt", "2026-11-03T13:01:00Z"); superseded.put("nextAttemptAt", "2026-11-03T13:01:00Z");
+        for (String field : List.of("previousRevisionNumber", "previousContent", "previousMessageId")) work.get(1).putNull(field);
+        first("incident_rulings").put("version", 7);
+        assertThatCode(() -> validate(11)).doesNotThrowAnyException();
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"stale-previous", "older-unresolved"})
+    void contradictoryCurrentOrUnreplacedRulingWorkMustRejectBeforeRestore(String cause) {
+        threeRulingVersions(); var publications = data.get("incident_ruling_publications");
+        var current = publications.get(2); current.put("previousRevisionNumber", 1); current.put("previousContent", publications.getFirst().path("content").asText());
+        if (cause.equals("older-unresolved")) {
+            var previous = publications.get(1); previous.put("state", "FAILED"); previous.putNull("messageId"); previous.put("failureCode", "DESTINATION");
+            first("incident_rulings").put("publishedRevisionNumber", 1); first("incident_rulings").put("version", 7);
+        }
+        assertThatThrownBy(() -> validate(11)).isInstanceOf(IncidentBackupValidator.ValidationException.class);
+    }
+    @ParameterizedTest @ValueSource(strings = {"701", "801"})
+    void aConfirmedRulingCannotClaimAnAlreadyRecordedIncidentMessageOrThread(String occupied) {
+        var publication = rulingPublication(); var root = first("incident_rulings");
+        publication.put("state", "SENT"); publication.put("version", 2); publication.put("attempts", 1);
+        publication.put("messageId", occupied); publication.put("completedAt", "2026-11-03T13:00:00Z");
+        publication.put("claimToken", id()); publication.put("claimGeneration", "test-runtime"); publication.put("leaseUntil", "2026-11-03T13:10:00Z");
+        root.put("publishedRevisionNumber", 1); root.put("publishedMessageId", occupied); root.put("version", 3);
+        assertThatThrownBy(() -> validate(11)).isInstanceOf(IncidentBackupValidator.ValidationException.class);
+    }
+    @Test void aHistoricalConfirmedCorrectionCannotEraseItsPrecedingConfirmedVersion() {
+        threeRulingVersions(); var correction = data.get("incident_ruling_publications").get(1);
+        for (String field : List.of("previousRevisionNumber", "previousContent", "previousMessageId")) correction.putNull(field);
+        assertThatThrownBy(() -> validate(11)).isInstanceOf(IncidentBackupValidator.ValidationException.class);
+    }
+
+    private void threeRulingVersions() {
+        var first = rulingPublication(); var root = first("incident_rulings"); var revision = first("incident_ruling_revisions");
+        first.put("state", "SENT"); first.put("version", 2); first.put("attempts", 1); first.put("messageId", "950"); first.put("completedAt", "2026-11-03T13:00:00Z");
+        first.put("claimToken", id()); first.put("claimGeneration", "test-runtime"); first.put("leaseUntil", "2026-11-03T13:10:00Z");
+        ObjectNode previous = first;
+        for (int number = 2; number <= 3; number++) {
+            var nextRevision = revision.deepCopy(); nextRevision.put("id", id()); nextRevision.put("revisionNumber", number);
+            nextRevision.put("text", "Test ruling version " + number); nextRevision.put("reason", "Test reviewed correction " + number);
+            String at = number == 2 ? "2026-11-03T13:01:00Z" : "2026-11-03T13:02:00Z"; nextRevision.put("acceptedAt", at);
+            data.get("incident_ruling_revisions").add(nextRevision);
+            var next = first.deepCopy(); next.put("id", id()); next.put("revision", nextRevision.path("id").asText());
+            String content = org.ctc.domain.service.IncidentRulingProjection.render(UUID.fromString(REPORT), "INC-TEST", nextRevision.path("text").asText());
+            next.put("content", content); next.put("nonce", org.ctc.domain.model.IncidentRulingPublication.nonce(UUID.fromString(REPORT), content));
+            next.put("requestedAt", at); next.put("nextAttemptAt", at); next.put("previousRevisionNumber", number - 1);
+            next.put("previousContent", previous.path("content").asText()); next.put("previousMessageId", "950");
+            if (number == 3) {
+                next.put("state", "PENDING"); next.put("version", 0); next.put("attempts", 0);
+                for (String field : List.of("claimToken", "claimGeneration", "leaseUntil", "completedAt", "messageId")) next.putNull(field);
+            } else { next.put("completedAt", at); next.put("claimToken", id()); next.put("leaseUntil", "2026-11-03T13:11:00Z"); }
+            data.get("incident_ruling_publications").add(next); previous = next;
+        }
+        root.put("latestRevisionNumber", 3); root.put("requestedRevisionNumber", 3); root.put("publishedRevisionNumber", 2);
+        root.put("publishedMessageId", "950"); root.put("version", 8);
+    }
+
+    private ObjectNode rulingPublication() {
+        rulingDraft(); var thread = publication(); thread.put("publicStarterId", "801"); thread.put("publicThreadId", "801");
+        first("incident_rulings").put("requestedRevisionNumber", 1); first("incident_rulings").put("version", 2);
+        var revision = first("incident_ruling_revisions");
+        String content = org.ctc.domain.service.IncidentRulingProjection.render(UUID.fromString(REPORT), "INC-TEST", revision.path("text").asText());
+        return row("incident_ruling_publications", "id", id(), "revision", revision.path("id").asText(), "threadPublication", thread.path("id").asText(),
+                "guildId", "100", "channelId", "801", "content", content, "previousContent", null, "previousRevisionNumber", null, "previousMessageId", null,
+                "nonce", org.ctc.domain.model.IncidentRulingPublication.nonce(UUID.fromString(REPORT), content), "requestedBy", "test-steward",
+                "requestedAt", "2026-11-03T13:00:00Z", "state", "PENDING", "version", 0, "attempts", 0,
+                "claimToken", null, "claimGeneration", null, "leaseUntil", null, "nextAttemptAt", "2026-11-03T13:00:00Z",
+                "completedAt", null, "messageId", null, "failureCode", null, "reconciledBy", null, "reconciliationReason", null);
+    }
+
+    private void rulingDraft() {
+        String ruling = id();
+        row("incident_rulings", "id", ruling, "report", REPORT, "version", 1, "latestRevisionNumber", 1,
+                "requestedRevisionNumber", null, "publishedRevisionNumber", null, "publishedMessageId", null);
+        row("incident_ruling_revisions", "id", id(), "ruling", ruling, "revisionNumber", 1,
+                "text", "Test steward decision <script>literal</script>", "reason", "", "actorId", "test-steward",
+                "acceptedAt", "2026-11-03T12:02:00Z");
+    }
+
     private void validate(int version) {
         var validator = new IncidentBackupValidator(version);
         data.forEach((table, rows) -> rows.forEach(row -> validator.accept(table, row)));
@@ -220,6 +364,7 @@ class IncidentBackupValidatorTest {
         var node = JSON.createObjectNode();
         for (int i = 0; i < values.length; i += 2) node.set((String) values[i], JSON.valueToTree(values[i + 1]));
         if (table.startsWith("incident_")) { node.putNull("createdAt"); node.putNull("updatedAt"); }
+        if (table.equals("incident_deliveries")) { node.putNull("pairingLabel"); node.putNull("raceLabel"); }
         data.computeIfAbsent(table, ignored -> new ArrayList<>()).add(node); return node;
     }
     private static String id() { return UUID.randomUUID().toString(); }

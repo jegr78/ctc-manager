@@ -20,13 +20,20 @@ public final class IncidentThreadProjection {
                 || report.getFrozenRevisionNumber()!=revision.getRevisionNumber()
                 || !report.getId().equals(revision.getReport().getId()) || operation.getPartyLabel()==null || operation.getPartyLabel().isBlank())throw unavailable();
         var facts=revision.getPayload();if(facts==null)throw unavailable();
-        return render(operation.getCaseReference(),operation.getPartyLabel(),facts);
+        return render(operation.getCaseReference(),operation.getPartyLabel(),facts,operation.getPairingLabel(),operation.getRaceLabel());
     }
     public static Payload render(String caseReference,String partyLabel,IncidentPayload facts) {
+        return render(caseReference, partyLabel, facts, null, null);
+    }
+    public static Payload render(String caseReference,String partyLabel,IncidentPayload facts,String pairingLabel,String raceLabel) {
+        if ((pairingLabel == null) != (raceLabel == null)) throw unavailable();
+        if (pairingLabel != null && (pairingLabel.isBlank() || raceLabel.isBlank() || pairingLabel.length() > 1000 || raceLabel.length() > 1000)) throw unavailable();
+        String identity = pairingLabel == null ? "" : "Pairing: " + escapedLabel(validText(pairingLabel).replace('\r', ' ').replace('\n', ' '))
+                + "\nRace: " + escapedLabel(validText(raceLabel).replace('\r', ' ').replace('\n', ' ')) + "\n";
         if(caseReference==null || caseReference.isBlank() || partyLabel==null || partyLabel.isBlank() || facts==null)throw unavailable();
         String label=validText(partyLabel).replace('\r',' ').replace('\n',' ');
         String title=bounded("Incident "+caseReference+" · "+label,100);
-        String body=validText("Incident "+caseReference+"\nReporting party: "+escapedLabel(label)
+        String body=validText("Incident "+caseReference+"\n"+identity+"Reporting party: "+escapedLabel(label)
                 +"\n\nInvolved drivers\n"+facts.getInvolvedDrivers()+"\n\nReplay timestamp\n"+facts.getReplayTimestamp()
                 +"\n\nDescription\n"+facts.getDescription()+"\n\nEvidence references\n"+facts.getEvidenceLinks());
         var messages=new ArrayList<String>();

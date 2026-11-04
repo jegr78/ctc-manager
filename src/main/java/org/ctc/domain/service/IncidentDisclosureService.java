@@ -1,6 +1,7 @@
 package org.ctc.domain.service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class IncidentDisclosureService {
     private final IncidentDeliveryRepository deliveries;
     private final IncidentReportRevisionRepository revisions;
     private final IncidentWindowService windows;
+    private final IncidentContextService contexts;
 
     public boolean freezeDueWindow(UUID windowId) { return windows.closeDue(windowId, null); }
 
@@ -41,7 +43,15 @@ public class IncidentDisclosureService {
             if (report.getFrozenRevisionNumber() == null || report.getFrozenRevisionNumber() != report.getLatestRevisionNumber()) throw new BusinessRuleException("Incident disclosure requires its final frozen revision");
             var revision = revisions.findByReportIdAndRevisionNumber(report.getId(), report.getFrozenRevisionNumber())
                     .orElseThrow(() -> new BusinessRuleException("The frozen incident revision is unavailable"));
-            queued.add(deliveries.save(IncidentDelivery.capture(report, revision, IncidentDeliveryOperation.DISCLOSURE, window.getClosedAt())));
+            var target = contexts.resolve(IncidentContextService.reference(window.getContext()));
+            var ordered = target.races().stream().sorted(Comparator.comparingInt((Race race) -> race.getMatchday().getSortIndex())
+                    .thenComparing(Race::getDateTime, Comparator.nullsLast(Comparator.naturalOrder())).thenComparing(Race::getId)).toList();
+            int leg = ordered.stream().map(Race::getId).toList().indexOf(report.getRace().getId()) + 1;
+            if (leg < 1) throw new BusinessRuleException("The frozen report no longer identifies its concrete pairing race");
+            var delivery = IncidentDelivery.capture(report, revision, IncidentDeliveryOperation.DISCLOSURE, window.getClosedAt());
+            delivery.freezePublicIdentity(target.home().getShortName() + " vs " + target.away().getShortName(),
+                    "Leg " + leg + " · " + report.getOriginalMatchday().getLabel() + " · Race " + report.getRace().getId());
+            queued.add(deliveries.save(delivery));
         }
         return List.copyOf(queued);
     }

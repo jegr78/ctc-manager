@@ -174,6 +174,12 @@ public class IncidentThreadPublicationService {
         return new IncidentThreadClaim(row.getId(),row.getReport().getWindow().getId(),row.getClaimToken(),row.getVersion(),generation,row.getLeaseUntil(),destination,work);
     }
 
+    IncidentThreadClaim rulingProof(IncidentDelivery row, IncidentThreadPublication mapping, String generation, Instant validUntil) {
+        if (!mapping.publicComplete()) throw unavailable();
+        var proof = snapshot(row, mapping, IncidentThreadProjection.capture(row), generation, IncidentThreadStage.PUBLIC_THREAD, 0);
+        return new IncidentThreadClaim(proof.id(), proof.windowId(), proof.token(), proof.version(), generation, validUntil, proof.destination(), proof.work());
+    }
+
     private IncidentDelivery locked(UUID id) {
         if(id==null)return null;var snapshot=deliveries.findById(id).orElse(null);if(snapshot==null)return null;
         var window=windows.lock(snapshot.getReport().getWindow().getId());var row=deliveries.findByIdForUpdate(id).orElse(null);if(row==null)return null;

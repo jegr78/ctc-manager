@@ -32,6 +32,16 @@ class IncidentThreadPublicationTest {
         assertThatThrownBy(() -> projected.messages().add("Test mutation")).isInstanceOf(UnsupportedOperationException.class);
     }
     @Test
+    void legacyDisclosuresKeepTheirExactPublishedFormatAfterTeamsAndRaceLabelsChange() {
+        var operation = frozen(facts, "Test original party");
+        var original = IncidentThreadProjection.capture(operation);
+        f.home.setShortName("T-CHANGED"); f.day.setLabel("Test changed day");
+        var reread = IncidentThreadProjection.capture(operation);
+        assertThat(reread).isEqualTo(original);
+        assertThat(String.join("", reread.messages())).doesNotContain("Pairing:", "Race:", "T-CHANGED", "Test changed day");
+    }
+
+    @Test
     void givenLongUnicodeFactsAndParty_whenProjecting_thenKeepEveryFactInOrderedBoundedMessagesWithoutBrokenSurrogates() {
         String description="Test complete emoji facts "+"🚗𝄞 abc ".repeat(1600);
         String evidence="https://example.invalid/test-evidence/"+"x".repeat(6000);
@@ -50,6 +60,18 @@ class IncidentThreadPublicationTest {
         assertThat(projected.title()).doesNotContain("\n","\r");
         String body=String.join("",projected.messages());assertThat(body).contains("Test \\*CLR\\* second line","Test broken \uFFFD value");
     }
+    @ParameterizedTest @ValueSource(strings = {"stored-legacy", "duplicate", "receipt", "half"})
+    void frozenIdentityCannotUpgradeLegacyRowsOrBeReplacedOrAttachedToAReceipt(String cause) {
+        var original = frozen(facts, "Test original party");
+        var fresh = cause.equals("stored-legacy") ? original : IncidentDelivery.capture(report, original.getRevision(),
+                cause.equals("receipt") ? IncidentDeliveryOperation.RECEIPT : IncidentDeliveryOperation.DISCLOSURE, original.getCapturedAt());
+        String race = "Leg 1 · Test original day · Race " + report.getRace().getId();
+        if (cause.equals("duplicate")) fresh.freezePublicIdentity("Test original pairing", race);
+        assertThatThrownBy(() -> fresh.freezePublicIdentity("Test changed pairing", cause.equals("half") ? null : race)).isInstanceOf(BusinessRuleException.class);
+        if (cause.equals("duplicate")) assertThat(fresh.getPairingLabel()).isEqualTo("Test original pairing");
+        else assertThat(fresh.getPairingLabel()).isNull();
+    }
+
     @ParameterizedTest
     @ValueSource(strings={"open","withdrawn","unfrozen","foreign-frozen","receipt","foreign-owner"})
     void givenAnUnpublishableOperation_whenProjecting_thenRejectBeforeAnyDetailedPayloadCanBeSent(String cause) {

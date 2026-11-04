@@ -11,11 +11,13 @@ class IncidentDisclosureServiceTest {
     final IncidentUnitFixture f = new IncidentUnitFixture();
     final IncidentDeliveryRepository deliveries = mock(IncidentDeliveryRepository.class);
     final IncidentReportRevisionRepository revisions = mock(IncidentReportRevisionRepository.class);
-    final IncidentDisclosureService disclosure = new IncidentDisclosureService(deliveries, revisions, mock(IncidentWindowService.class));
+    final IncidentContextService contexts = mock(IncidentContextService.class);
+    final IncidentDisclosureService disclosure = new IncidentDisclosureService(deliveries, revisions, mock(IncidentWindowService.class), contexts);
     final IncidentReport report = IncidentUnitFixture.id(new IncidentReport(f.window, f.race, "400000000000000004", f.party()));
     final IncidentPayload payload = new IncidentPayload("Test PRIVATE guest", "00:00", "Test PRIVATE final description", "");
     final IncidentReportRevision revision;
     IncidentDisclosureServiceTest() {
+        when(contexts.resolve(any())).thenReturn(f.target());
         f.openWindow(); report.appendRevision();
         revision = IncidentUnitFixture.id(new IncidentReportRevision(report, 1, 1, payload, report.getAuthorId(), IncidentUnitFixture.NOW, UUID.randomUUID()));
         when(revisions.findByReportIdAndRevisionNumber(report.getId(), 1)).thenReturn(Optional.of(revision));
@@ -34,6 +36,18 @@ class IncidentDisclosureServiceTest {
         assertThat(item.getRevision().getPayload().getDescription()).isEqualTo("Test PRIVATE final description"); assertThat(item.getPartyLabel()).isEqualTo(f.home.getName());
         when(deliveries.findByOperationKey(item.getOperationKey())).thenReturn(Optional.of(item));
         assertThat(disclosure.captureClosedWindow(f.window, List.of(report, withdrawn))).containsExactly(item); verify(deliveries, times(1)).save(any());
+    }
+
+    @Test
+    void newDisclosuresFreezeThePairingAndConcreteLegWithoutFollowingLaterNamesOrRaceOrder() {
+        report.freeze(); f.window.close(IncidentUnitFixture.NOW.plusSeconds(3600));
+        var queued = disclosure.captureClosedWindow(f.window, List.of(report)).getFirst();
+        String body = String.join("", IncidentThreadProjection.capture(queued).messages());
+        assertThat(body).contains("Pairing: TIH vs TIA", "Race: Leg 1 · Test Incident round · Race " + f.race.getId());
+        f.home.setShortName("T-CHANGED"); f.away.setShortName("T-OTHER"); f.day.setSortIndex(99);
+        var earlier = new Race(); earlier.setId(UUID.randomUUID()); earlier.setMatch(f.match); earlier.setMatchday(f.day);
+        earlier.setDateTime(java.time.LocalDateTime.of(2030, 1, 1, 0, 0)); f.match.getRaces().addFirst(earlier);
+        assertThat(String.join("", IncidentThreadProjection.capture(queued).messages())).isEqualTo(body).doesNotContain("T-CHANGED", "T-OTHER");
     }
 
     @Test

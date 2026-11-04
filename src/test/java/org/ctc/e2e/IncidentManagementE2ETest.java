@@ -55,6 +55,11 @@ class IncidentManagementE2ETest extends PlaywrightConfig {
     @Autowired IncidentReportWindowRepository windows;
     @Autowired DiscordGlobalConfigRepository configs;
     @Autowired IncidentReportService reports;
+    @Autowired org.ctc.domain.service.IncidentRulingService rulings;
+    @Autowired org.ctc.domain.repository.IncidentRulingRepository rulingRows;
+    @Autowired org.ctc.domain.repository.IncidentRulingPublicationRepository rulingPublications;
+    @Autowired IncidentThreadPublicationRepository threadRows;
+    @MockitoBean org.ctc.domain.incidents.IncidentRulingSender rulingSender;
     @Autowired IncidentDeliveryRepository deliveryRows;
     @Autowired org.ctc.domain.service.PickSessionEpoch epoch;
     @Autowired IncidentWindowService deadlines;
@@ -126,6 +131,44 @@ class IncidentManagementE2ETest extends PlaywrightConfig {
         org.mockito.Mockito.verifyNoInteractions(discord);
     }
 
+    @ParameterizedTest
+    @CsvSource({"1440,1000,desktop", "390,844,mobile"})
+    void permanentCaseDraftPreviewAndStaleRecoveryWorkWithoutJavascript(int width, int height, String viewport) throws Exception {
+        page.setViewportSize(width, height); page.navigate(url("/admin/matches/" + fixture.match().getId() + "/incidents"));
+        openThroughNativeForms();
+        UUID id = contextId(); UUID windowId = windowId(id);
+        var actor = new AuthorizedIncidentActor(id, GUILD, CHANNEL, "400000000000000004",
+                new IncidentParty(IncidentPartyType.TEAM, fixture.homeTeam().getId(), "Test original party", "300000000000000003"));
+        var payload = new IncidentPayload("Test drivers", "Lap 2", "Test permanent case facts", "https://example.invalid/video");
+        var saved = reports.submit(windowId, fixture.race().getId(), 1, UUID.randomUUID(), actor, payload);
+        page.reload();
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName(saved.caseReference()).setExact(true)).click();
+        assertThat(page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Permanent case").setExact(true))).isVisible();
+        String text = "Test ruling <script id='ruling-private-probe'>window.rulingProbe=true</script>\n" + "Test judgment ".repeat(80);
+        page.getByLabel("Public ruling text", new Page.GetByLabelOptions().setExact(true)).fill(text);
+        page.getByLabel("Reason for this version").fill("Test first internal reason");
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save draft version").setExact(true)).press("Enter");
+        assertThat(page.getByTestId("ruling-public-preview")).containsText(text);
+        assertThat(page.locator("#ruling-private-probe")).hasCount(0);
+        assertThat(page.locator("body")).containsText("No ruling published");
+        org.assertj.core.api.Assertions.assertThat(page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")).isEqualTo(true);
+        capture("incident-ruling-" + viewport);
+        page.getByLabel("Public ruling text", new Page.GetByLabelOptions().setExact(true)).fill("Test stale ruling input");
+        rulings.saveDraft(saved.reportId(), 1, "Test newer accepted draft", "", new IncidentManagementActor("test-other-manager"), epoch.managementGeneration());
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save draft version").setExact(true)).click();
+        assertThat(page.getByRole(AriaRole.ALERT)).containsText("changed");
+        assertThat(page.getByLabel("Public ruling text", new Page.GetByLabelOptions().setExact(true))).hasValue("Test stale ruling input");
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Reload current case").setExact(true)).click();
+        assertThat(page.getByLabel("Public ruling text", new Page.GetByLabelOptions().setExact(true))).hasValue("Test newer accepted draft");
+        tx.executeWithoutResult(status -> {
+            var root = rulingRows.findByReportId(saved.reportId()).orElseThrow();
+            org.assertj.core.api.Assertions.assertThat(root.getPublishedMessageId()).isNull();
+        });
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Back to pairing incidents").setExact(true)).click();
+        assertThat(page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Incident reporting").setExact(true))).isVisible();
+        org.mockito.Mockito.verifyNoInteractions(discord);
+    }
+
     @Test
     void staleNativeChangeRetainsEnteredValuesUntilExplicitReload() throws Exception {
         page.setViewportSize(390, 844); page.navigate(url("/admin/matches/" + fixture.match().getId() + "/incidents")); openThroughNativeForms();
@@ -181,6 +224,63 @@ class IncidentManagementE2ETest extends PlaywrightConfig {
         page.getByRole(AriaRole.BUTTON,new Page.GetByRoleOptions().setName("Resume delivery").setExact(true)).click();
         assertThat(page.getByRole(AriaRole.BUTTON,new Page.GetByRoleOptions().setName("Resume delivery").setExact(true))).hasCount(0);
         tx.executeWithoutResult(status -> {org.assertj.core.api.Assertions.assertThat(windows.findById(windowId).orElseThrow().isDeliveryPaused()).isFalse();org.assertj.core.api.Assertions.assertThat(deliveryRows.findById(deliveryId).orElseThrow().getState()).isEqualTo(org.ctc.domain.model.IncidentDeliveryState.PENDING);});org.mockito.Mockito.verifyNoInteractions(discord);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"1440,1000,desktop", "390,844,mobile"})
+    void nativeExplicitPublicationAndUnknownOutcomeReviewKeepOneKnownRulingWithoutJavascript(int width, int height, String viewport) throws Exception {
+        page.setViewportSize(width, height); page.navigate(url("/admin/matches/" + fixture.match().getId() + "/incidents")); openThroughNativeForms();
+        UUID id = contextId(), windowId = windowId(id);
+        var manager = new IncidentManagementActor("test-browser-manager");
+        var actor = new AuthorizedIncidentActor(id, GUILD, CHANNEL, "400000000000000004",
+                new IncidentParty(IncidentPartyType.TEAM, fixture.homeTeam().getId(), "Test browser reporting party", "300000000000000003"));
+        var saved = reports.submit(windowId, fixture.race().getId(), 1, UUID.randomUUID(), actor,
+                new IncidentPayload("Test browser drivers", "Lap 2", "Test browser incident facts", "https://example.invalid/video"));
+        deadlines.changeDeadline(id, NOW.plusSeconds(3600), 1, "Test explicit browser deadline", manager);
+        clock.set(NOW.plusSeconds(3600)); deadlines.closeDue(windowId, null);
+        tx.executeWithoutResult(status -> {
+            var detail = deliveryRows.findByOperationKey(saved.reportId() + ":DISCLOSURE").orElseThrow();
+            var mapping = threadRows.save(org.ctc.domain.model.IncidentThreadPublication.capture(detail, "600", "500", "", 1));
+            mapping.accept(org.ctc.domain.model.IncidentThreadStage.PRIVATE_STARTER, 0, "701", "701");
+            mapping.accept(org.ctc.domain.model.IncidentThreadStage.PUBLIC_STARTER, 0, "801", null);
+            mapping.accept(org.ctc.domain.model.IncidentThreadStage.PUBLIC_THREAD, 0, "801", "801");
+            mapping.accept(org.ctc.domain.model.IncidentThreadStage.PRIVATE_REFERENCE, 0, "901", null);
+            var token = UUID.randomUUID(); detail.claim(token, epoch.managementGeneration(), clock.instant(), clock.instant().plusSeconds(600));
+            detail.acknowledge(token, 1, epoch.managementGeneration(), clock.instant(), "801");
+            deliveryRows.findByOperationKey(saved.reportId() + ":RECEIPT").orElseThrow().supersede(clock.instant());
+        });
+        page.navigate(url("/admin/incidents/" + saved.reportId()));
+        page.getByLabel("Public ruling text", new Page.GetByLabelOptions().setExact(true)).fill("Test controlled ruling @everyone");
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save draft version").setExact(true)).press("Enter");
+        assertThat(page.getByTestId("ruling-public-preview")).containsText("Test controlled ruling @everyone");
+        org.mockito.Mockito.verifyNoInteractions(rulingSender);
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Publish saved ruling version").setExact(true)).press("Enter");
+        assertThat(page.locator("body")).containsText("No ruling published");
+        UUID work = tx.execute(status -> {
+            var root = rulingRows.findByReportId(saved.reportId()).orElseThrow();
+            return rulingPublications.findByRevisionRulingIdOrderByRequestedAtAscIdAsc(root.getId()).getFirst().getId();
+        });
+        org.mockito.Mockito.when(rulingSender.send(org.mockito.ArgumentMatchers.any())).thenReturn(
+                new org.ctc.domain.incidents.IncidentSendResult(org.ctc.domain.incidents.IncidentSendResult.Disposition.UNCERTAIN, null, "SEND_UNCERTAIN"));
+        org.assertj.core.api.Assertions.assertThat(rulings.dispatch(work)).isTrue(); page.reload();
+        assertThat(page.locator("body")).containsText("Outcome unknown; review required");
+        page.getByLabel("Reviewed ruling outcome").selectOption("RETRY_MISSING");
+        page.getByLabel("Reason for delivery review").fill("Test <script id='ruling-review-probe'>private</script> reviewed outcome");
+        page.getByLabel("I reviewed the approved ruling in the known match incident thread.").check();
+        org.mockito.Mockito.when(rulingSender.verify(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(""))).thenReturn(
+                new org.ctc.domain.incidents.IncidentSendResult(org.ctc.domain.incidents.IncidentSendResult.Disposition.REJECTED, null, "PROVEN_MISSING"));
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save ruling delivery review").setExact(true)).press("Enter");
+        assertThat(page.locator("#ruling-review-probe")).hasCount(0);
+        assertThat(page.locator("body")).containsText("No ruling published");
+        org.assertj.core.api.Assertions.assertThat(page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")).isEqualTo(true);
+        capture("incident-ruling-review-" + viewport);
+        org.mockito.Mockito.doReturn(new org.ctc.domain.incidents.IncidentSendResult(org.ctc.domain.incidents.IncidentSendResult.Disposition.SENT, "950", null))
+                .when(rulingSender).send(org.mockito.ArgumentMatchers.any());
+        org.assertj.core.api.Assertions.assertThat(rulings.dispatch(work)).isTrue(); page.reload();
+        assertThat(page.locator("body")).containsText("Published version 1");
+        assertThat(page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Confirmed ruling on Discord").setExact(true)))
+                .hasAttribute("href", "https://discord.com/channels/" + GUILD + "/801/950");
+        org.mockito.Mockito.verifyNoInteractions(discord);
     }
 
     private void openThroughNativeForms() {

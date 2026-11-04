@@ -105,7 +105,7 @@ public class IncidentAdminService {
             var revision = revisions.findByReportIdAndRevisionNumber(report.getId(), report.getLatestRevisionNumber())
                     .orElseThrow(() -> new BusinessRuleException("Incident history is inconsistent; review the data audit before changing reporting"));
             var payload = revision.getPayload();
-            return new CaseView(report.getCaseReference(), report.getState() == IncidentReportState.ACTIVE ? "Active" : "Withdrawn",
+            return new CaseView(report.getId(), report.getCaseReference(), report.getState() == IncidentReportState.ACTIVE ? "Active" : "Withdrawn",
                     report.getRace().getId(), report.getAuthorId(), report.getOriginalMatchday().getLabel(), report.getParty().getLabel(), report.getLatestRevisionNumber(),
                     payload.getInvolvedDrivers(), payload.getReplayTimestamp(), payload.getDescription(), payload.getEvidenceLinks());
         }).toList();
@@ -129,7 +129,7 @@ public class IncidentAdminService {
         return new IncidentManagementActor(name);
     }
 
-    public record CaseView(String reference, String state, UUID raceId, String authorId, String matchday, String party, int revision,
+    public record CaseView(UUID reportId, String reference, String state, UUID raceId, String authorId, String matchday, String party, int revision,
                            String drivers, String replayTimestamp, String description, String evidence) {}
     public record DecisionView(String action, String at, String actor, String reason, String deadline) {}
     public record Page(UUID seasonId, UUID contextId, String pairing, String backPath, String bindingPath, boolean regular,

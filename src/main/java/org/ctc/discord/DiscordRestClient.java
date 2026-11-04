@@ -150,6 +150,20 @@ public class DiscordRestClient {
                 .retrieve().body(BotMessage.class));
     }
 
+    public BotMessage createRulingMessage(String channelId, String nonce, String content, Instant validUntil) throws DiscordApiException {
+        return execute(() -> deadline(bot.post().uri("/channels/{channelId}/messages", channelId), validUntil)
+                .attribute(DiscordRateLimitInterceptor.UNCERTAIN_CREATION, true).contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("content", content, "allowed_mentions", Map.of("parse", List.of()), "nonce", nonce, "enforce_nonce", true))
+                .retrieve().body(BotMessage.class));
+    }
+
+    public BotMessage editBotMessage(String channelId, String messageId, String content, Instant validUntil) throws DiscordApiException {
+        return execute(() -> deadline(bot.patch().uri("/channels/{channelId}/messages/{messageId}", channelId, messageId), validUntil)
+                .attribute(DiscordRateLimitInterceptor.UNCERTAIN_CREATION, true).contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("content", content, "allowed_mentions", Map.of("parse", List.of())))
+                .retrieve().body(BotMessage.class));
+    }
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record BotMessage(String id, @JsonProperty("channel_id") String channelId, String content, BotUser author, String nonce) {
         @Override public String toString() { return "BotMessage[opaque]"; }

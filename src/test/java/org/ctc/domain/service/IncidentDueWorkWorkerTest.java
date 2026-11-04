@@ -14,9 +14,10 @@ class IncidentDueWorkWorkerTest {
     final IncidentDeliveryService delivery=mock(IncidentDeliveryService.class);
     final IncidentDisclosureService disclosure=mock(IncidentDisclosureService.class);
     final IncidentThreadPublicationService publication=mock(IncidentThreadPublicationService.class);
+    final IncidentRulingService rulings=mock(IncidentRulingService.class);
     final ImportLockService imports=new ImportLockService(java.time.Duration.ofSeconds(1));
     final OutboundPolicy enabled=new OutboundPolicy(true,new MockEnvironment());
-    final IncidentDueWorkWorker worker=new IncidentDueWorkWorker(delivery,disclosure,publication,imports,enabled);
+    final IncidentDueWorkWorker worker=new IncidentDueWorkWorker(delivery,disclosure,publication,rulings,imports,enabled);
 
     @Test
     void givenPersistedDueWindowsAndReceipts_whenTicking_thenRequestBoundedBatchesAndContinueAfterOneDomainFailure() {
@@ -28,9 +29,9 @@ class IncidentDueWorkWorkerTest {
     }
     @Test
     void givenRecoveryPolicyOrRestoreAdmission_whenTicking_thenDoNotDiscoverOrMutateWork() {
-        new IncidentDueWorkWorker(delivery,disclosure,publication,imports,new OutboundPolicy(true,new MockEnvironment().withProperty("spring.profiles.active","recovery-check"))).tick();
+        new IncidentDueWorkWorker(delivery,disclosure,publication,rulings,imports,new OutboundPolicy(true,new MockEnvironment().withProperty("spring.profiles.active","recovery-check"))).tick();
         assertThat(imports.tryLock()).isTrue();try {worker.tick();}finally{imports.unlock();}
-        verifyNoInteractions(delivery,disclosure,publication);
+        verifyNoInteractions(delivery,disclosure,publication,rulings);
     }
     @Test
     void givenAnActiveTick_whenAnotherTickArrives_thenDoNotDispatchTheSameBatchConcurrently() throws Exception {
@@ -42,7 +43,7 @@ class IncidentDueWorkWorkerTest {
     @Test
     void givenDefaultAndExplicitEnabledConfiguration_whenBooting_thenKeepTheSchedulerOffUntilOperatorActivation() {
         var context=new ApplicationContextRunner().withUserConfiguration(IncidentDeliverySchedulingConfiguration.class)
-            .withBean(IncidentDeliveryService.class,()->delivery).withBean(IncidentDisclosureService.class,()->disclosure).withBean(IncidentThreadPublicationService.class,()->publication).withBean(ImportLockService.class,()->imports).withBean(OutboundPolicy.class,()->enabled);
+            .withBean(IncidentDeliveryService.class,()->delivery).withBean(IncidentDisclosureService.class,()->disclosure).withBean(IncidentThreadPublicationService.class,()->publication).withBean(IncidentRulingService.class,()->rulings).withBean(ImportLockService.class,()->imports).withBean(OutboundPolicy.class,()->enabled);
         context.run(app -> assertThat(app).doesNotHaveBean(IncidentDueWorkWorker.class));
         context.withPropertyValues("app.discord.incidents.delivery-enabled=true","app.discord.incidents.worker-initial-delay-ms=60000").run(app -> assertThat(app).hasSingleBean(IncidentDueWorkWorker.class));
     }
@@ -51,4 +52,11 @@ class IncidentDueWorkWorkerTest {
         when(publication.dueDisclosures(10)).thenReturn(List.of(one,two));doThrow(new org.ctc.domain.exception.BusinessRuleException("Test unavailable step")).when(publication).dispatch(one);
         worker.tick();verify(publication).dueDisclosures(10);verify(publication).dispatch(one);verify(publication).dispatch(two);
     }
+    @Test void rulingWorkUsesTheSameBoundedWorkerAndContinuesAfterOneRejectedCase() {
+        var one=UUID.randomUUID();var two=UUID.randomUUID();
+        when(rulings.dueRulings(10)).thenReturn(List.of(one,two));
+        doThrow(new org.ctc.domain.exception.BusinessRuleException("Test rejected ruling")).when(rulings).dispatch(one);
+        worker.tick();verify(rulings).dueRulings(10);verify(rulings).dispatch(one);verify(rulings).dispatch(two);
+    }
+
 }

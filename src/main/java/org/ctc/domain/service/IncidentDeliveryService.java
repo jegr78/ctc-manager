@@ -30,13 +30,14 @@ public class IncidentDeliveryService {
     private final Clock clock;
     private final PickSessionEpoch epoch;
     private final IncidentReceiptSender sender;
+    private final org.ctc.domain.repository.IncidentRulingPublicationRepository rulingPublications;
 
     @SuppressFBWarnings(value = "EI_EXPOSE_REP2", matchType = edu.umd.cs.findbugs.annotations.SuppressMatchType.EXACT,
             justification = "Spring injects the shared transaction-scoped EntityManager proxy; copying it would break persistence context identity. See docs/security/sast-acceptance.md.")
     public IncidentDeliveryService(IncidentDeliveryRepository rows, IncidentWindowService windows, ImportLockService imports,
-                                   PlatformTransactionManager transactions, EntityManager em, Clock clock, PickSessionEpoch epoch, IncidentReceiptSender sender) {
+                                   PlatformTransactionManager transactions, EntityManager em, Clock clock, PickSessionEpoch epoch, IncidentReceiptSender sender, org.ctc.domain.repository.IncidentRulingPublicationRepository rulingPublications) {
         this.rows=rows;this.windows=windows;this.imports=imports;this.transactions=new TransactionTemplate(transactions);
-        this.em=em;this.clock=clock;this.epoch=epoch;this.sender=sender;
+        this.em=em;this.clock=clock;this.epoch=epoch;this.sender=sender;this.rulingPublications=rulingPublications;
     }
 
     public boolean dispatch(UUID id) {
@@ -92,6 +93,13 @@ public class IncidentDeliveryService {
                 em.refresh(row,LockModeType.PESSIMISTIC_WRITE);
                 if(row.getState()==IncidentDeliveryState.CLAIMED || row.getState()==IncidentDeliveryState.UNCERTAIN
                         || (row.getState()==IncidentDeliveryState.PENDING || row.getState()==IncidentDeliveryState.FAILED) && !row.isRestoreReviewed())throw new BusinessRuleException("Review every unresolved restored delivery before resuming this context");
+            }
+            for(var ruling:rulingPublications.findByWindowForUpdate(id)) {
+                em.refresh(ruling,LockModeType.PESSIMISTIC_WRITE);
+                if(ruling.getState()==IncidentDeliveryState.CLAIMED || ruling.getState()==IncidentDeliveryState.UNCERTAIN
+                        || (ruling.getState()==IncidentDeliveryState.PENDING || ruling.getState()==IncidentDeliveryState.FAILED) && !ruling.isRestoreReviewed()) {
+                    throw new BusinessRuleException("Review every unresolved restored ruling delivery on its permanent case before resuming this context");
+                }
             }
             window.resumeDelivery(actor.id(),reason,now());
         });} finally {imports.exitWriter();}

@@ -12,7 +12,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @ConditionalOnProperty(name="app.discord.incidents.delivery-enabled",havingValue="true")
 public class IncidentDeliverySchedulingConfiguration {
     @Bean
-    public IncidentDueWorkWorker incidentDueWorkWorker(IncidentDeliveryService delivery,IncidentDisclosureService disclosure,IncidentThreadPublicationService publication,ImportLockService imports,OutboundPolicy outbound) {
-        return new IncidentDueWorkWorker(delivery,disclosure,publication,imports,outbound);
+    public IncidentDueWorkWorker incidentDueWorkWorker(IncidentDeliveryService delivery,IncidentDisclosureService disclosure,IncidentThreadPublicationService publication,IncidentRulingService rulings,ImportLockService imports,OutboundPolicy outbound) {
+        return new IncidentDueWorkWorker(delivery,disclosure,publication,rulings,imports,outbound);
     }
 }

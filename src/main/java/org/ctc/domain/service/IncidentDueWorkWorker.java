@@ -13,6 +13,7 @@ public final class IncidentDueWorkWorker {
     private final IncidentDeliveryService delivery;
     private final IncidentDisclosureService disclosure;
     private final IncidentThreadPublicationService publication;
+    private final IncidentRulingService rulings;
     private final ImportLockService imports;
     private final OutboundPolicy outbound;
     private final AtomicBoolean working = new AtomicBoolean();
@@ -24,6 +25,7 @@ public final class IncidentDueWorkWorker {
             for(var id:delivery.dueWindows(10)) attempt(() -> disclosure.freezeDueWindow(id));
             for(var id:delivery.dueReceipts(10)) attempt(() -> delivery.dispatch(id));
             for(var id:publication.dueDisclosures(10)) attempt(() -> publication.dispatch(id));
+            for(var id:rulings.dueRulings(10)) attempt(() -> rulings.dispatch(id));
         } catch(RuntimeException unavailable) { log.warn("Incident due-work discovery is unavailable; inspect persistent delivery state"); }
         finally {working.set(false);}
     }

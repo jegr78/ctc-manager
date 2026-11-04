@@ -23,6 +23,8 @@ public class IncidentDelivery extends BaseEntity {
     @Column(nullable = false, length = 25, updatable = false) private String nonce;
     @Column(nullable = false, length = 64, updatable = false) private String caseReference;
     @Column(length = 255, updatable = false) private String partyLabel;
+    @Column(length = 1000, updatable = false) private String pairingLabel;
+    @Column(length = 1000, updatable = false) private String raceLabel;
     @Convert(converter = UtcInstantConverter.class) @Column(nullable = false, updatable = false) private Instant capturedAt;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 16) private IncidentDeliveryState state = IncidentDeliveryState.PENDING;
     @Column(name = "aggregate_version", nullable = false) private long version;
@@ -53,6 +55,13 @@ public class IncidentDelivery extends BaseEntity {
                 + (operation == IncidentDeliveryOperation.RECEIPT ? "R" : "D");
         return delivery;
     }
+    public void freezePublicIdentity(String pairing, String race) {
+        if (id != null || operation != IncidentDeliveryOperation.DISCLOSURE || state != IncidentDeliveryState.PENDING
+                || attempts != 0 || pairingLabel != null || raceLabel != null || pairing == null || race == null
+                || pairing.isBlank() || race.isBlank() || pairing.length() > 1000 || race.length() > 1000) throw unavailable();
+        pairingLabel = pairing; raceLabel = race;
+    }
+
     public void claim(UUID token, String generation, Instant now, Instant until) {
         if (token == null || generation == null || generation.isBlank() || generation.length() > 64
                 || now == null || until == null || !until.isAfter(now) || report.getWindow().isDeliveryPaused()
