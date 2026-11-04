@@ -97,6 +97,7 @@ public class BackupExportService {
     private final IncidentReportRevisionRepository incidentRevisions;
     private final IncidentReportEventRepository incidentEvents;
     private final IncidentDeliveryRepository incidentDeliveries;
+    private final IncidentThreadPublicationRepository incidentThreads;
 
 
 	private final String uploadDirRaw;
@@ -148,6 +149,7 @@ public class BackupExportService {
             IncidentReportRevisionRepository incidentRevisions,
             IncidentReportEventRepository incidentEvents,
             IncidentDeliveryRepository incidentDeliveries,
+            IncidentThreadPublicationRepository incidentThreads,
 			@Value("${app.upload-dir:data/dev/uploads}") String uploadDirRaw
 	) {
 		this.backupSchema = backupSchema;
@@ -193,6 +195,7 @@ public class BackupExportService {
         this.incidentRevisions = incidentRevisions;
         this.incidentEvents = incidentEvents;
         this.incidentDeliveries = incidentDeliveries;
+        this.incidentThreads = incidentThreads;
 		this.uploadDirRaw = uploadDirRaw;
 	}
 
@@ -242,6 +245,7 @@ public class BackupExportService {
         this.repositoriesByEntityClass.put(IncidentReportRevision.class, incidentRevisions);
         this.repositoriesByEntityClass.put(IncidentReportEvent.class, incidentEvents);
         this.repositoriesByEntityClass.put(IncidentDelivery.class, incidentDeliveries);
+        this.repositoriesByEntityClass.put(IncidentThreadPublication.class, incidentThreads);
 		log.info("BackupExportService initialized: uploadRoot={}, repositoryCount={}",
 				uploadRoot, repositoriesByEntityClass.size());
 	}

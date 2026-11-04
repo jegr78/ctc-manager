@@ -19,6 +19,8 @@ public interface IncidentDeliveryRepository extends JpaRepository<IncidentDelive
     Optional<IncidentDelivery> findByOperationKeyForUpdate(String key);
     @org.springframework.data.jpa.repository.Query("select d.id from IncidentDelivery d where d.operation='RECEIPT' and d.report.window.deliveryPaused=false and ((d.state in ('PENDING','FAILED') and d.nextAttemptAt<=:now) or (d.state='CLAIMED' and d.leaseUntil<=:now)) order by d.capturedAt,d.id")
     java.util.List<UUID> findDueReceiptIds(java.time.Instant now, org.springframework.data.domain.Pageable page);
+    @org.springframework.data.jpa.repository.Query("select d.id from IncidentDelivery d where d.operation='DISCLOSURE' and d.report.window.deliveryPaused=false and (d.report.window.deliveryResumedAt is null or d.restoreReviewed=true) and d.report.window.state='CLOSED' and d.report.state='ACTIVE' and ((d.state in ('PENDING','FAILED') and d.nextAttemptAt<=:now) or (d.state='CLAIMED' and d.leaseUntil<=:now)) order by d.capturedAt,d.id")
+    java.util.List<UUID> findDueDisclosureIds(java.time.Instant now, org.springframework.data.domain.Pageable page);
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"report", "revision"})
     @org.springframework.data.jpa.repository.Query("select d from IncidentDelivery d")
     java.util.List<IncidentDelivery> findAllForBackup();

@@ -10,6 +10,7 @@
         <a href="#discord-matches">Match channels</a>
         <a href="#discord-announcements">Announcements</a>
         <a href="#discord-forums">Results and standings forums</a>
+        <a href="#discord-incidents">Private incident discussions</a>
         <a href="#discord-pairings">Pairings message</a>
         <a href="#discord-tests">Connection tests</a>
         <a th:href="@{/admin/discord-config/picks}">Private team picks</a>
@@ -89,6 +90,30 @@
                 <span th:if="${#strings.isEmpty(form.standingsForumChannelId)}" class="badge-warning">not configured</span>
                 <span th:errors="*{standingsForumChannelId}" class="field-error" role="alert"></span>
             </div>
+        </fieldset>
+        <fieldset id="discord-incidents">
+            <legend>Private incident discussions</legend>
+            <p class="text-dim">Choose the private stewards text or forum parent. Only the listed staff roles, the server owner and the bot may see it. Current permissions are checked before every detailed post.</p>
+            <div class="form-group">
+                <label for="stewardsChannelId">Stewards parent channel ID</label>
+                <input type="text" id="stewardsChannelId" th:field="*{stewardsChannelId}">
+                <small class="text-dim">Exact private text or forum channel ID</small>
+                <span th:errors="*{stewardsChannelId}" class="field-error" role="alert"></span>
+            </div>
+            <div class="form-group">
+                <label for="incidentStaffRoleIds">Stewards and management role IDs</label>
+                <input type="text" id="incidentStaffRoleIds" th:field="*{incidentStaffRoleIds}">
+                <small class="text-dim">Comma-separated role IDs allowed to read private cases</small>
+                <span th:errors="*{incidentStaffRoleIds}" class="field-error" role="alert"></span>
+            </div>
+            <div class="form-group">
+                <label for="stewardsForumTagIds">Stewards forum tag IDs</label>
+                <input type="text" id="stewardsForumTagIds" th:field="*{stewardsForumTagIds}">
+                <small class="text-dim">Optional comma-separated tag IDs, up to five. Include required forum tags.</small>
+                <span th:errors="*{stewardsForumTagIds}" class="field-error" role="alert"></span>
+            </div>
+            <span th:errors="*{incidentDestinationComplete}" class="field-error" role="alert"></span>
+            <span th:errors="*{incidentIdsUnique}" class="field-error" role="alert"></span>
         </fieldset>
         <fieldset id="discord-pairings">
             <legend>Pairings message</legend>

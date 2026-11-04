@@ -24,6 +24,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor {
+    public static final String SEND_DEADLINE="ctc.discord.send-deadline";
+    public static final String UNCERTAIN_CREATION="ctc.discord.uncertain-creation";
 
 	private static final int MAX_429_RETRIES = 3;
 	private static final long[] DEFAULT_FIVE_XX_BACKOFF_MS = {200L, 1000L, 5000L};
@@ -58,6 +60,11 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 		int four29Attempts = 0;
 		int fiveXxAttempts = 0;
 		while (true) {
+            Object authority=request.getAttributes().get(SEND_DEADLINE);
+            if(authority!=null && (!(authority instanceof Instant deadline) || !clock.instant().isBefore(deadline))) {
+                throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE,
+                        new IOException("Incident send authority expired before its HTTP attempt"),fiveXxAttempts==0);
+            }
 			ClientHttpResponse response = execution.execute(request, body);
 			int status = response.getStatusCode().value();
 			updateBucket(response.getHeaders());
@@ -81,6 +88,11 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 				continue;
 			}
 			if (status >= 500 && status < 600) {
+                if(Boolean.TRUE.equals(request.getAttributes().get(UNCERTAIN_CREATION))) {
+                    response.close();
+                    throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE,
+                            new IOException("Creation outcome is uncertain; reconcile its incident marker"));
+                }
 				if (fiveXxAttempts >= fiveXxBackoffMs.length) {
 					response.close();
 					throw new DiscordTransientException(

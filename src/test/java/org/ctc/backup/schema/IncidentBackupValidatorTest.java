@@ -133,6 +133,64 @@ class IncidentBackupValidatorTest {
         assertThatThrownBy(() -> validate(8)).isInstanceOf(IncidentBackupValidator.ValidationException.class);
     }
 
+    private ObjectNode delivery(String operation) {
+        var revision=data.get("incident_report_revisions").get(operation.equals("RECEIPT")?0:1);
+        var report=UUID.fromString(REPORT);
+        String nonce=java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(java.nio.ByteBuffer.allocate(16).putLong(report.getMostSignificantBits()).putLong(report.getLeastSignificantBits()).array())+(operation.equals("RECEIPT")?"R":"D");
+        return row("incident_deliveries","id",id(),"report",REPORT,"revision",revision.path("id").asText(),"operation",operation,"operationKey",REPORT+":"+operation,"guildId","100","channelId","200","nonce",nonce,"caseReference","INC-TEST","partyLabel",operation.equals("RECEIPT")?null:"Test home","capturedAt",operation.equals("RECEIPT")?"2026-11-03T12:00:00Z":"2026-11-03T13:00:00Z","state","PENDING","version",4,"attempts",2,"claimToken",null,"claimGeneration",null,"leaseUntil",null,"nextAttemptAt","2026-11-03T13:00:00Z","completedAt",null,"messageId",null,"failureCode",null,"reconciledBy",null,"reconciliationReason",null);
+    }
+    private ObjectNode publication() {
+        close();var delivery=delivery("DISCLOSURE");
+        return row("incident_thread_publications","id",id(),"delivery",delivery.path("id").asText(),"stewardsChannelId","600","staffRoleIds","500","forumTagIds","","messageChunks",1,"privateStarterId","701","privateThreadId","701","privateMessageIds","","publicStarterId",null,"publicThreadId",null,"publicMessageIds","","referenceMessageId",null);
+    }
+    @Test void givenAStoredPartialThreadPair_whenValidating_thenRetainItsOwnFrozenDeliveryAndExactReferences() {
+        publication();assertThatCode(() -> validate(10)).doesNotThrowAnyException();
+    }
+    @ParameterizedTest @ValueSource(strings={"owner","receipt","destination","staff","tags","chunks","order","thread","reference","complete","review-grant","duplicate","shared-remote"})
+    void givenContradictoryThreadHistory_whenValidating_thenRejectBeforeRestoreWithoutLeakingFacts(String cause) {
+        var publication=publication();
+        switch(cause) {
+            case "owner" -> publication.put("delivery",id());
+            case "receipt" -> publication.put("delivery",delivery("RECEIPT").path("id").asText());
+            case "destination" -> publication.put("stewardsChannelId","200");
+            case "staff" -> publication.put("staffRoleIds","");
+            case "tags" -> publication.put("forumTagIds","900,900");
+            case "chunks" -> publication.put("messageChunks",2);
+            case "order" -> {publication.putNull("privateThreadId");publication.put("publicStarterId","801");}
+            case "thread" -> {publication.put("publicStarterId","801");publication.put("publicThreadId","802");}
+            case "reference" -> publication.put("referenceMessageId","702");
+            case "complete" -> {var delivery=first("incident_deliveries");delivery.put("state","SENT");delivery.put("messageId","801");delivery.put("completedAt","2026-11-03T13:00:00Z");}
+            case "review-grant" -> publication.put("restoreReviewed",true);
+            case "duplicate" -> {var copy=publication.deepCopy();copy.put("id",id());data.get("incident_thread_publications").add(copy);}
+            case "shared-remote" -> {publication.put("publicStarterId","701");publication.put("publicThreadId","701");}
+            default -> throw new AssertionError(cause);
+        }
+        assertThatThrownBy(() -> validate(10)).isInstanceOf(IncidentBackupValidator.ValidationException.class).hasMessageNotContaining("Test private incident facts");
+    }
+    @Test void givenThreadDataDisguisedAsSchemaNine_whenValidating_thenRejectInsteadOfInventingLegacyAuthority() {
+        publication();assertThatThrownBy(() -> validate(9)).isInstanceOf(IncidentBackupValidator.ValidationException.class);
+    }
+    @Test void givenPublicDetailsCompleteButPrivateReferencePending_whenValidatingASupersededReceipt_thenAcceptTheDurablePublicEvidence() {
+        var publication=publication();publication.put("publicStarterId","801");publication.put("publicThreadId","801");
+        var receipt=delivery("RECEIPT");receipt.put("state","SUPERSEDED");receipt.put("completedAt","2026-11-03T13:00:00Z");
+        assertThatCode(() -> validate(10)).doesNotThrowAnyException();
+    }
+    @ParameterizedTest @ValueSource(strings={"type","parent","staff","tags","duplicate","incomplete","legacy"})
+    void givenUnverifiedIncidentConfiguration_whenValidating_thenRejectItWithoutSilentlyReplacingFields(String cause) {
+        var config=row("discord_global_config","id",1,"guildId","100","stewardsChannelId","600000000000000006","incidentStaffRoleIds","500000000000000005","stewardsForumTagIds","");
+        switch(cause) {
+            case "type" -> config.put("stewardsChannelId",600);
+            case "parent" -> config.put("stewardsChannelId","private-stewards");
+            case "staff" -> config.put("incidentStaffRoleIds","@everyone");
+            case "tags" -> config.put("stewardsForumTagIds","unknown-tag");
+            case "duplicate" -> config.put("incidentStaffRoleIds","500000000000000005,500000000000000005");
+            case "incomplete" -> config.put("incidentStaffRoleIds","");
+            case "legacy" -> { }
+            default -> throw new AssertionError(cause);
+        }
+        assertThatThrownBy(() -> validate(cause.equals("legacy")?9:10)).isInstanceOf(IncidentBackupValidator.ValidationException.class);
+    }
+
     private void validate(int version) {
         var validator = new IncidentBackupValidator(version);
         data.forEach((table, rows) -> rows.forEach(row -> validator.accept(table, row)));

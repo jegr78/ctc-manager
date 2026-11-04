@@ -7,10 +7,12 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.*;
+import org.ctc.domain.model.IncidentPayload;
+import org.ctc.domain.service.IncidentThreadProjection;
 
 public final class IncidentBackupValidator {
     private static final int MAX_VALUES = 100000;
-    private static final Set<String> INCIDENT_TABLES = Set.of("incident_match_contexts", "incident_report_windows", "incident_reports", "incident_report_revisions", "incident_report_events", "incident_deliveries");
+    private static final Set<String> INCIDENT_TABLES = Set.of("incident_match_contexts", "incident_report_windows", "incident_reports", "incident_report_revisions", "incident_report_events", "incident_deliveries", "incident_thread_publications");
     private static final Map<String, Set<String>> FIELDS = Map.ofEntries(
             Map.entry("seasons", Set.of("id")), Map.entry("teams", Set.of("id")),
             Map.entry("season_phases", Set.of("id", "season")), Map.entry("matchdays", Set.of("id", "phase")),
@@ -23,6 +25,8 @@ public final class IncidentBackupValidator {
             Map.entry("incident_reports", Set.of("id", "window", "race", "originalMatchday", "originalHomeTeam", "originalAwayTeam", "caseReference", "authorId", "party", "state", "version", "latestRevisionNumber", "frozenRevisionNumber", "createdAt", "updatedAt")),
             Map.entry("incident_report_revisions", Set.of("id", "report", "revisionNumber", "reportVersion", "payload", "actorId", "acceptedAt", "requestId", "createdAt", "updatedAt")),
             Map.entry("incident_deliveries", Set.of("id", "report", "revision", "operation", "operationKey", "guildId", "channelId", "nonce", "caseReference", "partyLabel", "capturedAt", "state", "version", "attempts", "claimToken", "claimGeneration", "leaseUntil", "nextAttemptAt", "completedAt", "messageId", "failureCode", "reconciledBy", "reconciliationReason", "createdAt", "updatedAt")),
+            Map.entry("discord_global_config",Set.of("stewardsChannelId","incidentStaffRoleIds","stewardsForumTagIds")),
+            Map.entry("incident_thread_publications",Set.of("id","delivery","stewardsChannelId","staffRoleIds","forumTagIds","messageChunks","privateStarterId","privateThreadId","privateMessageIds","publicStarterId","publicThreadId","publicMessageIds","referenceMessageId","createdAt","updatedAt")),
             Map.entry("incident_report_events", Set.of("id", "window", "report", "eventKey", "kind", "windowVersion", "reportVersion", "revisionNumber", "actorKind", "actorId", "reason", "acceptedAt", "previousDeadline", "deadline", "requestId", "createdAt", "updatedAt")));
     private final int version;
     private final Map<String, Map<String, JsonNode>> rows = new HashMap<>();
@@ -43,6 +47,8 @@ public final class IncidentBackupValidator {
     public void accept(String table, JsonNode row) {
         if (!supports(table)) return;
         locate(table, row);
+        if(table.equals("discord_global_config")){validateConfig(row);return;}
+        if(table.equals("incident_thread_publications") && version<10)fail("Incident thread publication requires schema version 10");
         boolean incident = INCIDENT_TABLES.contains(table);
         if (table.equals("incident_deliveries") && version < 9) fail("Incident delivery requires schema version 9");
         if (version < 8) {
@@ -59,14 +65,14 @@ public final class IncidentBackupValidator {
         for (String field : FIELDS.get(table)) {
             var value = row.get(field);
             if (value == null) continue;
-            if (field.equals("payload")) { validatePayload(value); continue; }
+            if (field.equals("payload")) { validatePayload(value);projected.set(field,value.deepCopy());retained+=4;continue; }
             if (field.equals("party")) {
                 if (!value.isObject() || value.size() != 4) fail("Invalid incident reporting-party snapshot");
                 for (String key : List.of("type", "id", "label", "roleId")) if (!value.has(key)) fail("Incomplete incident reporting-party snapshot");
                 text(value, "type", 16); uuid(value, "id"); text(value, "label", 255); snowflake(value, "roleId");
                 retained += value.size();
             } else if (!value.isNull() && !(value.isBoolean() || value.isIntegralNumber()
-                    || value.isTextual() && value.textValue().length() <= 1000)) {
+                    || value.isTextual() && value.textValue().length() <= (table.equals("incident_thread_publications") && Set.of("staffRoleIds","privateMessageIds","publicMessageIds").contains(field)?2000:1000))) {
                 fail("Invalid incident retained scalar " + field);
             }
             projected.set(field, value.deepCopy());
@@ -149,6 +155,7 @@ public final class IncidentBackupValidator {
             if (frozen ? !report.hasNonNull("frozenRevisionNumber") || positive(report, "frozenRevisionNumber") != latest
                     : report.hasNonNull("frozenRevisionNumber")) fail("Incident frozen revision contradicts the closed window");
         }
+        validatePublications();
         validateDeliveries();
     }
 
@@ -185,8 +192,80 @@ public final class IncidentBackupValidator {
             if (state.equals("SENT") && (attempts == 0 || !delivery.hasNonNull("messageId") || !delivery.hasNonNull("completedAt") || delivery.hasNonNull("failureCode"))) fail("Incident delivery lacks confirmed remote evidence");
             if (Set.of("FAILED", "UNCERTAIN").contains(state) && (attempts == 0 || !delivery.hasNonNull("failureCode") || !delivery.hasNonNull("completedAt"))) fail("Incident delivery lacks a recorded failure outcome");
             if(delivery.hasNonNull("reconciledBy") || delivery.hasNonNull("reconciliationReason")) { text(delivery,"reconciledBy",128);text(delivery,"reconciliationReason",1000); }
-            if(state.equals("SUPERSEDED") && (!operation.equals("RECEIPT") || index("incident_deliveries").values().stream().noneMatch(other -> reportId.equals(other.path("report").asText()) && "DISCLOSURE".equals(other.path("operation").asText()) && "SENT".equals(other.path("state").asText()))))fail("A generic receipt was superseded without confirmed disclosure");
+            if(state.equals("SUPERSEDED") && (!operation.equals("RECEIPT") || index("incident_deliveries").values().stream().noneMatch(other -> reportId.equals(other.path("report").asText()) && "DISCLOSURE".equals(other.path("operation").asText()) && "SENT".equals(other.path("state").asText())) && !hasPublicDetails(reportId)))fail("A generic receipt was superseded without confirmed disclosure");
         }
+    }
+
+    private void validateConfig(JsonNode config) {
+        if(config==null || !config.isObject())fail("Invalid incident configuration row");
+        for(String field:FIELDS.get("discord_global_config")) {
+            var value=config.get(field);
+            if(version<10) {if(value!=null && !value.isNull() && (!value.isTextual() || !value.textValue().isEmpty()))fail("Incident destination configuration requires schema version 10");}
+            else if(value==null || !value.isTextual())fail("Missing or invalid incident configuration field "+field);
+        }
+        if(version<10)return;
+        String parent=optionalText(config,"stewardsChannelId",20);
+        if(parent==null || !parent.isEmpty() && !parent.matches("[0-9]{17,20}"))fail("Invalid stewards destination ID");
+        var staff=ids(config,"incidentStaffRoleIds",2000,60,17);var tags=ids(config,"stewardsForumTagIds",200,5,17);
+        if(parent.isEmpty()!=staff.isEmpty() || !tags.isEmpty() && parent.isEmpty())fail("Incomplete incident destination configuration");
+    }
+
+    private void validatePublications() {
+        var owners=new HashSet<String>();var remoteOwners=new HashMap<String,String>();
+        for(var delivery:index("incident_deliveries").values()) {
+            if("RECEIPT".equals(delivery.path("operation").asText()) && delivery.hasNonNull("messageId")) {
+                String remote=snowflake(delivery,"messageId");
+                if(remoteOwners.putIfAbsent(remote,uuid(delivery,"id"))!=null)fail("Duplicate neutral receipt identity");
+            }
+        }
+        for(var publication:index("incident_thread_publications").values()) {
+            locate("incident_thread_publications",publication);
+            String owner=reference(publication,"delivery","incident_deliveries");var delivery=index("incident_deliveries").get(owner);
+            if(!owners.add(owner) || !"DISCLOSURE".equals(text(delivery,"operation",16)))fail("Thread publication requires its own unique disclosure operation");
+            String parent=snowflake(publication,"stewardsChannelId");
+            if(!parent.matches("[0-9]{1,20}") || parent.equals(snowflake(delivery,"channelId")))fail("Private and match destinations must remain distinct");
+            if(ids(publication,"staffRoleIds",2000,60,1).isEmpty())fail("Incident thread publication requires configured staff roles");
+            ids(publication,"forumTagIds",200,5,1);
+            long chunks=positive(publication,"messageChunks");
+            var revision=index("incident_report_revisions").get(reference(delivery,"revision","incident_report_revisions"));var payload=revision.get("payload");
+            var projection=IncidentThreadProjection.render(text(delivery,"caseReference",64),text(delivery,"partyLabel",255),
+                    new IncidentPayload(text(payload,"involvedDrivers",2000),text(payload,"replayTimestamp",200),text(payload,"description",20000),optionalText(payload,"evidenceLinks",8000)));
+            if(chunks>40 || chunks!=projection.messages().size())fail("Incident thread chunks contradict their frozen source facts");
+            String privateStarter=optionalSnowflake(publication,"privateStarterId"),privateThread=optionalSnowflake(publication,"privateThreadId");
+            String publicStarter=optionalSnowflake(publication,"publicStarterId"),publicThread=optionalSnowflake(publication,"publicThreadId"),reference=optionalSnowflake(publication,"referenceMessageId");
+            var privateMessages=ids(publication,"privateMessageIds",2000,39,1);var publicMessages=ids(publication,"publicMessageIds",2000,39,1);
+            boolean privateComplete=privateThread!=null && privateMessages.size()==chunks-1;
+            boolean publicComplete=publicThread!=null && publicMessages.size()==chunks-1;
+            if(privateMessages.size()>chunks-1 || publicMessages.size()>chunks-1
+                    || privateThread!=null && privateStarter==null || !privateMessages.isEmpty() && privateThread==null
+                    || publicStarter!=null && !privateComplete || publicThread!=null && !publicThread.equals(publicStarter)
+                    || !publicMessages.isEmpty() && publicThread==null || reference!=null && !publicComplete)fail("Incident thread steps are out of order or incomplete");
+            if(privateStarter!=null && nonnegative(delivery,"attempts")==0)fail("Incident remote success lacks delivery provenance");
+            boolean sent="SENT".equals(text(delivery,"state",16));
+            if(sent && (reference==null || !Objects.equals(publicThread,optionalText(delivery,"messageId",32))) || reference!=null && !sent)fail("Completed incident publication contradicts its delivery outcome");
+            if(privateThread!=null && privateThread.equals(publicThread))fail("Private and public threads cannot share an identity");
+            var messages=new ArrayList<String>();if(privateStarter!=null)messages.add(privateStarter);messages.addAll(privateMessages);
+            if(publicStarter!=null)messages.add(publicStarter);messages.addAll(publicMessages);if(reference!=null)messages.add(reference);
+            if(new HashSet<>(messages).size()!=messages.size())fail("Incident publication reused a successful message identity");
+            var remotes=new HashSet<>(messages);if(privateThread!=null)remotes.add(privateThread);if(publicThread!=null)remotes.add(publicThread);
+            for(var remote:remotes) {var previous=remoteOwners.putIfAbsent(remote,owner);if(previous!=null && !previous.equals(owner))fail("Incident publication reused another operation's remote identity");}
+        }
+    }
+    private boolean hasPublicDetails(String reportId) {
+        return index("incident_thread_publications").values().stream().anyMatch(publication -> {
+            var delivery=index("incident_deliveries").get(publication.path("delivery").asText());
+            return delivery!=null && reportId.equals(delivery.path("report").asText()) && publication.hasNonNull("publicThreadId")
+                    && ids(publication,"publicMessageIds",2000,39,1).size()==positive(publication,"messageChunks")-1;
+        });
+    }
+    private static String optionalSnowflake(JsonNode row,String field) {
+        String value=optionalText(row,field,20);if(value!=null && !value.matches("[0-9]{1,20}"))fail("Invalid incident Discord reference "+field);return value;
+    }
+    private static List<String> ids(JsonNode row,String field,int maximum,int count,int minimumDigits) {
+        String value=optionalText(row,field,maximum);if(value==null)fail("Missing incident reference list "+field);
+        if(value.isEmpty())return List.of();var ids=List.of(value.split(",",-1));
+        if(ids.size()>count || new HashSet<>(ids).size()!=ids.size() || ids.stream().anyMatch(id -> !id.matches("[0-9]{1,20}") || id.length()<minimumDigits))fail("Invalid incident reference list "+field);
+        return ids;
     }
 
     private void validateContexts() {

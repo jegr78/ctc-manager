@@ -41,6 +41,9 @@ public class DiscordGlobalConfigService {
 		current.setBotApplicationId(form.getBotApplicationId());
 		current.setCurrentMatchCategoryId(nullSafe(form.getCurrentMatchCategoryId()));
 		current.setMatchdayPairingsTemplate(blankToNull(form.getMatchdayPairingsTemplate()));
+		current.setStewardsChannelId(nullSafe(form.getStewardsChannelId()));
+		current.setIncidentStaffRoleIds(nullSafe(form.getIncidentStaffRoleIds()));
+		current.setStewardsForumTagIds(nullSafe(form.getStewardsForumTagIds()));
 		DiscordGlobalConfig saved = repo.save(current);
 		log.info("Updated discord_global_config (id={}, guildId={})", saved.getId(), saved.getGuildId());
 		return saved;

@@ -78,3 +78,12 @@ Every finding was triaged by hand. Two led to source changes; the rest are struc
 |------|----------|-------|--------|-----------|
 | EI_EXPOSE_REP, EI_EXPOSE_REP2 | `IncidentSubmissionAccepted`, `IncidentWindowClosed` | 4 | suppressed | The first complete local #290 run reported constructor/accessor references to managed report/window entities. These internal synchronous events deliberately share the locked producer entities with MANDATORY listeners, which enqueue delivery work in that same transaction. They are not HTTP forms or external payloads. The closure report list remains defensively copied. Type-scoped annotations use EXACT matching for these two warnings only, following `IncidentMatchTarget`; other rules remain enabled. Atomic rollback and immutable capture tests cover the transaction contract. Reevaluate if an event becomes asynchronous, crosses a transport boundary or gains mutable non-entity state. |
 | EI_EXPOSE_REP2 | `IncidentDeliveryService` constructor | 1 | suppressed | Spring supplies its shared transaction-scoped EntityManager proxy, as in `PickPublicationService`. The service must retain that injected proxy for current locking refreshes; making a copy would break persistence context identity. An EXACT constructor-scoped annotation excludes only this structural representation warning. Whole-dispatch restore admission and H2/MariaDB concurrency tests cover its use. Reevaluate if the constructor accepts caller-owned mutable data. |
+
+
+## Linked incident thread migration, 2026-11-04
+
+| Rule | Location | Count | Bucket | Rationale |
+|------|----------|-------|--------|-----------|
+| SQL_INJECTION_JDBC | `db.migration.V31__AddIncidentThreads.migrate` | 1 | suppressed | Executes fixed bundled `/db/schema/incident_threads.sql` DDL with the existing literal timestamp type replacement for MariaDB. No request, archive or database values enter SQL text. The source annotation follows V29/V30. Reevaluate if the resource source or rewrite becomes input-controlled. |
+
+| EI_EXPOSE_REP2 | `IncidentThreadPublicationService` constructor | 1 | suppressed | Retains Spring's shared transaction-scoped EntityManager proxy for current locking refreshes under the window/delivery locks. Copying it would break persistence-context identity. The EXACT constructor-scoped annotation excludes only this representation warning; other rules remain enabled. Reevaluate if the constructor starts accepting caller-owned mutable data. |

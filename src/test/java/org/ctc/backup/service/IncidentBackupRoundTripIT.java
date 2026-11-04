@@ -48,6 +48,11 @@ class IncidentBackupRoundTripIT extends IncidentIntegrationFixture {
     @Autowired BackupArchiveService archives;
     @Autowired org.ctc.domain.service.IncidentDeliveryService delivery;
     @Autowired org.ctc.domain.repository.IncidentDeliveryRepository deliveryRows;
+    @Autowired org.ctc.domain.repository.IncidentThreadPublicationRepository threadRows;
+    @Autowired org.ctc.domain.service.IncidentThreadPublicationService threadPublication;
+    String previousParent,previousStaff,previousTags;
+    @BeforeEach void rememberIncidentSettings() {tx.executeWithoutResult(status -> {var config=configs.findById(configId).orElseThrow();previousParent=config.getStewardsChannelId();previousStaff=config.getIncidentStaffRoleIds();previousTags=config.getStewardsForumTagIds();});}
+    @org.junit.jupiter.api.AfterEach void restoreIncidentSettings() {tx.executeWithoutResult(status -> configs.findById(configId).ifPresent(config -> {config.setStewardsChannelId(previousParent);config.setIncidentStaffRoleIds(previousStaff);config.setStewardsForumTagIds(previousTags);}));}
     @MockitoSpyBean BackupImportService imports;
     @MockitoBean DiscordRestClient discord;
     UUID activeReport;
@@ -147,6 +152,51 @@ class IncidentBackupRoundTripIT extends IncidentIntegrationFixture {
         var preview = imports.stage(upload(zip(files))); imports.execute(preview.stagingId());
         assertThat(contextRows.findBySeasonId(fixture.season().getId())).isEmpty(); assertThat(windowRows.findByContextId(contextId)).isEmpty();
         assertThat(reportRows.findById(activeReport)).isEmpty(); verifyNoInteractions(discord);
+    }
+
+    UUID linkedPublication() {
+        clock.set(NOW.plusSeconds(3600));windows.closeDue(windowId,null);
+        return tx.execute(status -> {
+            var config=configs.findById(configId).orElseThrow();config.setStewardsChannelId("600000000000000006");config.setIncidentStaffRoleIds("500000000000000005");config.setStewardsForumTagIds("900000000000000009");
+            var row=deliveryRows.findByOperationKey(activeReport+":DISCLOSURE").orElseThrow();
+            var mapping=threadRows.save(org.ctc.domain.model.IncidentThreadPublication.capture(row,config.getStewardsChannelId(),config.getIncidentStaffRoleIds(),config.getStewardsForumTagIds(),org.ctc.domain.service.IncidentThreadProjection.capture(row).messages().size()));
+            for(int step=0;step<3;step++) {
+                var token=UUID.randomUUID();row.claim(token,delivery.reviewGeneration(),clock.instant(),clock.instant().plusSeconds(600));long version=row.getVersion();
+                mapping.accept(mapping.stage(),0,step==0?"601":"801",step==0?"600":step==2?"801":null);
+                row.continueDisclosure(token,version,delivery.reviewGeneration(),clock.instant());
+            }
+            row.reconcileMissing(row.getVersion(),"test-previous-thread-manager","Test old review cannot authorize restored thread steps",clock.instant());
+            assertThat(row.isRestoreReviewed()).isTrue();
+            deliveryRows.findByOperationKey(activeReport+":RECEIPT").orElseThrow().supersede(clock.instant());
+            return mapping.getId();
+        });
+    }
+    @Test void givenLinkedThreadReferencesAndPrivateConfiguration_whenRestoring_thenKeepExactMappingAndFactsButPauseAllSending() throws Exception {
+        var id=linkedPublication();byte[] archive=org.junit.jupiter.api.Assertions.assertDoesNotThrow(this::export);byte[] before=unzip(archive).get("data/incident-thread-publications.json");
+        var preview=imports.stage(upload(archive));imports.execute(preview.stagingId());
+        assertThat(unzip(export()).get("data/incident-thread-publications.json")).isEqualTo(before);
+        UUID operation=tx.execute(status -> {
+            var mapping=threadRows.findById(id).orElseThrow();assertThat(mapping.getPrivateThreadId()).isEqualTo("600");assertThat(mapping.getPrivateStarterId()).isEqualTo("601");assertThat(mapping.getPublicThreadId()).isEqualTo("801");assertThat(mapping.getReferenceMessageId()).isNull();assertThat(mapping.getDelivery().isRestoreReviewed()).isFalse();assertThat(mapping.getDelivery().getReport().getWindow().isDeliveryPaused()).isTrue();assertThat(mapping.getDelivery().getRevision().getPayload().getDescription()).isEqualTo("Test private correction");
+            var config=configs.findById(configId).orElseThrow();assertThat(config.getStewardsChannelId()).isEqualTo("600000000000000006");assertThat(config.getIncidentStaffRoleIds()).isEqualTo("500000000000000005");assertThat(config.getStewardsForumTagIds()).isEqualTo("900000000000000009");return mapping.getDelivery().getId();
+        });
+        assertThat(threadPublication.dispatch(operation)).isFalse();verifyNoInteractions(discord);
+    }
+    @ParameterizedTest @ValueSource(strings={"thread-owner","configuration"})
+    void givenLinkedThreadArchiveWithForgedOwnerOrMalformedConfiguration_whenStagingAndExecuting_thenRejectBeforeAnyWipe(String cause) throws Exception {
+        var id=linkedPublication();var valid=export();var files=unzip(valid);
+        String file=cause.equals("thread-owner")?"data/incident-thread-publications.json":"data/discord-global-config.json";
+        var rows=(ArrayNode)JSON.readTree(files.get(file));var row=(ObjectNode)rows.get(0);
+        if(cause.equals("thread-owner"))row.put("delivery",UUID.randomUUID().toString());else row.put("incidentStaffRoleIds",500);
+        files.put(file,JSON.writeValueAsBytes(rows));var broken=zip(files);
+        assertThatThrownBy(() -> imports.stage(upload(broken))).isInstanceOfSatisfying(BackupArchiveException.class,error -> assertThat(error.reason()).isEqualTo(BackupArchiveException.Reason.DATA_MISMATCH));verify(imports,never()).wipeAllTables(anyMap());
+        var preview=imports.stage(upload(valid));Files.write(ROOT.resolve("staging/upload-"+preview.stagingId()+".zip"),broken);clearInvocations(imports);
+        assertThatThrownBy(() -> imports.execute(preview.stagingId())).isInstanceOf(BackupImportException.class).cause().isInstanceOfSatisfying(BackupArchiveException.class,error -> assertThat(error.reason()).isEqualTo(BackupArchiveException.Reason.DATA_MISMATCH));verify(imports,never()).wipeAllTables(anyMap());assertThat(threadRows.findById(id)).isPresent();verifyNoInteractions(discord);imports.deleteStagingFile(preview.stagingId());
+    }
+    @Test void givenLinkedThreadCapableRuntimeAndARealSchemaNineArchive_whenRestoring_thenInventNoPublicationAndKeepOldOutboxPaused() throws Exception {
+        var files=unzip(export());var manifest=(ObjectNode)JSON.readTree(files.get("manifest.json"));manifest.put("schema_version",9);((ObjectNode)manifest.get("table_counts")).remove("incident_thread_publications");files.remove("data/incident-thread-publications.json");
+        var configs=(ArrayNode)JSON.readTree(files.get("data/discord-global-config.json"));for(var config:configs)((ObjectNode)config).remove(java.util.List.of("stewardsChannelId","incidentStaffRoleIds","stewardsForumTagIds"));files.put("data/discord-global-config.json",JSON.writeValueAsBytes(configs));files.put("manifest.json",JSON.writeValueAsBytes(manifest));
+        var preview=imports.stage(upload(zip(files)));imports.execute(preview.stagingId());assertThat(threadRows.count()).isZero();
+        tx.executeWithoutResult(status -> {assertThat(windowRows.findById(windowId).orElseThrow().isDeliveryPaused()).isTrue();assertThat(this.configs.findById(configId).orElseThrow().getStewardsChannelId()).isEmpty();});verifyNoInteractions(discord);
     }
 
     private byte[] export() throws Exception {

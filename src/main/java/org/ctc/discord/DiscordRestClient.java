@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.HashMap;
 import java.util.List;
+import java.time.Instant;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.discord.dto.Channel;
@@ -80,8 +81,70 @@ public class DiscordRestClient {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record PermissionRole(String id, String permissions) { }
 
+    public List<IncidentRole> fetchIncidentRoles(String guildId) throws DiscordApiException {
+        return execute(() -> bot.get().uri("/guilds/{guildId}/roles", guildId).retrieve()
+                .body(new ParameterizedTypeReference<List<IncidentRole>>() { }));
+    }
+    @JsonIgnoreProperties(ignoreUnknown=true)
+    public record IncidentRole(String id,String permissions,Boolean managed,IncidentRoleTags tags) { }
+    @JsonIgnoreProperties(ignoreUnknown=true)
+    public record IncidentRoleTags(@JsonProperty("bot_id") String botId) { }
+    public IncidentChannel fetchIncidentChannel(String channelId) throws DiscordApiException {
+        return execute(() -> bot.get().uri("/channels/{channelId}",channelId).retrieve().body(IncidentChannel.class));
+    }
+    public IncidentChannel startIncidentMessageThread(String channelId,String starterId,String name) throws DiscordApiException {
+        return startIncidentMessageThread(channelId,starterId,name,null);
+    }
+    public IncidentChannel startIncidentMessageThread(String channelId,String starterId,String name,Instant validUntil) throws DiscordApiException {
+        return execute(() -> deadline(bot.post().uri("/channels/{channelId}/messages/{messageId}/threads",channelId,starterId),validUntil)
+                .attribute(DiscordRateLimitInterceptor.UNCERTAIN_CREATION,true).contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("name",name,"auto_archive_duration",1440)).retrieve().body(IncidentChannel.class));
+    }
+    public IncidentChannel startIncidentForumThread(String channelId,String name,String content,List<String> tags) throws DiscordApiException {
+        return startIncidentForumThread(channelId,name,content,tags,null);
+    }
+    public IncidentChannel startIncidentForumThread(String channelId,String name,String content,List<String> tags,Instant validUntil) throws DiscordApiException {
+        return execute(() -> deadline(bot.post().uri("/channels/{channelId}/threads",channelId),validUntil)
+                .attribute(DiscordRateLimitInterceptor.UNCERTAIN_CREATION,true).contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("name",name,"auto_archive_duration",1440,"applied_tags",List.copyOf(tags),
+                        "message",Map.of("content",content,"allowed_mentions",Map.of("parse",List.of()))))
+                .retrieve().body(IncidentChannel.class));
+    }
+    public IncidentThreadPage listIncidentActiveThreads(String guildId) throws DiscordApiException {
+        return execute(() -> bot.get().uri("/guilds/{guildId}/threads/active",guildId).retrieve().body(IncidentThreadPage.class));
+    }
+    public IncidentThreadPage listIncidentArchivedThreads(String channelId,String before,int limit) throws DiscordApiException {
+        return execute(() -> bot.get().uri(uri -> {
+            var page=uri.path("/channels/{channelId}/threads/archived/public").queryParam("limit",limit);
+            if(before!=null)page.queryParam("before",before);
+            return page.build(channelId);
+        }).retrieve().body(IncidentThreadPage.class));
+    }
+    @JsonIgnoreProperties(ignoreUnknown=true)
+    public record IncidentChannel(String id,@JsonProperty("guild_id") String guildId,Integer type,@JsonProperty("parent_id") String parentId,String name,
+            @JsonProperty("permission_overwrites") List<PermissionOverwrite> permissionOverwrites,Integer flags,@JsonProperty("available_tags") List<IncidentForumTag> availableTags,
+            @JsonProperty("thread_metadata") IncidentThreadMetadata threadMetadata,BotMessage message) {
+        public IncidentChannel {
+            permissionOverwrites=permissionOverwrites==null?null:List.copyOf(permissionOverwrites);
+            availableTags=availableTags==null?null:List.copyOf(availableTags);
+        }
+        @Override public String toString(){return "IncidentChannel[opaque]";}
+    }
+    @JsonIgnoreProperties(ignoreUnknown=true)
+    public record IncidentForumTag(String id,String name,Boolean moderated) { }
+    @JsonIgnoreProperties(ignoreUnknown=true)
+    public record IncidentThreadMetadata(Boolean archived,Boolean locked,@JsonProperty("archive_timestamp") String archiveTimestamp) { }
+    @JsonIgnoreProperties(ignoreUnknown=true)
+    public record IncidentThreadPage(List<IncidentChannel> threads,@JsonProperty("has_more") Boolean hasMore) {
+        public IncidentThreadPage {threads=threads==null?null:List.copyOf(threads);}
+        @Override public String toString(){return "IncidentThreadPage[opaque]";}
+    }
+
     public BotMessage createBotMessage(String channelId, String nonce, String content) throws DiscordApiException {
-        return execute(() -> bot.post().uri("/channels/{channelId}/messages", channelId)
+        return createBotMessage(channelId,nonce,content,null);
+    }
+    public BotMessage createBotMessage(String channelId,String nonce,String content,Instant validUntil) throws DiscordApiException {
+        return execute(() -> deadline(bot.post().uri("/channels/{channelId}/messages", channelId),validUntil)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("content", content, "allowed_mentions", Map.of("parse", List.of()), "nonce", nonce, "enforce_nonce", true))
                 .retrieve().body(BotMessage.class));
@@ -90,6 +153,17 @@ public class DiscordRestClient {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record BotMessage(String id, @JsonProperty("channel_id") String channelId, String content, BotUser author, String nonce) {
         @Override public String toString() { return "BotMessage[opaque]"; }
+    }
+    private static RestClient.RequestBodySpec deadline(RestClient.RequestBodySpec request,Instant validUntil) {
+        if(validUntil!=null)request.attribute(DiscordRateLimitInterceptor.SEND_DEADLINE,validUntil);
+        return request;
+    }
+    public List<BotMessage> listIncidentMessages(String channelId,String before,int limit) throws DiscordApiException {
+        return execute(() -> bot.get().uri(uri -> {
+            var page=uri.path("/channels/{channelId}/messages").queryParam("limit",limit);
+            if(before!=null)page.queryParam("before",before);
+            return page.build(channelId);
+        }).retrieve().body(new ParameterizedTypeReference<List<BotMessage>>() { }));
     }
     public BotMessage fetchBotMessage(String channelId,String messageId) throws DiscordApiException {
         return execute(() -> bot.get().uri("/channels/{channelId}/messages/{messageId}",channelId,messageId).retrieve().body(BotMessage.class));
@@ -135,8 +209,10 @@ public class DiscordRestClient {
 	}
 
 	public Channel modifyChannel(String channelId, ChannelModifyRequest request) throws DiscordApiException {
-		return execute(() -> bot.patch()
-				.uri("/channels/{channelId}", channelId)
+        return modifyChannel(channelId,request,null);
+    }
+    public Channel modifyChannel(String channelId,ChannelModifyRequest request,Instant validUntil) throws DiscordApiException {
+		return execute(() -> deadline(bot.patch().uri("/channels/{channelId}", channelId),validUntil)
 				.contentType(MediaType.APPLICATION_JSON)
 				.body(request)
 				.retrieve()
