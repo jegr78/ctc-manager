@@ -51,7 +51,7 @@ class IncidentThreadPublicationTest {
         String body=String.join("",projected.messages());assertThat(body).contains("Test \\*CLR\\* second line","Test broken \uFFFD value");
     }
     @ParameterizedTest
-    @ValueSource(strings={"open","withdrawn","unfrozen","foreign-frozen","receipt"})
+    @ValueSource(strings={"open","withdrawn","unfrozen","foreign-frozen","receipt","foreign-owner"})
     void givenAnUnpublishableOperation_whenProjecting_thenRejectBeforeAnyDetailedPayloadCanBeSent(String cause) {
         var operation=frozen(facts,"Test CLR");
         if(cause.equals("open"))ReflectionTestUtils.setField(f.window,"state",IncidentWindowState.OPEN);
@@ -59,6 +59,11 @@ class IncidentThreadPublicationTest {
         if(cause.equals("unfrozen"))ReflectionTestUtils.setField(report,"frozenRevisionNumber",null);
         if(cause.equals("foreign-frozen"))ReflectionTestUtils.setField(report,"frozenRevisionNumber",2);
         if(cause.equals("receipt"))operation=IncidentDelivery.capture(report,operation.getRevision(),IncidentDeliveryOperation.RECEIPT,IncidentUnitFixture.NOW);
+        if(cause.equals("foreign-owner")) {
+            var foreign=IncidentUnitFixture.id(new IncidentReport(f.window,f.race,"901",f.party()));
+            var revision=IncidentUnitFixture.id(new IncidentReportRevision(foreign,1,1,facts,"901",IncidentUnitFixture.NOW,UUID.randomUUID()));
+            ReflectionTestUtils.setField(operation,"revision",revision);
+        }
         var candidate=operation;
         assertThatThrownBy(() -> IncidentThreadProjection.capture(candidate)).isInstanceOf(BusinessRuleException.class).hasMessageNotContaining(facts.getDescription()).hasMessageNotContaining(author);
     }

@@ -67,4 +67,13 @@ public class DiscordConfigForm {
         boolean tags = stewardsForumTagIds != null && !stewardsForumTagIds.isEmpty();
         return parent == staff && (!tags || parent);
     }
+    @AssertTrue(message = "Use each staff role and forum tag only once")
+    public boolean isIncidentIdsUnique() {
+        for(String value:new String[]{incidentStaffRoleIds,stewardsForumTagIds}) {
+            if(value==null || value.isEmpty())continue;
+            var ids=java.util.List.of(value.split(",",-1));
+            if(new java.util.HashSet<>(ids).size()!=ids.size())return false;
+        }
+        return true;
+    }
 }

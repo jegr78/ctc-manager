@@ -24,7 +24,6 @@ public class V31__AddIncidentThreads extends BaseJavaMigration {
                     + "no request, archive or database values enter SQL text. See docs/security/sast-acceptance.md.")
     public void migrate(Context context) throws Exception {
         var connection = context.getConnection();
-        // MariaDB's timezone-free datetime supports confirmed deadlines beyond its TIMESTAMP range.
         String sql = connection.getMetaData().getDatabaseProductName().equals("MariaDB")
                 ? SQL.replace("TIMESTAMP(6)", "DATETIME(6)") : SQL;
         try (var statement = connection.createStatement()) {

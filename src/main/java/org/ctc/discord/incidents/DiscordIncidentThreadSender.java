@@ -186,6 +186,7 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
             var thread=discord.fetchIncidentChannel(id);requireInventoryThread(claim,thread,parent,id);
             if(forum) {
                 var messages=matchingMessages(id,work.content(),prepared.botId(),work.marker());
+                require(messages.size()<=1);
                 if(hasCaseTitle(claim,thread) && messages.isEmpty())throw unavailable();
                 for(var message:messages) {requireThread(claim,thread,id);matches.put(id,sent(message.id(),id));}
             } else {
@@ -209,12 +210,14 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
         var target=claim.destination();var guild=discord.fetchAccessGuild(target.guildId());var member=discord.fetchAccessMember(target.guildId(),botId);
         var roles=discord.fetchIncidentRoles(target.guildId());var channel=discord.fetchIncidentChannel(target.matchChannelId());
         IncidentThreadPermissions.requirePublic(guild,channel,member,roles,botId,target.guildId(),target.matchChannelId());
+        scanMessages(target.matchChannelId(),message -> {
+            if(message.author()!=null && botId.equals(message.author().id()) && hasCaseMarker(message.content(),claim.work().caseReference()))throw unavailable();
+        });
         for(String id:inventory(target.guildId(),target.matchChannelId())) {
             var thread=discord.fetchIncidentChannel(id);requireInventoryThread(claim,thread,target.matchChannelId(),id);
             var source=discord.fetchBotMessage(target.matchChannelId(),id);
             require(source!=null && id.equals(source.id()) && target.matchChannelId().equals(source.channelId()));
-            String content=source.content();int line=content==null?-1:content.lastIndexOf('\n');
-            boolean marker=line>=0 && content.substring(line+1).startsWith("[CTC "+claim.work().caseReference()+" ");
+            boolean marker=hasCaseMarker(source.content(),claim.work().caseReference());
             if(hasCaseTitle(claim,thread) || source.author()!=null && botId.equals(source.author().id()) && marker)throw unavailable();
         }
     }
@@ -251,19 +254,30 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
     }
     private static boolean hasCaseTitle(IncidentThreadClaim claim,IncidentChannel thread) {return thread.name()!=null && thread.name().contains("Incident "+claim.work().caseReference());}
 
-    private List<BotMessage> matchingMessages(String channelId, String content, String botId,String marker) throws DiscordApiException {
-        var matches = new ArrayList<BotMessage>();var seen = new HashSet<String>();String before = null;
-        for (int page = 0; page < 10; page++) {
-            var messages = discord.listIncidentMessages(channelId, before, 100);require(messages != null && messages.size() <= 100);
-            for (var message : messages) {
-                require(message != null && snowflake(message.id()) && channelId.equals(message.channelId()) && seen.add(message.id()));
-                if(message.author()!=null && botId.equals(message.author().id())) {
-                    require(message.content()==null || !message.content().endsWith("\n"+marker) || content.equals(message.content()));
-                    if(content.equals(message.content()))matches.add(message);
-                }
+    private static boolean hasCaseMarker(String content,String reference) {
+        int line=content==null?-1:content.lastIndexOf('\n');
+        return line>=0 && content.substring(line+1).startsWith("[CTC "+reference+" ");
+    }
+    private List<BotMessage> matchingMessages(String channelId,String content,String botId,String marker) throws DiscordApiException {
+        var matches=new ArrayList<BotMessage>();
+        scanMessages(channelId,message -> {
+            if(message.author()!=null && botId.equals(message.author().id())) {
+                require(message.content()==null || !message.content().endsWith("\n"+marker) || content.equals(message.content()));
+                if(content.equals(message.content()))matches.add(message);
             }
-            if (messages.size() < 100) return List.copyOf(matches);
-            String next = messages.getLast().id();require(!Objects.equals(next, before));before = next;
+        });
+        return List.copyOf(matches);
+    }
+    private void scanMessages(String channelId,java.util.function.Consumer<BotMessage> consumer) throws DiscordApiException {
+        var seen=new HashSet<String>();String before=null;
+        for(int page=0;page<10;page++) {
+            var messages=discord.listIncidentMessages(channelId,before,100);require(messages!=null && messages.size()<=100);
+            for(var message:messages) {
+                require(message!=null && snowflake(message.id()) && channelId.equals(message.channelId()) && seen.add(message.id()));
+                consumer.accept(message);
+            }
+            if(messages.size()<100)return;
+            String next=messages.getLast().id();require(!Objects.equals(next,before));before=next;
         }
         throw unavailable();
     }

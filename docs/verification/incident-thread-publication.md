@@ -15,7 +15,7 @@ operator work; verification uses synthetic fixtures and a local fake Discord ser
 - [x] Observe failing projection, privacy and production-shaped HTTP contracts before implementation.
 - [x] Implement only the missing thread APIs and current destination/permission preflight.
 - [x] Persist and recover each successful publication step, with safe unknown-outcome handling.
-- [ ] Expose typed management recovery/status and preserve exact archive/config references.
+- [x] Expose typed management recovery/status and preserve exact archive/config references.
 - [ ] Falsify new protections individually; complete self-review and independent security review.
 - [ ] Run focused `verify` including static gates before the final expensive clean full run.
 - [ ] Verify the final committed head locally and in CI; merge and reconcile hierarchy/Wiki/branches.
@@ -164,3 +164,25 @@ limits, deleted starters and a conflicting bot marker keep the outcome unresolve
 case whose remotely published facts differ from the restored revision is not treated as absent.
 The current limits are fifty target threads, ten archive pages and ten 100-message pages per
 channel. They are explicit review bounds; hitting one never authorizes a retry.
+
+
+## Completed implementation and MariaDB checkpoint
+
+The independent incremental review at 57c87bf5 confirmed the deadline correction and found two
+remaining recovery defects: standalone public starters were absent from the cross-side evidence
+check, and two matching forum messages could collapse into one thread-keyed candidate. Separate
+real-client assertions reproduced both. Bounded public message scanning and an explicit per-thread
+ambiguity check corrected them; the 29-case sender suite is green. Native duplicate role/tag
+validation now matches archive validation, after two intended assertion failures.
+
+MariaDB passed nine dispatch, fifteen recovery, five failure/concurrency and four new archive
+cases. An additional two-case repeatable-read witness covers mapping creation and delivery
+advancement during a window-lock wait. The original nonlocking mapping lookup reproduced a
+duplicate-key failure before HTTP. Current locking reads instead surface MariaDB's stale-view
+1020 conflict as a domain retry. Both cases verify zero external attempts before that retry, then
+one correct step in a fresh transaction, preserving the original mapping UUID. Both are green.
+The read-only audit's three cases include contradictory publication metadata without repair or
+private fact leakage. Schema topology and repository graph checks cover all 43 entities.
+
+Implementation is complete. Individual guard falsification, the final exact-head review delta,
+static gates, canonical verification, CI, merge and post-merge Wiki/hierarchy cleanup remain.

@@ -142,6 +142,7 @@ class DiscordIncidentThreadSenderIT {
         assertThat(sender.send(claim(IncidentThreadStage.PRIVATE_STARTER,0)).disposition()).isEqualTo(IncidentSendResult.Disposition.REJECTED);wm.verify(1,postRequestedFor(urlEqualTo("/api/v10/channels/300/messages")));
     }
     void emptyInventory(String channel) {
+        wm.stubFor(get(urlPathEqualTo("/api/v10/channels/200/messages")).withQueryParam("limit",equalTo("100")).willReturn(okJson("[]")));
         wm.stubFor(get(urlPathEqualTo("/api/v10/channels/200/threads/archived/public")).withQueryParam("limit",equalTo("100")).willReturn(okJson("{\"threads\":[],\"has_more\":false}")));
         wm.stubFor(get(urlEqualTo("/api/v10/guilds/100/threads/active")).willReturn(okJson("{\"threads\":[]}")));
         wm.stubFor(get(urlPathEqualTo("/api/v10/channels/"+channel+"/threads/archived/public")).withQueryParam("limit",equalTo("100")).willReturn(okJson("{\"threads\":[],\"has_more\":false}")));
@@ -170,5 +171,38 @@ class DiscordIncidentThreadSenderIT {
         config.setStewardsForumTagIds("900");wm.stubFor(get(urlEqualTo("/api/v10/channels/300")).willReturn(okJson(parent(15,false))));emptyInventory("300");
         wm.stubFor(get(urlPathEqualTo("/api/v10/channels/300/threads/archived/public")).withQueryParam("limit",equalTo("100")).willReturn(okJson("{\"threads\":[]}")));
         assertThat(sender.verify(claim(IncidentThreadStage.PRIVATE_STARTER,0),"").code()).isNotEqualTo("PROVEN_MISSING");wm.verify(0,postRequestedFor(anyUrl()));
+    }
+    @Test void givenAStandaloneLaterPublicStarterButNoPublicThread_whenReviewingPrivateAbsence_thenKeepTheCaseUnresolved() {
+        emptyInventory("300");wm.stubFor(get(urlPathEqualTo("/api/v10/channels/300/messages")).withQueryParam("limit",equalTo("100")).willReturn(okJson("[]")));
+        wm.stubFor(get(urlPathEqualTo("/api/v10/channels/200/messages")).withQueryParam("limit",equalTo("100")).willReturn(okJson(json(List.of(message("801","200",content(false,0)))))));
+        assertThat(sender.verify(claim(IncidentThreadStage.PRIVATE_STARTER,0),"").code()).isNotEqualTo("PROVEN_MISSING");wm.verify(0,postRequestedFor(anyUrl()));
+    }
+    @Test void givenTwoIdenticalBotStartersInOneForumThread_whenDiscoveringAnUnknownResult_thenRejectItsAmbiguousIdentity() {
+        config.setStewardsForumTagIds("900");wm.stubFor(get(urlEqualTo("/api/v10/channels/300")).willReturn(okJson(parent(15,false))));emptyInventory("300");
+        wm.stubFor(get(urlEqualTo("/api/v10/guilds/100/threads/active")).willReturn(okJson("{\"threads\":["+thread("600","300",false)+"]}")));
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/600")).willReturn(okJson(thread("600","300",false))));wm.stubFor(get(urlPathEqualTo("/api/v10/channels/600/messages")).withQueryParam("limit",equalTo("100")).willReturn(okJson(json(List.of(message("602","600",content(true,0)),message("603","600",content(true,0)))))));
+        var result=sender.verify(claim(IncidentThreadStage.PRIVATE_STARTER,0),"");assertThat(result.disposition()).isNotEqualTo(IncidentSendResult.Disposition.SENT);assertThat(result.code()).isNotEqualTo("PROVEN_MISSING");wm.verify(0,postRequestedFor(anyUrl()));
+    }
+    @Test void givenAnArchivedCandidateOnAPaginatedInventory_whenReviewing_thenReadTheNextCursorPageBeforeAdopting() {
+        config.setStewardsForumTagIds("900");wm.stubFor(get(urlEqualTo("/api/v10/channels/300")).willReturn(okJson(parent(15,false))));emptyInventory("300");
+        wm.stubFor(get(urlPathEqualTo("/api/v10/channels/300/threads/archived/public")).withQueryParam("limit",equalTo("100")).withQueryParam("before",absent()).willReturn(okJson("{\"threads\":["+thread("600","300",true)+"],\"has_more\":true}")));
+        wm.stubFor(get(urlPathEqualTo("/api/v10/channels/300/threads/archived/public")).withQueryParam("limit",equalTo("100")).withQueryParam("before",equalTo("2026-11-03T12:00:00Z")).willReturn(okJson("{\"threads\":[],\"has_more\":false}")));
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/600")).willReturn(okJson(thread("600","300",true))));wm.stubFor(get(urlPathEqualTo("/api/v10/channels/600/messages")).withQueryParam("limit",equalTo("100")).willReturn(okJson(json(List.of(message("602","600",content(true,0)))))));
+        assertThat(sender.verify(claim(IncidentThreadStage.PRIVATE_STARTER,0),"").threadId()).isEqualTo("600");wm.verify(1,getRequestedFor(urlPathEqualTo("/api/v10/channels/300/threads/archived/public")).withQueryParam("before",equalTo("2026-11-03T12:00:00Z")));
+    }
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(strings={"forum","thread","unarchive"})
+    void givenEveryDetailedMutationCrossesLeaseExpiryAfter429_whenRetrying_thenFenceTheExactHttpEndpoint(String mutation) {
+        var stage=mutation.equals("thread")?IncidentThreadStage.PRIVATE_THREAD:mutation.equals("unarchive")?IncidentThreadStage.PRIVATE_BODY:IncidentThreadStage.PRIVATE_STARTER;
+        String path=mutation.equals("forum")?"/api/v10/channels/300/threads":mutation.equals("thread")?"/api/v10/channels/300/messages/601/threads":"/api/v10/channels/601";
+        if(mutation.equals("forum")){config.setStewardsForumTagIds("900");wm.stubFor(get(urlEqualTo("/api/v10/channels/300")).willReturn(okJson(parent(15,false))));}
+        else wm.stubFor(get(urlEqualTo("/api/v10/channels/601")).willReturn(mutation.equals("thread")?notFound():okJson(thread("601","300",true))));
+        when(clock.instant()).thenAnswer(call -> wm.getAllServeEvents().stream().anyMatch(event -> java.util.Set.of("POST","PATCH").contains(event.getRequest().getMethod().getName()))?NOW.plusSeconds(601):NOW);
+        if(mutation.equals("unarchive")) {
+            wm.stubFor(patch(urlEqualTo(path)).inScenario("Test mutation expiry").whenScenarioStateIs("Started").willReturn(aResponse().withStatus(429).withHeader("Retry-After","0")).willSetStateTo("Ready"));wm.stubFor(patch(urlEqualTo(path)).inScenario("Test mutation expiry").whenScenarioStateIs("Ready").willReturn(okJson("{}")));
+        } else {
+            wm.stubFor(post(urlEqualTo(path)).inScenario("Test mutation expiry").whenScenarioStateIs("Started").willReturn(aResponse().withStatus(429).withHeader("Retry-After","0")).willSetStateTo("Ready"));wm.stubFor(post(urlEqualTo(path)).inScenario("Test mutation expiry").whenScenarioStateIs("Ready").willReturn(okJson("{}")));
+        }
+        assertThat(sender.send(claim(stage,mutation.equals("unarchive")?1:0)).disposition()).isEqualTo(IncidentSendResult.Disposition.REJECTED);
+        if(mutation.equals("unarchive"))wm.verify(1,patchRequestedFor(urlEqualTo(path)));else wm.verify(1,postRequestedFor(urlEqualTo(path)));
     }
 }

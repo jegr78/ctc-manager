@@ -69,7 +69,8 @@ public class IncidentThreadPublicationService {
                 } else row.fail(claim.token(),claim.version(),generation,now,outcome.code(),outcome.disposition()==IncidentSendResult.Disposition.UNCERTAIN,now.plusSeconds(60));
             });
             return true;
-        } finally {imports.exitWriter();}
+        } catch(RuntimeException failure) {throw RaceSelectionConcurrency.translate(failure)==failure?failure:unavailable();}
+        finally {imports.exitWriter();}
     }
 
     public void reconcile(UUID id,long expectedVersion,IncidentManagementActor actor,String reason,boolean reviewed,String remoteId,String generation) {
@@ -114,7 +115,8 @@ public class IncidentThreadPublicationService {
                     row.reconcileDisclosureStep(expectedVersion,actor.id(),reason,now(),mapping.stage()==IncidentThreadStage.COMPLETE?mapping.getPublicThreadId():null);
                 } else row.reconcileMissing(expectedVersion,actor.id(),reason,now());
             });
-        } finally {imports.exitWriter();}
+        } catch(RuntimeException failure) {throw RaceSelectionConcurrency.translate(failure)==failure?failure:unavailable();}
+        finally {imports.exitWriter();}
     }
 
     private IncidentThreadClaim claim(UUID id,String generation) {
@@ -139,7 +141,7 @@ public class IncidentThreadPublicationService {
     }
 
     private IncidentThreadPublication captureMapping(IncidentDelivery row,IncidentThreadProjection.Payload projection) {
-        var mapping=publications.findByDeliveryId(row.getId()).orElse(null);
+        var mapping=publications.findByDeliveryIdForUpdate(row.getId()).orElse(null);
         if(mapping!=null)em.refresh(mapping,LockModeType.PESSIMISTIC_WRITE);
         else {
             var config=configs.findFirstByOrderByIdAsc();
@@ -180,7 +182,7 @@ public class IncidentThreadPublicationService {
         return row;
     }
     private IncidentThreadPublication mapping(IncidentDelivery row) {
-        var mapping=publications.findByDeliveryId(row.getId()).orElseThrow(IncidentThreadPublicationService::unavailable);
+        var mapping=publications.findByDeliveryIdForUpdate(row.getId()).orElseThrow(IncidentThreadPublicationService::unavailable);
         em.refresh(mapping,LockModeType.PESSIMISTIC_WRITE);return mapping;
     }
     @Transactional(readOnly=true)

@@ -29,10 +29,10 @@ class DiscordIncidentThreadConfigTest {
     @Test void givenAnUnconfiguredDestination_whenValidating_thenKeepBootstrapConfigurationValid() {
         try(var factory=Validation.buildDefaultValidatorFactory()) {assertThat(factory.getValidator().validate(new DiscordConfigForm())).isEmpty();}
     }
-    @ParameterizedTest @ValueSource(strings={"parent","roles","tags","missing-staff","missing-parent"})
+    @ParameterizedTest @ValueSource(strings={"parent","roles","tags","missing-staff","missing-parent","duplicate-staff","duplicate-tags"})
     void givenMalformedOrIncompleteIncidentDestination_whenValidating_thenRejectTheTypedForm(String cause) {
         var form=new DiscordConfigForm();form.setStewardsChannelId(PARENT);form.setIncidentStaffRoleIds(STAFF);form.setStewardsForumTagIds(TAGS);
-        switch(cause) {case "parent" -> form.setStewardsChannelId("private-stewards");case "roles" -> form.setIncidentStaffRoleIds("@everyone");case "tags" -> form.setStewardsForumTagIds("unknown-tag");case "missing-staff" -> form.setIncidentStaffRoleIds("");case "missing-parent" -> form.setStewardsChannelId("");default -> throw new AssertionError(cause);}
+        switch(cause) {case "parent" -> form.setStewardsChannelId("private-stewards");case "roles" -> form.setIncidentStaffRoleIds("@everyone");case "tags" -> form.setStewardsForumTagIds("unknown-tag");case "missing-staff" -> form.setIncidentStaffRoleIds("");case "missing-parent" -> form.setStewardsChannelId("");case "duplicate-staff" -> form.setIncidentStaffRoleIds(STAFF+",500000000000000005");case "duplicate-tags" -> form.setStewardsForumTagIds(TAGS+","+TAGS);default -> throw new AssertionError(cause);}
         try(var factory=Validation.buildDefaultValidatorFactory()) {assertThat(factory.getValidator().validate(form)).isNotEmpty();}
     }
 }
