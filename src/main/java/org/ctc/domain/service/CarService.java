@@ -105,10 +105,9 @@ public class CarService {
 		var car = carRepository.findByIdForUpdate(id)
 				.orElseThrow(() -> new EntityNotFoundException("Car", id));
 		try {
-			if (car.getImageUrl() != null) {
-				fileStorageService.delete(car.getImageUrl());
-			}
-			String url = fileStorageService.storeImage("cars", id, image);
+            String previousUrl = car.getImageUrl();
+            String url = fileStorageService.storeImage("cars", id, image);
+            fileStorageService.deleteAfterCommit(previousUrl);
 			car.setImageUrl(url);
 			carRepository.save(car);
 			log.info("Updated image for car: {} {}", car.getManufacturer(), car.getName());

@@ -281,7 +281,7 @@ class SeasonManagementServiceTest {
         service.updateSeasonTeam(seasonTeam.getId(), null, null, null, null, logoFile);
 
         // then
-        verify(fileStorageService).delete("/uploads/old-logo.png");
+        verify(fileStorageService).deleteAfterCommit("/uploads/old-logo.png");
         verify(fileStorageService).storeImage(eq("season-teams"), eq(seasonTeam.getId()), any());
         assertThat(seasonTeam.getLogoUrl()).contains("new-logo.png");
         verify(seasonTeamRepository).save(seasonTeam);

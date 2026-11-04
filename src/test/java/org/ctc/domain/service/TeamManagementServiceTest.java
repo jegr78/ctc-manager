@@ -276,7 +276,7 @@ class TeamManagementServiceTest {
 			service.uploadLogo(id, logo);
 
 			// then
-			verify(fileStorageService).delete("/uploads/teams/old.png");
+			verify(fileStorageService).deleteAfterCommit("/uploads/teams/old.png");
 			verify(fileStorageService).storeImage("teams", id, logo);
 			assertThat(team.getLogoUrl()).isEqualTo("/uploads/teams/new.png");
 		}

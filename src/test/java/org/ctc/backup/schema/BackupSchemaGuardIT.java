@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("dev")
 @Tag("integration")
-class BackupSchemaGuardTest {
+class BackupSchemaGuardIT {
 
     @Autowired
     BackupSchema backupSchema;

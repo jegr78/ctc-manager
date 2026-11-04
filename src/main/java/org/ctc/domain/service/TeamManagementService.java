@@ -268,16 +268,15 @@ public class TeamManagementService {
 	}
 
 	/**
-	 * Uploads a logo for a team, deleting the old one if present, and propagates to sub-teams.
+	 * Uploads a team logo and propagates it to sub-teams.
 	 */
 	@Transactional
 	public void uploadLogo(UUID id, MultipartFile logo) {
 		var team = findById(id);
 		try {
-			if (team.getLogoUrl() != null) {
-				fileStorageService.delete(team.getLogoUrl());
-			}
-			var newUrl = fileStorageService.storeImage("teams", id, logo);
+            String previousUrl = team.getLogoUrl();
+            var newUrl = fileStorageService.storeImage("teams", id, logo);
+            fileStorageService.deleteAfterCommit(previousUrl);
 			team.setLogoUrl(newUrl);
 			teamRepository.save(team);
 			propagateLogoToSubTeams(team, newUrl);

@@ -14,6 +14,8 @@ import org.ctc.integration.OutboundPolicy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Slf4j
 @Service
@@ -118,10 +120,38 @@ public class FileStorageService {
 		String safeName = UUID.randomUUID().toString().substring(0, 8) + "_" + sanitizeFilename(file.getOriginalFilename());
 		Path target = dir.resolve(safeName);
 		validatePathWithinUploadDir(target);
-		file.transferTo(target);
+		String url = "/uploads/" + subDir + "/" + entityId + "/" + safeName;
+        try {
+            file.transferTo(target);
+        } catch (IOException | RuntimeException failure) {
+            delete(url);
+            throw failure;
+        }
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status == STATUS_ROLLED_BACK) delete(url);
+                }
+            });
+        }
 		log.info("Stored image: {} ({} bytes)", target, file.getSize());
-		return "/uploads/" + subDir + "/" + entityId + "/" + safeName;
+		return url;
 	}
+
+    public void deleteAfterCommit(String url) {
+        if (url == null) return;
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    delete(url);
+                }
+            });
+        } else {
+            delete(url);
+        }
+    }
 
 	private String sanitizeFilename(String filename) {
 		if (filename == null) {

@@ -360,4 +360,22 @@ class FileStorageServiceTest {
 				.isInstanceOf(IllegalArgumentException.class)
 				.hasMessageContaining("Path traversal detected");
 	}
+    @Test
+    void givenUnknownTransactionOutcome_whenCompletingAnImageUpload_thenRetainTheNewFile() throws IOException {
+        // given
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        try {
+            var file = new MockMultipartFile("image", "test.png", "image/png", new byte[]{1, 2, 3});
+            String url = fileStorageService.storeImage("cars", UUID.randomUUID(), file);
+            // when
+            for (var synchronization : org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()) {
+                synchronization.afterCompletion(org.springframework.transaction.support.TransactionSynchronization.STATUS_UNKNOWN);
+            }
+            // then
+            assertTrue(Files.exists(tempDir.resolve(url.substring("/uploads/".length()))));
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
 }
