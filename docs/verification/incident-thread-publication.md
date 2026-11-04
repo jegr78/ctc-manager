@@ -16,7 +16,7 @@ operator work; verification uses synthetic fixtures and a local fake Discord ser
 - [x] Implement only the missing thread APIs and current destination/permission preflight.
 - [x] Persist and recover each successful publication step, with safe unknown-outcome handling.
 - [x] Expose typed management recovery/status and preserve exact archive/config references.
-- [ ] Falsify new protections individually; complete self-review and independent security review.
+- [x] Falsify new protections individually; complete self-review and independent security review.
 - [ ] Run focused `verify` including static gates before the final expensive clean full run.
 - [ ] Verify the final committed head locally and in CI; merge and reconcile hierarchy/Wiki/branches.
 
@@ -193,3 +193,21 @@ locking/translation and native validation, with no further validated findings. O
 consistency hardening applies a current PESSIMISTIC_READ to the receipt supersession lookup.
 The existing nine H2 and nine MariaDB receipt dispatch cases both pass. No stale receipt was
 claimed as reproduced; this keeps the touched lookup consistent with the surrounding lock order.
+
+## Individual guard falsification
+
+All 23 individual mutations at committed checkpoint
+`b148534584c13bd3e5c023b470d66191691e87f9` produced their intended assertion failures,
+with zero test errors. Each run restored the exact committed source bytes before the next
+mutation; the final working tree was clean. The witnesses cover closed/active/frozen/owned
+revisions, public author privacy, actual parent type, staff/participant separation, outside
+role/member visibility, required bot rights, every-attempt deadlines and their real HTTP binding,
+uncertain forum creation, complete archive inventory, conflicting restored facts, unique forum
+starters, standalone public evidence, prior-success verification, consumption of each restored
+step's review, permanent report-based nonces, archive schema boundaries, frozen chunk counts and
+the real MariaDB window-wait/current-publication race. The last mutation failed at its intended
+assertion rather than at a database or compilation error.
+
+The final independent read-only review of the same checkpoint confirmed the receipt lookup
+hardening and reported no additional findings. Self-review and all validated security findings
+are complete. Static gates and the canonical clean verification remain release requirements.
