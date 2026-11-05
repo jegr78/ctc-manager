@@ -159,7 +159,7 @@
           <div class="row"><span class="set-label">PP Limit</span><span class="set-value">No Limit</span></div>
           <div class="row"><span class="set-label">Max. Power Output</span><span class="set-value">No Limit</span></div>
           <div class="row"><span class="set-label">Minimum Weight</span><span class="set-value">No Limit</span></div>
-          <div class="row"><span class="set-label">Usable Tyres</span><span class="set-value">Racing</span></div>
+          <div class="row"><span class="set-label">Usable Tyres</span><span class="set-value" th:text="${v.tyreFamily} ?: '—'">Racing</span></div>
           <div class="row"><span class="set-label">Usable Tyre &amp; Types</span><span class="set-value" th:text="${v.usableTyres} ?: 'Soft, Medium, Hard, Intermediate, Wet'">Soft, Medium, Hard, Intermediate, Wet</span></div>
           <div class="row"><span class="set-label">Required Tyre Type</span><span class="set-value" th:text="${v.requiredTyre} ?: 'None'">None</span></div>
           <div class="row"><span class="set-label">Nitrous</span><span class="set-value">Unrestricted</span></div>

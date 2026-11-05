@@ -76,6 +76,8 @@ class MatchdayPickControllerTest {
         // given
         var fresh = new PickCorrectionForm(); var model = new ExtendedModelMap(); model.addAttribute("form", null);
         when(service.correctionForm(race)).thenReturn(fresh); when(service.detail(race)).thenReturn(detail());
+        when(service.correctionChoices(race, fresh)).thenReturn(new org.ctc.domain.service.RaceService.RaceFormData(
+                null, List.of(), List.of(), List.of(), List.of(), java.util.Set.of(), java.util.Set.of(), null, null));
         // when / then
         assertThat(controller.correction(race, model)).isEqualTo("admin/matchday-pick-correction");
         assertThat(model.getAttribute("form")).isSameAs(fresh);

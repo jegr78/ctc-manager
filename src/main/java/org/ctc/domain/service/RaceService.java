@@ -272,14 +272,17 @@ public class RaceService {
                 if (rejection == null) rejection = incidentGuard.identityRejection(plan.race(), matchdayId, plan.home(), plan.away());
                 if (rejection == null) rejection = penaltyGuard.identityRejection(plan.race(), matchdayId, plan.home(), plan.away());
             }
+            if (rejection != null) return new SaveResult(false, rejection, id, matchdayId);
+            var tyreInputs = NativeTyreInputs.resolve(race, carPoolEntryId, carId, lockedSeason.getLobbyRulesProfile(), availableTyres, mandatoryTyres);
             var submittedSettings = new RaceSettingsValues(numberOfLaps, tyreWearMultiplier, fuelConsumptionMultiplier,
                     refuelingSpeed, initialFuel, numberOfRequiredPitStops, timeProgressionMode, timeProgressionMultiplier,
-                    weather, timeOfDay, availableTyres, mandatoryTyres, startType, slipstream);
-            if (rejection == null) rejection = pickGuard.setupRejection(race, trackId, carId, carPoolEntryId, submittedSettings);
+                    weather, timeOfDay, tyreInputs.available(), tyreInputs.mandatory(), startType, slipstream);
+            rejection = pickGuard.setupRejection(race, trackId, carId, carPoolEntryId, submittedSettings);
             if (rejection == null) rejection = validatePlannedTracks(lockedSeason, planned);
             if (rejection != null) return new SaveResult(false, rejection, id, matchdayId);
             var selectedEntry = carPoolEntryId == null ? null : lockedSeason.getCarPoolEntries().stream()
                     .filter(entry -> carPoolEntryId.equals(entry.getId())).findFirst().orElseThrow();
+            RaceTyrePolicy.require(lockedSeason, selectedEntry, car, submittedSettings);
 
             race.setMatchday(matchday);
             if (race.getPlayoffMatchup() == null) {

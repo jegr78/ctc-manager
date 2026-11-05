@@ -27,7 +27,7 @@ class PickValuePersistenceTest {
         // given / when / then
         var converter = new PickTyreSetConverter();
         assertThat(converter.convertToDatabaseColumn(Set.of(PickTyre.RH, PickTyre.RM, PickTyre.RS))).isEqualTo("RS,RM,RH");
-        assertThat(converter.convertToEntityAttribute("RS,RM,RH")).containsExactlyInAnyOrder(PickTyre.values());
+        assertThat(converter.convertToEntityAttribute("RS,RM,RH")).containsExactlyInAnyOrder(PickTyre.RS, PickTyre.RM, PickTyre.RH);
         assertThat(converter.convertToDatabaseColumn(Set.of())).isEmpty();
         assertThat(converter.convertToEntityAttribute("")).isEmpty();
         assertThat(converter.convertToDatabaseColumn(null)).isNull();

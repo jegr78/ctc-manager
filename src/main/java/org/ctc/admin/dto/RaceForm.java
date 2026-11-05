@@ -5,6 +5,7 @@ import org.ctc.domain.model.LobbyRulesProfile;
 import org.ctc.domain.model.RaceStartType;
 import org.ctc.domain.model.RaceSlipstream;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -47,6 +48,6 @@ public class RaceForm {
     private Integer timeProgressionMultiplier;
 	private String weather;
 	private String timeOfDay;
-	private String availableTyres;
-	private String mandatoryTyres;
+    @Size(max = 255) private String availableTyres;
+    @Size(max = 255) private String mandatoryTyres;
 }

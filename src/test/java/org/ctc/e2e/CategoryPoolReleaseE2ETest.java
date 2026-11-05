@@ -265,9 +265,10 @@ class CategoryPoolReleaseE2ETest extends PlaywrightConfig {
         page.locator("#trackId").selectOption(track.toString());
         for (var field : Map.ofEntries(Map.entry("numberOfLaps", "5"), Map.entry("numberOfRequiredPitStops", "1"),
                 Map.entry("tyreWearMultiplier", "2"), Map.entry("fuelConsumptionMultiplier", "2"), Map.entry("refuelingSpeed", "1"),
-                Map.entry("initialFuel", "Full"), Map.entry("timeOfDay", "Day"), Map.entry("weather", "Clear"),
-                Map.entry("availableTyres", "RS, RM"), Map.entry("mandatoryTyres", "RM")).entrySet())
+                Map.entry("initialFuel", "Full"), Map.entry("timeOfDay", "Day"), Map.entry("weather", "Clear")).entrySet())
             page.locator("#" + field.getKey()).fill(field.getValue());
+        page.locator("#availableTyres").selectOption(new String[]{"RS", "RM"});
+        page.locator("#mandatoryTyres").selectOption("RM");
         page.locator("#timeProgressionMode").selectOption("MULTIPLIER");
         page.locator("#timeProgressionMultiplier").fill("0");
         checkWidths();

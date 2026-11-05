@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.picks.PickTeamView;
 import org.ctc.domain.picks.SubmissionReceipt;
@@ -69,15 +70,15 @@ final class PickInteractionViews {
 
     static PickGatewayModal modal(String id, String stage) { return modal(id, stage, LobbyRulesProfile.LEGACY); }
 
-    static PickGatewayModal modal(String id, String stage, LobbyRulesProfile profile) {
+    static PickGatewayModal modal(String id, String stage, LobbyRulesProfile profile, boolean oneMake) {
         List<PickGatewayModal.Field> fields = switch (stage) {
             case "rules" -> List.of(text("laps", "Laps, positive integer", 10), text("wear", "Tyre wear, 1 to 7", 1),
                     text("consumption", "Fuel consumption, 1 to 6", 1), text("refuel", "Refuelling litres/second, 1 to 10", 2));
             case "fuel" -> List.of(select("initial", "Initial fuel", Arrays.stream(PickInitialFuel.values())
                             .map(value -> new PickGatewayModal.Option(value.settingsValue(), value.name())).toList(), 1),
                     select("stops", "Required pit stops", options("0", "1", "2"), 1),
-                    select("available", "Available tyres", options("RS", "RM", "RH"), 3),
-                    select("mandatory", "Mandatory tyres, None or a subset", options("None", "RS", "RM", "RH"), 3));
+                    select("available", "Available tyres, choose one family", tyreOptions(profile, oneMake, false), 5),
+                    select("mandatory", "Mandatory dry tyres, None or a subset", tyreOptions(profile, oneMake, true), 3));
             case "time" -> {
                 var progression = new ArrayList<PickGatewayModal.Option>();
                 progression.add(new PickGatewayModal.Option("Equal Conditions", "equal"));
@@ -97,6 +98,20 @@ final class PickInteractionViews {
         };
         return new PickGatewayModal(id, stage.startsWith("search-") ? "Search private picks" : "Private picks: " + stage, fields);
     }
+
+    static PickGatewayModal modal(String id, String stage, LobbyRulesProfile profile) {
+        return modal(id, stage, profile, false);
+    }
+
+    private static List<PickGatewayModal.Option> tyreOptions(LobbyRulesProfile profile, boolean oneMake, boolean mandatory) {
+        var result = new ArrayList<PickGatewayModal.Option>();
+        if (mandatory) result.add(new PickGatewayModal.Option("None", "None"));
+        Arrays.stream(PickTyre.values())
+                .filter(tyre -> tyre.getFamily() == PickTyreFamily.RACING || profile == LobbyRulesProfile.CTC_2027 && oneMake)
+                .filter(tyre -> !mandatory || !tyre.isWet())
+                .map(tyre -> new PickGatewayModal.Option(tyre.getLabel(), tyre.name())).forEach(result::add);
+        return List.copyOf(result);
+    }
     private static PickGatewayModal.Text text(String id, String label, int max) {
         return new PickGatewayModal.Text(id, label, false, null, 1, max, true);
     }
@@ -109,7 +124,7 @@ final class PickInteractionViews {
 
     static void validateStage(String stage, Map<String, List<String>> values) { validateStage(stage, values, LobbyRulesProfile.LEGACY); }
 
-    static void validateStage(String stage, Map<String, List<String>> values, LobbyRulesProfile profile) {
+    static void validateStage(String stage, Map<String, List<String>> values, LobbyRulesProfile profile, boolean oneMake) {
         Set<String> expected = switch (stage) {
             case "rules" -> Set.of("laps", "wear", "consumption", "refuel");
             case "fuel" -> Set.of("initial", "stops", "available", "mandatory");
@@ -126,7 +141,11 @@ final class PickInteractionViews {
             case "fuel" -> {
                 PickInitialFuel.valueOf(one(values, "initial")); number(values, "stops", 0, 2);
                 var available = tyreSet(values, "available", false); var mandatory = tyreSet(values, "mandatory", true);
-                if (!available.containsAll(mandatory)) throw new IllegalArgumentException("Mandatory tyres must be available");
+                try {
+                    requireTyres(profile, oneMake, available, mandatory);
+                } catch (BusinessRuleException invalid) {
+                    throw new IllegalArgumentException(invalid.getMessage(), invalid);
+                }
             }
             case "time" -> {
                 String progression = one(values, "progression");
@@ -142,15 +161,29 @@ final class PickInteractionViews {
             }
         }
     }
+
+    static void validateStage(String stage, Map<String, List<String>> values, LobbyRulesProfile profile) {
+        validateStage(stage, values, profile, false);
+    }
+
+    private static void requireTyres(LobbyRulesProfile profile, boolean oneMake, Set<PickTyre> available, Set<PickTyre> mandatory) {
+        var family = PickTyreSelection.require(profile, available, mandatory);
+        if (family == PickTyreFamily.SPORTS && !oneMake) {
+            throw new BusinessRuleException("Sports tyres require an explicit One-Make entry");
+        }
+    }
     static PickPayload payload(PickDraftSessionStore.Session session) {
         var fields = session.fields;
         String progression = one(fields, "progression");
+        var available = tyreSet(fields, "available", false);
+        var mandatory = tyreSet(fields, "mandatory", true);
+        requireTyres(session.lobbyRulesProfile, session.car.oneMake(), available, mandatory);
         return new PickPayload(session.track.id(), session.car.id(), session.car.entryId(), number(fields, "laps", 1, Integer.MAX_VALUE),
                 number(fields, "wear", 1, 7), number(fields, "consumption", 1, 6), number(fields, "refuel", 1, 10),
                 PickInitialFuel.valueOf(one(fields, "initial")), number(fields, "stops", 0, 2),
                 "equal".equals(progression) ? TimeProgressionMode.EQUAL_CONDITIONS : TimeProgressionMode.MULTIPLIER,
                 "equal".equals(progression) ? null : number(fields, "progression", 0, 6), one(fields, "weather"), one(fields, "daytime"),
-                tyreSet(fields, "available", false), tyreSet(fields, "mandatory", true), session.lobbyRulesProfile,
+                available, mandatory, session.lobbyRulesProfile,
                 session.lobbyRulesProfile == LobbyRulesProfile.CTC_2027 ? RaceStartType.valueOf(one(fields, "start")) : RaceStartType.GRID_FALSE_START,
                 session.lobbyRulesProfile == LobbyRulesProfile.CTC_2027 ? RaceSlipstream.valueOf(one(fields, "slipstream")) : RaceSlipstream.REAL);
     }
@@ -172,7 +205,7 @@ final class PickInteractionViews {
     }
     private static Set<PickTyre> tyreSet(Map<String, List<String>> fields, String key, boolean allowNone) {
         var values = fields.get(key);
-        if (values == null || values.isEmpty() || values.size() > 3 || values.stream().distinct().count() != values.size()) {
+        if (values == null || values.isEmpty() || values.size() > (allowNone ? 3 : 5) || values.stream().distinct().count() != values.size()) {
             throw new IllegalArgumentException("Choose valid tyres");
         }
         if (allowNone && values.equals(List.of("None"))) return Set.of();

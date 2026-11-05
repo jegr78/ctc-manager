@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.ctc.domain.repository.CarRepository;
 import org.ctc.domain.repository.TrackRepository;
@@ -36,6 +37,7 @@ public class RaceSettingsApplicationService {
     public void apply(Race race, Track track, Car car, SeasonCarPoolEntry entry, RaceSettingsValues values) {
         var season = race.getMatchday() == null ? null : race.getMatchday().getSeason();
         LobbyRulesPolicy.requireCurrent(season, season == null ? null : season.getLobbyRulesProfile(), values.startType(), values.slipstream());
+        RaceTyrePolicy.require(Objects.requireNonNull(season), entry, car, values);
         race.setTrack(track);
         race.setCar(car);
         race.setCarPoolEntry(entry);

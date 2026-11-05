@@ -60,6 +60,7 @@ public class LobbySettingsGraphicService extends AbstractGraphicService implemen
 		var season = race.getMatchday().getSeason();
         var profile = season.getLobbyRulesProfile();
         org.ctc.domain.service.LobbyRulesPolicy.requireCurrent(season, profile, settings.getStartType(), settings.getSlipstream());
+        org.ctc.domain.service.RaceTyrePolicy.require(season, race.getCarPoolEntry(), race.getCar(), org.ctc.domain.model.RaceSettingsValues.from(settings));
 		Team home = race.getHomeTeam();
 		Team away = race.getAwayTeam();
 
@@ -87,6 +88,8 @@ public class LobbySettingsGraphicService extends AbstractGraphicService implemen
 		v.put("initialFuel", settings.getInitialFuel());
 		v.put("minPitStops", settings.getNumberOfRequiredPitStops());
 		v.put("usableTyres", settings.getAvailableTyres());
+        v.put("tyreFamily", org.ctc.domain.model.PickTyreText.read(settings.getAvailableTyres(), false)
+                .filter(tyres -> !tyres.isEmpty()).map(tyres -> tyres.iterator().next().getFamily().getLabel()).orElse(DASH));
 		v.put("requiredTyre", settings.getMandatoryTyres());
 
 		var ctx = new Context();

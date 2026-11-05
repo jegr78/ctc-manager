@@ -43,10 +43,71 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
     @Autowired PickReviewService reviews;
     @Autowired MatchdayPickAdminService admin;
     @Autowired SeasonCarPoolService pools;
+    @Autowired org.ctc.admin.service.LobbySettingsGraphicService lobbyGraphics;
     @MockitoBean PickCollectionStatus collection;
     TestHelper.SeasonFixture fixture;
     PickPayload payload;
     final List<UUID> carIds = new ArrayList<>();
+
+    @ParameterizedTest
+    @CsvSource({"1440,1000,desktop", "390,844,mobile"})
+    void givenExplicit2027OneMakeWithoutJavaScript_whenSavingNativeAndCorrectingApprovedTyres_thenRetainOneFamilyAndDryRequiredCompounds(
+            int width, int height, String viewport) throws Exception {
+        // given
+        when(collection.isConfidentialityReady()).thenReturn(true);
+        tx.executeWithoutResult(status -> seasons.findById(fixture.season().getId()).orElseThrow().setLobbyRulesProfile(LobbyRulesProfile.CTC_2027));
+        pools.changeMode(fixture.season().getId(), CarPoolMode.CATEGORY_POOL);
+        var entry = pools.saveOneMakeEntry(fixture.season().getId(), null, "Test explicit tyre One-Make", payload.carId());
+        pools.freeze(fixture.season().getId());
+        payload = new PickPayload(payload.trackId(), payload.carId(), entry, payload.laps(), payload.tyreWear(), payload.fuelConsumption(),
+                payload.refuelingSpeed(), payload.initialFuel(), payload.requiredPitStops(), payload.timeProgressionMode(), payload.timeProgressionMultiplier(),
+                payload.weather(), payload.timeOfDay(), payload.availableTyres(), payload.mandatoryTyres(), LobbyRulesProfile.CTC_2027,
+                RaceStartType.GRID_FALSE_START, RaceSlipstream.REAL);
+        tx.executeWithoutResult(status -> {
+            var race = races.findById(fixture.race().getId()).orElseThrow(); race.setPicksManaged(false);
+            race.setCar(cars.findById(payload.carId()).orElseThrow()); race.setCarPoolEntry(entries.findById(entry).orElseThrow());
+            race.setTrack(tracks.findById(payload.trackId()).orElseThrow());
+            var settings = new RaceSettings(race); RaceSettingsValues.from(payload).applyTo(settings); race.setSettings(settings);
+        });
+        page.setViewportSize(width, height); page.navigate(url("/admin/races/" + fixture.race().getId() + "/edit"));
+        assertThat(page.locator("#availableTyres option")).hasCount(8);
+        assertThat(page.locator("#mandatoryTyres option[value=I], #mandatoryTyres option[value=W]")).hasCount(0);
+        // when
+        page.locator("#availableTyres").selectOption(new String[] {"SS", "SM", "SH"});
+        page.locator("#mandatoryTyres").selectOption("SM"); capture("tyres-native-" + viewport);
+        page.locator(".entity-editor-actions button").click();
+        // then
+        assertThat(page).hasURL(url("/admin/races?matchdayId=" + fixture.matchday().getId()));
+        page.navigate(url("/admin/races/" + fixture.race().getId() + "/edit"));
+        assertThat(page.locator("#availableTyres")).hasValues(new String[] {"SS", "SM", "SH"});
+        assertThat(page.locator("#mandatoryTyres")).hasValues(new String[] {"SM"});
+        tx.executeWithoutResult(status -> races.findById(fixture.race().getId()).orElseThrow().setPicksManaged(true));
+        preconfigureAndSubmit(); approve(); page.navigate(url(path() + "/correction"));
+        assertThat(page.locator("#correct-mandatory-I, #correct-mandatory-W")).hasCount(0);
+        for (var checkbox : page.locator("input[name=availableTyres]").all()) checkbox.uncheck();
+        for (String tyre : List.of("SS", "SM", "SH")) page.locator("#correct-available-" + tyre).check();
+        for (var checkbox : page.locator("input[name=mandatoryTyres]").all()) checkbox.uncheck();
+        page.locator("#correct-mandatory-SM").check(); page.locator("#correct-available-RS").check();
+        page.getByLabel("Reason for internal correction").fill("Test single-family Sports correction");
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save internal correction")).click();
+        assertThat(page.getByRole(AriaRole.ALERT).first()).containsText("not saved");
+        org.assertj.core.api.Assertions.assertThat(admin.detail(fixture.race().getId()).row().version()).isEqualTo(2);
+        assertThat(page.locator("#correct-available-SS")).isChecked();
+        page.locator("#correct-available-RS").uncheck(); capture("tyres-correction-" + viewport);
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save internal correction")).click();
+        org.assertj.core.api.Assertions.assertThat(admin.detail(fixture.race().getId()).row().version()).isEqualTo(3);
+        tx.executeWithoutResult(status -> {
+            var settings = races.findById(fixture.race().getId()).orElseThrow().getSettings();
+            org.assertj.core.api.Assertions.assertThat(settings.getAvailableTyres()).isEqualTo("SS, SM, SH");
+            org.assertj.core.api.Assertions.assertThat(settings.getMandatoryTyres()).isEqualTo("SM");
+        });
+        var graphic = tx.execute(status -> org.junit.jupiter.api.Assertions.assertDoesNotThrow(() ->
+                lobbyGraphics.renderPublication(races.findById(fixture.race().getId()).orElseThrow())));
+        Files.write(Path.of(".screenshots/tyres-lobby-" + viewport + ".png"), graphic.png());
+        var image = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(graphic.png()));
+        org.assertj.core.api.Assertions.assertThat(image).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(image.getHeight()).isGreaterThan(1000);
+    }
 
     @BeforeEach
     void createSyntheticFixtureAndNativeBrowser() {

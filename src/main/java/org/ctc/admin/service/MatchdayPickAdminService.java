@@ -132,7 +132,7 @@ public class MatchdayPickAdminService {
         form.setTimeProgressionMode(values.timeProgressionMode()); form.setTimeProgressionMultiplier(values.timeProgressionMultiplier());
         form.setWeather(values.weather()); form.setTimeOfDay(values.timeOfDay());
         form.setInitialFuel(Arrays.stream(PickInitialFuel.values()).filter(fuel -> fuel.settingsValue().equals(values.initialFuel())).findFirst().orElse(null));
-        form.setAvailableTyres(tyres(values.availableTyres())); form.setMandatoryTyres(tyres(values.mandatoryTyres()));
+        form.setAvailableTyres(List.copyOf(tyres(values.availableTyres()))); form.setMandatoryTyres(List.copyOf(tyres(values.mandatoryTyres())));
         return form;
     }
 

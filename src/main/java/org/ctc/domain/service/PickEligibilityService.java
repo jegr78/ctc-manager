@@ -20,6 +20,7 @@ public class PickEligibilityService {
         LobbyRulesPolicy.requireCurrent(season, payload.lobbyRulesProfile(), payload.startType(), payload.slipstream());
         var result = cars.validate(season.getId(), race.getHomeTeam().getId(), race.getId(), payload.carPoolEntryId(), payload.carId());
         if (!result.valid()) throw new BusinessRuleException(result.message());
+        RaceTyrePolicy.require(season, result.entry(), result.car(), org.ctc.domain.model.RaceSettingsValues.from(payload));
         if (tracks.findById(payload.trackId()).isEmpty()
                 || season.getTracks().stream().noneMatch(track -> payload.trackId().equals(track.getId()))) {
             throw new BusinessRuleException("Pick track must belong to this season");

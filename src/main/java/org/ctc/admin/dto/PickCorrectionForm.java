@@ -1,11 +1,13 @@
 package org.ctc.admin.dto;
 
 import jakarta.validation.constraints.*;
-import java.util.LinkedHashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.*;
 
 @Getter
@@ -31,11 +33,20 @@ public class PickCorrectionForm {
     @Min(0) @Max(6) private Integer timeProgressionMultiplier;
     @NotBlank @Size(max = 255) private String weather;
     @NotBlank @Size(max = 255) private String timeOfDay;
-    @NotEmpty private Set<PickTyre> availableTyres = new LinkedHashSet<>();
-    @NotNull private Set<PickTyre> mandatoryTyres = new LinkedHashSet<>();
+    @NotEmpty @Size(max = 5) private List<PickTyre> availableTyres = new ArrayList<>();
+    @NotNull @Size(max = 3) private List<PickTyre> mandatoryTyres = new ArrayList<>();
 
     public PickPayload payload() {
         return new PickPayload(trackId, carId, carPoolEntryId, laps, tyreWear, fuelConsumption, refuelingSpeed,
-                initialFuel, requiredPitStops, timeProgressionMode, timeProgressionMultiplier, weather, timeOfDay, availableTyres, mandatoryTyres, lobbyRulesProfile, startType, slipstream);
+                initialFuel, requiredPitStops, timeProgressionMode, timeProgressionMultiplier, weather, timeOfDay,
+                unique(availableTyres), unique(mandatoryTyres), lobbyRulesProfile, startType, slipstream);
+    }
+
+    private static Set<PickTyre> unique(List<PickTyre> values) {
+        if (values == null) return null;
+        if (values.stream().anyMatch(java.util.Objects::isNull) || values.stream().distinct().count() != values.size()) {
+            throw new BusinessRuleException("Choose each valid tyre compound only once");
+        }
+        return Set.copyOf(values);
     }
 }

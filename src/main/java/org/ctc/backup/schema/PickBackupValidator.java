@@ -20,7 +20,7 @@ public final class PickBackupValidator {
             Map.entry("team_pick_channel_bindings", Set.of("id", "season", "team", "guildId", "channelId", "createdAt", "updatedAt")),
             Map.entry("playoff_matchups", Set.of("id", "team1", "team2", "bye")),
             Map.entry("races", Set.of("id", "matchday", "match", "playoffMatchup", "homeTeamOverride", "awayTeamOverride", "car", "track", "carPoolEntry", "picksManaged")),
-            Map.entry("season_car_pool_entries", Set.of("id", "season")), Map.entry("season_car_pool_members", Set.of("id", "entry", "car")),
+            Map.entry("season_car_pool_entries", Set.of("id", "season", "oneMakeCar")), Map.entry("season_car_pool_members", Set.of("id", "entry", "car")),
             Map.entry("race_settings", Set.of("id", "race", "numberOfLaps", "tyreWearMultiplier", "fuelConsumptionMultiplier", "refuelingSpeed", "initialFuel", "numberOfRequiredPitStops", "timeProgressionMode", "timeProgressionMultiplier", "weather", "timeOfDay", "availableTyres", "mandatoryTyres", "startType", "slipstream")),
             Map.entry("matchday_picks", Set.of("id", "race", "season", "team", "originalMatchday", "originalAwayTeam", "version", "state", "latestRevisionNumber", "approvedRevisionNumber", "manualOpen", "manualClosed", "createdAt", "updatedAt")),
             Map.entry("matchday_pick_revisions", Set.of("id", "pick", "revisionNumber", "payload", "confirmedAt", "submitterId", "requestId", "receiptVersion", "createdAt", "updatedAt")),
@@ -215,6 +215,7 @@ public final class PickBackupValidator {
             if (output == PickPublicationOutput.LOBBY_SETTINGS && fields.contains(PickDisclosureField.CAR)) fail("Lobby cannot disclose a car");
             var content = PickPublicationContentReader.read(row.get("content"));
             if (content.lobbyRulesProfile() != LobbyRulesArchive.profile(index("seasons").get(seasonId))) fail("Publication rules differ from their original season");
+            validateTyres(seasonId, content.carPoolEntryId(), content.carId(), content.availableTyres(), content.mandatoryTyres());
             String hash = text(row, "contentHash", 64);
             if (!PickPublicationAttempt.hashMatches(hash, content.fingerprint())
                     || !PickPublicationAttempt.hashMatches(text(row, "requestHash", 64), PickPublicationAttempt.manifestHash(text(row, "requestManifest", 16000)))) {
@@ -285,6 +286,8 @@ public final class PickBackupValidator {
         var season = index("seasons").get(seasonId);
         if (season == null || !index("cars").containsKey(payload.carId().toString()) || !index("tracks").containsKey(payload.trackId().toString())) fail("Missing payload reference");
         if (payload.lobbyRulesProfile() != LobbyRulesArchive.profile(season)) fail("Pick rules differ from their season");
+        var values = RaceSettingsValues.from(payload);
+        validateTyres(seasonId, payload.carPoolEntryId(), payload.carId(), values.availableTyres(), values.mandatoryTyres());
         if (!contains(season.get("tracks"), payload.trackId().toString())) fail("Track is outside the pick season");
         if ("FIXED_CARS".equals(text(season, "carPoolMode", 24))) {
             if (payload.carPoolEntryId() != null || !contains(season.get("cars"), payload.carId().toString())) fail("Invalid fixed-pool payload reference");
@@ -294,6 +297,17 @@ public final class PickBackupValidator {
             if (entry == null || !seasonId.equals(uuid(entry, "season")) || !"FROZEN".equals(text(season, "carPoolState", 16))) fail("Invalid historical pool entry");
             if (index("season_car_pool_members").values().stream().noneMatch(member -> entryId.equals(uuid(member, "entry")) && payload.carId().toString().equals(uuid(member, "car")))) fail("Payload car is not a frozen entry member");
         }
+    }
+
+    private void validateTyres(String seasonId, UUID entryId, UUID carId, String available, String mandatory) {
+        var season = index("seasons").get(seasonId);
+        var entry = entryId == null ? null : index("season_car_pool_entries").get(entryId.toString());
+        boolean oneMake = season != null && "CATEGORY_POOL".equals(season.path("carPoolMode").asText())
+                && "FROZEN".equals(season.path("carPoolState").asText()) && entry != null
+                && seasonId.equals(nullableUuid(entry, "season")) && carId != null
+                && carId.toString().equals(nullableUuid(entry, "oneMakeCar"));
+        if (season == null) fail("Missing tyre season");
+        org.ctc.domain.service.RaceTyrePolicy.require(LobbyRulesArchive.profile(season), oneMake, available, mandatory);
     }
 
     private void validateApproved(String raceId, JsonNode race, PickPayload payload) {

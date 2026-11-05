@@ -34,8 +34,12 @@ public final class PickPayloadReader {
         var multiplier = row.get("timeProgressionMultiplier");
         if (!multiplier.isNull() && (!multiplier.isIntegralNumber() || !multiplier.canConvertToInt())) throw invalid();
         for (String field : TYRES) {
-            if (!row.get(field).isArray() || row.get(field).size() > 3) throw invalid();
-            for (var tyre : row.get(field)) if (!tyre.isTextual()) throw invalid();
+            int maximum = field.equals("availableTyres") ? 5 : 3;
+            if (!row.get(field).isArray() || row.get(field).size() > maximum) throw invalid();
+            var distinct = new HashSet<String>();
+            for (var tyre : row.get(field)) {
+                if (!tyre.isTextual() || !distinct.add(tyre.textValue())) throw invalid();
+            }
         }
         try {
             LobbyRulesArchive.choices(row);

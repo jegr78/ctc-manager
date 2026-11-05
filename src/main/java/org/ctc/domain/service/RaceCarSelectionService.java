@@ -42,7 +42,8 @@ public class RaceCarSelectionService {
                     .map(car -> new CarChoice(car.getId(), car.getDisplayName())).toList() : List.<CarChoice>of();
             String reason = !frozen ? "Freeze this season's pool before choosing a car."
                     : taken ? "Already used by this home team this season." : null;
-            return new EntryChoice(entry.getId(), entry.getLabel(), cars, taken, reason);
+            return new EntryChoice(entry.getId(), entry.getLabel(), cars, taken, reason,
+                    entry.getOneMakeCar() == null ? null : entry.getOneMakeCar().getId());
         }).toList();
         return new Availability(season.getCarPoolMode(), season.getCarPoolState(), choices, consumed, usedCars);
     }
@@ -172,7 +173,10 @@ public class RaceCarSelectionService {
         }
     }
 
-    public record EntryChoice(UUID id, String label, List<CarChoice> cars, boolean consumed, String reason) {
+    public record EntryChoice(UUID id, String label, List<CarChoice> cars, boolean consumed, String reason, UUID oneMakeCarId) {
+        public EntryChoice(UUID id, String label, List<CarChoice> cars, boolean consumed, String reason) {
+            this(id, label, cars, consumed, reason, null);
+        }
         public EntryChoice { cars = List.copyOf(cars); }
     }
 

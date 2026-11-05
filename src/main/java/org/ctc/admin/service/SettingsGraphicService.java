@@ -75,6 +75,7 @@ public class SettingsGraphicService extends AbstractGraphicService implements Te
 		var settings = race.getSettings();
         var profile = season.getLobbyRulesProfile();
         org.ctc.domain.service.LobbyRulesPolicy.requireCurrent(season, profile, settings.getStartType(), settings.getSlipstream());
+        org.ctc.domain.service.RaceTyrePolicy.require(season, race.getCarPoolEntry(), race.getCar(), org.ctc.domain.model.RaceSettingsValues.from(settings));
 
 		String homeCardBase64 = encodeCardBase64(buildCardPath(season.getId().toString(), homeTeam.getShortName()));
 		String awayCardBase64 = encodeCardBase64(buildCardPath(season.getId().toString(), awayTeam.getShortName()));
@@ -140,6 +141,8 @@ public class SettingsGraphicService extends AbstractGraphicService implements Te
 		ctx.setVariable("weather", settings.getWeather());
 		ctx.setVariable("timeOfDay", settings.getTimeOfDay());
 		ctx.setVariable("availableTyres", settings.getAvailableTyres());
+        ctx.setVariable("tyreFamily", org.ctc.domain.model.PickTyreText.read(settings.getAvailableTyres(), false)
+                .filter(tyres -> !tyres.isEmpty()).map(tyres -> tyres.iterator().next().getFamily().getLabel()).orElse(null));
 		ctx.setVariable("mandatoryTyres", settings.getMandatoryTyres());
         ctx.setVariable("lobbyRulesProfile", profile.getLabel());
         ctx.setVariable("startType", settings.getStartType().getLabel());

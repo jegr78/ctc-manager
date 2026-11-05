@@ -110,7 +110,8 @@ public class TemplatePreviewService {
         ctx.setVariable("timeProgressionDisplay", "60x");
         ctx.setVariable("weather", "Clear");
         ctx.setVariable("timeOfDay", "14:00");
-        ctx.setVariable("availableTyres", "SS, SM, SH, RH, IM, HW");
+        ctx.setVariable("availableTyres", "RS, RM, RH, I, W");
+        ctx.setVariable("tyreFamily", "Racing");
         ctx.setVariable("mandatoryTyres", "SH");
         ctx.setVariable("lobbyRulesProfile", "CTC 2027");
         ctx.setVariable("startType", "Rolling Start");
@@ -149,6 +150,7 @@ public class TemplatePreviewService {
         v.put("initialFuel", "Default");
         v.put("minPitStops", 0);
         v.put("usableTyres", "Soft, Medium, Hard, Intermediate, Wet");
+        v.put("tyreFamily", "Racing");
         v.put("requiredTyre", "None");
         ctx.setVariable("v", v);
         return ctx;

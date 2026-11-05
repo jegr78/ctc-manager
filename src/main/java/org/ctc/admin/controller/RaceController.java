@@ -202,6 +202,8 @@ public class RaceController {
         model.addAttribute("slipstreams", profile == null ? java.util.List.of() : profile.getSlipstreams());
         model.addAttribute("loadedRulesLabel", profile == null ? "Reload season rules" : profile.getLabel());
         model.addAttribute("loadedFlagRules", profile == null ? "Unknown" : profile.getFlagRules());
+        model.addAttribute("tyreForm", org.ctc.domain.service.RaceTyreFormChoices.from(profile, data.carSelection(),
+                rulesForm.getCarPoolEntryId(), rulesForm.getAvailableTyres(), rulesForm.getMandatoryTyres()));
     }
 
 	@GetMapping("/{id}/results")
