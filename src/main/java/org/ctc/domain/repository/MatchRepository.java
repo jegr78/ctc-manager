@@ -40,7 +40,7 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
 	 * <p>Eager-fetches the three {@code @ManyToOne} associations: {@code matchday},
 	 * {@code homeTeam}, {@code awayTeam}.
 	 */
-	@EntityGraph(attributePaths = {"matchday", "homeTeam", "awayTeam"})
+	@EntityGraph(attributePaths = {"matchday", "homeTeam", "awayTeam", "walkoverTeam"})
 	@Query("SELECT e FROM Match e")
 	List<Match> findAllForBackup();
 }

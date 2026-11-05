@@ -226,9 +226,8 @@ public class MatchService {
 		if (match.getAwayTeam() == null) {
 			throw new BusinessRuleException("Match has no away team — cannot be a walkover.");
 		}
-		boolean isHome = walkoverTeamId.equals(match.getHomeTeam().getId());
-		boolean isAway = walkoverTeamId.equals(match.getAwayTeam().getId());
-		if (!isHome && !isAway) {
+		if (!org.ctc.domain.model.MatchWalkoverRules.valid(walkoverTeamId,
+                match.getHomeTeam() == null ? null : match.getHomeTeam().getId(), match.getAwayTeam().getId(), match.isBye())) {
 			throw new BusinessRuleException("Walkover team must be one of the match's two teams.");
 		}
         penaltyGuard.requireNoHistory(raceRepository.findByMatchId(matchId));

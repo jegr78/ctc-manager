@@ -59,6 +59,21 @@ class RacePenaltyAuditIT extends RacePenaltyFixture {
         assertScores(70, 70);
     }
 
+    @Test
+    void givenNonparticipantMatchWalkover_whenAuditing_thenReportWithoutChangingMarker() {
+        // given
+        var other = teams.findAll().stream().map(org.ctc.domain.model.Team::getId)
+                .filter(id -> !id.equals(homeId) && !id.equals(awayId)).findFirst().orElseThrow();
+        jdbc.update("update matches set walkover_team_id = ? where id = ?", other, matchId);
+        // when
+        var report = audit.audit();
+        // then
+        assertThat(report.sections().stream().flatMap(section -> section.findings().stream())
+                .filter(finding -> finding.subject().contains(matchId.toString())))
+                .anyMatch(finding -> finding.category().name().equals("PAIRING") && finding.evidence().contains("walkover"));
+        assertThat(jdbc.queryForObject("select walkover_team_id from matches where id = ?", java.util.UUID.class, matchId)).isEqualTo(other);
+    }
+
     private void correct() {
         var view = penalties.view(raceId);
         penalties.save(raceId, new RacePenaltyService.Correction(homeId, awayId, 20, 10, view.revision(),

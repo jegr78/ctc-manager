@@ -184,6 +184,104 @@ class RacePenaltyBackupRoundTripIT extends RacePenaltyFixture {
         assertThat(penalties.view(raceId).history()).isEmpty(); assertScores(80, 70);
     }
 
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"12,uuid", "12,object", "12,missing", "12,null", "13,uuid", "13,object", "13,missing", "13,null"})
+    void givenOrdinaryWalkoverInCurrentOrLegacyArchive_whenRestoring_thenPreserveMarkerAndScores(int version, String shape) throws Exception {
+        // given
+        UUID walkover = createWalkoverMatch();
+        String homeName = teams.findById(homeId).orElseThrow().getName();
+        var bytes = walkoverArchive(archive(), version, shape, walkover);
+        // when
+        var preview = org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> backupImports.stage(upload(bytes)));
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> backupImports.execute(preview.stagingId()));
+        // then
+        tx.executeWithoutResult(status -> {
+            var match = matches.findById(walkover).orElseThrow();
+            if (shape.equals("missing") || shape.equals("null")) assertThat(match.getWalkoverTeam()).isNull();
+            else assertThat(match.getWalkoverTeam()).isNotNull().extracting(org.ctc.domain.model.Team::getId).isEqualTo(homeId);
+            assertThat(match.getHomeScore()).isZero(); assertThat(match.getAwayScore()).isEqualTo(9);
+            assertThat(teams.findById(homeId).orElseThrow().getName()).isEqualTo(homeName);
+        });
+        assertThat(penalties.view(raceId).history()).isEmpty(); assertScores(80, 70);
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"12,foreign", "12,missing-team", "12,bye", "12,missing-away", "12,bad-object", "12,wrong-id-type", "12,short-uuid", "12,array", "12,bool", "13,foreign", "13,missing-team", "13,bye", "13,missing-away", "13,bad-object", "13,wrong-id-type", "13,short-uuid", "13,array", "13,bool"})
+    void givenInvalidWalkoverMarker_whenStagingOrExecuting_thenRejectBeforeWipeIncludingLegacyArchives(int version, String kind) throws Exception {
+        // given
+        UUID walkover = createWalkoverMatch(); var original = archive();
+        var valid = walkoverArchive(original, version, "uuid", walkover);
+        var broken = walkoverArchive(original, version, kind, walkover);
+        clearInvocations(backupImports);
+        // when / then
+        assertThatThrownBy(() -> backupImports.stage(upload(broken))).isInstanceOf(BackupArchiveException.class).hasMessageContaining("walkover");
+        verify(backupImports, never()).wipeAllTables(anyMap());
+        var preview = backupImports.stage(upload(valid));
+        Files.write(ROOT.resolve("staging/upload-" + preview.stagingId() + ".zip"), broken);
+        clearInvocations(backupImports);
+        assertThatThrownBy(() -> backupImports.execute(preview.stagingId())).isInstanceOf(BackupImportException.class)
+                .cause().isInstanceOf(BackupArchiveException.class).hasMessageContaining("walkover");
+        verify(backupImports, never()).wipeAllTables(anyMap());
+        tx.executeWithoutResult(status -> assertThat(matches.findById(walkover).orElseThrow().getWalkoverTeam().getId()).isEqualTo(homeId));
+        assertScores(80, 70);
+    }
+
+    private UUID createWalkoverMatch() {
+        return tx.execute(status -> {
+            var season = seasons.findById(seasonId).orElseThrow();
+            var day = helper.createMatchday(season, "Test walkover backup", 2);
+            var match = helper.createMatch(day, teams.findById(homeId).orElseThrow(), teams.findById(awayId).orElseThrow());
+            match.setWalkoverTeam(match.getHomeTeam()); match.setHomeScore(0); match.setAwayScore(9);
+            return match.getId();
+        });
+    }
+
+    private byte[] walkoverArchive(byte[] original, int version, String kind, UUID matchId) throws Exception {
+        var files = unzip(original);
+        var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json")); manifest.put("schema_version", version);
+        if (version < 13) { files.remove("data/race-penalty-revisions.json"); ((ObjectNode) manifest.get("table_counts")).put("race_penalty_revisions", 0); }
+        var rows = (ArrayNode) JSON.readTree(files.get("data/matches.json"));
+        var row = (ObjectNode) java.util.stream.StreamSupport.stream(rows.spliterator(), false)
+                .filter(value -> value.path("id").asText().equals(matchId.toString())).findFirst().orElseThrow();
+        row.put("walkoverTeam", homeId.toString());
+        switch (kind) {
+            case "object" -> row.putObject("walkoverTeam").put("id", homeId.toString()).put("name", "Historical team details");
+            case "missing" -> row.remove("walkoverTeam");
+            case "null" -> row.putNull("walkoverTeam");
+            case "foreign" -> row.put("walkoverTeam", teams.findAll().stream().map(org.ctc.domain.model.Team::getId)
+                    .filter(id -> !id.equals(homeId) && !id.equals(awayId)).findFirst().orElseThrow().toString());
+            case "missing-team" -> { String absent = UUID.randomUUID().toString(); row.put("homeTeam", absent).put("walkoverTeam", absent); }
+            case "bye" -> row.put("bye", true);
+            case "missing-away" -> row.putNull("awayTeam");
+            case "bad-object" -> row.putObject("walkoverTeam").put("name", "No identity");
+            case "wrong-id-type" -> row.putObject("walkoverTeam").put("id", 123);
+            case "short-uuid" -> row.put("walkoverTeam", "0-0-0-0-0");
+            case "array" -> row.putArray("walkoverTeam").add(homeId.toString());
+            case "bool" -> row.put("walkoverTeam", false);
+            default -> { }
+        }
+        files.put("data/matches.json", JSON.writeValueAsBytes(rows));
+        files.put("manifest.json", JSON.writeValueAsBytes(manifest)); return zip(files);
+    }
+
+    private LinkedHashMap<String, byte[]> unzip(byte[] original) throws Exception {
+        var files = new LinkedHashMap<String, byte[]>();
+        try (var zip = new ZipInputStream(new ByteArrayInputStream(original))) {
+            ZipEntry entry; while ((entry = zip.getNextEntry()) != null) files.put(entry.getName(), zip.readAllBytes());
+        }
+        return files;
+    }
+
+    private byte[] zip(LinkedHashMap<String, byte[]> files) throws Exception {
+        var output = new ByteArrayOutputStream();
+        try (var zip = new ZipOutputStream(output)) {
+            for (var entry : files.entrySet()) {
+                zip.putNextEntry(new ZipEntry(entry.getKey())); zip.write(entry.getValue()); zip.closeEntry();
+            }
+        }
+        return output.toByteArray();
+    }
+
     private byte[] mutate(byte[] original, String kind) throws Exception {
         var files = new LinkedHashMap<String, byte[]>();
         try (var zip = new ZipInputStream(new ByteArrayInputStream(original))) {

@@ -56,3 +56,19 @@ fingerprint. `ScoringService.RaceScoreSnapshot` now captures the scalar result f
 attribution used for both calculations. The view uses the same initialized penalty history for
 its displayed totals and revision token. Writer-side validation uses that shared snapshot under
 the existing locks. Transaction isolation and the fingerprint field order remain unchanged.
+
+CI exposed another supported archive shape: a regular match could export its walkover team as an
+embedded object. The new scalar penalty preflight rejected that unrelated valid walkover, while
+the existing regular-match restorer did not retain the marker at all. The export is now ID-only;
+legacy objects are normalized to their ID without retaining or importing team-body data. A bounded
+walkover preflight runs for every supported archive version and checks direct participants, team
+references and the bye flag before wipe. Restore preserves marker and scores; the pairing audit
+reports invalid stored markers without changes.
+
+Evidence: `BackupSerializationModuleTest`, `MatchRestorerTest`, `MatchWalkoverBackupValidatorTest`,
+`RacePenaltyBackupValidatorTest`, H2/MariaDB `RacePenaltyBackupRoundTripIT`, and
+`RacePenaltyAuditIT`. Tests cover UUID/object/missing/null references, invalid shapes, missing or
+foreign teams, bye conflicts, unchanged team-body data and scores, and stage/execute rejection.
+The six CI-failing cases in `CategoryPoolReleaseE2ETest` and `BackupImportE2ETest` pass in the
+focused reproduction after the repair. The initial regression was observed as four unit and
+twenty integration assertion failures with zero test errors before implementation.

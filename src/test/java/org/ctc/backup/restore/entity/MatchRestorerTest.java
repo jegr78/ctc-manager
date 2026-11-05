@@ -14,15 +14,6 @@ import org.springframework.jdbc.core.ParameterizedPreparedStatementSetter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-/**
- * Phase 75 / Plan 04 — Unit test for {@link MatchRestorer}.
- *
- * <p>Schema (V1, no V3+ additions): {@code id, matchday_id, home_team_id, away_team_id,
- * home_score, away_score, bye, created_at, updated_at}. The {@code bye} column is boolean —
- * the test verifies {@code ps.setBoolean}, not {@code setInt}/{@code setString}. Nullable
- * columns ({@code away_team_id}, {@code home_score}, {@code away_score}) bind via
- * {@code setNull}.
- */
 class MatchRestorerTest {
 
     private final MatchRestorer restorer = new MatchRestorer();
@@ -111,4 +102,29 @@ class MatchRestorerTest {
         verify(ps).setNull(6, java.sql.Types.INTEGER); // away_score
         verify(ps).setBoolean(7, true);
     }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    @SuppressWarnings("unchecked")
+    void givenWalkoverUuidOrHistoricalTeamObject_whenRestoring_thenBindTheMarkerWithoutChangingScores(boolean historicalObject) throws Exception {
+        // given
+        var jdbc = mock(JdbcTemplate.class);
+        var row = mapper.createObjectNode().put("id", UUID.randomUUID().toString())
+                .put("homeTeam", UUID.randomUUID().toString()).put("awayTeam", UUID.randomUUID().toString())
+                .put("homeScore", 3).put("awayScore", 1).put("bye", false)
+                .put("createdAt", "2026-11-05T12:00:00").put("updatedAt", "2026-11-05T12:00:00");
+        UUID forfeiting = UUID.fromString(row.path("homeTeam").asText());
+        if (historicalObject) row.putObject("walkoverTeam").put("id", forfeiting.toString()).put("name", "Historical team body");
+        else row.put("walkoverTeam", forfeiting.toString());
+        // when
+        restorer.restore(List.of(row), jdbc);
+        // then
+        var sql = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<ParameterizedPreparedStatementSetter<JsonNode>> setter = ArgumentCaptor.forClass(ParameterizedPreparedStatementSetter.class);
+        verify(jdbc).batchUpdate(sql.capture(), any(List.class), eq(500), setter.capture());
+        assertThat(sql.getValue()).contains("walkover_team_id");
+        var statement = mock(PreparedStatement.class); setter.getValue().setValues(statement, row);
+        verify(statement).setObject(18, forfeiting);
+        verify(statement).setInt(5, 3); verify(statement).setInt(6, 1);
+    }
+
 }

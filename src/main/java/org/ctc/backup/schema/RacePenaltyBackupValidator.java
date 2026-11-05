@@ -37,6 +37,10 @@ public final class RacePenaltyBackupValidator {
         for (String field : FIELDS.get(table)) {
             var value = row.get(field);
             if (value == null) continue;
+            if (table.equals("matches") && field.equals("walkoverTeam")) {
+                var marker = MatchWalkoverReference.read(value);
+                value = marker == null ? JsonNodeFactory.instance.nullNode() : JsonNodeFactory.instance.textNode(marker.toString());
+            }
             if (!(value.isNull() || value.isBoolean() || value.isIntegralNumber()
                     || value.isTextual() && value.textValue().length() <= 2000)) fail("Invalid team penalty scalar " + field);
             projected.set(field, value.deepCopy());

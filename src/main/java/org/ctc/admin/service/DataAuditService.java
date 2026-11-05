@@ -312,6 +312,14 @@ public class DataAuditService {
 	private void auditPairings(List<Match> matches, List<DataAuditFinding> out) {
 		Map<String, List<Match>> byPairing = new LinkedHashMap<>();
 		for (Match match : matches) {
+            if (!org.ctc.domain.model.MatchWalkoverRules.valid(
+                    match.getWalkoverTeam() == null ? null : match.getWalkoverTeam().getId(),
+                    match.getHomeTeam() == null ? null : match.getHomeTeam().getId(),
+                    match.getAwayTeam() == null ? null : match.getAwayTeam().getId(), match.isBye())) {
+                out.add(new DataAuditFinding(PAIRING, AMBIGUOUS, describe(match),
+                        "The match walkover is a bye or does not identify one of its direct participants",
+                        "Review the original forfeiture decision and correct the marker explicitly. Do not infer a team."));
+            }
 			if (match.getHomeTeam() == null || match.getAwayTeam() == null) {
 				continue;
 			}

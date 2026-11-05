@@ -99,4 +99,29 @@ class RacePenaltyBackupValidatorTest {
         // when / then
         assertThatThrownBy(() -> feed(validator)).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("penalty");
     }
+    @Test
+    void givenUnrelatedWalkoverWithHistoricalTeamObject_whenValidatingPenaltyArchive_thenKeepItsCompactReference() {
+        // given
+        var validator = fixture();
+        var existing = rows.values().stream().filter(row -> row.has("homeTeam") && !row.has("revisionNumber")).findFirst().orElseThrow();
+        var unrelated = row("matches").put("matchday", existing.path("matchday").asText())
+                .put("homeTeam", existing.path("homeTeam").asText()).put("awayTeam", existing.path("awayTeam").asText()).put("bye", false);
+        unrelated.putObject("walkoverTeam").put("id", existing.path("homeTeam").asText()).put("name", "Historical full team");
+        // when / then
+        assertThatCode(() -> feed(validator)).doesNotThrowAnyException();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void givenZeroPenaltyHistoryOnWalkoverWithUuidOrObjectMarker_whenValidating_thenRejectHistory(boolean historicalObject) {
+        // given
+        var validator = fixture(); penalty().put("homePenalty", 0).put("awayPenalty", 0);
+        var match = rows.values().stream().filter(row -> row.has("homeTeam") && !row.has("revisionNumber")).findFirst().orElseThrow();
+        String home = match.path("homeTeam").asText();
+        if (historicalObject) match.putObject("walkoverTeam").put("id", home);
+        else match.put("walkoverTeam", home);
+        // when / then
+        assertThatThrownBy(() -> feed(validator)).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("bye or walkover");
+    }
+
 }

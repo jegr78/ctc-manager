@@ -785,6 +785,7 @@ public class BackupImportService {
      */
     private void validateRestorableRows(Path staged, BackupManifest manifest) throws BackupArchiveException {
         var activeSeasonValidator = new org.ctc.backup.schema.ActiveSeasonBackupValidator();
+        var walkoverValidator = new org.ctc.backup.schema.MatchWalkoverBackupValidator();
         var penaltyValidator = new org.ctc.backup.schema.RacePenaltyBackupValidator(manifest.schemaVersion());
         var poolValidator = new org.ctc.backup.schema.CarPoolBackupValidator(manifest.schemaVersion());
         var pickValidator = new org.ctc.backup.schema.PickBackupValidator(manifest.schemaVersion());
@@ -798,6 +799,7 @@ public class BackupImportService {
                 if (entry != null) {
                     counts.put(ref.tableName(), readRows(zf, entry, inflatedBytes, row -> {
                         activeSeasonValidator.accept(ref.tableName(), row);
+                        walkoverValidator.accept(ref.tableName(), row);
                         penaltyValidator.accept(ref.tableName(), row);
                         poolValidator.accept(ref.tableName(), row);
                         pickValidator.accept(ref.tableName(), row);
@@ -805,6 +807,7 @@ public class BackupImportService {
                     }));
                 }
             }
+            walkoverValidator.validate();
             penaltyValidator.validate();
             poolValidator.validate();
             assertRowCountsMatchManifest(counts, manifest);
