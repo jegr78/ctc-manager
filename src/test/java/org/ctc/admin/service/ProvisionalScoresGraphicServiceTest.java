@@ -77,6 +77,14 @@ class ProvisionalScoresGraphicServiceTest {
 			when(scoringService.isDriverInTeam(eq(r), any(), eq(homeTeam.getId()))).thenReturn(false);
 		}
 
+        when(scoringService.calculateRaceTotals(race, homeTeam.getId())).thenAnswer(call -> {
+            int homePoints = 0, awayPoints = 0;
+            for (var result : race.getResults()) {
+                if (scoringService.isDriverInTeam(result, race.getId(), homeTeam.getId())) homePoints += result.getPointsTotal();
+                else awayPoints += result.getPointsTotal();
+            }
+            return org.ctc.domain.model.RacePenaltyTotals.calculate(homePoints, awayPoints, 0, 0);
+        });
 		writeFakeCard(seasonId, homeTeam.getShortName());
 		writeFakeCard(seasonId, awayTeam.getShortName());
 		return race;
@@ -102,6 +110,14 @@ class ProvisionalScoresGraphicServiceTest {
 		race.getResults().add(away);
 		when(scoringService.isDriverInTeam(eq(away), any(), eq(homeTeam.getId()))).thenReturn(false);
 
+        when(scoringService.calculateRaceTotals(race, homeTeam.getId())).thenAnswer(call -> {
+            int homePoints = 0, awayPoints = 0;
+            for (var result : race.getResults()) {
+                if (scoringService.isDriverInTeam(result, race.getId(), homeTeam.getId())) homePoints += result.getPointsTotal();
+                else awayPoints += result.getPointsTotal();
+            }
+            return org.ctc.domain.model.RacePenaltyTotals.calculate(homePoints, awayPoints, 0, 0);
+        });
 		writeFakeCard(seasonId, homeTeam.getShortName());
 		writeFakeCard(seasonId, awayTeam.getShortName());
 		return race;

@@ -2906,3 +2906,11 @@ body:has(.archive-dialog[open]) { overflow: hidden; }
 .incident-workspace .form-check { display: flex; align-items: start; gap: 10px; }
 .incident-workspace .form-check input[type="checkbox"] { width: 18px; height: 18px; min-height: 18px; flex: 0 0 18px; padding: 0; margin-top: 3px; accent-color: var(--accent); }
 .incident-workspace .form-check label { margin: 0; cursor: pointer; }
+
+.penalty-score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 1rem; }
+.penalty-score-grid article { min-width: 0; border: 1px solid var(--border); padding: 1rem; }
+.penalty-score-grid h3 { overflow-wrap: anywhere; margin-bottom: .75rem; }
+.penalty-score-grid dl > div { display: flex; justify-content: space-between; gap: 1rem; }
+#penalty-history { min-width: 64rem; table-layout: fixed; }
+#penalty-history th:last-child { width: 32%; }
+#penalty-history td:last-child { white-space: pre-wrap; overflow-wrap: anywhere; }

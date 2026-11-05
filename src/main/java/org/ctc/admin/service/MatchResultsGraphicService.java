@@ -10,7 +10,6 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Race;
-import org.ctc.domain.model.RaceResult;
 import org.ctc.domain.service.ScoringService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -101,16 +100,8 @@ public class MatchResultsGraphicService extends AbstractGraphicService implement
 			}
 			raceNumber++;
 
-			int homePoints = race.getResults().stream()
-					.filter(r -> scoringService.isDriverInTeam(r, race.getId(), homeTeamId))
-					.mapToInt(RaceResult::getPointsTotal)
-					.sum();
-			int awayPoints = race.getResults().stream()
-					.filter(r -> !scoringService.isDriverInTeam(r, race.getId(), homeTeamId))
-					.mapToInt(RaceResult::getPointsTotal)
-					.sum();
-
-			rows.add(new RaceResultRow("Race " + raceNumber, homePoints, awayPoints));
+            var totals = scoringService.calculateRaceTotals(race, homeTeamId);
+            rows.add(new RaceResultRow("Race " + raceNumber, totals.home().official(), totals.away().official()));
 		}
 		return rows;
 	}

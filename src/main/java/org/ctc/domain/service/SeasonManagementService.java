@@ -54,7 +54,7 @@ public class SeasonManagementService {
      * One Swiss pairing in match orientation. {@code quickScoreRaceId} is the leg that takes a quick
      * score while the pairing is still open, otherwise {@code null}.
      */
-    public record SwissPairing(Match match, UUID quickScoreRaceId, LocalDateTime dateTime) {}
+    public record SwissPairing(Match match, UUID quickScoreRaceId, LocalDateTime dateTime, boolean resultEntryRequired) {}
 
     public record SeasonGroupOption(int year, int number, String label, int teamCount) {}
 
@@ -286,10 +286,11 @@ public class SeasonManagementService {
                 var legs = match.getRaces();
                 var firstLeg = legs.stream().filter(leg -> !leg.hasTeamOverrides()).findFirst()
                         .or(() -> legs.stream().findFirst());
-                boolean open = !match.isBye() && match.getWalkoverTeam() == null && match.getHomeScore() == null;
+                boolean resultEntryRequired = legs.stream().anyMatch(leg -> !leg.getPenaltyRevisions().isEmpty());
+                boolean open = !match.isBye() && match.getWalkoverTeam() == null && match.getHomeScore() == null && !resultEntryRequired;
                 mdPairings.add(new SwissPairing(match,
                         open ? firstLeg.map(Race::getId).orElse(null) : null,
-                        firstLeg.map(Race::getDateTime).orElse(null)));
+                        firstLeg.map(Race::getDateTime).orElse(null), resultEntryRequired));
             }
             pairings.put(md.getId(), mdPairings);
         }

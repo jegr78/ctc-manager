@@ -2,6 +2,7 @@ package org.ctc.domain.service;
 
 import static org.ctc.util.LogSanitizer.sanitize;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -141,13 +142,18 @@ public class ScoringService {
 			}
 			scored = true;
 			Map<UUID, RaceLineup> lineups = lineupsOfRace.apply(leg.getId());
+			int legHome = 0;
+			int legAway = 0;
 			for (RaceResult result : leg.getResults()) {
 				if (isDriverInTeam(result, leg, homeTeamId, lineups.get(result.getDriver().getId()))) {
-					home += result.getPointsTotal();
+					legHome = addPoints(legHome, result.getPointsTotal());
 				} else {
-					away += result.getPointsTotal();
+					legAway = addPoints(legAway, result.getPointsTotal());
 				}
 			}
+            var official = RacePenaltyHistory.totals(leg, homeTeamId, legHome, legAway);
+            home = addPoints(home, official.home().official());
+            away = addPoints(away, official.away().official());
 		}
 		return scored ? new int[]{home, away} : null;
 	}
@@ -169,18 +175,61 @@ public class ScoringService {
 	 * Calculates [team1Points, team2Points] from race results.
 	 * Used by PlayoffService.determineWinner and PlayoffBracketViewService.buildMatchupView.
 	 */
+    @Transactional(readOnly = true)
 	public int[] calculateTeamTotals(List<RaceResult> results, UUID raceId, UUID team1Id) {
 		int team1Total = 0;
 		int team2Total = 0;
 		for (RaceResult result : results) {
 			if (isDriverInTeam(result, raceId, team1Id)) {
-				team1Total += result.getPointsTotal();
+				team1Total = addPoints(team1Total, result.getPointsTotal());
 			} else {
-				team2Total += result.getPointsTotal();
+				team2Total = addPoints(team2Total, result.getPointsTotal());
 			}
 		}
-		return new int[]{team1Total, team2Total};
+        var race = raceRepository.findById(raceId).orElse(null);
+        if (race == null) return new int[]{team1Total, team2Total};
+        var official = RacePenaltyHistory.totals(race, team1Id, team1Total, team2Total);
+		return new int[]{official.home().official(), official.away().official()};
 	}
+
+    @Transactional(readOnly = true)
+    public RacePenaltyTotals calculateRaceTotals(Race race, UUID firstTeamId) {
+        return calculateRaceScoreSnapshot(race, firstTeamId).totals();
+    }
+
+    public record ScoredDriver(UUID resultId, UUID driverId, int position, int qualifyingPosition,
+                               boolean fastestLap, int racePoints, int qualifyingPoints, int fastestLapPoints,
+                               int totalPoints, boolean firstTeam) {}
+    public record RaceScoreSnapshot(RacePenaltyTotals totals, List<ScoredDriver> drivers) {
+        public RaceScoreSnapshot { drivers = List.copyOf(drivers); }
+    }
+
+    @Transactional(readOnly = true)
+    public RaceScoreSnapshot calculateRaceScoreSnapshot(Race race, UUID firstTeamId) {
+        var current = raceRepository.findById(race.getId()).orElseThrow(
+                () -> new org.ctc.domain.exception.EntityNotFoundException("Race", race.getId()));
+        var lineups = lineupsOf(current.getId());
+        var drivers = new ArrayList<ScoredDriver>();
+        int first = 0;
+        int second = 0;
+        for (var result : current.getResults()) {
+            var driver = new ScoredDriver(result.getId(), result.getDriver().getId(), result.getPosition(),
+                    result.getQualiPosition(), result.isFastestLap(), result.getPointsRace(), result.getPointsQuali(),
+                    result.getPointsFl(), result.getPointsTotal(),
+                    isDriverInTeam(result, current, firstTeamId, lineups.get(result.getDriver().getId())));
+            drivers.add(driver);
+            if (driver.firstTeam()) first = addPoints(first, driver.totalPoints());
+            else second = addPoints(second, driver.totalPoints());
+        }
+        return new RaceScoreSnapshot(RacePenaltyHistory.totals(current, firstTeamId, first, second), drivers);
+    }
+
+    private static int addPoints(int first, int second) {
+        try { return Math.addExact(first, second); }
+        catch (ArithmeticException failure) {
+            throw new org.ctc.domain.exception.BusinessRuleException("Team race points exceed the supported integer range");
+        }
+    }
 
 	/**
 	 * Checks if a driver belongs to the given team for a specific race.
@@ -208,6 +257,7 @@ public class ScoringService {
 		var seasonId = race.getMatchday().getSeason().getId();
 		return result.getDriver().getSeasonDrivers().stream()
 				.filter(sd -> sd.getSeason().getId().equals(seasonId))
-				.anyMatch(sd -> sd.getTeam().getId().equals(teamId));
+				.anyMatch(sd -> sd.getTeam().getId().equals(teamId)
+                        || sd.getTeam().getParentTeam() != null && sd.getTeam().getParentTeam().getId().equals(teamId));
 	}
 }

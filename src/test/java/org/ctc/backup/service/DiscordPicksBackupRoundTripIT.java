@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -35,6 +36,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @CtcDevSpringBootContext
+@TestPropertySource(properties = "spring.datasource.url=jdbc:h2:mem:ctc_private_picks_backup;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
 @Tag("integration")
 class DiscordPicksBackupRoundTripIT {
     static final ObjectMapper JSON = new ObjectMapper();

@@ -22,6 +22,7 @@ import static org.mockito.Mockito.*;
 class RaceServiceTest {
     @org.mockito.Mock private ScoreWriteLockService scoreLocks;
     @Mock private IncidentLifecycleGuard incidentGuard;
+    @Mock private RacePenaltyLifecycleGuard penaltyGuard;
 
     @Mock private RaceRepository raceRepository;
     @Mock private MatchRepository matchRepository;
@@ -306,6 +307,7 @@ class RaceServiceTest {
         when(driverRepository.findById(driverId)).thenReturn(Optional.of(driver));
         when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        when(scoringService.calculateRaceTotals(race, race.getHomeTeam().getId())).thenReturn(RacePenaltyTotals.calculate(0, 0, 0, 0));
         // when
         var message = service.saveResults(raceId, List.of(rd));
 
@@ -415,8 +417,7 @@ class RaceServiceTest {
         race.getResults().addAll(List.of(r1, r2));
 
         when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(scoringService.isDriverInTeam(eq(r1), any(), eq(homeTeam.getId()))).thenReturn(true);
-        when(scoringService.isDriverInTeam(eq(r2), any(), eq(homeTeam.getId()))).thenReturn(false);
+        when(scoringService.calculateRaceTotals(race, homeTeam.getId())).thenReturn(RacePenaltyTotals.calculate(20, 17, 0, 0));
         when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driver1.getId()))
                 .thenReturn(Optional.of(new RaceLineup(race, driver1, homeTeam)));
         when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driver2.getId()))
@@ -466,8 +467,7 @@ class RaceServiceTest {
         race.getResults().addAll(List.of(r1, r2));
 
         when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(scoringService.isDriverInTeam(eq(r1), any(), eq(homeTeam.getId()))).thenReturn(true);
-        when(scoringService.isDriverInTeam(eq(r2), any(), eq(homeTeam.getId()))).thenReturn(false);
+        when(scoringService.calculateRaceTotals(race, homeTeam.getId())).thenReturn(RacePenaltyTotals.calculate(20, 17, 0, 0));
         when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), guestDriver.getId()))
                 .thenReturn(Optional.of(new RaceLineup(race, guestDriver, homeTeam, true)));
         when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), regularDriver.getId()))

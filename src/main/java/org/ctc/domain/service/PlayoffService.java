@@ -46,6 +46,7 @@ public class PlayoffService {
 	private final SeasonPhaseService seasonPhaseService;
 	private final RaceLineupRepository raceLineupRepository;
     private final PlayoffCarSelectionService carSelections;
+    private final RacePenaltyLifecycleGuard penaltyGuard;
 
 	static final int MAX_REASON_LENGTH = 500;
 	private static final Pattern CONTROL_CHARACTERS = Pattern.compile("\\p{Cntrl}|[\\u2028\\u2029]");
@@ -282,7 +283,9 @@ public class PlayoffService {
 	public void declareWalkover(UUID matchupId, UUID forfeitingTeamId, String reason) {
 		PlayoffMatchup matchup = findMatchup(matchupId);
 		requireUndecided(matchup);
-		String rejection = walkoverRejection(matchup, raceRepository.findByPlayoffMatchupId(matchupId));
+        var legs = raceRepository.findByPlayoffMatchupId(matchupId);
+        penaltyGuard.requireNoHistory(legs);
+        String rejection = walkoverRejection(matchup, legs);
 		if (rejection != null) {
 			throw new IllegalStateException(rejection);
 		}
@@ -317,7 +320,10 @@ public class PlayoffService {
 		if (!matchup.isReady()) {
 			return "A walkover needs both teams in the matchup";
 		}
-		return allLegsUnscored(legs) ? null : "A walkover needs a matchup without results";
+		if (legs.stream().anyMatch(leg -> !leg.getPenaltyRevisions().isEmpty())) {
+            return "A walkover cannot discard permanent team penalty history";
+        }
+        return allLegsUnscored(legs) ? null : "A walkover needs a matchup without results";
 	}
 
 	private PlayoffMatchup findMatchup(UUID matchupId) {

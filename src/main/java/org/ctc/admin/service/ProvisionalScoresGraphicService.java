@@ -143,11 +143,12 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 		int homeOverallPtsRace = homeRows.stream().mapToInt(ProvisionalRow::ptsRace).sum();
 		int homeOverallPtsQuali = homeRows.stream().mapToInt(ProvisionalRow::ptsQuali).sum();
 		int homeOverallPtsFl = homeRows.stream().mapToInt(ProvisionalRow::ptsFl).sum();
-		int homeOverallTotal = homeRows.stream().mapToInt(ProvisionalRow::total).sum();
 		int awayOverallPtsRace = awayRows.stream().mapToInt(ProvisionalRow::ptsRace).sum();
 		int awayOverallPtsQuali = awayRows.stream().mapToInt(ProvisionalRow::ptsQuali).sum();
 		int awayOverallPtsFl = awayRows.stream().mapToInt(ProvisionalRow::ptsFl).sum();
-		int awayOverallTotal = awayRows.stream().mapToInt(ProvisionalRow::total).sum();
+        var penaltyTotals = scoringService.calculateRaceTotals(race, homeTeam.getId());
+        int homeOverallTotal = penaltyTotals.home().official();
+        int awayOverallTotal = penaltyTotals.away().official();
 
 		Context ctx = new Context();
 		ctx.setVariable("seasonYear", String.valueOf(season.getYear()));
@@ -166,6 +167,7 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 		ctx.setVariable("homeOverallPtsQuali", homeOverallPtsQuali);
 		ctx.setVariable("homeOverallPtsFl", homeOverallPtsFl);
 		ctx.setVariable("homeOverallTotal", homeOverallTotal);
+        ctx.setVariable("penaltyTotals", penaltyTotals);
 		ctx.setVariable("awayOverallPtsRace", awayOverallPtsRace);
 		ctx.setVariable("awayOverallPtsQuali", awayOverallPtsQuali);
 		ctx.setVariable("awayOverallPtsFl", awayOverallPtsFl);

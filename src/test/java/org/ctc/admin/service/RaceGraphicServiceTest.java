@@ -11,6 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
@@ -39,6 +40,24 @@ class RaceGraphicServiceTest {
 	@InjectMocks
 	private RaceGraphicService service;
 
+
+    @Test
+    void givenExistingResultGraphic_whenRegenerating_thenKeepAttachmentIdentityAndAvoidDuplicateLinks() throws Exception {
+        // given
+        var home = new Team("Test home", "T-HOM"); var away = new Team("Test away", "T-AWY");
+        var day = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("Test season"), "Test round", 1);
+        var race = new Race(); race.setId(UUID.randomUUID()); race.setMatchday(day); race.setMatch(new Match(day, home, away));
+        String url = "/uploads/races/" + race.getId() + "/results.png";
+        var original = new RaceAttachment(race, AttachmentType.FILE, "Previous results", url); original.setId(UUID.randomUUID());
+        race.getAttachments().add(original);
+        when(raceRepository.findById(race.getId())).thenReturn(java.util.Optional.of(race));
+        when(resultsGraphicService.generateResults(race)).thenReturn(url);
+        // when
+        service.generateResults(race.getId());
+        // then
+        verify(raceAttachmentRepository).save(original);
+        assertThat(race.getAttachments()).containsExactly(original);
+    }
 
 	@Test
 	void givenRace_whenGenerateResults_thenCreatesAttachment() throws Exception {

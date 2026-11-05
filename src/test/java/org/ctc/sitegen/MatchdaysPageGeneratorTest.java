@@ -328,7 +328,8 @@ class MatchdaysPageGeneratorTest {
         org.mockito.Mockito.when(races.findById(race.getId())).thenReturn(java.util.Optional.of(race));
         var generator = new MatchdaysPageGenerator(writer, slugger, days, races, lineups, null, null,
                 new org.ctc.domain.service.PickDisclosureService(races,
-                        org.mockito.Mockito.mock(org.ctc.domain.repository.PickPublicationSnapshotRepository.class)));
+                        org.mockito.Mockito.mock(org.ctc.domain.repository.PickPublicationSnapshotRepository.class)),
+                org.mockito.Mockito.mock(org.ctc.domain.service.ScoringService.class));
         var generation = new org.ctc.sitegen.model.GenerationContext(tempDir, season, "test", "Test display", false,
                 null, new org.ctc.sitegen.model.SiteSlugs(java.util.Map.of(), java.util.Map.of(), List.of()));
         // when
@@ -374,7 +375,8 @@ class MatchdaysPageGeneratorTest {
         org.mockito.Mockito.when(races.findById(race.getId())).thenReturn(java.util.Optional.of(race));
         var generator = new MatchdaysPageGenerator(writer, slugger, days, races, lineups, null, null,
                 new org.ctc.domain.service.PickDisclosureService(races,
-                        org.mockito.Mockito.mock(org.ctc.domain.repository.PickPublicationSnapshotRepository.class)));
+                        org.mockito.Mockito.mock(org.ctc.domain.repository.PickPublicationSnapshotRepository.class)),
+                org.mockito.Mockito.mock(org.ctc.domain.service.ScoringService.class));
         var generation = new org.ctc.sitegen.model.GenerationContext(tempDir, season, "test-private", "Test private", false,
                 null, new org.ctc.sitegen.model.SiteSlugs(java.util.Map.of(), java.util.Map.of(), List.of()));
         // when
@@ -396,7 +398,7 @@ class MatchdaysPageGeneratorTest {
         // given
         String label = "Gr.3 MR + Gr.3 RR <img src=x onerror='window.injected=1'>";
         var race = new org.ctc.sitegen.model.RaceView("Test home", "Test away", "Test track", "Test Honda MR", 0, 0,
-                false, false, false, List.of(), category ? label : null);
+                false, false, false, List.of(), category ? label : null, org.ctc.domain.model.RacePenaltyTotals.calculate(0, 0, 0, 0));
         var context = new Context();
         context.setVariable("race", race);
         // when

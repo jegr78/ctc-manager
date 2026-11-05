@@ -103,6 +103,7 @@ public class DataAuditService {
 		Legs legs = new Legs(races, raceLineupRepository.findAllForBackup());
 
 		auditResultPoints(races, findings.get(Category.RESULT_POINTS));
+        auditTeamPenalties(races, findings.get(Category.TEAM_PENALTIES));
 		auditMatchAggregates(matches, legs, findings.get(STALE_AGGREGATE));
 		auditPlayoffAggregates(matchups, legs, findings.get(STALE_AGGREGATE));
 		auditPairings(matches, findings.get(PAIRING));
@@ -240,11 +241,30 @@ public class DataAuditService {
 		}
 	}
 
+    private static void auditTeamPenalties(List<Race> races, List<DataAuditFinding> findings) {
+        for (var race : races) {
+            var problems = new ArrayList<>(org.ctc.domain.model.RacePenaltyHistory.problems(race));
+            if (!race.getPenaltyRevisions().isEmpty() && (race.isBye()
+                    || race.getMatch() != null && race.getMatch().getWalkoverTeam() != null
+                    || race.getPlayoffMatchup() != null && (race.getPlayoffMatchup().isBye() || race.getPlayoffMatchup().getWalkoverTeam() != null))) {
+                problems.add("Penalty history belongs to a bye or walkover");
+            }
+            if (!problems.isEmpty()) findings.add(new DataAuditFinding(Category.TEAM_PENALTIES, AMBIGUOUS,
+                    "Race " + race.getId(), String.join("; ", problems) + "; aggregate comparison skipped for this race",
+                    "Review the original correction evidence and recorded participants. Do not rewrite or discard history."));
+        }
+    }
+
+    private static boolean validPenaltyHistory(List<Race> races) {
+        return races.stream().allMatch(race -> org.ctc.domain.model.RacePenaltyHistory.problems(race).isEmpty());
+    }
+
 	private void auditMatchAggregates(List<Match> matches, Legs legs, List<DataAuditFinding> out) {
 		for (Match match : matches) {
 			if (match.isBye() || match.getWalkoverTeam() != null || match.getHomeTeam() == null) {
 				continue;
 			}
+			if (!validPenaltyHistory(legs.of(match))) continue;
 			int[] totals = scoringService.legTotals(legs.of(match), match.getHomeTeam().getId(), legs.lineups());
 			auditAggregate(describe(match), totals, match.getHomeScore(), match.getAwayScore(), false, out);
 		}
@@ -255,6 +275,7 @@ public class DataAuditService {
 			if (matchup.isBye() || matchup.getWalkoverTeam() != null || matchup.getTeam1() == null) {
 				continue;
 			}
+			if (!validPenaltyHistory(legs.of(matchup))) continue;
 			int[] totals = scoringService.legTotals(legs.of(matchup), matchup.getTeam1().getId(), legs.lineups());
 			auditAggregate(describe(matchup), totals, matchup.getHomeScore(), matchup.getAwayScore(),
 					matchup.getWinner() != null, out);
@@ -291,6 +312,14 @@ public class DataAuditService {
 	private void auditPairings(List<Match> matches, List<DataAuditFinding> out) {
 		Map<String, List<Match>> byPairing = new LinkedHashMap<>();
 		for (Match match : matches) {
+            if (!org.ctc.domain.model.MatchWalkoverRules.valid(
+                    match.getWalkoverTeam() == null ? null : match.getWalkoverTeam().getId(),
+                    match.getHomeTeam() == null ? null : match.getHomeTeam().getId(),
+                    match.getAwayTeam() == null ? null : match.getAwayTeam().getId(), match.isBye())) {
+                out.add(new DataAuditFinding(PAIRING, AMBIGUOUS, describe(match),
+                        "The match walkover is a bye or does not identify one of its direct participants",
+                        "Review the original forfeiture decision and correct the marker explicitly. Do not infer a team."));
+            }
 			if (match.getHomeTeam() == null || match.getAwayTeam() == null) {
 				continue;
 			}

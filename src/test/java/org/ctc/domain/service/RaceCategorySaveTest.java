@@ -20,6 +20,7 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class RaceCategorySaveTest {
     @Mock private IncidentLifecycleGuard incidentGuard;
+    @Mock private RacePenaltyLifecycleGuard penaltyGuard;
     @Mock RaceRepository raceRepository;
     @Mock MatchRepository matchRepository;
     @Mock MatchdayRepository matchdayRepository;

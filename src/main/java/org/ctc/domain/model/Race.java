@@ -16,7 +16,7 @@ import lombok.*;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = {"matchday", "match", "track", "car", "settings", "results", "playoffMatchup", "attachments", "homeTeamOverride", "awayTeamOverride"})
+@ToString(exclude = {"matchday", "match", "track", "car", "settings", "results", "playoffMatchup", "attachments", "penaltyRevisions", "homeTeamOverride", "awayTeamOverride"})
 public class Race extends BaseEntity {
 
     @Column(nullable = false)
@@ -72,6 +72,10 @@ public class Race extends BaseEntity {
 	@OneToMany(mappedBy = "race", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("position ASC")
 	private List<RaceResult> results = new ArrayList<>();
+
+    @OneToMany(mappedBy = "race", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("revisionNumber ASC")
+    private List<RacePenaltyRevision> penaltyRevisions = new ArrayList<>();
 
 	@OneToMany(mappedBy = "race", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("createdAt DESC")

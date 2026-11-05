@@ -65,6 +65,7 @@
                             <div class="swiss-team" th:text="${match.homeTeam.shortName}"></div>
                             <div class="swiss-team" th:text="${match.awayTeam.shortName}"></div>
                         </th:block>
+                        <p class="text-dim" th:if="${pairing.resultEntryRequired and match.homeScore == null}">Enter each leg's driver results to retain its team penalty points.</p>
                         <div th:if="${pairing.dateTime != null}" class="text-dim swiss-pairing-date">
                             <span th:data-london-time="${pairing.dateTime.toString().substring(0, 16)}"
                                   th:text="${#temporals.format(pairing.dateTime, 'dd.MM.yyyy HH:mm')}"></span>

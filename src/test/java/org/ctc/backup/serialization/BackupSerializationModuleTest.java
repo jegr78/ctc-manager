@@ -7,10 +7,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Verifies {@link BackupSerializationModule} registers all 24 entity-to-MixIn mappings on a
- * freshly constructed {@link ObjectMapper}. Pure unit test — does NOT boot a Spring context.
- */
 class BackupSerializationModuleTest {
 
     private ObjectMapper mapper;
@@ -48,6 +44,20 @@ class BackupSerializationModuleTest {
         assertThat(mapper.findMixInClassFor(RaceResult.class)).isEqualTo(RaceResultMixIn.class);
         assertThat(mapper.findMixInClassFor(RaceSettings.class)).isEqualTo(RaceSettingsMixIn.class);
         assertThat(mapper.findMixInClassFor(RaceAttachment.class)).isEqualTo(RaceAttachmentMixIn.class);
+    }
+
+    @Test
+    void givenMatchWithForfeitingTeam_whenExporting_thenWriteOnlyItsUuid() {
+        // given
+        var home = new Team("Test walkover home", "T-WOH"); home.setId(java.util.UUID.randomUUID());
+        var away = new Team("Test walkover away", "T-WOA"); away.setId(java.util.UUID.randomUUID());
+        var day = new Matchday(); day.setId(java.util.UUID.randomUUID());
+        var match = new Match(day, home, away); match.setId(java.util.UUID.randomUUID()); match.setWalkoverTeam(home);
+        // when
+        var row = mapper.valueToTree(match);
+        // then
+        assertThat(row.path("walkoverTeam").isTextual()).isTrue();
+        assertThat(row.path("walkoverTeam").asText()).isEqualTo(home.getId().toString());
     }
 
     @Test

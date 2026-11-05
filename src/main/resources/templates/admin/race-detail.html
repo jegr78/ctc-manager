@@ -13,6 +13,7 @@
         </div>
         <div class="actions">
             <a th:href="@{/admin/races/{id}/results(id=${race.id})}" class="btn btn-primary">Results</a>
+            <a th:if="${race.homeTeam != null and race.awayTeam != null}" th:href="@{/admin/races/{id}/penalties(id=${race.id})}" class="btn btn-secondary">Team penalty points</a>
             <a th:href="@{/admin/races/{id}/lineup(id=${race.id})}" class="btn btn-secondary">Lineup</a>
             <a th:href="@{/admin/races/{id}/edit(id=${race.id})}" class="btn btn-secondary">Edit</a>
             <a th:if="${race.picksManaged}" th:href="@{/admin/matchday-picks/{id}(id=${race.id})}" class="btn btn-secondary">Review team picks</a>
@@ -84,6 +85,11 @@
         </div>
 
     </div>
+    <div class="card" th:if="${penaltyTotals != null and penaltyTotals.hasPenalties()}">
+        <h2>Team score adjustments</h2>
+        <p th:text="${race.homeTeam.shortName + ': ' + penaltyTotals.home.summary()}"></p>
+        <p th:text="${race.awayTeam.shortName + ': ' + penaltyTotals.away.summary()}"></p>
+    </div>
     <div class="card" id="race-results">
         <div class="detail-section">
             <h2 th:text="'Results (' + ${race.results.size()} + ')'"></h2>
@@ -133,7 +139,7 @@
 
         <!-- Results Button -->
         <form th:if="${canGenerateResults}" th:action="@{/admin/races/{id}/generate-results(id=${race.id})}" method="post">
-            <button type="submit" class="btn btn-secondary">Generate Results Graphic</button>
+            <button type="submit" class="btn btn-secondary" th:text="${resultsExist ? 'Regenerate Results Graphic' : 'Generate Results Graphic'}">Generate Results Graphic</button>
         </form>
         <span th:if="${!canGenerateResults && !resultsExist}" class="btn-with-hint">
             <button class="btn btn-secondary" disabled>Generate Results Graphic</button>
@@ -145,7 +151,7 @@
 
         <!-- Provisional Button -->
         <form th:if="${canGenerateProvisional}" th:action="@{/admin/races/{id}/generate-provisional(id=${race.id})}" method="post">
-            <button type="submit" class="btn btn-secondary">Generate Provisional Graphic</button>
+            <button type="submit" class="btn btn-secondary" th:text="${provisionalExists ? 'Regenerate Provisional Graphic' : 'Generate Provisional Graphic'}">Generate Provisional Graphic</button>
         </form>
         <span th:if="${!canGenerateProvisional && !provisionalExists}" class="btn-with-hint">
             <button class="btn btn-secondary" disabled>Generate Provisional Graphic</button>

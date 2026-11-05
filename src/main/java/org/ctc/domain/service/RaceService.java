@@ -41,6 +41,7 @@ public class RaceService {
     private final RaceSettingsApplicationService settingsApplication;
     private final PickLifecycleGuard pickGuard;
     private final IncidentLifecycleGuard incidentGuard;
+    private final RacePenaltyLifecycleGuard penaltyGuard;
     private final PickReservationService reservations;
 
 	public RaceListData getRaceListData(UUID matchdayId, UUID seasonId) {
@@ -60,21 +61,10 @@ public class RaceService {
 
 		var raceScores = new HashMap<UUID, int[]>();
 		for (var race : races) {
-			// Prefer scores from RaceResults (individual race scores)
-			if (!race.getResults().isEmpty()) {
-				int homeScore = 0;
-				int awayScore = 0;
-
-				UUID homeTeamId = race.getHomeTeam() != null ? race.getHomeTeam().getId() : null;
-				for (var result : race.getResults()) {
-					if (homeTeamId != null && scoringService.isDriverInTeam(result, race.getId(), homeTeamId)) {
-						homeScore += result.getPointsTotal();
-					} else {
-						awayScore += result.getPointsTotal();
-					}
-				}
-				raceScores.put(race.getId(), new int[]{homeScore, awayScore});
-			} else if (race.getHomeScore() != null && race.getAwayScore() != null) {
+            if (!race.getResults().isEmpty()) {
+                var totals = scoringService.calculateRaceTotals(race, race.getHomeTeam() == null ? null : race.getHomeTeam().getId());
+                raceScores.put(race.getId(), new int[]{totals.home().official(), totals.away().official()});
+			} else if (race.getHomeScore() != null && race.getAwayScore() != null && !hasRecordedLegs(race)) {
 				// Fallback to match scores if no RaceResults exist
 				raceScores.put(race.getId(), new int[]{race.getHomeScore(), race.getAwayScore()});
 			}
@@ -84,21 +74,26 @@ public class RaceService {
                 RaceCarPresentation.forRaces(races));
 	}
 
+    private static boolean hasRecordedLegs(Race race) {
+        var legs = race.getMatch() != null ? race.getMatch().getRaces()
+                : race.getPlayoffMatchup() != null ? race.getPlayoffMatchup().getRaces() : List.<Race>of();
+        return legs.stream().anyMatch(leg -> !leg.getResults().isEmpty());
+    }
+
 	public RaceDetailData getRaceDetailData(UUID raceId) {
 		var race = raceRepository.findById(raceId).orElseThrow();
 
 		int homeTotal = 0;
 		int awayTotal = 0;
+        RacePenaltyTotals penaltyTotals = RacePenaltyTotals.calculate(0, 0, 0, 0);
 		Map<UUID, String> driverTeamMap = null;
 		Map<UUID, Boolean> guestDriverMap = null;
 
 		if (!race.getResults().isEmpty() && race.getHomeTeam() != null) {
-			homeTotal = race.getResults().stream()
-					.filter(r -> scoringService.isDriverInTeam(r, race.getId(), race.getHomeTeam().getId()))
-					.mapToInt(RaceResult::getPointsTotal).sum();
-			awayTotal = race.getResults().stream()
-					.filter(r -> !scoringService.isDriverInTeam(r, race.getId(), race.getHomeTeam().getId()))
-					.mapToInt(RaceResult::getPointsTotal).sum();
+            var totals = scoringService.calculateRaceTotals(race, race.getHomeTeam().getId());
+            penaltyTotals = totals;
+            homeTotal = totals.home().official();
+            awayTotal = totals.away().official();
 
 			var sid = race.getMatchday().getSeason().getId();
 			driverTeamMap = new HashMap<>();
@@ -158,15 +153,15 @@ public class RaceService {
 		return new RaceDetailData(race, homeTotal, awayTotal, driverTeamMap, guestDriverMap,
 				hasLineup && hasHomeCard && hasAwayCard && !lineupExists,
 				!hasLineup, !hasHomeCard || !hasAwayCard, lineupExists,
-				hasResults && hasHomeCard && hasAwayCard && !resultsGraphicExists,
+				hasResults && hasHomeCard && hasAwayCard,
 				!hasResults, resultsGraphicExists,
-				hasResults && hasHomeCard && hasAwayCard && !provisionalGraphicExists, provisionalGraphicExists,
+				hasResults && hasHomeCard && hasAwayCard, provisionalGraphicExists,
 				hasAllSettings && hasHomeCard && hasAwayCard && !settingsGraphicExists,
 				!hasAllSettings, settingsGraphicExists,
 				hasMatch && !overlayExists, overlayExists,
 				calendarAvailable, hasCalendarEvent, canCreateCalendarEvent,
 				lobbySettingsReady && lobbyTeamsPresent && !lobbySettingsGraphicExists,
-				!lobbySettingsReady, lobbySettingsGraphicExists, RaceCarPresentation.from(race));
+				!lobbySettingsReady, lobbySettingsGraphicExists, RaceCarPresentation.from(race), penaltyTotals);
 	}
 
     @Transactional
@@ -257,6 +252,7 @@ public class RaceService {
             for (var plan : planned) {
                 if (rejection == null) rejection = pickGuard.identityRejection(plan.race(), matchdayId, plan.home(), plan.away());
                 if (rejection == null) rejection = incidentGuard.identityRejection(plan.race(), matchdayId, plan.home(), plan.away());
+                if (rejection == null) rejection = penaltyGuard.identityRejection(plan.race(), matchdayId, plan.home(), plan.away());
             }
             var submittedSettings = new RaceSettingsValues(numberOfLaps, tyreWearMultiplier, fuelConsumptionMultiplier,
                     refuelingSpeed, initialFuel, numberOfRequiredPitStops, timeProgressionMode, timeProgressionMultiplier,
@@ -322,8 +318,11 @@ public class RaceService {
 			scoringService.aggregateMatchScores(race);
 		}
 
-		var homeScore = race.getHomeScore() != null ? race.getHomeScore() : 0;
-		var awayScore = race.getAwayScore() != null ? race.getAwayScore() : 0;
+        int homeScore = 0, awayScore = 0;
+        if (!race.getResults().isEmpty()) {
+            var totals = scoringService.calculateRaceTotals(race, race.getHomeTeam().getId());
+            homeScore = totals.home().official(); awayScore = totals.away().official();
+        }
 
 		log.info("Saved results for {} vs {}: {} : {}",
 				race.getHomeTeam().getShortName(), race.getAwayTeam().getShortName(), homeScore, awayScore);
@@ -338,6 +337,10 @@ public class RaceService {
 		if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
 			throw new BusinessRuleException("A walkover match has no score");
 		}
+        var legs = race.getMatch() == null ? List.of(race) : raceRepository.findByMatchId(race.getMatch().getId());
+        if (legs.stream().anyMatch(penaltyGuard::protects)) {
+            throw new BusinessRuleException("Quick scores cannot replace a match with team penalty history; enter or correct each leg's driver results");
+        }
 		if (race.getMatch() != null) {
 			race.getMatch().setHomeScore(race.hasTeamOverrides() ? awayScore : homeScore);
 			race.getMatch().setAwayScore(race.hasTeamOverrides() ? homeScore : awayScore);
@@ -356,6 +359,7 @@ public class RaceService {
         race = raceRepository.findByIdForSelectionUpdate(raceId).orElseThrow();
         pickGuard.requireNoHistory(List.of(race));
         incidentGuard.requireNoHistory(List.of(race));
+        penaltyGuard.requireNoHistory(List.of(race));
 		PlayoffDecisionGuard.requireOpen(race);
 		var matchdayId = race.getMatchday().getId();
 		var match = race.getMatch();
@@ -581,7 +585,7 @@ public class RaceService {
 	                             boolean calendarAvailable, boolean hasCalendarEvent,
 	                             boolean canCreateCalendarEvent,
 	                             boolean canGenerateLobbySettings, boolean lobbySettingsMissing,
-	                             boolean lobbySettingsExist, RaceCarPresentation carPresentation) {
+	                             boolean lobbySettingsExist, RaceCarPresentation carPresentation, RacePenaltyTotals penaltyTotals) {
 	}
 
 	public record ResultsFormData(RaceData data, Race race, RaceScoring raceScoring, RaceCarPresentation carPresentation) {
