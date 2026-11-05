@@ -107,6 +107,14 @@
                 <div class="setting-value" th:text="${timeOfDay + ' / ' + timeProgressionDisplay}"></div>
             </div>
             <div class="setting-row">
+                <div class="setting-label">Start Type / Race Slipstream</div>
+                <div class="setting-value" th:text="${startType + ' / ' + slipstream}"></div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">Flag Rules / Qualifying</div>
+                <div class="setting-value" th:text="${flagRules + ' / ' + qualifyingMinutes + ' min'}"></div>
+            </div>
+            <div class="setting-row">
                 <div class="setting-label">Weather</div>
                 <div class="setting-value" th:text="${weather}"></div>
             </div>

@@ -7,11 +7,16 @@ import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.UUID;
 
-public record PickSetupSnapshot(UUID trackId, UUID carId, UUID entryId, RaceSettingsValues settings) {
+public record PickSetupSnapshot(UUID trackId, UUID carId, UUID entryId, RaceSettingsValues settings,
+                                LobbyRulesProfile lobbyRulesProfile) {
+    public PickSetupSnapshot(UUID trackId, UUID carId, UUID entryId, RaceSettingsValues settings) {
+        this(trackId, carId, entryId, settings, LobbyRulesProfile.LEGACY);
+    }
     public static PickSetupSnapshot from(Race race) {
         return new PickSetupSnapshot(race.getTrack() == null ? null : race.getTrack().getId(),
                 race.getCar() == null ? null : race.getCar().getId(),
-                race.getCarPoolEntry() == null ? null : race.getCarPoolEntry().getId(), RaceSettingsValues.from(race.getSettings()));
+                race.getCarPoolEntry() == null ? null : race.getCarPoolEntry().getId(), RaceSettingsValues.from(race.getSettings()),
+                LobbyRulesProfile.from(race));
     }
 
     public boolean configured() {
@@ -19,7 +24,8 @@ public record PickSetupSnapshot(UUID trackId, UUID carId, UUID entryId, RaceSett
     }
 
     public boolean matches(PickPayload payload) {
-        return java.util.Objects.equals(trackId, payload.trackId()) && java.util.Objects.equals(carId, payload.carId())
+        return lobbyRulesProfile == payload.lobbyRulesProfile()
+                && java.util.Objects.equals(trackId, payload.trackId()) && java.util.Objects.equals(carId, payload.carId())
                 && java.util.Objects.equals(entryId, payload.carPoolEntryId()) && settings.equals(RaceSettingsValues.from(payload));
     }
 
@@ -28,15 +34,22 @@ public record PickSetupSnapshot(UUID trackId, UUID carId, UUID entryId, RaceSett
                 settings.refuelingSpeed(), settings.initialFuel(), settings.requiredPitStops(), settings.timeProgressionMode(),
                 settings.timeProgressionMultiplier(), settings.weather(), settings.timeOfDay(), settings.availableTyres(), settings.mandatoryTyres()};
         var canonical = new StringBuilder();
-        Arrays.stream(fields).forEach(field -> {
-            if (field == null) canonical.append("-1:");
-            else { String value = field.toString(); canonical.append(value.length()).append(':').append(value); }
-        });
+        if (lobbyRulesProfile != LobbyRulesProfile.LEGACY || settings.startType() != RaceStartType.GRID_FALSE_START
+                || settings.slipstream() != RaceSlipstream.REAL) {
+            append(canonical, "ctc-lobby-rules-v1"); append(canonical, lobbyRulesProfile);
+            append(canonical, settings.startType()); append(canonical, settings.slipstream());
+        }
+        Arrays.stream(fields).forEach(field -> append(canonical, field));
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(canonical.toString().getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException unavailable) {
             throw new IllegalStateException("Required SHA-256 support is unavailable", unavailable);
         }
+    }
+
+    private static void append(StringBuilder canonical, Object field) {
+        if (field == null) canonical.append("-1:");
+        else { String value = field.toString(); canonical.append(value.length()).append(':').append(value); }
     }
 
     @Override public String toString() { return "PickSetupSnapshot[internal]"; }

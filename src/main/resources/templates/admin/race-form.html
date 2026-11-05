@@ -91,6 +91,24 @@
             <p class="text-dim form-hint--sm" data-used-selection-status role="status"></p>
             </fieldset>
             <fieldset id="race-settings"><legend>Race settings</legend>
+            <input type="hidden" th:field="*{lobbyRulesProfile}">
+            <p><span th:text="${loadedRulesLabel}"></span> · Flag Rules <span th:text="${loadedFlagRules}"></span>. Use Refresh choices to load changed season options before saving.</p>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="startType">Start Type</label>
+                    <select id="startType" th:field="*{startType}" required>
+                        <option th:each="start : ${startTypes}" th:value="${start}" th:text="${start.label}"></option>
+                    </select>
+                    <p class="field-error" th:if="${#fields.hasErrors('startType')}">Choose a supported start type.</p>
+                </div>
+                <div class="form-group">
+                    <label for="slipstream">Race Slipstream</label>
+                    <select id="slipstream" th:field="*{slipstream}" required>
+                        <option th:each="slip : ${slipstreams}" th:value="${slip}" th:text="${slip.label}"></option>
+                    </select>
+                    <p class="field-error" th:if="${#fields.hasErrors('slipstream')}">Choose a supported race slipstream.</p>
+                </div>
+            </div>
             <div class="form-row">
                 <div class="form-group">
                     <label for="numberOfLaps">Number of Laps</label>

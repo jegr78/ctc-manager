@@ -135,7 +135,7 @@ public class BackupImportService {
      * {@code SUPPORTED_SCHEMA_VERSIONS.toString()}, where {@code Set.of(1, 2)} produces
      * a hash-randomised order that breaks message-matching assertions.
      */
-    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13));
+    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14));
 
     /** Tables an older schema version never exported; they may be absent when the manifest announces no rows. */
     static final Set<String> INCIDENT_TABLES = Set.of("incident_match_contexts", "incident_report_windows", "incident_reports", "incident_report_revisions", "incident_report_events", "incident_deliveries", "incident_thread_publications", "incident_rulings", "incident_ruling_revisions", "incident_ruling_publications");
@@ -594,7 +594,7 @@ public class BackupImportService {
             Files.createDirectories(uploadsNewDir);
             backupArchive.extractUploadsTo(staged, uploadsNewDir);
 
-            restoreAll(staged, restoredCounts);
+            restoreAll(staged, restoredCounts, schemaVersion);
 
             // Step 4: publish the success event as the LAST statement inside the try block.
             // Spring's TransactionalEventListener(phase=AFTER_COMMIT) buffers delivery until
@@ -714,6 +714,10 @@ public class BackupImportService {
      * @throws IOException on ZIP / JSON parse failure (caller catches and rolls back)
      */
     void restoreAll(Path staged, Map<String, Long> restoredCounts) throws IOException {
+        restoreAll(staged, restoredCounts, BackupSchema.SCHEMA_VERSION);
+    }
+
+    private void restoreAll(Path staged, Map<String, Long> restoredCounts, int schemaVersion) throws IOException {
         // Open the ZIP exactly once (random-access ZipFile) instead of re-opening a
         // ZipInputStream per entity (re-scanning from the start every time). This
         // eliminates the on-Windows race where the listener's cleanup can hit the same
@@ -728,7 +732,7 @@ public class BackupImportService {
                 if (restorer == null) {
                     throw new IllegalStateException("No EntityRestorer wired for tableName=" + table);
                 }
-                long restored = restoreOneTable(zf, ref, restorer, inflatedBytes);
+                long restored = restoreOneTable(zf, ref, restorer, inflatedBytes, schemaVersion);
                 restoredCounts.put(table, restored);
                 if (inflatedBytes[0] > BackupImportLimits.MAX_TOTAL_BYTES) {
                     throw new BackupArchiveException(Reason.TOTAL_TOO_LARGE,
@@ -750,7 +754,7 @@ public class BackupImportService {
      * the random-access {@link ZipFile#getEntry(String)} lookup, then stream the JSON
      * through {@link ZipFile#getInputStream(ZipEntry)} — no per-entity rescan.
      */
-    private long restoreOneTable(ZipFile zf, EntityRef ref, EntityRestorer restorer, long[] inflatedBytes)
+    private long restoreOneTable(ZipFile zf, EntityRef ref, EntityRestorer restorer, long[] inflatedBytes, int schemaVersion)
             throws IOException {
         String entryPath = ref.fileName();
         // CodeQL FP: java/path-injection — assertEntrySafe + PathTraversalGuard.assertWithin defense not traceable; see docs/security/sast-acceptance.md
@@ -763,7 +767,7 @@ public class BackupImportService {
         List<JsonNode> batch = new ArrayList<>(RESTORE_BATCH_SIZE);
         long[] rowIndex = {0L};
         long totalRows = readRows(zf, entry, inflatedBytes, row -> {
-            batch.add(row);
+            batch.add(org.ctc.backup.schema.LobbyRulesArchive.normalize(schemaVersion, ref.tableName(), row));
             rowIndex[0]++;
             if (rowIndex[0] % FAIL_INJECT_INTERVAL == 0) {
                 failureInjector.maybeFailAt(ref.tableName(), (int) rowIndex[0]);
@@ -785,6 +789,7 @@ public class BackupImportService {
      */
     private void validateRestorableRows(Path staged, BackupManifest manifest) throws BackupArchiveException {
         var activeSeasonValidator = new org.ctc.backup.schema.ActiveSeasonBackupValidator();
+        var lobbyRulesValidator = new org.ctc.backup.schema.LobbyRulesBackupValidator();
         var walkoverValidator = new org.ctc.backup.schema.MatchWalkoverBackupValidator();
         var penaltyValidator = new org.ctc.backup.schema.RacePenaltyBackupValidator(manifest.schemaVersion());
         var poolValidator = new org.ctc.backup.schema.CarPoolBackupValidator(manifest.schemaVersion());
@@ -798,6 +803,8 @@ public class BackupImportService {
                 ZipEntry entry = zf.getEntry(ref.fileName());
                 if (entry != null) {
                     counts.put(ref.tableName(), readRows(zf, entry, inflatedBytes, row -> {
+                        row = org.ctc.backup.schema.LobbyRulesArchive.normalize(manifest.schemaVersion(), ref.tableName(), row);
+                        lobbyRulesValidator.accept(ref.tableName(), row);
                         activeSeasonValidator.accept(ref.tableName(), row);
                         walkoverValidator.accept(ref.tableName(), row);
                         penaltyValidator.accept(ref.tableName(), row);
@@ -811,6 +818,7 @@ public class BackupImportService {
             penaltyValidator.validate();
             poolValidator.validate();
             assertRowCountsMatchManifest(counts, manifest);
+            lobbyRulesValidator.validate();
             pickValidator.validate();
             incidentValidator.validate();
             if (pickValidator.hasConfidentialContent() && !pickCollection.isConfidentialityReady()) {

@@ -112,6 +112,12 @@ public class TemplatePreviewService {
         ctx.setVariable("timeOfDay", "14:00");
         ctx.setVariable("availableTyres", "SS, SM, SH, RH, IM, HW");
         ctx.setVariable("mandatoryTyres", "SH");
+        ctx.setVariable("lobbyRulesProfile", "CTC 2027");
+        ctx.setVariable("startType", "Rolling Start");
+        ctx.setVariable("slipstream", "Weak");
+        ctx.setVariable("flagRules", org.ctc.domain.model.LobbyRulesProfile.CTC_2027.getFlagRules());
+        ctx.setVariable("qualifyingMinutes", org.ctc.domain.model.LobbyRulesProfile.CTC_2027.getQualifyingMinutes());
+        ctx.setVariable("qualifierSlipstream", org.ctc.domain.model.LobbyRulesProfile.CTC_2027.getQualifierSlipstream());
         return ctx;
     }
 
@@ -131,6 +137,12 @@ public class TemplatePreviewService {
         v.put("timeOfDay", "Afternoon");
         v.put("timeSpeed", "3×");
         v.put("equalConditionsMode", "Off");
+        v.put("lobbyRulesProfile", "CTC 2027");
+        v.put("startType", "Rolling Start");
+        v.put("slipstream", "Weak");
+        v.put("flagRules", org.ctc.domain.model.LobbyRulesProfile.CTC_2027.getFlagRules());
+        v.put("qualifyingMinutes", org.ctc.domain.model.LobbyRulesProfile.CTC_2027.getQualifyingMinutes());
+        v.put("qualifierSlipstream", org.ctc.domain.model.LobbyRulesProfile.CTC_2027.getQualifierSlipstream());
         v.put("tyreWear", "4×");
         v.put("fuelRate", "3×");
         v.put("refuelSpeed", "3 Litre/sec");

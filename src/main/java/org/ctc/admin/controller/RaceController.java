@@ -1,6 +1,7 @@
 package org.ctc.admin.controller;
 
 import org.springframework.validation.BindingResult;
+import jakarta.validation.Valid;
 
 import static org.springframework.util.StringUtils.hasText;
 
@@ -194,6 +195,13 @@ public class RaceController {
         model.addAttribute("outOfPoolTrack", data.outOfPoolTrack());
         model.addAttribute("unavailableTrack", data.unavailableTrack());
         model.addAttribute("carSelection", data.carSelection());
+        var rulesForm = (RaceForm) model.asMap().get("raceForm");
+        if (Boolean.TRUE.equals(model.asMap().get("refreshLobbyRules"))) rulesForm.setLobbyRulesProfile(data.data().lobbyRulesProfile());
+        var profile = rulesForm.getLobbyRulesProfile();
+        model.addAttribute("startTypes", profile == null ? java.util.List.of() : profile.getStartTypes());
+        model.addAttribute("slipstreams", profile == null ? java.util.List.of() : profile.getSlipstreams());
+        model.addAttribute("loadedRulesLabel", profile == null ? "Reload season rules" : profile.getLabel());
+        model.addAttribute("loadedFlagRules", profile == null ? "Unknown" : profile.getFlagRules());
     }
 
 	@GetMapping("/{id}/results")
@@ -207,14 +215,15 @@ public class RaceController {
 	}
 
     @PostMapping("/save")
-    public String save(@ModelAttribute RaceForm form, BindingResult binding, RedirectAttributes redirectAttributes) {
+    public String save(@Valid @ModelAttribute RaceForm form, BindingResult binding, RedirectAttributes redirectAttributes) {
         if (binding.hasErrors()) return rejectedForm(form, binding, "Check the highlighted fields.", redirectAttributes);
         try {
             var result = raceService.saveRace(form.getId(), form.getMatchdayId(), form.getHomeTeamId(), form.getAwayTeamId(),
                     form.getTrackId(), form.getCarId(), form.getDateTime(), form.getNumberOfLaps(), form.getTyreWearMultiplier(),
                     form.getFuelConsumptionMultiplier(), form.getRefuelingSpeed(), form.getInitialFuel(), form.getNumberOfRequiredPitStops(),
                     form.getTimeProgressionMode(), form.getTimeProgressionMultiplier(), form.getWeather(),
-                    form.getTimeOfDay(), form.getAvailableTyres(), form.getMandatoryTyres(), form.getCarPoolEntryId());
+                    form.getTimeOfDay(), form.getAvailableTyres(), form.getMandatoryTyres(), form.getCarPoolEntryId(),
+                    form.getLobbyRulesProfile(), form.getStartType(), form.getSlipstream());
             if (!result.success()) return rejectedForm(form, binding, result.message(), redirectAttributes);
             redirectAttributes.addFlashAttribute("successMessage", result.message());
             return "redirect:/admin/races?matchdayId=" + result.matchdayId();
@@ -226,6 +235,7 @@ public class RaceController {
     @PostMapping("/refresh-choices")
     public String refreshChoices(@ModelAttribute RaceForm form, BindingResult binding, RedirectAttributes redirectAttributes) {
         preserveForm(form, binding, redirectAttributes);
+        if (!binding.hasErrors()) redirectAttributes.addFlashAttribute("refreshLobbyRules", true);
         if (binding.hasErrors()) redirectAttributes.addFlashAttribute("errorMessage", "Check the highlighted fields.");
         else redirectAttributes.addFlashAttribute("successMessage", "Choices refreshed. Save the race when ready.");
         return formRedirect(form);
@@ -430,6 +440,9 @@ public class RaceController {
 		form.setTimeOfDay(data.timeOfDay());
 		form.setAvailableTyres(data.availableTyres());
 		form.setMandatoryTyres(data.mandatoryTyres());
+        form.setLobbyRulesProfile(data.lobbyRulesProfile());
+        form.setStartType(data.startType());
+        form.setSlipstream(data.slipstream());
 		for (var rd : data.results()) {
 			var rf = new RaceResultForm();
 			rf.setDriverId(rd.driverId());

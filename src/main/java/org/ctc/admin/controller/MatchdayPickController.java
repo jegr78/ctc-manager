@@ -80,6 +80,9 @@ public class MatchdayPickController {
         var detail = service.detail(raceId); model.addAttribute("review", detail); model.addAttribute("selectedSeasonId", detail.row().seasonId());
         model.addAttribute("choices", service.correctionChoices(raceId, form));
         model.addAttribute("fuels", org.ctc.domain.model.PickInitialFuel.values()); model.addAttribute("tyres", org.ctc.domain.model.PickTyre.values());
+        var profile = form.getLobbyRulesProfile();
+        model.addAttribute("startTypes", profile == null ? java.util.List.of() : profile.getStartTypes());
+        model.addAttribute("slipstreams", profile == null ? java.util.List.of() : profile.getSlipstreams());
         return "admin/matchday-pick-correction";
     }
 }

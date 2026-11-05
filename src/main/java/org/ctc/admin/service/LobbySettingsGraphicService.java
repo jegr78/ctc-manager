@@ -58,6 +58,8 @@ public class LobbySettingsGraphicService extends AbstractGraphicService implemen
 
 		var settings = race.getSettings();
 		var season = race.getMatchday().getSeason();
+        var profile = season.getLobbyRulesProfile();
+        org.ctc.domain.service.LobbyRulesPolicy.requireCurrent(season, profile, settings.getStartType(), settings.getSlipstream());
 		Team home = race.getHomeTeam();
 		Team away = race.getAwayTeam();
 
@@ -67,6 +69,12 @@ public class LobbySettingsGraphicService extends AbstractGraphicService implemen
 		v.put("roomName", buildRoomName(season.getYear(), race.getMatchday().getLabel(), home, away));
 		v.put("track", race.getTrack().getName());
 		v.put("laps", settings.getNumberOfLaps());
+        v.put("lobbyRulesProfile", profile.getLabel());
+        v.put("startType", settings.getStartType().getLabel());
+        v.put("slipstream", settings.getSlipstream().getLabel());
+        v.put("flagRules", profile.getFlagRules());
+        v.put("qualifyingMinutes", profile.getQualifyingMinutes());
+        v.put("qualifierSlipstream", profile.getQualifierSlipstream());
 		v.put("weatherMethod", weather.weatherMethod());
 		v.put("weather", weather.presetWeather());
 		v.put("customWeather", weather.customWeather());

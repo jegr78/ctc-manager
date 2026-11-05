@@ -226,6 +226,8 @@ public class PickPublicationService {
             if (attempts.findByActiveRaceId(id).isPresent()) {
                 throw new BusinessRuleException("A prior publication is pending or uncertain; reconcile it before another publication");
             }
+            var values = RaceSettingsValues.from(race.getSettings());
+            LobbyRulesPolicy.requireCurrent(race.getMatchday().getSeason(), LobbyRulesProfile.from(race), values.startType(), values.slipstream());
             sources.put(id, authorization.authorize(race)); contents.put(id, PickPublicationContent.from(race)); selected.add(race);
         }
         var bundle = render.apply(List.copyOf(selected));

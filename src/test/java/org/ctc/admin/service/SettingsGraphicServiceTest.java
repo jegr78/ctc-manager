@@ -22,6 +22,19 @@ import static org.mockito.Mockito.*;
 
 class SettingsGraphicServiceTest {
 
+    @Test
+    void givenLegacyRaceWithForbiddenSlipstream_whenRendering_thenRejectBeforeProducingAGraphic() throws Exception {
+        // given
+        var race = createReadyRace(false); race.getSettings().setSlipstream(RaceSlipstream.WEAK);
+        service = spy(service);
+        when(standingsService.calculateStandings(any(), any())).thenReturn(List.of());
+        doAnswer(call -> { Files.writeString(call.getArgument(1), "Test graphic bytes"); return null; })
+                .when(service).renderScreenshot(anyString(), any(Path.class));
+        // when / then
+        assertThatThrownBy(() -> service.renderPublication(race)).isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class)
+                .hasMessageContaining("season rules");
+    }
+
 	@TempDir
 	Path tempDir;
 
@@ -102,6 +115,26 @@ class SettingsGraphicServiceTest {
         org.assertj.core.api.Assertions.assertThat(graphic).isNotNull();
         org.assertj.core.api.Assertions.assertThat(graphic.fields()).isEmpty();
         org.assertj.core.api.Assertions.assertThat(new String(graphic.png(), java.nio.charset.StandardCharsets.UTF_8)).contains("Test legacy custom output");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"LEGACY,GRID_FALSE_START,REAL,Off", "CTC_2027,ROLLING,WEAK,On"})
+    void givenVersionedRules_whenRenderingSettings_thenActuallyRenderEveryNewDisclosedChoice(
+            LobbyRulesProfile profile, RaceStartType start, RaceSlipstream slipstream, String flags) throws Exception {
+        // given
+        service = spy(service); var race = createReadyRace(false);
+        when(standingsService.calculateStandings(any(), any())).thenReturn(List.of());
+        race.getMatchday().getSeason().setLobbyRulesProfile(profile);
+        race.getSettings().setStartType(start); race.getSettings().setSlipstream(slipstream);
+        doAnswer(call -> { java.nio.file.Files.writeString(call.getArgument(1), call.getArgument(0)); return null; })
+                .when(service).renderScreenshot(anyString(), any(Path.class));
+        // when
+        var graphic = service.renderPublication(race);
+        var document = org.jsoup.Jsoup.parse(new String(graphic.png(), java.nio.charset.StandardCharsets.UTF_8));
+        // then
+        org.assertj.core.api.Assertions.assertThat(document.select(".setting-value").eachText())
+                .contains(start.getLabel() + " / " + slipstream.getLabel(), flags + " / 10 min");
+        org.assertj.core.api.Assertions.assertThat(graphic.fields()).contains(PickDisclosureField.START_TYPE, PickDisclosureField.SLIPSTREAM);
     }
 
 	@Test

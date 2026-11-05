@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class PickPublicationAttemptRestorer implements EntityRestorer {
-    private static final String SQL = "INSERT INTO pick_publication_attempts (id,batch_id,race_id,season_id,original_matchday_id,original_home_team_id,original_away_team_id,content_version,source_version,origin,output_type,track_id,car_id,car_pool_entry_id,track_name,car_name,pool_entry_label,laps,tyre_wear,fuel_consumption,refueling_speed,initial_fuel,required_pit_stops,time_progression_mode,time_progression_multiplier,weather,time_of_day,available_tyres,mandatory_tyres,content_hash,field_mask,actor_id,channel_id,webhook_id,target_message_id,template_hash,request_manifest,request_hash,runtime_generation,captured_at,state,active_race_id,message_id,completed_at,failure_code,reconciled_by,reconciliation_reason,resolved_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+    private static final String SQL = "INSERT INTO pick_publication_attempts (id,batch_id,race_id,season_id,original_matchday_id,original_home_team_id,original_away_team_id,content_version,source_version,origin,output_type,track_id,car_id,car_pool_entry_id,track_name,car_name,pool_entry_label,laps,tyre_wear,fuel_consumption,refueling_speed,initial_fuel,required_pit_stops,time_progression_mode,time_progression_multiplier,weather,time_of_day,available_tyres,mandatory_tyres,content_hash,field_mask,actor_id,channel_id,webhook_id,target_message_id,template_hash,request_manifest,request_hash,runtime_generation,captured_at,state,active_race_id,message_id,completed_at,failure_code,reconciled_by,reconciliation_reason,resolved_at,created_at,updated_at,lobby_rules_profile,start_type,slipstream) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
     @Override public String tableName() { return "pick_publication_attempts"; }
     @Override public void restore(List<JsonNode> rows, JdbcTemplate jdbc) {
         jdbc.batchUpdate(SQL, rows, 500, (ps, row) -> {
@@ -63,7 +63,10 @@ public class PickPublicationAttemptRestorer implements EntityRestorer {
                 text(row, "reconciliationReason"),
                 row.hasNonNull("resolvedAt") ? PickRestoreSupport.instant(row, "resolvedAt") : null,
                 PickRestoreSupport.auditTime(row, "createdAt"),
-                PickRestoreSupport.auditTime(row, "updatedAt")
+                PickRestoreSupport.auditTime(row, "updatedAt"),
+                text(row.path("content"), "lobbyRulesProfile"),
+                text(row.path("content"), "startType"),
+                text(row.path("content"), "slipstream")
             };
             for (int index = 0; index < values.length; index++) ps.setObject(index + 1, values[index]);
         });

@@ -297,9 +297,23 @@ class MatchdayPickReviewIT extends PickPersistenceIT {
     MockHttpServletRequestBuilder correction(PickCorrectionForm form) {
         return post(path() + "/correction").param("expectedVersion", form.getExpectedVersion().toString()).param("settingsFingerprint", form.getSettingsFingerprint())
                 .param("expectedGeneration", form.getExpectedGeneration().toString())
+                .param("lobbyRulesProfile", form.getLobbyRulesProfile().name()).param("startType", form.getStartType().name()).param("slipstream", form.getSlipstream().name())
                 .param("trackId", form.getTrackId().toString()).param("carId", form.getCarId().toString()).param("tyreWear", "2")
                 .param("fuelConsumption", "3").param("refuelingSpeed", "4").param("initialFuel", "DEFAULT").param("requiredPitStops", "1")
                 .param("availableTyres", "RS", "RM").param("mandatoryTyres", "RM").param("timeOfDay", "Sunset")
                 .param("reason", "Test internal correction reason");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"lobbyRulesProfile", "startType", "slipstream"})
+    void givenMissingCorrectionRulesField_whenPosting_thenReturnItsFieldErrorWithoutChangingTheApprovedPick(String field) throws Exception {
+        // given
+        submit();
+        reviews.approve(fixture.race().getId(), 1, 1, new org.ctc.domain.picks.ManagementPickActor("test-manager"), "Test approved before missing field");
+        var request = correction(admin.correctionForm(fixture.race().getId())).param("laps", "12").param("weather", "Test unchanged weather")
+                .param("timeProgressionMode", "EQUAL_CONDITIONS").with(raw -> { raw.removeParameter(field); return raw; });
+        // when / then
+        mvc.perform(request).andExpect(status().isOk()).andExpect(model().attributeHasFieldErrors("form", field));
+        assertThat(admin.detail(fixture.race().getId()).row().version()).isEqualTo(2);
     }
 }

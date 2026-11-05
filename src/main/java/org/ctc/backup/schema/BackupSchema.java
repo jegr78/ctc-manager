@@ -32,7 +32,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class BackupSchema {
 
-    public static final int SCHEMA_VERSION = 13;
+    public static final int SCHEMA_VERSION = 14;
 
     private static final Set<Class<?>> FK_TAIL_ENTITIES = Set.of(DiscordPost.class);
 

@@ -359,6 +359,55 @@ class DiscordPicksBackupRoundTripIT {
     private PickPayload payload(int option, String weather) {
         return payload(option, weather, TimeProgressionMode.EQUAL_CONDITIONS, null);
     }
+
+    @Test
+    void givenSchemaThirteenWithoutLobbyFields_whenRestoring_thenPreserveOriginalLegacyHashesMasksAndPublicationBytes() throws Exception {
+        // given
+        publications.publish(List.of(fixture.race().getId()), PickPublicationOutput.SETTINGS, manager, rows ->
+                new org.ctc.domain.picks.PreparedPickPublication<>("123456789012345678", "234567890123456789", null,
+                        "a".repeat(64), "{\"legacy-template\":\"original bytes\"}", Map.of(fixture.race().getId(), Set.of(PickDisclosureField.TRACK)),
+                        () -> "test-legacy-lobby-message", message -> message));
+        var captured = tx.execute(status -> publicationAttempts.findAll().stream()
+                .filter(attempt -> attempt.getSeasonId().equals(fixture.season().getId())).findFirst().orElseThrow());
+        var before = disclosure.forPublic(fixture.race().getId());
+        var files = unzip(export());
+        var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
+        manifest.put("schema_version", 13);
+        files.put("manifest.json", JSON.writeValueAsBytes(manifest));
+        for (String table : List.of("seasons", "race-settings", "matchday-pick-revisions", "matchday-pick-decisions", "pick-publication-attempts")) {
+            String file = "data/" + table + ".json";
+            var rows = (ArrayNode) JSON.readTree(files.get(file));
+            for (var row : rows) {
+                var value = switch (table) {
+                    case "matchday-pick-revisions" -> row.get("payload");
+                    case "matchday-pick-decisions" -> row.get("correctionPayload");
+                    case "pick-publication-attempts" -> row.get("content");
+                    default -> row;
+                };
+                if (value != null && value.isObject()) ((ObjectNode) value).remove(List.of("lobbyRulesProfile", "startType", "slipstream"));
+            }
+            files.put(file, JSON.writeValueAsBytes(rows));
+        }
+        // when
+        var preview = imports.stage(upload(zip(files)));
+        imports.execute(preview.stagingId());
+        // then
+        assertThat(disclosure.forPublic(fixture.race().getId())).isEqualTo(before);
+        tx.executeWithoutResult(status -> {
+            assertThat(seasons.findById(fixture.season().getId()).orElseThrow().getLobbyRulesProfile()).isEqualTo(LobbyRulesProfile.LEGACY);
+            assertThat(races.findById(fixture.race().getId()).orElseThrow().getSettings().getStartType()).isEqualTo(RaceStartType.GRID_FALSE_START);
+            assertThat(races.findById(fixture.race().getId()).orElseThrow().getSettings().getSlipstream()).isEqualTo(RaceSlipstream.REAL);
+            assertThat(revisions.findByRequestId(original.requestId()).orElseThrow().receipt()).isEqualTo(original);
+            var restored = publicationAttempts.findById(captured.getId()).orElseThrow();
+            assertThat(restored.getContent()).isEqualTo(captured.getContent());
+            assertThat(restored.getContentHash()).isEqualTo(captured.getContentHash());
+            assertThat(restored.getFieldMask()).isEqualTo(captured.getFieldMask());
+            assertThat(restored.getRequestManifest()).isEqualTo(captured.getRequestManifest());
+            assertThat(restored.getRequestHash()).isEqualTo(captured.getRequestHash());
+            assertThat(restored.getTemplateHash()).isEqualTo(captured.getTemplateHash());
+        });
+        assertThat(integrity.inspect()).isEmpty();
+    }
     private PickPayload payload(int option, String weather, TimeProgressionMode mode, Integer multiplier) {
         return new PickPayload(trackIds.get(option), carIds.get(option), null, 12, 2, 3, 4, PickInitialFuel.DEFAULT, 1,
                 mode, multiplier, weather, "Sunset", Set.of(PickTyre.RS, PickTyre.RM), Set.of(PickTyre.RM));

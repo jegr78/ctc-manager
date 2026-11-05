@@ -22,27 +22,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
 
-/**
- * Phase 75 / Plan 03 — Surefire unit test for {@link SeasonRestorer}.
- *
- * <p>Asserts:
- * <ul>
- *   <li>{@code tableName()} returns the exact snake_case table name {@code "seasons"}.</li>
- *   <li>{@code restore(...)} issues a single {@link JdbcTemplate#batchUpdate(String, List, int,
- *       ParameterizedPreparedStatementSetter)} call with an {@code INSERT INTO seasons (...) VALUES (?, ?, ...)}
- *       statement that matches the well-formedness regex (no string concatenation, one {@code ?}
- *       per column).</li>
- *   <li>The captured setter binds JSON values to the {@link PreparedStatement} with the correct
- *       JDBC types: native UUID via {@code setObject}, VARCHAR via {@code setString}, INT via
- *       {@code setInt}, BOOLEAN via {@code setBoolean}, and TIMESTAMP via {@code Timestamp.valueOf(
- *       LocalDateTime.parse(...))} — preserving the verbatim {@code createdAt}/{@code updatedAt}
- *       values for the auditing bypass contract.</li>
- * </ul>
- *
- * <p>The {@code @Component} (production discovery) and {@code !@Primary} (no shadow override)
- * annotations are also smoke-checked so the orchestrator's {@code Map<String, EntityRestorer>}
- * wiring (Plan 06) resolves predictably.
- */
 @ExtendWith(MockitoExtension.class)
 class SeasonRestorerTest {
 
@@ -90,7 +69,7 @@ class SeasonRestorerTest {
                   "updatedAt": "2024-06-01T12:30:45"
                 }
                 """;
-        JsonNode row = MAPPER.readTree(json);
+        JsonNode row = org.ctc.backup.schema.LobbyRulesArchive.normalize(13, "seasons", MAPPER.readTree(json));
 
         // when
         restorer.restore(List.of(row), jdbcTemplate);
@@ -117,6 +96,7 @@ class SeasonRestorerTest {
         verify(preparedStatement).setInt(4, 1);
         verify(preparedStatement).setString(5, "Round Robin — two groups");
         verify(preparedStatement).setBoolean(6, true);
+        verify(preparedStatement).setString(14, "LEGACY");
         verify(preparedStatement).setTimestamp(7,
                 Timestamp.valueOf(LocalDateTime.parse("2024-01-01T00:00:00")));
         verify(preparedStatement).setTimestamp(8,
@@ -139,7 +119,7 @@ class SeasonRestorerTest {
                   "updatedAt": "2024-02-01T08:00:00"
                 }
                 """;
-        JsonNode row = MAPPER.readTree(json);
+        JsonNode row = org.ctc.backup.schema.LobbyRulesArchive.normalize(13, "seasons", MAPPER.readTree(json));
 
         // when
         restorer.restore(List.of(row), jdbcTemplate);
@@ -153,5 +133,6 @@ class SeasonRestorerTest {
 
         verify(preparedStatement).setString(5, null);
         verify(preparedStatement).setBoolean(6, false);
+        verify(preparedStatement).setString(14, "LEGACY");
     }
 }

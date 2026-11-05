@@ -13,6 +13,10 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
 public interface PickPublicationAttemptRepository extends JpaRepository<PickPublicationAttempt, UUID> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select a from PickPublicationAttempt a where a.seasonId = :seasonId order by a.id")
+    List<PickPublicationAttempt> findRulesHistoryForUpdate(UUID seasonId);
+
     Optional<PickPublicationAttempt> findByActiveRaceId(UUID raceId);
     Optional<PickPublicationAttempt> findFirstByRaceIdOrderByContentVersionDescCapturedAtDesc(UUID raceId);
     List<PickPublicationAttempt> findByBatchId(UUID batchId);

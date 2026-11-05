@@ -166,6 +166,22 @@ public class RaceService {
 
     @Transactional
     public SaveResult saveRace(UUID id, UUID matchdayId, UUID homeTeamId, UUID awayTeamId,
+                               UUID trackId, UUID carId, LocalDateTime dateTime, Integer numberOfLaps,
+                               Integer tyreWearMultiplier, Integer fuelConsumptionMultiplier, Integer refuelingSpeed,
+                               String initialFuel, Integer numberOfRequiredPitStops, TimeProgressionMode timeProgressionMode,
+                               Integer timeProgressionMultiplier, String weather, String timeOfDay, String availableTyres,
+                               String mandatoryTyres, UUID carPoolEntryId, LobbyRulesProfile capturedProfile,
+                               RaceStartType startType, RaceSlipstream slipstream) {
+        String error = timeProgressionError(timeProgressionMode, timeProgressionMultiplier);
+        if (error != null) return new SaveResult(false, error, id, matchdayId);
+        return saveRaceInternal(id, matchdayId, homeTeamId, awayTeamId, trackId, carId, dateTime,
+                numberOfLaps, tyreWearMultiplier, fuelConsumptionMultiplier, refuelingSpeed, initialFuel,
+                numberOfRequiredPitStops, timeProgressionMode, timeProgressionMultiplier, weather, timeOfDay,
+                availableTyres, mandatoryTyres, carPoolEntryId, true, capturedProfile, startType, slipstream);
+    }
+
+    @Transactional
+    public SaveResult saveRace(UUID id, UUID matchdayId, UUID homeTeamId, UUID awayTeamId,
                                UUID trackId, UUID carId, LocalDateTime dateTime,
                                Integer numberOfLaps, Integer tyreWearMultiplier,
                                Integer fuelConsumptionMultiplier, Integer refuelingSpeed,
@@ -177,7 +193,7 @@ public class RaceService {
         return saveRaceInternal(id, matchdayId, homeTeamId, awayTeamId, trackId, carId, dateTime,
                 numberOfLaps, tyreWearMultiplier, fuelConsumptionMultiplier, refuelingSpeed,
                 initialFuel, numberOfRequiredPitStops, timeProgressionMode, timeProgressionMultiplier,
-                weather, timeOfDay, availableTyres, mandatoryTyres, carPoolEntryId, true);
+                weather, timeOfDay, availableTyres, mandatoryTyres, carPoolEntryId, true, LobbyRulesProfile.LEGACY, RaceStartType.GRID_FALSE_START, RaceSlipstream.REAL);
     }
 
 	@Transactional
@@ -193,7 +209,7 @@ public class RaceService {
         return saveRaceInternal(id, matchdayId, homeTeamId, awayTeamId, trackId, carId, dateTime,
                 numberOfLaps, tyreWearMultiplier, fuelConsumptionMultiplier, refuelingSpeed,
                 initialFuel, numberOfRequiredPitStops, timeProgressionMode,
-                timeProgressionMultiplier, weather, timeOfDay, availableTyres, mandatoryTyres, null, false);
+                timeProgressionMultiplier, weather, timeOfDay, availableTyres, mandatoryTyres, null, false, LobbyRulesProfile.LEGACY, RaceStartType.GRID_FALSE_START, RaceSlipstream.REAL);
     }
 
 	@Transactional
@@ -211,7 +227,7 @@ public class RaceService {
         return saveRaceInternal(id, matchdayId, homeTeamId, awayTeamId, trackId, carId, dateTime,
                 numberOfLaps, tyreWearMultiplier, fuelConsumptionMultiplier, refuelingSpeed,
                 initialFuel, numberOfRequiredPitStops, TimeProgressionMode.MULTIPLIER,
-                timeProgressionMultiplier, weather, timeOfDay, availableTyres, mandatoryTyres, null, false);
+                timeProgressionMultiplier, weather, timeOfDay, availableTyres, mandatoryTyres, null, false, LobbyRulesProfile.LEGACY, RaceStartType.GRID_FALSE_START, RaceSlipstream.REAL);
     }
 
 	private SaveResult saveRaceInternal(UUID id, UUID matchdayId, UUID homeTeamId, UUID awayTeamId,
@@ -220,11 +236,13 @@ public class RaceService {
 	                           Integer fuelConsumptionMultiplier, Integer refuelingSpeed,
 	                           String initialFuel, Integer numberOfRequiredPitStops,
 	                           TimeProgressionMode timeProgressionMode, Integer timeProgressionMultiplier, String weather,
-	                           String timeOfDay, String availableTyres, String mandatoryTyres, UUID carPoolEntryId, boolean nativeSelection) {
+	                           String timeOfDay, String availableTyres, String mandatoryTyres, UUID carPoolEntryId, boolean nativeSelection,
+                               LobbyRulesProfile capturedProfile, RaceStartType startType, RaceSlipstream slipstream) {
         try {
             var matchday = matchdayRepository.findById(matchdayId).orElseThrow();
             Race race = id != null ? raceRepository.findById(id).orElseThrow() : new Race();
             var lockedSeason = lockSelectionContext(race, matchday);
+            LobbyRulesPolicy.requireCurrent(lockedSeason, capturedProfile, startType, slipstream);
             if (id != null) race = raceRepository.findByIdForSelectionUpdate(id).orElseThrow();
             var homeTeam = teamRepository.findById(homeTeamId).orElseThrow();
             var awayTeam = awayTeamId != null ? teamRepository.findById(awayTeamId).orElseThrow() : null;
@@ -256,7 +274,7 @@ public class RaceService {
             }
             var submittedSettings = new RaceSettingsValues(numberOfLaps, tyreWearMultiplier, fuelConsumptionMultiplier,
                     refuelingSpeed, initialFuel, numberOfRequiredPitStops, timeProgressionMode, timeProgressionMultiplier,
-                    weather, timeOfDay, availableTyres, mandatoryTyres);
+                    weather, timeOfDay, availableTyres, mandatoryTyres, startType, slipstream);
             if (rejection == null) rejection = pickGuard.setupRejection(race, trackId, carId, carPoolEntryId, submittedSettings);
             if (rejection == null) rejection = validatePlannedTracks(lockedSeason, planned);
             if (rejection != null) return new SaveResult(false, rejection, id, matchdayId);
@@ -552,7 +570,19 @@ public class RaceService {
 	                       String initialFuel, Integer numberOfRequiredPitStops,
 	                       Integer timeProgressionMultiplier, String weather,
 	                       String timeOfDay, String availableTyres, String mandatoryTyres,
-                           TimeProgressionMode timeProgressionMode, UUID carPoolEntryId) {
+                           TimeProgressionMode timeProgressionMode, UUID carPoolEntryId,
+                           LobbyRulesProfile lobbyRulesProfile, RaceStartType startType, RaceSlipstream slipstream) {
+        public RaceData(UUID id, UUID matchdayId, UUID homeTeamId, UUID awayTeamId,
+                        UUID trackId, UUID carId, LocalDateTime dateTime, List<RaceResultData> results,
+                        Integer numberOfLaps, Integer tyreWearMultiplier, Integer fuelConsumptionMultiplier,
+                        Integer refuelingSpeed, String initialFuel, Integer numberOfRequiredPitStops,
+                        Integer timeProgressionMultiplier, String weather, String timeOfDay, String availableTyres,
+                        String mandatoryTyres, TimeProgressionMode timeProgressionMode, UUID carPoolEntryId) {
+            this(id, matchdayId, homeTeamId, awayTeamId, trackId, carId, dateTime, results, numberOfLaps,
+                    tyreWearMultiplier, fuelConsumptionMultiplier, refuelingSpeed, initialFuel, numberOfRequiredPitStops,
+                    timeProgressionMultiplier, weather, timeOfDay, availableTyres, mandatoryTyres, timeProgressionMode, carPoolEntryId,
+                    LobbyRulesProfile.LEGACY, RaceStartType.GRID_FALSE_START, RaceSlipstream.REAL);
+        }
         public RaceData(UUID id, UUID matchdayId, UUID homeTeamId, UUID awayTeamId,
                         UUID trackId, UUID carId, LocalDateTime dateTime, List<RaceResultData> results,
                         Integer numberOfLaps, Integer tyreWearMultiplier, Integer fuelConsumptionMultiplier,

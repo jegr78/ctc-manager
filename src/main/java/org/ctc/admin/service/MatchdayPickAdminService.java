@@ -78,9 +78,12 @@ public class MatchdayPickAdminService {
         for (int i = 0; i < currentValues.size(); i++) {
             var current = currentValues.get(i); var submitted = proposed == null ? null : proposedValues.get(i);
             boolean changed = submitted != null && !current.value().equals(submitted.value());
-            if (proposed != null && i == 0) changed = !Objects.equals(existing.trackId(), proposed.trackId());
-            if (proposed != null && i == 1) changed = !Objects.equals(existing.carId(), proposed.carId());
-            if (proposed != null && i == 2) changed = !Objects.equals(existing.entryId(), proposed.carPoolEntryId());
+            if (proposed != null) changed = switch (current.label()) {
+                case "Track" -> !Objects.equals(existing.trackId(), proposed.trackId());
+                case "Car" -> !Objects.equals(existing.carId(), proposed.carId());
+                case "Pool entry" -> !Objects.equals(existing.entryId(), proposed.carPoolEntryId());
+                default -> changed;
+            };
             comparison.add(new Comparison(current.label(), current.value(), submitted == null ? "No submission" : submitted.value(), changed));
         }
         var returnReason = stateReturnReason(pick, decisionHistory);
@@ -122,6 +125,7 @@ public class MatchdayPickAdminService {
         var race = race(raceId); var snapshot = PickSetupSnapshot.from(race); var values = snapshot.settings();
         var form = new PickCorrectionForm(); form.setExpectedVersion(detail.row().version()); form.setSettingsFingerprint(detail.fingerprint());
         form.setExpectedGeneration(detail.generation());
+        form.setLobbyRulesProfile(snapshot.lobbyRulesProfile()); form.setStartType(values.startType()); form.setSlipstream(values.slipstream());
         form.setTrackId(snapshot.trackId()); form.setCarId(snapshot.carId()); form.setCarPoolEntryId(snapshot.entryId());
         form.setLaps(values.laps()); form.setTyreWear(values.tyreWear()); form.setFuelConsumption(values.fuelConsumption());
         form.setRefuelingSpeed(values.refuelingSpeed()); form.setRequiredPitStops(values.requiredPitStops());
@@ -192,11 +196,14 @@ public class MatchdayPickAdminService {
         return race;
     }
     private List<Value> values(PickPayload payload) {
-        return values(new PickSetupSnapshot(payload.trackId(), payload.carId(), payload.carPoolEntryId(), RaceSettingsValues.from(payload)));
+        return values(new PickSetupSnapshot(payload.trackId(), payload.carId(), payload.carPoolEntryId(), RaceSettingsValues.from(payload), payload.lobbyRulesProfile()));
     }
     private List<Value> values(PickSetupSnapshot snapshot) {
         var v = snapshot.settings();
-        return List.of(new Value("Track", snapshot.trackId() == null ? "Not set" : tracks.findById(snapshot.trackId()).orElseThrow().getName()),
+        return List.of(new Value("Season rules", snapshot.lobbyRulesProfile().getLabel()),
+                new Value("Start type", v.startType() == null ? "Not set" : v.startType().getLabel()),
+                new Value("Race slipstream", v.slipstream() == null ? "Not set" : v.slipstream().getLabel()),
+                new Value("Track", snapshot.trackId() == null ? "Not set" : tracks.findById(snapshot.trackId()).orElseThrow().getName()),
                 new Value("Car", snapshot.carId() == null ? "Not set" : cars.findById(snapshot.carId()).orElseThrow().getDisplayName()),
                 new Value("Pool entry", snapshot.entryId() == null ? "None" : entries.findById(snapshot.entryId()).orElseThrow().getLabel()),
                 new Value("Laps", text(v.laps())), new Value("Tyre wear", text(v.tyreWear())), new Value("Fuel consumption", text(v.fuelConsumption())),

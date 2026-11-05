@@ -21,8 +21,22 @@ public record PickPayload(
         @Column(name = "weather", length = 255) String weather,
         @Column(name = "time_of_day", length = 255) String timeOfDay,
         @Convert(converter = PickTyreSetConverter.class) @Column(name = "available_tyres", length = 8) Set<PickTyre> availableTyres,
-        @Convert(converter = PickTyreSetConverter.class) @Column(name = "mandatory_tyres", length = 8) Set<PickTyre> mandatoryTyres) {
+        @Convert(converter = PickTyreSetConverter.class) @Column(name = "mandatory_tyres", length = 8) Set<PickTyre> mandatoryTyres,
+        @Enumerated(EnumType.STRING) @Column(name = "lobby_rules_profile", length = 16) LobbyRulesProfile lobbyRulesProfile,
+        @Enumerated(EnumType.STRING) @Column(name = "start_type", length = 24) RaceStartType startType,
+        @Enumerated(EnumType.STRING) @Column(name = "slipstream", length = 16) RaceSlipstream slipstream) {
+    public PickPayload(UUID trackId, UUID carId, UUID carPoolEntryId, Integer laps, Integer tyreWear,
+                       Integer fuelConsumption, Integer refuelingSpeed, PickInitialFuel initialFuel,
+                       Integer requiredPitStops, TimeProgressionMode timeProgressionMode, Integer timeProgressionMultiplier,
+                       String weather, String timeOfDay, Set<PickTyre> availableTyres, Set<PickTyre> mandatoryTyres) {
+        this(trackId, carId, carPoolEntryId, laps, tyreWear, fuelConsumption, refuelingSpeed, initialFuel, requiredPitStops,
+                timeProgressionMode, timeProgressionMultiplier, weather, timeOfDay, availableTyres, mandatoryTyres,
+                LobbyRulesProfile.LEGACY, RaceStartType.GRID_FALSE_START, RaceSlipstream.REAL);
+    }
+
     public PickPayload {
+        require(lobbyRulesProfile != null, "requires a season rules profile");
+        lobbyRulesProfile.requireChoices(startType, slipstream);
         require(trackId != null && carId != null, "requires a track and concrete car");
         require(laps != null && laps > 0, "laps must be positive");
         bounded(tyreWear, 1, 7, "tyre wear");

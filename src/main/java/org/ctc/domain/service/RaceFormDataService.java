@@ -31,10 +31,11 @@ public class RaceFormDataService {
 
     public RaceService.RaceFormData getSubmittedRaceFormData(UUID matchdayId, UUID homeTeamId, UUID raceId,
                                                            UUID entryId, UUID carId, UUID trackId) {
+        var season = matchdayId == null ? null : matchdayRepository.findById(matchdayId).map(Matchday::getSeason).orElse(null);
         var data = new RaceService.RaceData(raceId, matchdayId, homeTeamId, null, trackId, carId, null,
                 List.of(), null, null, null, null, null, null, null, null, null, null, null,
-                TimeProgressionMode.MULTIPLIER, entryId);
-        var season = matchdayId == null ? null : matchdayRepository.findById(matchdayId).map(Matchday::getSeason).orElse(null);
+                TimeProgressionMode.MULTIPLIER, entryId, season == null ? LobbyRulesProfile.LEGACY : season.getLobbyRulesProfile(),
+                RaceStartType.GRID_FALSE_START, RaceSlipstream.REAL);
         return assemble(data, season);
     }
 
@@ -102,7 +103,8 @@ public class RaceFormDataService {
                     data.numberOfLaps(), data.tyreWearMultiplier(), data.fuelConsumptionMultiplier(),
                     data.refuelingSpeed(), data.initialFuel(), data.numberOfRequiredPitStops(),
                     data.timeProgressionMultiplier(), data.weather(), data.timeOfDay(),
-                    data.availableTyres(), data.mandatoryTyres(), data.timeProgressionMode(), data.carPoolEntryId());
+                    data.availableTyres(), data.mandatoryTyres(), data.timeProgressionMode(), data.carPoolEntryId(),
+                    data.lobbyRulesProfile(), data.startType(), data.slipstream());
         }
 
         return new RaceService.ResultsFormData(data, race, race.getMatchday().getPhase().getRaceScoring(),
@@ -204,6 +206,8 @@ public class RaceFormDataService {
                 settings != null ? settings.getAvailableTyres() : null,
                 settings != null ? settings.getMandatoryTyres() : null,
                 settings != null ? settings.getTimeProgressionMode() : TimeProgressionMode.MULTIPLIER,
-                race.getCarPoolEntry() == null ? null : race.getCarPoolEntry().getId());
+                race.getCarPoolEntry() == null ? null : race.getCarPoolEntry().getId(), LobbyRulesProfile.from(race),
+                settings == null ? RaceStartType.GRID_FALSE_START : settings.getStartType(),
+                settings == null ? RaceSlipstream.REAL : settings.getSlipstream());
     }
 }

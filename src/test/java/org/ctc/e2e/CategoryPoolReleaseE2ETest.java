@@ -190,7 +190,7 @@ class CategoryPoolReleaseE2ETest extends PlaywrightConfig {
         page.navigate(url("/admin/races/" + second + "/edit"));
         assertThat(page.locator("#carPoolEntryId option[value='" + entry + "']")).isDisabled();
         var response = context.request().post(url("/admin/races/save"), RequestOptions.create().setMaxRedirects(0)
-                .setForm(FormData.create().set("id", second.toString()).set("matchdayId", fixture.matchday().getId().toString())
+                .setForm(FormData.create().set("lobbyRulesProfile", "LEGACY").set("startType", "GRID_FALSE_START").set("slipstream", "REAL").set("id", second.toString()).set("matchdayId", fixture.matchday().getId().toString())
                         .set("homeTeamId", fixture.homeTeam().getId().toString()).set("awayTeamId", fixture.awayTeam().getId().toString())
                         .set("carPoolEntryId", entry.toString()).set("carId", rr.toString()).set("numberOfLaps", "19")));
         org.assertj.core.api.Assertions.assertThat(response.status()).isEqualTo(302);

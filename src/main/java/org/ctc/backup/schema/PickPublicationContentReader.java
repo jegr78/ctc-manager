@@ -10,7 +10,7 @@ import org.ctc.domain.model.TimeProgressionMode;
 public final class PickPublicationContentReader {
     private static final Set<String> FIELDS = Set.of("trackId", "carId", "carPoolEntryId", "trackName", "carName", "poolEntryLabel",
             "laps", "tyreWear", "fuelConsumption", "refuelingSpeed", "initialFuel", "requiredPitStops", "timeProgressionMode",
-            "timeProgressionMultiplier", "weather", "timeOfDay", "availableTyres", "mandatoryTyres");
+            "timeProgressionMultiplier", "weather", "timeOfDay", "availableTyres", "mandatoryTyres", "lobbyRulesProfile", "startType", "slipstream");
     private PickPublicationContentReader() { }
 
     public static PickPublicationContent read(JsonNode row) {
@@ -18,12 +18,13 @@ public final class PickPublicationContentReader {
             if (row == null || !row.isObject() || row.size() != FIELDS.size()) throw invalid();
             row.fieldNames().forEachRemaining(name -> { if (!FIELDS.contains(name)) throw invalid(); });
             var mode = text(row, "timeProgressionMode", 24);
+            var rules = LobbyRulesArchive.choices(row);
             return new PickPublicationContent(uuid(row, "trackId"), uuid(row, "carId"), uuid(row, "carPoolEntryId"),
                     text(row, "trackName", 255), text(row, "carName", 1024), text(row, "poolEntryLabel", 255),
                     integer(row, "laps"), integer(row, "tyreWear"), integer(row, "fuelConsumption"), integer(row, "refuelingSpeed"),
                     text(row, "initialFuel", 255), integer(row, "requiredPitStops"), mode == null ? null : TimeProgressionMode.valueOf(mode),
                     integer(row, "timeProgressionMultiplier"), text(row, "weather", 255), text(row, "timeOfDay", 255),
-                    text(row, "availableTyres", 255), text(row, "mandatoryTyres", 255));
+                    text(row, "availableTyres", 255), text(row, "mandatoryTyres", 255), rules.profile(), rules.start(), rules.slipstream());
         } catch (IllegalArgumentException failure) { throw invalid(); }
     }
 

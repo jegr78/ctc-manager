@@ -49,7 +49,7 @@ class PickPayloadReaderTest {
         return (ObjectNode) mapper.readTree("""
                 {"trackId":"%s","carId":"%s","carPoolEntryId":null,"laps":12,"tyreWear":2,"fuelConsumption":3,
                  "refuelingSpeed":4,"initialFuel":"DEFAULT","requiredPitStops":1,"timeProgressionMode":"MULTIPLIER",
-                 "timeProgressionMultiplier":0,"weather":"S01, R03, S02","timeOfDay":"Sunset","availableTyres":["RS","RM"],"mandatoryTyres":[]}
+                 "timeProgressionMultiplier":0,"weather":"S01, R03, S02","timeOfDay":"Sunset","availableTyres":["RS","RM"],"mandatoryTyres":[],"lobbyRulesProfile":"LEGACY","startType":"GRID_FALSE_START","slipstream":"REAL"}
                 """.formatted(UUID.randomUUID(), UUID.randomUUID()));
     }
 }

@@ -191,7 +191,7 @@ class CategoryCarPresentationE2ETest extends PlaywrightConfig {
             String editUrl = url("/admin/races/" + fixture.race().getId() + "/edit");
             assertThat(editor).hasURL(editUrl);
             var response = nativeContext.request().post(url("/admin/races/save"), RequestOptions.create().setMaxRedirects(0)
-                    .setForm(FormData.create().set("id", fixture.race().getId().toString())
+                    .setForm(FormData.create().set("lobbyRulesProfile", "LEGACY").set("startType", "GRID_FALSE_START").set("slipstream", "REAL").set("id", fixture.race().getId().toString())
                             .set("matchdayId", fixture.matchday().getId().toString()).set("homeTeamId", fixture.homeTeam().getId().toString())
                             .set("awayTeamId", fixture.awayTeam().getId().toString()).set("carId", mr.toString())
                             .set("trackId", track.toString()).set("carPoolEntryId", entry.toString()).set("numberOfLaps", "bad-laps")));

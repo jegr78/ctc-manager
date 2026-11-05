@@ -115,7 +115,7 @@ public class DataAuditService {
 		auditPublicUrls(findings.get(PUBLIC_URL));
         auditCarMetadata(findings.get(CAR_METADATA), findings.get(CAR_ELIGIBILITY));
         auditCarPools(races, findings.get(CAR_POOL));
-        findings.get(Category.PRIVATE_PICKS).addAll(pickIntegrity.inspect());
+        pickIntegrity.inspect().forEach(finding -> findings.get(finding.category()).add(finding));
         findings.get(Category.INCIDENT_REPORTS).addAll(incidentIntegrity.inspect());
 
 		List<DataAuditReport.Section> sections = findings.entrySet().stream()

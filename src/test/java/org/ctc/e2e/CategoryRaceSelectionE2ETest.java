@@ -185,7 +185,7 @@ class CategoryRaceSelectionE2ETest extends PlaywrightConfig {
             var editor = nativeContext.newPage();
             String editUrl = url("/admin/races/" + fixture.race().getId() + "/edit");
             var response = nativeContext.request().post(url("/admin/races/save"), RequestOptions.create().setMaxRedirects(0)
-                    .setForm(FormData.create().set("id", fixture.race().getId().toString())
+                    .setForm(FormData.create().set("lobbyRulesProfile", "LEGACY").set("startType", "GRID_FALSE_START").set("slipstream", "REAL").set("id", fixture.race().getId().toString())
                             .set("matchdayId", fixture.matchday().getId().toString())
                             .set("homeTeamId", fixture.awayTeam().getId().toString())
                             .set("awayTeamId", fixture.homeTeam().getId().toString())
@@ -239,7 +239,7 @@ class CategoryRaceSelectionE2ETest extends PlaywrightConfig {
             editor.onPageError(errors::add);
             String editUrl = url("/admin/races/" + fixture.race().getId() + "/edit");
             var response = localContext.request().post(url("/admin/races/save"), RequestOptions.create().setMaxRedirects(0)
-                    .setForm(FormData.create().set("id", fixture.race().getId().toString())
+                    .setForm(FormData.create().set("lobbyRulesProfile", "LEGACY").set("startType", "GRID_FALSE_START").set("slipstream", "REAL").set("id", fixture.race().getId().toString())
                             .set("matchdayId", fixture.matchday().getId().toString())
                             .set("homeTeamId", fixture.homeTeam().getId().toString())
                             .set("awayTeamId", fixture.awayTeam().getId().toString())

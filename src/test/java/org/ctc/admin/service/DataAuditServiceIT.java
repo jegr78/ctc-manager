@@ -66,6 +66,26 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class DataAuditServiceIT {
     @Test
+    void givenLegacyRaceWithHistoricalRollingStart_whenAuditing_thenReportInLobbyCategoryWithoutRepairing() {
+        // given
+        var fixture = testHelper.createFullSeasonFixture("TLA" + id);
+        var settings = new org.ctc.domain.model.RaceSettings(fixture.race());
+        settings.setStartType(org.ctc.domain.model.RaceStartType.ROLLING);
+        fixture.race().setSettings(settings);
+        entityManager.flush();
+        entityManager.clear();
+        // when
+        var report = dataAuditService.audit();
+        // then
+        assertThat(report.findings(Category.LOBBY_RULES)).anySatisfy(finding -> {
+            assertThat(finding.evidence()).contains(fixture.race().getId().toString());
+            assertThat(finding.evidence()).doesNotContain("Rolling", "Test_");
+        });
+        assertThat(report.findings(Category.PRIVATE_PICKS)).isEmpty();
+        assertThat(entityManager.find(org.ctc.domain.model.RaceSettings.class, settings.getId()).getStartType())
+                .isEqualTo(org.ctc.domain.model.RaceStartType.ROLLING);
+    }
+    @Test
     void givenInconsistentOneMakeSnapshot_whenAudited_thenReportWithoutRepair() {
         // given
         var selected = new org.ctc.domain.model.Car("Test One-Make audit", "Selected " + UUID.randomUUID());

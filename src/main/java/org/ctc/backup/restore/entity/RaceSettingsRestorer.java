@@ -21,8 +21,8 @@ public class RaceSettingsRestorer implements EntityRestorer {
             "INSERT INTO race_settings (id, race_id, number_of_laps, tyre_wear_multiplier, "
           + "fuel_consumption_multiplier, refueling_speed, initial_fuel, "
           + "number_of_required_pit_stops, time_progression_multiplier, weather, "
-          + "time_of_day, available_tyres, mandatory_tyres, created_at, updated_at, time_progression_mode) "
-          + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+          + "time_of_day, available_tyres, mandatory_tyres, created_at, updated_at, time_progression_mode, start_type, slipstream) "
+          + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     @Override
     public String tableName() {
@@ -61,6 +61,8 @@ public class RaceSettingsRestorer implements EntityRestorer {
             ps.setTimestamp(14, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
             ps.setTimestamp(15, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
             ps.setString(16, row.has("timeProgressionMode") ? row.get("timeProgressionMode").asText() : "MULTIPLIER");
+            ps.setString(17, row.get("startType").textValue());
+            ps.setString(18, row.get("slipstream").textValue());
         });
         log.debug("RaceSettingsRestorer: restored {} rows", rows.size());
     }

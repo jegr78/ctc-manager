@@ -8,6 +8,7 @@ th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
         </h1>
         <nav class="entity-section-nav" aria-label="Season editing sections">
             <a href="#season-identity">Season details</a>
+            <a th:if="${seasonForm.id != null}" href="#season-lobby-rules">Lobby rules</a>
             <a th:if="${seasonForm.id != null}" href="#season-teams">Teams</a>
             <a th:if="${seasonForm.id != null}" href="#carPool">Cars</a>
             <a th:if="${seasonForm.id != null}" href="#trackPool">Tracks</a>
@@ -58,7 +59,26 @@ th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
                 </div>
             </form>
         </div>
-        <p th:if="${seasonForm.id != null}" class="text-dim configuration-hint">Season details and the assignments below are saved separately. Each assignment action takes effect immediately.</p>
+        <div th:if="${seasonForm.id != null}" class="card" id="season-lobby-rules">
+            <form class="entity-editor-form" th:action="@{/admin/seasons/{id}/lobby-rules(id=${seasonForm.id})}" th:object="${lobbyRulesForm}" method="post">
+                <fieldset><legend>Season lobby rules</legend>
+                    <p>Choose the rules before saving race settings or private picks. Existing setup, pick history and every publication attempt freeze this choice.</p>
+                    <input type="hidden" th:field="*{expectedProfile}">
+                    <div class="form-group">
+                        <label for="lobbyRulesProfile">Rules profile</label>
+                        <select id="lobbyRulesProfile" th:field="*{lobbyRulesProfile}" required th:attr="aria-invalid=${#fields.hasErrors('lobbyRulesProfile')}">
+                            <option value="">Choose rules</option>
+                            <option th:each="profile : ${lobbyRulesProfiles}" th:value="${profile}" th:text="${profile.label}"></option>
+                        </select>
+                        <p class="field-error" th:if="${#fields.hasErrors('lobbyRulesProfile')}">Choose a supported rules profile.</p>
+                    </div>
+                    <p>CTC 2027 enables Flag Rules and lets the home team choose Rolling Start or the checked grid start, and Weak or Real race slipstream. Qualifying stays ten minutes with slipstream Off.</p>
+                    <p class="field-error" th:each="error : ${#fields.globalErrors()}" th:text="${error}"></p>
+                </fieldset>
+                <div class="entity-editor-actions"><span class="text-dim">Lobby rules</span><button type="submit" class="btn btn-primary">Save lobby rules</button></div>
+            </form>
+        </div>
+        <p th:if="${seasonForm.id != null}" class="text-dim configuration-hint">Season details, lobby rules and the assignments below are saved separately. Each action takes effect immediately.</p>
         <!-- Team assignment (only when editing) -->
         <div th:if="${seasonForm.id != null}" class="card" id="season-teams">
             <h2>Teams in this Season</h2>

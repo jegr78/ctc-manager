@@ -71,7 +71,7 @@ public class PickTeamReadService {
                 payload == null ? null : cars.findById(payload.carId()).orElseThrow().getDisplayName(),
                 payload == null ? null : tracks.findById(payload.trackId()).orElseThrow().getName(), deadlineLabel,
                 pick != null && pick.isManualOpen(), pick != null && pick.isManualClosed(), reason,
-                sorted(carChoices), sorted(trackChoices));
+                sorted(carChoices), sorted(trackChoices), season.getLobbyRulesProfile());
     }
 
     private static List<Choice> sorted(List<Choice> choices) {

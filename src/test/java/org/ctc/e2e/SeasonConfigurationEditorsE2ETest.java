@@ -36,10 +36,10 @@ class SeasonConfigurationEditorsE2ETest extends PlaywrightConfig {
         page.navigate(url("/admin/seasons/" + fixture.season().getId() + "/edit"));
 
         // when
-        page.locator(".entity-editor-form").evaluate("form => form.noValidate = true");
+        page.locator("form[action='/admin/seasons/save']").evaluate("form => form.noValidate = true");
         page.locator("#name").fill("");
         page.locator("#description").fill("Updated season details");
-        page.locator(".entity-editor-actions button").click();
+        page.locator("form[action='/admin/seasons/save'] .entity-editor-actions button").click();
 
         // then
         assertThat(page.locator("#name-error")).isVisible();
@@ -52,7 +52,7 @@ class SeasonConfigurationEditorsE2ETest extends PlaywrightConfig {
 
         // when
         page.locator("#name").fill(fixture.season().getName());
-        page.locator(".entity-editor-actions button").click();
+        page.locator("form[action='/admin/seasons/save'] .entity-editor-actions button").click();
 
         // then
         assertThat(page).hasURL(url("/admin/seasons"));

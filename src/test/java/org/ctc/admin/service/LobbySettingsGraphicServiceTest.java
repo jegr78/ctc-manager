@@ -16,6 +16,18 @@ import static org.mockito.Mockito.*;
 class LobbySettingsGraphicServiceTest {
     @TempDir Path directory;
 
+    @Test
+    void givenLegacyRaceWithForbiddenStart_whenRendering_thenRejectBeforeProducingAGraphic() throws Exception {
+        // given
+        var service = spy(new LobbySettingsGraphicService(mock(TemplateEngine.class), directory.toString()));
+        doAnswer(call -> { java.nio.file.Files.writeString(call.getArgument(1), "Test graphic bytes"); return null; })
+                .when(service).renderScreenshot(anyString(), any(Path.class));
+        var race = readyRace(); race.getSettings().setStartType(RaceStartType.ROLLING);
+        // when / then
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.renderPublication(race))
+                .isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class).hasMessageContaining("season rules");
+    }
+
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
     void givenBuiltinPublicationTemplate_whenRendering_thenFreezeProvenFieldsAndBytesOutsideTheInternalCache(boolean equal) throws Exception {
@@ -106,6 +118,33 @@ class LobbySettingsGraphicServiceTest {
         assertThat(((java.util.Map<?, ?>) contexts.getAllValues().get(0).getVariable("v")).get("timeSpeed")).isEqualTo("Equal Conditions");
         assertThat(((java.util.Map<?, ?>) contexts.getAllValues().get(1).getVariable("v")).get("timeSpeed")).isEqualTo("0x");
     }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"LEGACY,GRID_FALSE_START,REAL,Off", "CTC_2027,ROLLING,WEAK,On"})
+    void givenVersionedRaceRules_whenRenderingLobby_thenShowCapturedChoicesAndPreserveAllOtherLeagueSettings(
+            LobbyRulesProfile profile, RaceStartType start, RaceSlipstream slipstream, String flags) throws Exception {
+        // given
+        var service = spy(new LobbySettingsGraphicService(mock(TemplateEngine.class), directory.toString()));
+        var race = readyRace(); race.getMatchday().getSeason().setLobbyRulesProfile(profile);
+        race.getSettings().setStartType(start); race.getSettings().setSlipstream(slipstream);
+        doAnswer(call -> { java.nio.file.Files.writeString(call.getArgument(1), call.getArgument(0)); return null; })
+                .when(service).renderScreenshot(anyString(), any(Path.class));
+        // when
+        var graphic = service.renderPublication(race);
+        var document = org.jsoup.Jsoup.parse(new String(graphic.png(), java.nio.charset.StandardCharsets.UTF_8));
+        var values = document.select(".row").stream().collect(java.util.stream.Collectors.toMap(
+                row -> row.select(".set-label").text(), row -> row.select(".set-value").text(), (first, next) -> first));
+        // then
+        assertThat(values).containsEntry("Start Type", start.getLabel()).containsEntry("Slipstream Strength", slipstream.getLabel())
+                .containsEntry("Flag Rules", flags).containsEntry("Mechanical Damage", "Light")
+                .containsEntry("Race Finish Delay", "180 second(s)").containsEntry("Qualifying Continuation Time", "60 Seconds")
+                .containsEntry("Slipstream Strength (Qualifier)", "Off").containsEntry("Engine Swap", "Prohibited")
+                .containsEntry("Pit Lane Line Cutting Penalty", "On");
+        var qualifier = document.select("section").stream().filter(section -> section.select(".sec-title").text().equals("Qualifier Settings"))
+                .findFirst().orElseThrow();
+        assertThat(qualifier.text()).contains("10 Minute(s)");
+        assertThat(graphic.fields()).contains(PickDisclosureField.START_TYPE, PickDisclosureField.SLIPSTREAM);
+    }
+
     private org.ctc.domain.model.Race readyRace() {
         var season = new Season("Test", 2026, 1);
         var race = new Race();

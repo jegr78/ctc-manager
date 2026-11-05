@@ -10,7 +10,8 @@ import org.ctc.domain.model.PickPayload;
 public final class PickPayloadReader {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final Set<String> INTEGERS = Set.of("laps", "tyreWear", "fuelConsumption", "refuelingSpeed", "requiredPitStops");
-    private static final Set<String> TEXT = Set.of("trackId", "carId", "initialFuel", "timeProgressionMode", "weather", "timeOfDay");
+    private static final Set<String> TEXT = Set.of("trackId", "carId", "initialFuel", "timeProgressionMode", "weather", "timeOfDay",
+            "lobbyRulesProfile", "startType", "slipstream");
     private static final Set<String> OPTIONAL = Set.of("carPoolEntryId", "timeProgressionMultiplier");
     private static final Set<String> TYRES = Set.of("availableTyres", "mandatoryTyres");
     private PickPayloadReader() { }
@@ -37,9 +38,10 @@ public final class PickPayloadReader {
             for (var tyre : row.get(field)) if (!tyre.isTextual()) throw invalid();
         }
         try {
+            LobbyRulesArchive.choices(row);
             return MAPPER.treeToValue(row, PickPayload.class);
-        } catch (JsonProcessingException exception) {
-            throw new IllegalArgumentException("Invalid pick payload", exception);
+        } catch (JsonProcessingException | IllegalArgumentException exception) {
+            throw invalid();
         }
     }
 

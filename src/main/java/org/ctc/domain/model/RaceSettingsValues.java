@@ -7,12 +7,21 @@ import java.util.stream.Collectors;
 public record RaceSettingsValues(Integer laps, Integer tyreWear, Integer fuelConsumption, Integer refuelingSpeed,
                                  String initialFuel, Integer requiredPitStops, TimeProgressionMode timeProgressionMode,
                                  Integer timeProgressionMultiplier, String weather, String timeOfDay,
-                                 String availableTyres, String mandatoryTyres) {
+                                 String availableTyres, String mandatoryTyres, RaceStartType startType, RaceSlipstream slipstream) {
+    public RaceSettingsValues(Integer laps, Integer tyreWear, Integer fuelConsumption, Integer refuelingSpeed,
+                              String initialFuel, Integer requiredPitStops, TimeProgressionMode timeProgressionMode,
+                              Integer timeProgressionMultiplier, String weather, String timeOfDay,
+                              String availableTyres, String mandatoryTyres) {
+        this(laps, tyreWear, fuelConsumption, refuelingSpeed, initialFuel, requiredPitStops, timeProgressionMode,
+                timeProgressionMultiplier, weather, timeOfDay, availableTyres, mandatoryTyres,
+                RaceStartType.GRID_FALSE_START, RaceSlipstream.REAL);
+    }
     public static RaceSettingsValues from(PickPayload payload) {
         return new RaceSettingsValues(payload.laps(), payload.tyreWear(), payload.fuelConsumption(), payload.refuelingSpeed(),
                 payload.initialFuel().settingsValue(), payload.requiredPitStops(), payload.timeProgressionMode(),
                 payload.timeProgressionMultiplier(), payload.weather(), payload.timeOfDay(),
-                tyreText(payload.availableTyres()), payload.mandatoryTyres().isEmpty() ? "None" : tyreText(payload.mandatoryTyres()));
+                tyreText(payload.availableTyres()), payload.mandatoryTyres().isEmpty() ? "None" : tyreText(payload.mandatoryTyres()),
+                payload.startType(), payload.slipstream());
     }
 
     public static RaceSettingsValues from(RaceSettings settings) {
@@ -21,7 +30,7 @@ public record RaceSettingsValues(Integer laps, Integer tyreWear, Integer fuelCon
                 : new RaceSettingsValues(settings.getNumberOfLaps(), settings.getTyreWearMultiplier(), settings.getFuelConsumptionMultiplier(),
                         settings.getRefuelingSpeed(), settings.getInitialFuel(), settings.getNumberOfRequiredPitStops(),
                         settings.getTimeProgressionMode(), settings.getTimeProgressionMultiplier(), settings.getWeather(), settings.getTimeOfDay(),
-                        settings.getAvailableTyres(), settings.getMandatoryTyres());
+                        settings.getAvailableTyres(), settings.getMandatoryTyres(), settings.getStartType(), settings.getSlipstream());
     }
 
     private static String tyreText(Set<PickTyre> tyres) {
@@ -41,5 +50,7 @@ public record RaceSettingsValues(Integer laps, Integer tyreWear, Integer fuelCon
         settings.setTimeOfDay(timeOfDay);
         settings.setAvailableTyres(availableTyres);
         settings.setMandatoryTyres(mandatoryTyres);
+        settings.setStartType(startType);
+        settings.setSlipstream(slipstream);
     }
 }

@@ -119,6 +119,37 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
         org.assertj.core.api.Assertions.assertThat(saved.revisions()).hasSize(1);
     }
 
+    @ParameterizedTest
+    @CsvSource({"1440,1000,desktop", "390,844,mobile"})
+    void givenApproved2027PickWithoutJavaScript_whenCorrectingStartAndSlipstream_thenRetainOriginalRevisionAndSaveExactChoices(int width, int height, String viewport) throws Exception {
+        // given
+        tx.executeWithoutResult(status -> seasons.findById(fixture.season().getId()).orElseThrow().setLobbyRulesProfile(LobbyRulesProfile.CTC_2027));
+        payload = new PickPayload(payload.trackId(), payload.carId(), payload.carPoolEntryId(), payload.laps(), payload.tyreWear(),
+                payload.fuelConsumption(), payload.refuelingSpeed(), payload.initialFuel(), payload.requiredPitStops(), payload.timeProgressionMode(),
+                payload.timeProgressionMultiplier(), payload.weather(), payload.timeOfDay(), payload.availableTyres(), payload.mandatoryTyres(),
+                LobbyRulesProfile.CTC_2027, RaceStartType.ROLLING, RaceSlipstream.WEAK);
+        preconfigureAndSubmit(); approve(); page.setViewportSize(width, height); page.navigate(url(path() + "/correction"));
+        assertThat(page.locator("input[name=lobbyRulesProfile]")).hasValue("CTC_2027");
+        assertThat(page.getByLabel("Start type", new Page.GetByLabelOptions().setExact(true))).hasValue("ROLLING");
+        assertThat(page.getByLabel("Race slipstream", new Page.GetByLabelOptions().setExact(true))).hasValue("WEAK");
+        // when
+        page.getByLabel("Start type", new Page.GetByLabelOptions().setExact(true)).selectOption("GRID_FALSE_START");
+        page.getByLabel("Race slipstream", new Page.GetByLabelOptions().setExact(true)).selectOption("REAL");
+        page.getByLabel("Reason for internal correction").fill("Test 2027 start and slipstream correction");
+        capture("lobby-correction-" + viewport);
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save internal correction")).click();
+        // then
+        assertThat(page.getByTestId("pick-review-state")).hasText("APPROVED");
+        var detail = admin.detail(fixture.race().getId());
+        org.assertj.core.api.Assertions.assertThat(detail.row().version()).isEqualTo(3);
+        org.assertj.core.api.Assertions.assertThat(detail.revisions()).hasSize(1);
+        tx.executeWithoutResult(status -> {
+            var settings = races.findById(fixture.race().getId()).orElseThrow().getSettings();
+            org.assertj.core.api.Assertions.assertThat(settings.getStartType()).isEqualTo(RaceStartType.GRID_FALSE_START);
+            org.assertj.core.api.Assertions.assertThat(settings.getSlipstream()).isEqualTo(RaceSlipstream.REAL);
+        });
+    }
+
     @Test
     void givenMalformedNumericCorrection_whenServerRejects_thenKeepRawInputAndVisibleFieldError() throws Exception {
         // given

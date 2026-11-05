@@ -1,0 +1,48 @@
+# Season lobby rules verification
+
+The eight screenshots supplied on 2026-11-05 are the inventory of game fields. Selected sample values are not policy. Preserve every existing CTC fixed setting except the approved Flag Rules change. Qualifying stays ten minutes, unrestricted by attempt count. Qualifier slipstream stays Off independently of the race choice. Do not infer collapsed selector members, ranges or the unopened Settings Options submenu.
+
+## Requirement matrix before production edits
+
+| ID | Requirement and production path | Positive behavioral test | Rejection/failure test | Runtime evidence |
+|---|---|---|---|---|
+| L1 | Persist immutable LEGACY/CTC_2027 season presets. Migrate all seasons to LEGACY; manager explicitly chooses CTC_2027. Season/native editor and new migration. | H2/MariaDB save/reload and fresh native form show chosen preset. | Null/unknown preset yields field/domain error and preserves submitted form. | Database and no-JS desktop/mobile evidence. |
+| L2 | Race start: LEGACY Grid Start With False Start Check; CTC_2027 that or Rolling Start. Race slipstream: LEGACY Real; CTC_2027 Real or Weak. Central domain policy protects native save, eligibility and application. | All allowed profile/choice combinations persist and render. | Legacy rolling/weak and missing/unknown choices reject before race mutation. | Native and private-pick workflows. |
+| L3 | Fixed settings resolve from captured preset. 2027 Flag Rules On; legacy Off. Ten-minute qualifying, continuation60s, qualifier slipstreamOff, mechanicalLight, finish180s, engineSwapProhibited, pitlineOn unchanged. | Each profile renders expected fixed settings plus chosen race values. | Rendering a captured old publication after changing unrelated current data preserves original content. | Lobby/settings HTML, custom template contract and escaped browser renders. |
+| L4 | Profile edits acquire current season lock. Freeze after meaningful configured races, private revisions/corrections or any publication attempt state. A planned empty race remains unconfigured. | Change preset before configuration; rename metadata after freeze. | PREPARED/UNCERTAIN/FAILED/ABANDONED attempts and each history path reject a preset change. Concurrent submit/capture versus change is serialized. | H2 and MariaDB transaction tests; no isolation changes. |
+| L5 | Capture preset at native form load, management correction preparation and actual private Edit start. Compare under write locks. | Fresh draft/correction/native post succeeds under matching profile. | Old form or transient draft after a permitted profile change rejects with reload guidance and no settings/revision/send. | Native HTTP field errors, handler and admitted workflow tests. |
+| L6 | Versioned fingerprints bind profile/start/slipstream. Preserve exact original canonical bytes for valid legacy values. Equals/matches/configured agree. | Golden legacy hashes for populated/null states; every2027choice changes fingerprint; empty2027 race unconfigured. | Profile/choice alteration makes approval/correction stale; nondefault legacy choices cannot hide behind old hash. | Unit golden vectors plus approval integration. |
+| L7 | Capture profile/start/slipstream in immutable publication content; retain stored labels, templates, manifests, IDs, hashes and masks. | Restart/restore then exact immutable output and content hash. | Tampered captured choice invalidates hash; current race edits cannot change an existing attempt's values. | Publication H2/MariaDB and generated-artifact tests. |
+| L8 | Append new disclosure bits without changing original bit positions. Partial projections leave unreleased start/slipstream null. Unknown custom templates release nothing. | Standard settings/lobby masks release exactly the fields actually emitted. | Track/car-only or unknown custom template must not leak new settings via constructor defaults, DTOs, site files, graphics or error text. | DTO/site/HTTP confidentiality probes. |
+| L9 | Next backup schema, all47entities; version-aware common normalization for old archives. Current schema requires explicit known profile/options. Typed restorers append exact JDBC bindings, including nullable correction payloads. | Old archives restore LEGACY defaults with exact old hashes/template bytes; new archives round-trip2027options on H2/MariaDB. | Current missing/null/unknown/profile-mismatched choices fail stage and tampered execute before wipe; old schemas cannot smuggle2027choices. | Full archive export/stage/execute and unchanged-live-data assertions. |
+| L10 | Bounded read-only lobby integrity audit mirrors profile and choice invariants. | Valid legacy/2027 records have no finding. | Synthetic invalid policy/profile references produce fixed ID-only findings and remain unchanged. | Read-only audit integration. |
+| L11 | Native race/correction controls are labeled and usable without JS; invalid raw values retain meaningful errors. Refresh updates choices without save. | Desktop1440/mobile390 saved options and selections visible. | Invalid enum/binding, stale preset and incomplete draft retain data and contextual return links. | Playwright screenshots and native requests. |
+| L12 | Room, track, time/weather, race, qualifier, regulation, penalties and driving aid inventory maps to existing fixed/selected controls; no new generic editor or guessed ranges. Tyres stay in344. | Rendered inventory has actual game field names and preserved constants. | Race slipstream must not affect qualifier slipstream; screenshot sample settings never replace existing policy. | Focused template assertions and screenshot review. |
+| L13 | Selecting/changing preset or home choices does not send Discord/site output. Existing explicit publication remains required. | Save and review apply data only. | No remote publication calls in native/private write paths. | Service mocks and existing delivery workflow integration. |
+
+Keep this matrix synchronized with final class/test names and measured verification results after implementation. Guard falsification is performed separately per new guard on the correct committed head, followed by full committed-head verification.
+
+## Behavioral coverage
+
+- `LobbyRulesTest`, `LegacyLobbyFingerprintTest` and `LobbyRulesPolicyTest` cover preset policy, exact old canonical hashes, choice-sensitive fingerprints, every wire-mask bit and withheld null values.
+- `LobbyRulesFormIT` and its MariaDB subclass exercise every 2027 choice pair, stale and malformed native requests, required field errors and explicit refresh without saving.
+- `LobbyRulesPersistenceIT` and its MariaDB subclass exercise real submission/replay, approval, correction, profile freeze for every publication state, concurrent profile writers, immutable partial publication and complete current-schema restore. Tampered staged archives must fail before wipe and retain the live aggregate and restore generation.
+- `DiscordPicksBackupRoundTripIT` and its MariaDB subclass retain the original receipt, hashes, masks, manifest and template evidence when restoring schema 13 without the new fields, alongside the existing legacy-schema and confidentiality acceptance cases.
+- `LobbyRulesArchiveReaderTest`, `LobbyRulesBackupValidatorTest` and typed restorer tests cover strict version-aware decoding, compact reference bounds, missing ownership, duplicate identities and JDBC bindings.
+- `DataAuditServiceIT` proves an invalid historical Legacy/Rolling combination appears in the Lobby rules category and stays unchanged. The review regression in `LobbyRulesPersistenceIT` detects changed start/slipstream options and distinct car identities with equal displayed labels. Both review defects were observed as assertion failures before correction.
+- `PickInteractionViewsTest` and `PickInteractionHandlerTest` exercise the five-component 2027 modal, exact stage fields and retention of the originally captured profile after a later change.
+- `LobbySettingsGraphicServiceTest` and `SettingsGraphicServiceTest` assert actual rendered values, preserved fixed rules and disclosure masks. `RaceSetupEditorsE2ETest` and `MatchdayPicksE2ETest` exercise native season/race/correction controls without JavaScript at desktop and mobile widths.
+
+## Final verification protocol
+
+Run the repository lifecycle on Java 25 with Docker available:
+
+```sh
+./mvnw clean verify -Pe2e -Dspring.profiles.active=dev -Ddocker.available=true
+```
+
+Use an application-owned temporary directory on the same filesystem as the upload target for the atomic backup swap. Do not weaken the cross-filesystem guard. Selected TDD runs can fail the global coverage floor even when every selected test passes; only the complete lifecycle is final build evidence.
+
+The independent actual-delta security review found two P2 defects: positional review comparisons after adding fields, and lobby findings routed to the private-picks category. Both were corrected and independently rechecked. Perform guard falsification individually after committing the correct implementation, restore that exact commit, and repeat the complete lifecycle on the committed head. Record measured totals, guard results, actual PR head/base and CI evidence in the PR.
+
+The first complete precommit run exposed H2 retaining the migration connection inside new `CHECK IN` expressions. `V36LobbyRulesConnectionMigrationTest` reproduced this as an intended assertion failure after closing that connection. The new migration now uses connection-independent CASE membership checks, as existing V25 does; its H2 and MariaDB probes cover all changed tables, valid/invalid choices, null correction shape and exact mask bounds. Existing delivered migrations remain unchanged.
