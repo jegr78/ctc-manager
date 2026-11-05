@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
+import org.ctc.domain.model.LobbyRulesProfile;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -11,6 +12,19 @@ import org.junit.jupiter.params.provider.CsvSource;
 import static org.assertj.core.api.Assertions.*;
 
 class PickInteractionViewsTest {
+    @Test
+    void given2027TimeStage_whenOpeningAndValidating_thenIncludeBothChoicesWithinFiveModalFields() {
+        // given / when
+        var modal = PickInteractionViews.modal("test", "time", LobbyRulesProfile.CTC_2027);
+        // then
+        assertThat(modal.fields()).hasSize(5);
+        var values = new HashMap<>(valid("time"));
+        values.put("start", List.of("ROLLING")); values.put("slipstream", List.of("WEAK"));
+        assertThatCode(() -> PickInteractionViews.validateStage("time", values, LobbyRulesProfile.CTC_2027)).doesNotThrowAnyException();
+        values.remove("start");
+        assertThatThrownBy(() -> PickInteractionViews.validateStage("time", values, LobbyRulesProfile.CTC_2027)).isInstanceOf(IllegalArgumentException.class);
+    }
+
     @ParameterizedTest
     @CsvSource({"rules,laps,0", "rules,laps,2147483648", "rules,wear,8", "rules,consumption,7", "rules,refuel,11",
             "rules,laps,1.5", "fuel,initial,unknown", "fuel,stops,3", "time,progression,7", "time,weather,' '", "time,daytime,' '"})

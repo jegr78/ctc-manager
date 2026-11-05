@@ -32,7 +32,21 @@ public record PickPublicationContent(
         @Column(name = "weather", length = 255, updatable = false) String weather,
         @Column(name = "time_of_day", length = 255, updatable = false) String timeOfDay,
         @Column(name = "available_tyres", updatable = false) String availableTyres,
-        @Column(name = "mandatory_tyres", updatable = false) String mandatoryTyres) {
+        @Column(name = "mandatory_tyres", updatable = false) String mandatoryTyres,
+        @Enumerated(EnumType.STRING) @Column(name = "lobby_rules_profile", length = 16, updatable = false) LobbyRulesProfile lobbyRulesProfile,
+        @Enumerated(EnumType.STRING) @Column(name = "start_type", length = 24, updatable = false) RaceStartType startType,
+        @Enumerated(EnumType.STRING) @Column(name = "slipstream", length = 16, updatable = false) RaceSlipstream slipstream) {
+
+    public PickPublicationContent(UUID trackId, UUID carId, UUID carPoolEntryId, String trackName, String carName,
+                                  String poolEntryLabel, Integer laps, Integer tyreWear, Integer fuelConsumption,
+                                  Integer refuelingSpeed, String initialFuel, Integer requiredPitStops,
+                                  TimeProgressionMode timeProgressionMode, Integer timeProgressionMultiplier,
+                                  String weather, String timeOfDay, String availableTyres, String mandatoryTyres) {
+        this(trackId, carId, carPoolEntryId, trackName, carName, poolEntryLabel, laps, tyreWear, fuelConsumption,
+                refuelingSpeed, initialFuel, requiredPitStops, timeProgressionMode, timeProgressionMultiplier,
+                weather, timeOfDay, availableTyres, mandatoryTyres, LobbyRulesProfile.LEGACY,
+                RaceStartType.GRID_FALSE_START, RaceSlipstream.REAL);
+    }
 
     public static PickPublicationContent from(Race race) {
         var values = RaceSettingsValues.from(race.getSettings()); var car = RaceCarPresentation.from(race);
@@ -40,16 +54,17 @@ public record PickPublicationContent(
                 race.getCar() == null ? null : race.getCar().getId(), race.getCarPoolEntry() == null ? null : race.getCarPoolEntry().getId(),
                 race.getTrack() == null ? null : race.getTrack().getName(), car.carName(), car.poolEntryLabel(),
                 values.laps(), values.tyreWear(), values.fuelConsumption(), values.refuelingSpeed(), values.initialFuel(), values.requiredPitStops(),
-                values.timeProgressionMode(), values.timeProgressionMultiplier(), values.weather(), values.timeOfDay(), values.availableTyres(), values.mandatoryTyres());
+                values.timeProgressionMode(), values.timeProgressionMultiplier(), values.weather(), values.timeOfDay(), values.availableTyres(), values.mandatoryTyres(),
+                LobbyRulesProfile.from(race), values.startType(), values.slipstream());
     }
 
     public RaceSettingsValues settings() {
         return new RaceSettingsValues(laps, tyreWear, fuelConsumption, refuelingSpeed, initialFuel, requiredPitStops,
-                timeProgressionMode, timeProgressionMultiplier, weather, timeOfDay, availableTyres, mandatoryTyres);
+                timeProgressionMode, timeProgressionMultiplier, weather, timeOfDay, availableTyres, mandatoryTyres, startType, slipstream);
     }
 
     public String fingerprint() {
-        Object[] fields = {new PickSetupSnapshot(trackId, carId, carPoolEntryId, settings()).fingerprint(), trackName, carName, poolEntryLabel};
+        Object[] fields = {new PickSetupSnapshot(trackId, carId, carPoolEntryId, settings(), lobbyRulesProfile).fingerprint(), trackName, carName, poolEntryLabel};
         var canonical = new StringBuilder();
         for (var field : fields) {
             if (field == null) canonical.append("-1:");
@@ -76,7 +91,9 @@ public record PickPublicationContent(
                 fields.contains(PickDisclosureField.WEATHER) ? weather : null,
                 fields.contains(PickDisclosureField.TIME_OF_DAY) ? timeOfDay : null,
                 fields.contains(PickDisclosureField.AVAILABLE_TYRES) ? availableTyres : null,
-                fields.contains(PickDisclosureField.MANDATORY_TYRES) ? mandatoryTyres : null);
+                fields.contains(PickDisclosureField.MANDATORY_TYRES) ? mandatoryTyres : null,
+                fields.contains(PickDisclosureField.START_TYPE) ? startType : null,
+                fields.contains(PickDisclosureField.SLIPSTREAM) ? slipstream : null);
         return new PublicPickProjection(raceId, fields.contains(PickDisclosureField.CAR) ? carName : null,
                 fields.contains(PickDisclosureField.CAR) ? poolEntryLabel : null,
                 fields.contains(PickDisclosureField.TRACK) ? trackName : null, visible);

@@ -120,12 +120,12 @@
       <section class="section">
         <header class="sec-head"><span class="sec-tick"></span><span class="sec-title">Race Settings</span></header>
         <div class="sec-rows">
-          <div class="row"><span class="set-label">Start Type</span><span class="set-value">Grid Start With False Start Check</span></div>
+          <div class="row"><span class="set-label">Start Type</span><span class="set-value" th:text="${v.startType}">Grid Start With False Start Check</span></div>
           <div class="row"><span class="set-label">Grid Order</span><span class="set-value">Fastest First</span></div>
           <div class="row"><span class="set-label">BoP / Tuning Prohibited</span><span class="set-value">On</span></div>
           <div class="row"><span class="set-label">Settings Options</span><span class="set-value">Some · Brake Balance</span></div>
           <div class="row"><span class="set-label">Boost</span><span class="set-value">Off</span></div>
-          <div class="row"><span class="set-label">Slipstream Strength</span><span class="set-value">Real</span></div>
+          <div class="row"><span class="set-label">Slipstream Strength</span><span class="set-value" th:text="${v.slipstream}">Real</span></div>
           <div class="row"><span class="set-label">Visible Damage</span><span class="set-value">Off</span></div>
           <div class="row"><span class="set-label">Mechanical Damage</span><span class="set-value">Light</span></div>
           <div class="row"><span class="set-label">Tyre Wear Rate</span><span class="set-value" th:text="${v.tyreWear} ?: '4×'">4×</span></div>
@@ -143,12 +143,12 @@
       <section class="section">
         <header class="sec-head"><span class="sec-tick"></span><span class="sec-title">Qualifier Settings</span></header>
         <div class="sec-rows">
-          <div class="row"><span class="set-label">Time Limit</span><span class="set-value">10 Minute(s)</span></div>
+          <div class="row"><span class="set-label">Time Limit</span><span class="set-value" th:text="${v.qualifyingMinutes + ' Minute(s)'}">10 Minute(s)</span></div>
           <div class="row"><span class="set-label">Qualifying Continuation Time</span><span class="set-value">60 Seconds</span></div>
           <div class="row"><span class="set-label">Tyre Wear Rate (Qualifier)</span><span class="set-value">Same as During the Race</span></div>
           <div class="row"><span class="set-label">Fuel Consumption Rate (Qualifier)</span><span class="set-value">Same as During the Race</span></div>
           <div class="row"><span class="set-label">Initial Fuel (Qualifier)</span><span class="set-value">Same as During the Race</span></div>
-          <div class="row"><span class="set-label">Slipstream Strength (Qualifier)</span><span class="set-value">Off</span></div>
+          <div class="row"><span class="set-label">Slipstream Strength (Qualifier)</span><span class="set-value" th:text="${v.qualifierSlipstream}">Off</span></div>
         </div>
       </section>
 
@@ -159,7 +159,7 @@
           <div class="row"><span class="set-label">PP Limit</span><span class="set-value">No Limit</span></div>
           <div class="row"><span class="set-label">Max. Power Output</span><span class="set-value">No Limit</span></div>
           <div class="row"><span class="set-label">Minimum Weight</span><span class="set-value">No Limit</span></div>
-          <div class="row"><span class="set-label">Usage Tyres</span><span class="set-value">Racing</span></div>
+          <div class="row"><span class="set-label">Usable Tyres</span><span class="set-value">Racing</span></div>
           <div class="row"><span class="set-label">Usable Tyre &amp; Types</span><span class="set-value" th:text="${v.usableTyres} ?: 'Soft, Medium, Hard, Intermediate, Wet'">Soft, Medium, Hard, Intermediate, Wet</span></div>
           <div class="row"><span class="set-label">Required Tyre Type</span><span class="set-value" th:text="${v.requiredTyre} ?: 'None'">None</span></div>
           <div class="row"><span class="set-label">Nitrous</span><span class="set-value">Unrestricted</span></div>
@@ -180,9 +180,9 @@
           <div class="row"><span class="set-label">Wall Collision Penalty</span><span class="set-value">Off</span></div>
           <div class="row"><span class="set-label">Correct Vehicle Course After Wall Collision</span><span class="set-value">Off</span></div>
           <div class="row"><span class="set-label">Car Collision Penalty</span><span class="set-value">Off</span></div>
-          <div class="row"><span class="set-label">Pit Lane Cutting Penalty</span><span class="set-value">On</span></div>
+          <div class="row"><span class="set-label">Pit Lane Line Cutting Penalty</span><span class="set-value">On</span></div>
           <div class="row"><span class="set-label">Ghosting During Race</span><span class="set-value">Off</span></div>
-          <div class="row"><span class="set-label">Flag Rules</span><span class="set-value">Off</span></div>
+          <div class="row"><span class="set-label">Flag Rules</span><span class="set-value" th:text="${v.flagRules}">Off</span></div>
         </div>
       </section>
 
@@ -191,7 +191,7 @@
         <div class="sec-rows">
           <div class="row"><span class="set-label">Countersteering Assistance</span><span class="set-value">No Limit</span></div>
           <div class="row"><span class="set-label">Active Stability Management (ASM)</span><span class="set-value">No Limit</span></div>
-          <div class="row"><span class="set-label">Driving Line Assist</span><span class="set-value">No Limit</span></div>
+          <div class="row"><span class="set-label">Driving Line Assistance</span><span class="set-value">No Limit</span></div>
           <div class="row"><span class="set-label">Traction Control</span><span class="set-value">No Limit</span></div>
           <div class="row"><span class="set-label">ABS</span><span class="set-value">No Limit</span></div>
           <div class="row"><span class="set-label">Auto-Drive</span><span class="set-value">No Limit</span></div>

@@ -26,6 +26,12 @@
             <p class="text-dim" th:text="${choices.carSelection.hint}"></p>
             <button class="btn btn-secondary" type="submit" formnovalidate th:formaction="@{/admin/matchday-picks/{id}/correction/refresh(id=${review.row.raceId})}">Refresh choices</button>
         </fieldset>
+        <fieldset><legend>Start and slipstream</legend>
+            <input type="hidden" th:field="*{lobbyRulesProfile}">
+            <span class="field-error" th:errors="*{lobbyRulesProfile}"></span>
+            <div class="form-group"><label for="correct-startType">Start type</label><select id="correct-startType" th:field="*{startType}" required><option th:each="start : ${startTypes}" th:value="${start}" th:text="${start.label}"></option></select><span class="field-error" th:errors="*{startType}"></span></div>
+            <div class="form-group"><label for="correct-slipstream">Race slipstream</label><select id="correct-slipstream" th:field="*{slipstream}" required><option th:each="slip : ${slipstreams}" th:value="${slip}" th:text="${slip.label}"></option></select><span class="field-error" th:errors="*{slipstream}"></span></div>
+        </fieldset>
         <fieldset><legend>Race values and fuel</legend>
             <div class="form-group"><label for="correct-laps">Laps</label><input id="correct-laps" th:type="${#fields.hasErrors('laps') ? 'text' : 'number'}" th:field="*{laps}" min="1" required><span class="field-error" role="alert" th:errors="*{laps}"></span></div>
             <div class="form-group"><label for="correct-tyreWear">Tyre wear</label><input id="correct-tyreWear" th:type="${#fields.hasErrors('tyreWear') ? 'text' : 'number'}" th:field="*{tyreWear}" min="1" max="7" required><span class="field-error" role="alert" th:errors="*{tyreWear}"></span></div>

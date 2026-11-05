@@ -17,6 +17,7 @@ public class PickEligibilityService {
     private final PickReservationService reservations;
     public void validate(Race race, PickPayload payload) {
         var season = race.getMatchday().getSeason();
+        LobbyRulesPolicy.requireCurrent(season, payload.lobbyRulesProfile(), payload.startType(), payload.slipstream());
         var result = cars.validate(season.getId(), race.getHomeTeam().getId(), race.getId(), payload.carPoolEntryId(), payload.carId());
         if (!result.valid()) throw new BusinessRuleException(result.message());
         if (tracks.findById(payload.trackId()).isEmpty()

@@ -42,7 +42,7 @@ The active season is unique. Deactivate the current season before activating ano
 - **Race Attachments** — Upload files or link external resources to races
 - **Docker** — Local development and production deployment with MariaDB
 - **Season car pools** — Keep fixed car choices or build named category entries from local metadata. Combine alternative category/drivetrain/year clauses, preview eligible cars and overlaps, then freeze exact membership. Catalog changes preserve frozen choices; used pools cannot be reopened. Race setup selects an entry and one concrete frozen member. Saving consumes the whole entry for the effective home team that season. Native forms retain invalid inputs, concurrent selections serialize through the season, and unambiguous CSV/Sheets overwrites preserve configured race identities. Admin race summaries, public matchdays and settings graphics show the concrete car with its saved pool-entry label. Custom settings templates keep `carName` and can use optional `poolEntryLabel`.
-- **Backup & Restore** — Export a full ZIP backup of all 47 entity tables, including exact seasonal pool snapshots, Discord state and public URL slugs; restore via a preview-and-confirm import flow that accepts schema versions 1 through 13, so older backups remain restorable
+- **Backup & Restore** — Export a full ZIP backup of all 47 entity tables, including exact seasonal pool snapshots, Discord state and public URL slugs; restore via a preview-and-confirm import flow that accepts schema versions 1 through 14, so older backups remain restorable
 - **Channel Archive Dialog** — Labeled destination categories with channel counts, disabled full categories, keyboard focus and Escape/cancel support. A native inline form remains available without JavaScript.
 - **Backup Workspace** — Separate export and restore panels, labeled current and backup row counts, a neutral archive preview and a clear replacement confirmation.
 - **Data Audit** — Read-only check at `/admin/data-audit` for historical aggregates, pairings, phases, succession, playoffs, public URLs, race settings and seasonal pool references. Separate eligibility information explains unknown car metadata and exact-year exclusions. Unknown years remain valid; opening the audit changes no record. See the [Data Audit wiki page](../../wiki/Data-Audit).
@@ -52,7 +52,7 @@ The active season is unique. Deactivate the current season before activating ano
 - **Confidential team picks.** Private Discord dialogs, immutable history and management review keep approval separate from explicit publication. The Gateway defaults off and seasons opt in individually; use the [operator rollout checklist](docs/operations/discord-integration.md#operator-rollout-checklist). Current backups preserve bindings, private history and confirmed field masks, with the documented defaults for supported earlier schemas.
 - **Discord Integration** — Per-match Discord channels with 11 structured posts (team cards, settings, lineups, schedule, results, match preview, matchday overview, power rankings, standings), forum-thread linking for race-results + standings, auto-edit on schedule/preview changes, pre-flight gates and stale-detection signals. See [Discord Integration wiki page](../../wiki/Discord-Integration) and [`docs/operations/discord-integration.md`](docs/operations/discord-integration.md).
 - **Private team channels** — Configure exact season/team/channel bindings and inspect outgoing Gateway health under Discord Config → Private team picks. Current private-channel access controls team authority. Command registration is an explicit management action, and the consumer defaults off until the operator enables it.
-- **Private picks dialogs** — The `/picks` workflow offers home-race selection, searchable local car/track catalogs and staged entry of all 13 values. Review the full summary before confirming. Authorized channel members can retrieve the latest saved revision; unfinished drafts expire after 30 minutes and never replace it. Collection uses the explicit Gateway and season opt-ins.
+- **Private picks dialogs** — The `/picks` workflow offers home-race selection, searchable local car/track catalogs and staged entry of every race setup value. Review the full summary before confirming. Authorized channel members can retrieve the latest saved revision; unfinished drafts expire after 30 minutes and never replace it. Collection uses the explicit Gateway and season opt-ins.
 - **Picks management review** — Review exact revisions and their history from race or matchday workspaces. Open missing submissions or return corrections without a new deadline, close team editing, and approve complete picks atomically. Differing internal settings require explicit replacement consent. Later corrections retain the approved revision and team lock; publication remains separate.
 - **Pick publication** — Existing settings, lobby and explicit preview controls capture exact approved content. Public pages show only confirmed disclosed fields; lobby-only output keeps the car withheld. Later edits remain private. Season opt-in reviews existing settings explicitly, and unconfirmed Discord deliveries have a native verification/retirement screen.
 - **Discord Role Selection** — A labeled native selection works without JavaScript. Optional search filters roles by name or ID, preserves the selected role and retains saved IDs missing from the cache.
@@ -79,7 +79,7 @@ v1.10 introduces a full database backup/restore feature accessible via `/admin/b
 2. Review the preview: per-table row counts (current vs. backup) and schema-version match indicator.
 3. Check the **I understand** confirmation and click **Execute Import**. The database is replaced atomically.
 
-> **Schema-Version lock:** The import rejects a backup whose schema version is outside versions 1 through 13 before it
+> **Schema-Version lock:** The import rejects a backup whose schema version is outside versions 1 through 14 before it
 > writes anything. Schema 4 also validates pool references and limits preflight to 100,000 retained reference rows.
 
 ### Recovery
@@ -122,6 +122,33 @@ including playoffs. Pending picks retain the existing reservation rules.
 Backup schema 13 preserves team penalty history, One-Make definitions and their exact frozen members. Schemas 1–11
 remain importable; older entries keep their category definitions. Import rejects missing cars,
 mixed definitions and inconsistent One-Make snapshots before any database wipe.
+
+## Season lobby rules
+
+Existing and newly created seasons use **Previous CTC rules** until management explicitly selects
+**CTC 2027** under **Edit season → Lobby rules**. Select the profile before configuring races,
+collecting private picks or preparing a publication. Any saved setup, private selection history
+or publication attempt freezes the profile, including failed or retired attempts. Season metadata
+can still be edited.
+
+The previous profile keeps the checked grid start, Real race slipstream and Flag Rules Off.
+CTC 2027 lets the home team choose the checked grid start or Rolling Start and Real or Weak
+race slipstream. Flag Rules are On. Both profiles retain ten-minute qualifying without a one-shot
+restriction, qualifier slipstream Off and the other existing fixed CTC settings. The lobby screenshots
+identify available fields; their selected sample values do not change those rules.
+
+Choose start type and race slipstream in the native race editor or private pick wizard. Management
+reviews and corrections carry the same values. Forms opened before a permitted profile change
+require a reload; **Refresh choices** explicitly loads the current race context without saving.
+Saving or approving settings does not publish them. Existing explicit publication actions capture
+immutable content, and public output reveals only confirmed fields.
+
+Backup schema 14 preserves the profile and race choices in settings, private revisions, corrections
+and publication captures. Schemas 1 through 13 restore the previous profile and its exact original
+fingerprints, publication hashes and masks. Current archives require explicit valid choices and
+are validated before any wipe. The read-only audit reports inconsistent lobby rules separately.
+Custom settings/lobby templates can use `lobbyRulesProfile`, `startType`, `slipstream`, `flagRules`,
+`qualifyingMinutes` and `qualifierSlipstream`. Unknown custom-template coverage discloses no new fields.
 
 ## Team penalty points
 

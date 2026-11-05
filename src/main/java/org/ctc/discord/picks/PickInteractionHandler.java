@@ -36,7 +36,7 @@ public class PickInteractionHandler implements PickGatewayInteractionHandler {
                     if (!action.name().startsWith("open-")) return false;
                     String stage = action.name().substring(5);
                     session.clearActions();
-                    reply.openModal(modal(session.action(stage, MODAL), stage));
+                    reply.openModal(modal(session.action(stage, MODAL), stage, session.lobbyRulesProfile));
                     return true;
                 });
                 if (opened) return;
@@ -90,6 +90,7 @@ public class PickInteractionHandler implements PickGatewayInteractionHandler {
         if (!view.target().editable()) { showStatus(session, view, reply); return; }
         if (name.equals("edit")) {
             session.version = view.target().version();
+            session.lobbyRulesProfile = view.lobbyRulesProfile();
             session.fields.clear(); session.track = null; session.car = null; session.payload = null;
             catalog(session, "track", view.tracks(), "", 0, reply); return;
         }
@@ -108,7 +109,7 @@ public class PickInteractionHandler implements PickGatewayInteractionHandler {
             return;
         }
         try {
-            validateStage(name, event.values());
+            validateStage(name, event.values(), session.lobbyRulesProfile);
         } catch (IllegalArgumentException invalid) {
             next(session, name, "Check all required values and allowed ranges. Mandatory tyres must be available; choose None on its own.", reply); return;
         }

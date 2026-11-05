@@ -73,7 +73,7 @@ class RaceCategoryFormIT {
     @Test
     void givenNativeEntryAndMember_whenSaving_thenPersistConcreteCarAndEntryWithoutChangingUrls() throws Exception {
         // given / when
-        mvc.perform(post("/admin/races/save").param("id", fixture.race().getId().toString())
+        mvc.perform(post("/admin/races/save").param("lobbyRulesProfile", "LEGACY").param("startType", "GRID_FALSE_START").param("slipstream", "REAL").param("id", fixture.race().getId().toString())
                         .param("matchdayId", fixture.matchday().getId().toString())
                         .param("homeTeamId", fixture.homeTeam().getId().toString())
                         .param("awayTeamId", fixture.awayTeam().getId().toString())
@@ -111,7 +111,7 @@ class RaceCategoryFormIT {
         // given
         UUID configured = addLeg(true);
         select(configured, fixture.awayTeam().getId(), fixture.homeTeam().getId());
-        var posted = mvc.perform(post("/admin/races/save").param("id", fixture.race().getId().toString())
+        var posted = mvc.perform(post("/admin/races/save").param("lobbyRulesProfile", "LEGACY").param("startType", "GRID_FALSE_START").param("slipstream", "REAL").param("id", fixture.race().getId().toString())
                         .param("matchdayId", fixture.matchday().getId().toString())
                         .param("homeTeamId", fixture.awayTeam().getId().toString())
                         .param("awayTeamId", fixture.homeTeam().getId().toString())
@@ -144,7 +144,7 @@ class RaceCategoryFormIT {
     @Test
     void givenInvalidDateTime_whenReturningToEditor_thenKeepRawInputWithAnEditableFieldAndHumanError() throws Exception {
         // given
-        var posted = mvc.perform(post("/admin/races/save").param("id", fixture.race().getId().toString())
+        var posted = mvc.perform(post("/admin/races/save").param("lobbyRulesProfile", "LEGACY").param("startType", "GRID_FALSE_START").param("slipstream", "REAL").param("id", fixture.race().getId().toString())
                         .param("matchdayId", fixture.matchday().getId().toString())
                         .param("homeTeamId", fixture.homeTeam().getId().toString())
                         .param("awayTeamId", fixture.awayTeam().getId().toString())
@@ -195,7 +195,7 @@ class RaceCategoryFormIT {
                 null, mr, null, 12, null, null, null, null, null, TimeProgressionMode.MULTIPLIER, 0,
                 null, null, null, null, entry).success()).isTrue();
         // when
-        mvc.perform(post("/admin/races/save").param("id", fixture.race().getId().toString())
+        mvc.perform(post("/admin/races/save").param("lobbyRulesProfile", "LEGACY").param("startType", "GRID_FALSE_START").param("slipstream", "REAL").param("id", fixture.race().getId().toString())
                         .param("matchdayId", fixture.matchday().getId().toString())
                         .param("homeTeamId", fixture.awayTeam().getId().toString())
                         .param("awayTeamId", fixture.homeTeam().getId().toString())
@@ -210,7 +210,7 @@ class RaceCategoryFormIT {
             assertThat(saved.getSettings().getNumberOfLaps()).isEqualTo(12);
         });
         // when
-        mvc.perform(post("/admin/races/save").param("id", fixture.race().getId().toString())
+        mvc.perform(post("/admin/races/save").param("lobbyRulesProfile", "LEGACY").param("startType", "GRID_FALSE_START").param("slipstream", "REAL").param("id", fixture.race().getId().toString())
                         .param("matchdayId", fixture.matchday().getId().toString())
                         .param("homeTeamId", fixture.homeTeam().getId().toString())
                         .param("awayTeamId", fixture.awayTeam().getId().toString())
@@ -231,7 +231,7 @@ class RaceCategoryFormIT {
         select(fixture.race().getId(), fixture.homeTeam().getId(), fixture.awayTeam().getId());
         UUID unknownTrack = UUID.randomUUID();
         // when
-        var posted = mvc.perform(post("/admin/races/save").param("id", fixture.race().getId().toString())
+        var posted = mvc.perform(post("/admin/races/save").param("lobbyRulesProfile", "LEGACY").param("startType", "GRID_FALSE_START").param("slipstream", "REAL").param("id", fixture.race().getId().toString())
                         .param("matchdayId", fixture.matchday().getId().toString())
                         .param("homeTeamId", fixture.homeTeam().getId().toString())
                         .param("awayTeamId", fixture.awayTeam().getId().toString())

@@ -9,7 +9,8 @@ public enum PickDisclosureField {
     TRACK(1, "Track"), CAR(2, "Car and pool entry"), LAPS(4, "Laps"), TYRE_WEAR(8, "Tyre wear"),
     FUEL_CONSUMPTION(16, "Fuel consumption"), REFUELING_SPEED(32, "Refuelling speed"), INITIAL_FUEL(64, "Initial fuel"),
     PIT_STOPS(128, "Required pit stops"), TIME_PROGRESSION(256, "Time progression"), WEATHER(512, "Weather"),
-    TIME_OF_DAY(1024, "Time of day"), AVAILABLE_TYRES(2048, "Available tyres"), MANDATORY_TYRES(4096, "Mandatory tyres");
+    TIME_OF_DAY(1024, "Time of day"), AVAILABLE_TYRES(2048, "Available tyres"), MANDATORY_TYRES(4096, "Mandatory tyres"),
+    START_TYPE(8192, "Start type"), SLIPSTREAM(16384, "Race slipstream");
 
     private final int bit;
     private final String label;

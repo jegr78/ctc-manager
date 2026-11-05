@@ -228,7 +228,7 @@ class RaceEditPairingIT {
 	}
 
 	private ResultActions save(UUID raceId, Matchday targetMatchday, Team home, Team away) throws Exception {
-		return mockMvc.perform(post("/admin/races/save")
+		return mockMvc.perform(post("/admin/races/save").param("lobbyRulesProfile", "LEGACY").param("startType", "GRID_FALSE_START").param("slipstream", "REAL")
 						.param("id", raceId.toString())
 						.param("matchdayId", targetMatchday.getId().toString())
 						.param("homeTeamId", home.getId().toString())

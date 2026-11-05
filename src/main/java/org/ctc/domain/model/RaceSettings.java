@@ -15,6 +15,14 @@ import lombok.Setter;
 @NoArgsConstructor
 public class RaceSettings extends BaseEntity {
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "start_type", nullable = false, length = 24)
+    private RaceStartType startType = RaceStartType.GRID_FALSE_START;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "slipstream", nullable = false, length = 16)
+    private RaceSlipstream slipstream = RaceSlipstream.REAL;
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
 	private UUID id;
@@ -57,7 +65,7 @@ public class RaceSettings extends BaseEntity {
     }
 
 	public boolean isComplete() {
-		return numberOfLaps != null && tyreWearMultiplier != null
+		return startType != null && slipstream != null && numberOfLaps != null && tyreWearMultiplier != null
 				&& fuelConsumptionMultiplier != null && refuelingSpeed != null
 				&& hasText(initialFuel)
 				&& numberOfRequiredPitStops != null && isTimeProgressionComplete()

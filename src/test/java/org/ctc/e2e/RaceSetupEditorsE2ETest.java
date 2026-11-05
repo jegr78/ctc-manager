@@ -38,6 +38,47 @@ class RaceSetupEditorsE2ETest extends PlaywrightConfig {
     @AfterEach
     void tearDown() { teardownPage(); }
 
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"1440,1000,desktop", "390,844,mobile"})
+    void given2027SeasonWithoutJavaScript_whenChoosingStartAndSlipstream_thenSaveAndReloadExactOptions(int width, int height, String viewport) throws Exception {
+        // given
+        var fixture = helper.createFullSeasonFixture("Test Lobby Native " + UUID.randomUUID().toString().substring(0, 8));
+        try (var nativeContext = browser.newContext(new Browser.NewContextOptions().setJavaScriptEnabled(false))) {
+            var nativePage = nativeContext.newPage();
+            nativePage.setViewportSize(width, height);
+            nativePage.navigate(url("/admin/seasons/" + fixture.season().getId() + "/edit"));
+            nativePage.getByLabel("Rules profile").selectOption("CTC_2027");
+            nativePage.getByRole(com.microsoft.playwright.options.AriaRole.BUTTON,
+                    new com.microsoft.playwright.Page.GetByRoleOptions().setName("Save lobby rules")).click();
+            assertThat(nativePage.getByLabel("Rules profile")).hasValue("CTC_2027");
+            java.nio.file.Files.createDirectories(java.nio.file.Path.of(".screenshots"));
+            nativePage.screenshot(new com.microsoft.playwright.Page.ScreenshotOptions()
+                    .setPath(java.nio.file.Path.of(".screenshots/lobby-season-" + viewport + ".png")).setFullPage(true));
+            nativePage.navigate(url("/admin/races/" + fixture.race().getId() + "/edit"));
+            // when
+            nativePage.getByLabel("Start Type", new com.microsoft.playwright.Page.GetByLabelOptions().setExact(true)).selectOption("ROLLING");
+            nativePage.getByLabel("Race Slipstream", new com.microsoft.playwright.Page.GetByLabelOptions().setExact(true)).selectOption("WEAK");
+            nativePage.locator("#timeProgressionMultiplier").fill("0");
+            nativePage.locator(".entity-editor-actions button").click();
+            // then
+            assertThat(nativePage).hasURL(url("/admin/races?matchdayId=" + fixture.matchday().getId()));
+            nativePage.navigate(url("/admin/races/" + fixture.race().getId() + "/edit"));
+            assertThat(nativePage.locator("#startType")).hasValue("ROLLING");
+            assertThat(nativePage.locator("#slipstream")).hasValue("WEAK");
+            assertThat(nativePage.locator("input[name=lobbyRulesProfile]")).hasValue("CTC_2027");
+            org.assertj.core.api.Assertions.assertThat(nativePage.evaluate("document.documentElement.scrollWidth <= innerWidth")).isEqualTo(true);
+            nativePage.screenshot(new com.microsoft.playwright.Page.ScreenshotOptions()
+                    .setPath(java.nio.file.Path.of(".screenshots/lobby-race-" + viewport + ".png")).setFullPage(true));
+            transaction.executeWithoutResult(status -> {
+                var saved = races.findById(fixture.race().getId()).orElseThrow();
+                assertEquals(org.ctc.domain.model.RaceStartType.ROLLING, saved.getSettings().getStartType());
+                assertEquals(org.ctc.domain.model.RaceSlipstream.WEAK, saved.getSettings().getSlipstream());
+            });
+        } finally {
+            transaction.executeWithoutResult(status -> helper.deleteSeasonCascade(seasons.findById(fixture.season().getId()).orElseThrow()));
+        }
+    }
+
     @Test
     void givenSeasonMatchday_whenInvalidLabelIsCorrected_thenOrderAndSeasonRemainAndSaveSucceeds() {
         // given

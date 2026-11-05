@@ -14,6 +14,7 @@ public record DataAuditFinding(Category category, Resolution resolution, String 
 		PLAYOFF("Playoff winners and advancement", "#195, #201"),
 		PUBLIC_URL("Ambiguous public URLs", "#210"),
         RACE_SETTINGS("Inconsistent race settings", "#280"),
+        LOBBY_RULES("Inconsistent season lobby rules", "#343"),
         CAR_METADATA("Car metadata without valid review evidence", "#274"),
         CAR_ELIGIBILITY("Car eligibility information", "#278"),
         CAR_POOL("Inconsistent seasonal car pools", "#275, #276, #278"),

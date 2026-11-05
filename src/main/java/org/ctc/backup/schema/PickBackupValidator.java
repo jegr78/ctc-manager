@@ -13,7 +13,7 @@ import org.ctc.domain.model.*;
 public final class PickBackupValidator {
     private static final int MAX_VALUES = 100_000;
     private static final Map<String, Set<String>> FIELDS = Map.ofEntries(
-            Map.entry("seasons", Set.of("id", "picksCollectionEnabled", "carPoolMode", "carPoolState", "cars", "tracks")),
+            Map.entry("seasons", Set.of("id", "picksCollectionEnabled", "lobbyRulesProfile", "carPoolMode", "carPoolState", "cars", "tracks")),
             Map.entry("teams", Set.of("id")), Map.entry("cars", Set.of("id")), Map.entry("tracks", Set.of("id")),
             Map.entry("season_phases", Set.of("id", "season")), Map.entry("matchdays", Set.of("id", "phase")),
             Map.entry("matches", Set.of("id", "homeTeam", "awayTeam", "bye", "discordChannelId")),
@@ -21,7 +21,7 @@ public final class PickBackupValidator {
             Map.entry("playoff_matchups", Set.of("id", "team1", "team2", "bye")),
             Map.entry("races", Set.of("id", "matchday", "match", "playoffMatchup", "homeTeamOverride", "awayTeamOverride", "car", "track", "carPoolEntry", "picksManaged")),
             Map.entry("season_car_pool_entries", Set.of("id", "season")), Map.entry("season_car_pool_members", Set.of("id", "entry", "car")),
-            Map.entry("race_settings", Set.of("id", "race", "numberOfLaps", "tyreWearMultiplier", "fuelConsumptionMultiplier", "refuelingSpeed", "initialFuel", "numberOfRequiredPitStops", "timeProgressionMode", "timeProgressionMultiplier", "weather", "timeOfDay", "availableTyres", "mandatoryTyres")),
+            Map.entry("race_settings", Set.of("id", "race", "numberOfLaps", "tyreWearMultiplier", "fuelConsumptionMultiplier", "refuelingSpeed", "initialFuel", "numberOfRequiredPitStops", "timeProgressionMode", "timeProgressionMultiplier", "weather", "timeOfDay", "availableTyres", "mandatoryTyres", "startType", "slipstream")),
             Map.entry("matchday_picks", Set.of("id", "race", "season", "team", "originalMatchday", "originalAwayTeam", "version", "state", "latestRevisionNumber", "approvedRevisionNumber", "manualOpen", "manualClosed", "createdAt", "updatedAt")),
             Map.entry("matchday_pick_revisions", Set.of("id", "pick", "revisionNumber", "payload", "confirmedAt", "submitterId", "requestId", "receiptVersion", "createdAt", "updatedAt")),
             Map.entry("pick_publication_attempts", Set.of("id", "batchId", "race", "seasonId", "originalMatchdayId", "originalHomeTeamId", "originalAwayTeamId",
@@ -40,6 +40,7 @@ public final class PickBackupValidator {
     public void accept(String table, JsonNode row) {
         if (!FIELDS.containsKey(table)) return;
         try {
+            row = LobbyRulesArchive.normalize(version, table, row);
             boolean publication = table.startsWith("pick_publication_");
             if (publication && version < 7) fail("Publication evidence requires schema version 7");
             if (version < 6 && table.equals("team_pick_channel_bindings")) fail("Channel bindings require schema version 6");
@@ -213,6 +214,7 @@ public final class PickBackupValidator {
             var fields = PickDisclosureField.fields((int) mask);
             if (output == PickPublicationOutput.LOBBY_SETTINGS && fields.contains(PickDisclosureField.CAR)) fail("Lobby cannot disclose a car");
             var content = PickPublicationContentReader.read(row.get("content"));
+            if (content.lobbyRulesProfile() != LobbyRulesArchive.profile(index("seasons").get(seasonId))) fail("Publication rules differ from their original season");
             String hash = text(row, "contentHash", 64);
             if (!PickPublicationAttempt.hashMatches(hash, content.fingerprint())
                     || !PickPublicationAttempt.hashMatches(text(row, "requestHash", 64), PickPublicationAttempt.manifestHash(text(row, "requestManifest", 16000)))) {
@@ -275,13 +277,14 @@ public final class PickBackupValidator {
                     .orElseThrow(() -> new ValidationException("Invalid pick publication source revision"));
             payload = PickPayloadReader.read(revision.get("payload"));
         } else throw new ValidationException("Invalid pick publication source origin");
-        var captured = new PickSetupSnapshot(content.trackId(), content.carId(), content.carPoolEntryId(), content.settings());
+        var captured = new PickSetupSnapshot(content.trackId(), content.carId(), content.carPoolEntryId(), content.settings(), content.lobbyRulesProfile());
         if (!captured.matches(payload)) fail("Published content differs from its immutable source");
     }
 
     private void validatePayload(PickPayload payload, String seasonId) {
         var season = index("seasons").get(seasonId);
         if (season == null || !index("cars").containsKey(payload.carId().toString()) || !index("tracks").containsKey(payload.trackId().toString())) fail("Missing payload reference");
+        if (payload.lobbyRulesProfile() != LobbyRulesArchive.profile(season)) fail("Pick rules differ from their season");
         if (!contains(season.get("tracks"), payload.trackId().toString())) fail("Track is outside the pick season");
         if ("FIXED_CARS".equals(text(season, "carPoolMode", 24))) {
             if (payload.carPoolEntryId() != null || !contains(season.get("cars"), payload.carId().toString())) fail("Invalid fixed-pool payload reference");
@@ -306,6 +309,7 @@ public final class PickBackupValidator {
         equal(row, "timeProgressionMode", value.timeProgressionMode().name()); equal(row, "timeProgressionMultiplier", value.timeProgressionMultiplier());
         equal(row, "weather", value.weather()); equal(row, "timeOfDay", value.timeOfDay());
         equal(row, "availableTyres", value.availableTyres()); equal(row, "mandatoryTyres", value.mandatoryTyres());
+        equal(row, "startType", value.startType().name()); equal(row, "slipstream", value.slipstream().name());
     }
 
     private void validateReservations(List<Pending> pending) {

@@ -73,6 +73,8 @@ public class SettingsGraphicService extends AbstractGraphicService implements Te
 		var awayTeam = race.getAwayTeam();
 		var season = race.getMatchday().getSeason();
 		var settings = race.getSettings();
+        var profile = season.getLobbyRulesProfile();
+        org.ctc.domain.service.LobbyRulesPolicy.requireCurrent(season, profile, settings.getStartType(), settings.getSlipstream());
 
 		String homeCardBase64 = encodeCardBase64(buildCardPath(season.getId().toString(), homeTeam.getShortName()));
 		String awayCardBase64 = encodeCardBase64(buildCardPath(season.getId().toString(), awayTeam.getShortName()));
@@ -139,6 +141,12 @@ public class SettingsGraphicService extends AbstractGraphicService implements Te
 		ctx.setVariable("timeOfDay", settings.getTimeOfDay());
 		ctx.setVariable("availableTyres", settings.getAvailableTyres());
 		ctx.setVariable("mandatoryTyres", settings.getMandatoryTyres());
+        ctx.setVariable("lobbyRulesProfile", profile.getLabel());
+        ctx.setVariable("startType", settings.getStartType().getLabel());
+        ctx.setVariable("slipstream", settings.getSlipstream().getLabel());
+        ctx.setVariable("flagRules", profile.getFlagRules());
+        ctx.setVariable("qualifyingMinutes", profile.getQualifyingMinutes());
+        ctx.setVariable("qualifierSlipstream", profile.getQualifierSlipstream());
 
         return ctx;
     }

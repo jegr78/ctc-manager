@@ -37,6 +37,11 @@ class PickRestorersTest {
             var context = mock(Context.class);
             when(context.getConnection()).thenReturn(connection);
             new V26__AddConfidentialPicks().migrate(context);
+            for (String table : List.of("matchday_pick_revisions", "matchday_pick_decisions")) {
+                jdbc.execute("ALTER TABLE " + table + " ADD COLUMN lobby_rules_profile VARCHAR(16)");
+                jdbc.execute("ALTER TABLE " + table + " ADD COLUMN start_type VARCHAR(24)");
+                jdbc.execute("ALTER TABLE " + table + " ADD COLUMN slipstream VARCHAR(16)");
+            }
             jdbc.update("INSERT INTO seasons (id) VALUES (?)", season);
             jdbc.update("INSERT INTO teams (id) VALUES (?)", team);
             jdbc.update("INSERT INTO teams (id) VALUES (?)", away);
@@ -63,7 +68,7 @@ class PickRestorersTest {
                      "refuelingSpeed":4,"initialFuel":"DEFAULT","requiredPitStops":1,"timeProgressionMode":"EQUAL_CONDITIONS",
                      "timeProgressionMultiplier":null,"weather":"S01, R03, S02","timeOfDay":"Sunset","availableTyres":["RS","RM"],"mandatoryTyres":[]}
                     """.formatted(track, car)));
-            new MatchdayPickRevisionRestorer().restore(List.of(revision), jdbc);
+            new MatchdayPickRevisionRestorer().restore(List.of(org.ctc.backup.schema.LobbyRulesArchive.normalize(13, "matchday_pick_revisions", revision)), jdbc);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM matchday_pick_revisions", Integer.class)).isEqualTo(1);
             var restored = jdbc.queryForMap("SELECT * FROM matchday_pick_revisions");
             assertThat(restored.get("CONFIRMED_AT").toString()).isEqualTo("2026-10-25 01:30:00.123456");
@@ -73,6 +78,9 @@ class PickRestorersTest {
             assertThat(restored.get("MANDATORY_TYRES")).isEqualTo("");
             assertThat(restored.get("WEATHER")).isEqualTo("S01, R03, S02");
             assertThat(restored.get("REQUEST_ID")).isEqualTo(request);
+            assertThat(restored.get("LOBBY_RULES_PROFILE")).isEqualTo("LEGACY");
+            assertThat(restored.get("START_TYPE")).isEqualTo("GRID_FALSE_START");
+            assertThat(restored.get("SLIPSTREAM")).isEqualTo("REAL");
             var decision = mapper.createObjectNode();
             decision.put("id", UUID.randomUUID().toString()).put("pick", pick.toString()).put("kind", "APPROVE").put("aggregateVersion", 4)
                     .put("actorKind", "MANAGEMENT").put("actorId", "test-admin").put("reason", "Checked exact revision 2")

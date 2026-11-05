@@ -29,8 +29,8 @@ class BackupSchemaGuardIT {
     void givenBackupSchema_whenInspected_thenSchemaVersionIsThirteen() {
         // when / then
         assertThat(BackupSchema.SCHEMA_VERSION)
-                .as("BackupSchema.SCHEMA_VERSION changed from 13; this is a wire contract bump")
-                .isEqualTo(13);
+                .as("BackupSchema.SCHEMA_VERSION changed from 14; this is a wire contract bump")
+                .isEqualTo(14);
     }
 
     @Test

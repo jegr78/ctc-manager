@@ -1,6 +1,10 @@
 package org.ctc.admin.dto;
 
 import org.ctc.domain.model.TimeProgressionMode;
+import org.ctc.domain.model.LobbyRulesProfile;
+import org.ctc.domain.model.RaceStartType;
+import org.ctc.domain.model.RaceSlipstream;
+import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -24,6 +28,13 @@ public class RaceForm {
     private UUID carPoolEntryId;
 	private LocalDateTime dateTime;
 	private List<RaceResultForm> results = new ArrayList<>();
+
+    @NotNull(message = "Reload the race form to capture the season rules.")
+    private LobbyRulesProfile lobbyRulesProfile;
+    @NotNull(message = "Choose a start type from the season options.")
+    private RaceStartType startType;
+    @NotNull(message = "Choose a race slipstream from the season options.")
+    private RaceSlipstream slipstream;
 
 	// Race Settings
 	private Integer numberOfLaps;

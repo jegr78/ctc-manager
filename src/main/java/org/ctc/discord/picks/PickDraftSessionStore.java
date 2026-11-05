@@ -11,6 +11,7 @@ import java.util.function.BiFunction;
 import java.util.function.LongSupplier;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.PickPayload;
+import org.ctc.domain.model.LobbyRulesProfile;
 import org.ctc.domain.picks.HomeRaceTarget;
 import org.ctc.domain.picks.PickTeamView.Choice;
 
@@ -72,6 +73,7 @@ public final class PickDraftSessionStore {
         Choice track;
         Choice car;
         PickPayload payload;
+        LobbyRulesProfile lobbyRulesProfile = LobbyRulesProfile.LEGACY;
         Session(String guild, String channel, String user, long generation, Instant expires) {
             this.guild = guild; this.channel = channel; this.user = user; this.generation = generation; this.expires = expires;
         }

@@ -106,7 +106,7 @@ class RaceControllerTest {
     @Test
     void givenEqualConditions_whenSavingAndReopening_thenModeAndOtherInputsSurvive() throws Exception {
         // given / when
-        mockMvc.perform(post("/admin/races/save")
+        mockMvc.perform(post("/admin/races/save").param("lobbyRulesProfile", "LEGACY").param("startType", "GRID_FALSE_START").param("slipstream", "REAL")
                 .param("id", race.getId().toString())
                 .param("matchdayId", matchday.getId().toString())
                 .param("homeTeamId", home.getId().toString())
@@ -130,7 +130,7 @@ class RaceControllerTest {
     void givenContradictoryOrMalformedMode_whenSaving_thenReturnsActionableErrorAndSubmittedValues() throws Exception {
         // given / when / then
         for (String mode : new String[]{"EQUAL_CONDITIONS", "FORGED"}) {
-            mockMvc.perform(post("/admin/races/save")
+            mockMvc.perform(post("/admin/races/save").param("lobbyRulesProfile", "LEGACY").param("startType", "GRID_FALSE_START").param("slipstream", "REAL")
                     .param("id", race.getId().toString())
                     .param("matchdayId", matchday.getId().toString())
                     .param("homeTeamId", home.getId().toString())
@@ -222,7 +222,7 @@ class RaceControllerTest {
 	@Test
 	void givenMatchdayAndTeams_whenSaveNewRace_thenRedirectsWithSuccess() throws Exception {
 		// when
-		mockMvc.perform(post("/admin/races/save")
+		mockMvc.perform(post("/admin/races/save").param("lobbyRulesProfile", "LEGACY").param("startType", "GRID_FALSE_START").param("slipstream", "REAL")
 						.param("matchdayId", matchday.getId().toString())
 						.param("homeTeamId", home.getId().toString())
 						.param("awayTeamId", away.getId().toString())
@@ -429,7 +429,7 @@ class RaceControllerTest {
 		var matchday2 = matchdayRepository.save(new Matchday(regularPhase2, "RT Matchday 2", 2));
 
 		// when
-		mockMvc.perform(post("/admin/races/save")
+		mockMvc.perform(post("/admin/races/save").param("lobbyRulesProfile", "LEGACY").param("startType", "GRID_FALSE_START").param("slipstream", "REAL")
 						.param("matchdayId", matchday2.getId().toString())
 						.param("homeTeamId", home.getId().toString())
 						.param("awayTeamId", away.getId().toString())
@@ -448,7 +448,7 @@ class RaceControllerTest {
 		// Intentionally NOT adding car to season pool
 
 		// when
-		mockMvc.perform(post("/admin/races/save")
+		mockMvc.perform(post("/admin/races/save").param("lobbyRulesProfile", "LEGACY").param("startType", "GRID_FALSE_START").param("slipstream", "REAL")
 						.param("matchdayId", matchday.getId().toString())
 						.param("homeTeamId", home.getId().toString())
 						.param("awayTeamId", away.getId().toString())
@@ -465,7 +465,7 @@ class RaceControllerTest {
 		// Intentionally NOT adding track to season pool
 
 		// when
-		mockMvc.perform(post("/admin/races/save")
+		mockMvc.perform(post("/admin/races/save").param("lobbyRulesProfile", "LEGACY").param("startType", "GRID_FALSE_START").param("slipstream", "REAL")
 						.param("matchdayId", matchday.getId().toString())
 						.param("homeTeamId", home.getId().toString())
 						.param("awayTeamId", away.getId().toString())
@@ -590,7 +590,7 @@ class RaceControllerTest {
 		var matchday2 = matchdayRepository.save(new Matchday(regularPhaseDt, "RT Matchday DT", 3));
 
 		// when
-		mockMvc.perform(post("/admin/races/save")
+		mockMvc.perform(post("/admin/races/save").param("lobbyRulesProfile", "LEGACY").param("startType", "GRID_FALSE_START").param("slipstream", "REAL")
 						.param("matchdayId", matchday2.getId().toString())
 						.param("homeTeamId", home.getId().toString())
 						.param("awayTeamId", away.getId().toString())

@@ -24,6 +24,8 @@ public class RaceSettingsApplicationService {
     private final TrackRepository tracks;
     private final SeasonCarPoolEntryRepository entries;
     public void apply(Race race, PickPayload payload) {
+        LobbyRulesPolicy.requireCurrent(race.getMatchday() == null ? null : race.getMatchday().getSeason(),
+                payload.lobbyRulesProfile(), payload.startType(), payload.slipstream());
         var car = cars.findById(payload.carId()).orElseThrow(() -> new BusinessRuleException("Pick car no longer exists"));
         var track = tracks.findById(payload.trackId()).orElseThrow(() -> new BusinessRuleException("Pick track no longer exists"));
         var entry = payload.carPoolEntryId() == null ? null : entries.findById(payload.carPoolEntryId())
@@ -32,6 +34,8 @@ public class RaceSettingsApplicationService {
     }
 
     public void apply(Race race, Track track, Car car, SeasonCarPoolEntry entry, RaceSettingsValues values) {
+        var season = race.getMatchday() == null ? null : race.getMatchday().getSeason();
+        LobbyRulesPolicy.requireCurrent(season, season == null ? null : season.getLobbyRulesProfile(), values.startType(), values.slipstream());
         race.setTrack(track);
         race.setCar(car);
         race.setCarPoolEntry(entry);

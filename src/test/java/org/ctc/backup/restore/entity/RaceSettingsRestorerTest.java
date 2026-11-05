@@ -23,7 +23,7 @@ class RaceSettingsRestorerTest {
     void givenContradictoryMode_whenRestoring_thenRejectsBeforeWriting() throws Exception {
         // given
         var jdbc = mock(JdbcTemplate.class);
-        var row = mapper.readTree("{\"timeProgressionMode\":\"EQUAL_CONDITIONS\",\"timeProgressionMultiplier\":0}");
+        var row = legacy("{\"timeProgressionMode\":\"EQUAL_CONDITIONS\",\"timeProgressionMultiplier\":0}");
         // when / then
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> restorer.restore(List.of(row), jdbc))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("time progression");
@@ -40,7 +40,7 @@ class RaceSettingsRestorerTest {
     void givenCompleteSettings_whenRestoreCalled_thenAllColumnsBoundWithCorrectTypes() throws Exception {
         // given — all fields populated (isComplete() == true semantics)
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        JsonNode row = mapper.readTree("""
+        JsonNode row = legacy("""
                 {
                   "id": "11111111-1111-1111-1111-111111111111",
                   "race": "22222222-2222-2222-2222-222222222222",
@@ -96,6 +96,8 @@ class RaceSettingsRestorerTest {
         verify(ps).setInt(8, 1);
         verify(ps).setInt(9, 30);
         verify(ps).setString(16, "MULTIPLIER");
+        verify(ps).setString(17, "GRID_FALSE_START");
+        verify(ps).setString(18, "REAL");
         verify(ps).setString(10, "Clear");
         verify(ps).setString(11, "Day");
         verify(ps).setString(12, "Hard,Medium,Soft");
@@ -109,7 +111,7 @@ class RaceSettingsRestorerTest {
     void givenIncompleteSettings_whenRestoreCalled_thenNullableColumnsBoundAsNull() throws Exception {
         // given — minimum race_id only; all other fields nullable per V1 schema
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        JsonNode row = mapper.readTree("""
+        JsonNode row = legacy("""
                 {
                   "id": "11111111-1111-1111-1111-111111111111",
                   "race": "22222222-2222-2222-2222-222222222222",
@@ -147,9 +149,15 @@ class RaceSettingsRestorerTest {
         verify(ps).setNull(8, java.sql.Types.INTEGER);
         verify(ps).setNull(9, java.sql.Types.INTEGER);
         verify(ps).setString(16, "MULTIPLIER");
+        verify(ps).setString(17, "GRID_FALSE_START");
+        verify(ps).setString(18, "REAL");
         verify(ps).setNull(10, java.sql.Types.VARCHAR);
         verify(ps).setNull(11, java.sql.Types.VARCHAR);
         verify(ps).setNull(12, java.sql.Types.VARCHAR);
         verify(ps).setNull(13, java.sql.Types.VARCHAR);
     }
+    private JsonNode legacy(String json) throws Exception {
+        return org.ctc.backup.schema.LobbyRulesArchive.normalize(13, "race_settings", mapper.readTree(json));
+    }
+
 }

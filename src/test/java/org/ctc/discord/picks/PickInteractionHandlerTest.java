@@ -17,6 +17,30 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class PickInteractionHandlerTest {
+    @Test
+    void given2027DraftAndLaterProfileChange_whenConfirming_thenKeepCapturedChoicesAndDoNotClaimSuccessOnRejection() {
+        // given
+        view = new PickTeamView(view.target(), view.payload(), view.receipt(), view.carLabel(), view.trackLabel(), view.deadline(),
+                view.manualOpen(), view.manualClosed(), view.returnReason(), view.cars(), view.tracks(), LobbyRulesProfile.CTC_2027);
+        enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open fuel form"); submitModal(fuel); open("Open time form");
+        assertThat(response.modal.fields()).hasSize(5);
+        view = new PickTeamView(view.target(), view.payload(), view.receipt(), view.carLabel(), view.trackLabel(), view.deadline(),
+                view.manualOpen(), view.manualClosed(), view.returnReason(), view.cars(), view.tracks(), LobbyRulesProfile.LEGACY);
+        submitModal(fields("progression", "0", "weather", "S01", "daytime", "Night", "start", "ROLLING", "slipstream", "WEAK"));
+        assertThat(response.last().buttons()).extracting(PickGatewayMessage.Button::label).contains("Confirm submission");
+        assertThat(response.last().content()).contains("Rolling Start", "Weak");
+        when(submissions.submit(eq(race), anyLong(), any(), eq(actor), any())).thenThrow(new BusinessRuleException("Rules changed; reload"));
+        // when
+        click("Confirm submission");
+        // then
+        var captured = ArgumentCaptor.forClass(PickPayload.class);
+        verify(submissions).submit(eq(race), eq(0L), any(), eq(actor), captured.capture());
+        assertThat(captured.getValue().lobbyRulesProfile()).isEqualTo(LobbyRulesProfile.CTC_2027);
+        assertThat(captured.getValue().startType()).isEqualTo(RaceStartType.ROLLING);
+        assertThat(captured.getValue().slipstream()).isEqualTo(RaceSlipstream.WEAK);
+        assertThat(response.allText()).contains("reload").doesNotContain("Saved revision");
+    }
+
     final PickAccessService access = mock(PickAccessService.class);
     final PickTargetService targets = mock(PickTargetService.class);
     final PickTeamReadService reads = mock(PickTeamReadService.class);

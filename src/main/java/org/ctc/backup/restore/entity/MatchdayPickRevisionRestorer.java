@@ -10,7 +10,7 @@ import org.ctc.backup.schema.PickPayloadReader;
 
 @Component
 public class MatchdayPickRevisionRestorer implements EntityRestorer {
-    private static final String SQL = "INSERT INTO matchday_pick_revisions (id,pick_id,revision_number,confirmed_at,submitter_id,request_id,receipt_version," + PickRestoreSupport.PAYLOAD_COLUMNS + ",created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+    private static final String SQL = "INSERT INTO matchday_pick_revisions (id,pick_id,revision_number,confirmed_at,submitter_id,request_id,receipt_version," + PickRestoreSupport.PAYLOAD_COLUMNS + ",created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
     @Override public String tableName() { return "matchday_pick_revisions"; }
     @Override public void restore(List<JsonNode> rows, JdbcTemplate jdbc) {
         jdbc.batchUpdate(SQL, rows, 500, (ps, row) -> {
@@ -22,8 +22,8 @@ public class MatchdayPickRevisionRestorer implements EntityRestorer {
             ps.setObject(6, UUID.fromString(row.get("requestId").asText()));
             ps.setLong(7, row.get("receiptVersion").longValue());
             PickRestoreSupport.payload(ps, 8, PickPayloadReader.read(row.get("payload")));
-            ps.setTimestamp(23, PickRestoreSupport.auditTime(row, "createdAt"));
-            ps.setTimestamp(24, PickRestoreSupport.auditTime(row, "updatedAt"));
+            ps.setTimestamp(26, PickRestoreSupport.auditTime(row, "createdAt"));
+            ps.setTimestamp(27, PickRestoreSupport.auditTime(row, "updatedAt"));
         });
     }
 }

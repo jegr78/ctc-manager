@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchdayGeneratorForm;
 import org.ctc.admin.dto.PostStandingsForm;
 import org.ctc.admin.dto.SeasonForm;
+import org.ctc.admin.dto.SeasonLobbyRulesForm;
+import org.ctc.domain.model.LobbyRulesProfile;
 import org.ctc.admin.dto.SeasonPoolEntryForm;
 import org.ctc.admin.dto.SeasonPoolModeForm;
 import org.ctc.admin.service.DiscordSeasonViewService;
@@ -113,6 +115,7 @@ public class SeasonController {
 		model.addAttribute("allTracks", data.allTracks());
 		model.addAllAttributes(discordSeasonViewService.buildDiscordIntegrationModel(season.getId()));
         preparePoolModels(season.getId(), model);
+        prepareLobbyRuleModels(season, model);
 		return "admin/season-form";
 	}
 
@@ -212,6 +215,7 @@ public class SeasonController {
                 model.addAttribute("allTracks", data.allTracks());
                 model.addAllAttributes(discordSeasonViewService.buildDiscordIntegrationModel(form.getId()));
                 preparePoolModels(form.getId(), model);
+                prepareLobbyRuleModels(data.season(), model);
             }
 			return "admin/season-form";
 		}
@@ -274,6 +278,13 @@ public class SeasonController {
 		}
 		return "redirect:/admin/seasons/" + id;
 	}
+
+    private void prepareLobbyRuleModels(org.ctc.domain.model.Season season, Model model) {
+        model.addAttribute("lobbyRulesProfiles", LobbyRulesProfile.values());
+        if (!model.containsAttribute("lobbyRulesForm")) {
+            model.addAttribute("lobbyRulesForm", SeasonLobbyRulesForm.from(season.getLobbyRulesProfile()));
+        }
+    }
 
     private void preparePoolModels(UUID id, Model model) {
         model.addAttribute("poolPreview", carPoolService.preview(id));

@@ -7,6 +7,7 @@ import java.util.List;
 import org.ctc.admin.dto.DataAuditFinding;
 import org.ctc.backup.schema.BackupSchema;
 import org.ctc.backup.schema.PickBackupValidator;
+import org.ctc.backup.schema.LobbyRulesBackupValidator;
 import org.ctc.backup.service.BackupExportService;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.MatchdayPick;
@@ -36,6 +37,7 @@ public class PickIntegrityAuditService {
     @Transactional(readOnly = true)
     public List<DataAuditFinding> inspect() {
         var validator = new PickBackupValidator(BackupSchema.SCHEMA_VERSION);
+        var lobbyRules = new LobbyRulesBackupValidator();
         var managedRaces = new ArrayList<Race>();
         var picks = new HashMap<java.util.UUID, MatchdayPick>();
         try {
@@ -44,9 +46,12 @@ public class PickIntegrityAuditService {
                 for (var row : exports.fetchAllForBackup(entity.entityClass())) {
                     if (row instanceof Race race && race.isPicksManaged()) managedRaces.add(race);
                     if (row instanceof MatchdayPick pick) picks.put(pick.getRace().getId(), pick);
-                    validator.accept(entity.tableName(), mapper.valueToTree(row));
+                    var json = mapper.valueToTree(row);
+                    lobbyRules.accept(entity.tableName(), json);
+                    validator.accept(entity.tableName(), json);
                 }
             }
+            lobbyRules.validate();
             validator.validate();
             for (var race : managedRaces) {
                 var pick = picks.get(race.getId());
@@ -64,6 +69,10 @@ public class PickIntegrityAuditService {
                 }
             }
             return List.of();
+        } catch (LobbyRulesBackupValidator.ValidationException failure) {
+            return List.of(new DataAuditFinding(DataAuditFinding.Category.LOBBY_RULES,
+                    DataAuditFinding.Resolution.AMBIGUOUS, "Season lobby rules", failure.getMessage(),
+                    "Compare the saved season profile and race choices with authoritative records; do not rewrite historical settings or publication evidence."));
         } catch (PickBackupValidator.ValidationException failure) {
             return List.of(new DataAuditFinding(DataAuditFinding.Category.PRIVATE_PICKS,
                     DataAuditFinding.Resolution.AMBIGUOUS, "Private picks and channel bindings", failure.getMessage(),

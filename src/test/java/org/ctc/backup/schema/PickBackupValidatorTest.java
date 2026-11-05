@@ -147,7 +147,7 @@ class PickBackupValidatorTest {
 
     private Map<String, List<ObjectNode>> publicationFixture() throws Exception {
         var rows = fixture();
-        var payload = PickPayloadReader.read(rows.get("matchday_pick_revisions").getFirst().get("payload"));
+        var payload = PickPayloadReader.read(LobbyRulesArchive.normalize(7, "matchday_pick_revisions", rows.get("matchday_pick_revisions").getFirst()).get("payload"));
         var v = org.ctc.domain.model.RaceSettingsValues.from(payload);
         var content = new org.ctc.domain.model.PickPublicationContent(track, car, null, "Test historical track", "Test historical car", null,
                 v.laps(), v.tyreWear(), v.fuelConsumption(), v.refuelingSpeed(), v.initialFuel(), v.requiredPitStops(),
