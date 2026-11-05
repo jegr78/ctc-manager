@@ -29,12 +29,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @Tag("integration")
+@TestPropertySource(properties = "spring.datasource.url=jdbc:h2:mem:ctc_incident_backup;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
 class IncidentBackupRoundTripIT extends IncidentIntegrationFixture {
     static final ObjectMapper JSON = new ObjectMapper();
     static final Path ROOT = SitegenTestDir.create("incident-backup");
@@ -54,6 +56,7 @@ class IncidentBackupRoundTripIT extends IncidentIntegrationFixture {
     @Autowired org.ctc.domain.service.IncidentDeliveryService delivery;
     @Autowired org.ctc.domain.repository.IncidentDeliveryRepository deliveryRows;
     @Autowired org.ctc.domain.repository.IncidentThreadPublicationRepository threadRows;
+    @Autowired org.ctc.domain.repository.PickPublicationAttemptRepository pickPublicationRows;
     @Autowired org.ctc.domain.service.IncidentThreadPublicationService threadPublication;
     String previousParent,previousStaff,previousTags;
     @BeforeEach void rememberIncidentSettings() {tx.executeWithoutResult(status -> {var config=configs.findById(configId).orElseThrow();previousParent=config.getStewardsChannelId();previousStaff=config.getIncidentStaffRoleIds();previousTags=config.getStewardsForumTagIds();});}
@@ -67,6 +70,7 @@ class IncidentBackupRoundTripIT extends IncidentIntegrationFixture {
 
     @BeforeEach
     void seedCases() throws Exception {
+        assertThat(pickPublicationRows.count()).as("incident archive fixtures contain no unrelated pick publications").isZero();
         Files.createDirectories(ROOT.resolve("uploads"));
         windows.open(contextId, NOW.plusSeconds(3600), 0, manager);
         firstRequest = UUID.randomUUID(); firstReceipt = reports.submit(windowId, fixture.race().getId(), 1, firstRequest, actor, payload);

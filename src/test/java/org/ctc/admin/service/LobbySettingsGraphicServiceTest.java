@@ -16,6 +16,46 @@ import static org.mockito.Mockito.*;
 class LobbySettingsGraphicServiceTest {
     @TempDir Path directory;
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"'SS, SM, SH',SM,Sports", "'RS, RM, RH, I, W',RM,Racing"})
+    void givenSavedOneMakeTyres_whenRenderingLobby_thenShowActualFamilyAndKeepExactCompoundText(String available, String mandatory, String family) throws Exception {
+        // given
+        var service = spy(new LobbySettingsGraphicService(mock(TemplateEngine.class), directory.toString()));
+        var race = oneMakeRace(); race.getSettings().setAvailableTyres(available); race.getSettings().setMandatoryTyres(mandatory);
+        doAnswer(call -> { java.nio.file.Files.writeString(call.getArgument(1), call.getArgument(0)); return null; })
+                .when(service).renderScreenshot(anyString(), any(Path.class));
+        // when
+        var graphic = service.renderPublication(race);
+        var document = org.jsoup.Jsoup.parse(new String(graphic.png(), java.nio.charset.StandardCharsets.UTF_8));
+        var values = document.select(".row").stream().collect(java.util.stream.Collectors.toMap(
+                row -> row.select(".set-label").text(), row -> row.select(".set-value").text(), (first, next) -> first));
+        // then
+        assertThat(values).containsEntry("Usable Tyres", family).containsEntry("Usable Tyre & Types", available)
+                .containsEntry("Required Tyre Type", mandatory);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"'RS, I',I,false", "'RS, W',W,false", "'RS, SS',None,false", "SS,None,true"})
+    void givenInvalidTyreSettings_whenRenderingLobby_thenRejectBeforeAnyGraphic(String available, String mandatory, boolean category) throws Exception {
+        // given
+        var service = spy(new LobbySettingsGraphicService(mock(TemplateEngine.class), directory.toString()));
+        var race = oneMakeRace(); race.getSettings().setAvailableTyres(available); race.getSettings().setMandatoryTyres(mandatory);
+        if (category) race.getCarPoolEntry().setOneMakeCar(null);
+        // when / then
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.renderPublication(race))
+                .isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class);
+        verify(service, never()).renderScreenshot(anyString(), any(Path.class));
+    }
+
+    private Race oneMakeRace() {
+        var race = readyRace(); var season = race.getMatchday().getSeason();
+        season.setId(UUID.randomUUID()); season.setLobbyRulesProfile(LobbyRulesProfile.CTC_2027);
+        season.setCarPoolMode(CarPoolMode.CATEGORY_POOL); season.setCarPoolState(CarPoolState.FROZEN);
+        var car = new Car("Test tyre car", "Test manufacturer"); car.setId(UUID.randomUUID()); race.setCar(car);
+        var entry = new SeasonCarPoolEntry(); entry.setId(UUID.randomUUID()); entry.setSeason(season); entry.setOneMakeCar(car);
+        race.setCarPoolEntry(entry); return race;
+    }
+
     @Test
     void givenLegacyRaceWithForbiddenStart_whenRendering_thenRejectBeforeProducingAGraphic() throws Exception {
         // given

@@ -20,7 +20,7 @@ public record PickPayload(
         @Column(name = "time_progression_multiplier") Integer timeProgressionMultiplier,
         @Column(name = "weather", length = 255) String weather,
         @Column(name = "time_of_day", length = 255) String timeOfDay,
-        @Convert(converter = PickTyreSetConverter.class) @Column(name = "available_tyres", length = 8) Set<PickTyre> availableTyres,
+        @Convert(converter = PickTyreSetConverter.class) @Column(name = "available_tyres", length = 12) Set<PickTyre> availableTyres,
         @Convert(converter = PickTyreSetConverter.class) @Column(name = "mandatory_tyres", length = 8) Set<PickTyre> mandatoryTyres,
         @Enumerated(EnumType.STRING) @Column(name = "lobby_rules_profile", length = 16) LobbyRulesProfile lobbyRulesProfile,
         @Enumerated(EnumType.STRING) @Column(name = "start_type", length = 24) RaceStartType startType,
@@ -52,10 +52,7 @@ public record PickPayload(
         }
         text(weather, "weather");
         text(timeOfDay, "time of day");
-        require(availableTyres != null && !availableTyres.isEmpty() && availableTyres.stream().noneMatch(java.util.Objects::isNull),
-                "requires a non-empty available tyre set");
-        require(mandatoryTyres != null && mandatoryTyres.stream().noneMatch(java.util.Objects::isNull)
-                && availableTyres.containsAll(mandatoryTyres), "mandatory tyres must be a subset of available tyres");
+        PickTyreSelection.require(lobbyRulesProfile, availableTyres, mandatoryTyres);
         availableTyres = Set.copyOf(availableTyres);
         mandatoryTyres = Set.copyOf(mandatoryTyres);
     }

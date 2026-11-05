@@ -23,6 +23,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 /**
  * Runs {@link RaceService#saveRace} against the real database without a test transaction, so a
@@ -176,9 +177,9 @@ class RaceServiceSaveRejectionIT {
 		testHelper.createMatch(fixture.matchday(), fixture.awayTeam(), otherTeam);
 
 		// when
-		var result = raceService.saveRace(fixture.race().getId(), fixture.matchday().getId(), otherTeam.getId(),
+		var result = assertDoesNotThrow(() -> raceService.saveRace(fixture.race().getId(), fixture.matchday().getId(), otherTeam.getId(),
 				fixture.awayTeam().getId(), null, null, ORIGINAL_TIME.plusDays(3),
-				99, 9, 9, 9, "50%", 3, 9, "rain", "night", "RS", "RH");
+				99, 9, 9, 9, "50%", 3, 9, "rain", "night", "RS", "RH"));
 
 		// then
 		assertThat(result.success()).as("edit onto an existing pairing").isFalse();
@@ -188,9 +189,9 @@ class RaceServiceSaveRejectionIT {
 	}
 
 	private RaceService.SaveResult saveEdit(UUID raceId, Team home, Car car) {
-		return raceService.saveRace(raceId, fixture.matchday().getId(), home.getId(), fixture.awayTeam().getId(),
+		return assertDoesNotThrow(() -> raceService.saveRace(raceId, fixture.matchday().getId(), home.getId(), fixture.awayTeam().getId(),
 				null, car.getId(), ORIGINAL_TIME.plusDays(3),
-				99, 9, 9, 9, "50%", 3, 9, "rain", "night", "RS", "RH");
+				99, 9, 9, 9, "50%", 3, 9, "rain", "night", "RS", "RH"));
 	}
 
 	private void assertRaceUnchanged() {

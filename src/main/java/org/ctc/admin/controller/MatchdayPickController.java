@@ -78,9 +78,13 @@ public class MatchdayPickController {
 
     private String correctionModel(UUID raceId, PickCorrectionForm form, Model model) {
         var detail = service.detail(raceId); model.addAttribute("review", detail); model.addAttribute("selectedSeasonId", detail.row().seasonId());
-        model.addAttribute("choices", service.correctionChoices(raceId, form));
-        model.addAttribute("fuels", org.ctc.domain.model.PickInitialFuel.values()); model.addAttribute("tyres", org.ctc.domain.model.PickTyre.values());
+        var choices = service.correctionChoices(raceId, form);
+        model.addAttribute("choices", choices);
+        model.addAttribute("fuels", org.ctc.domain.model.PickInitialFuel.values());
         var profile = form.getLobbyRulesProfile();
+        var tyres = org.ctc.domain.service.RaceTyreFormChoices.from(profile, choices.carSelection(), form.getCarPoolEntryId(), null, null);
+        model.addAttribute("availableTyreChoices", tyres.available());
+        model.addAttribute("mandatoryTyreChoices", tyres.mandatory());
         model.addAttribute("startTypes", profile == null ? java.util.List.of() : profile.getStartTypes());
         model.addAttribute("slipstreams", profile == null ? java.util.List.of() : profile.getSlipstreams());
         return "admin/matchday-pick-correction";

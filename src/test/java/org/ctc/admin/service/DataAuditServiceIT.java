@@ -66,6 +66,22 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class DataAuditServiceIT {
     @Test
+    void givenHistoricalWetMandatoryTyre_whenAuditing_thenReportSafeLobbyFindingWithoutChangingTheSavedText() {
+        // given
+        var fixture = testHelper.createFullSeasonFixture("TTYA" + id);
+        var settings = new org.ctc.domain.model.RaceSettings(fixture.race());
+        settings.setAvailableTyres("RS, I"); settings.setMandatoryTyres("I"); fixture.race().setSettings(settings);
+        entityManager.flush(); entityManager.clear();
+        // when
+        var report = dataAuditService.audit();
+        // then
+        assertThat(report.findings(Category.LOBBY_RULES)).anySatisfy(finding ->
+                assertThat(finding.evidence()).isEqualTo("Invalid tyre choices for race " + fixture.race().getId()));
+        assertThat(entityManager.find(org.ctc.domain.model.RaceSettings.class, settings.getId()).getAvailableTyres()).isEqualTo("RS, I");
+        assertThat(entityManager.find(org.ctc.domain.model.RaceSettings.class, settings.getId()).getMandatoryTyres()).isEqualTo("I");
+    }
+
+    @Test
     void givenLegacyRaceWithHistoricalRollingStart_whenAuditing_thenReportInLobbyCategoryWithoutRepairing() {
         // given
         var fixture = testHelper.createFullSeasonFixture("TLA" + id);

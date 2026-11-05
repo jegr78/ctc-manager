@@ -36,7 +36,8 @@ public class PickInteractionHandler implements PickGatewayInteractionHandler {
                     if (!action.name().startsWith("open-")) return false;
                     String stage = action.name().substring(5);
                     session.clearActions();
-                    reply.openModal(modal(session.action(stage, MODAL), stage, session.lobbyRulesProfile));
+                    reply.openModal(modal(session.action(stage, MODAL), stage, session.lobbyRulesProfile,
+                            session.car != null && session.car.oneMake()));
                     return true;
                 });
                 if (opened) return;
@@ -109,7 +110,7 @@ public class PickInteractionHandler implements PickGatewayInteractionHandler {
             return;
         }
         try {
-            validateStage(name, event.values(), session.lobbyRulesProfile);
+            validateStage(name, event.values(), session.lobbyRulesProfile, session.car != null && session.car.oneMake());
         } catch (IllegalArgumentException invalid) {
             next(session, name, "Check all required values and allowed ranges. Mandatory tyres must be available; choose None on its own.", reply); return;
         }

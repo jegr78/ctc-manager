@@ -42,7 +42,7 @@ The active season is unique. Deactivate the current season before activating ano
 - **Race Attachments** — Upload files or link external resources to races
 - **Docker** — Local development and production deployment with MariaDB
 - **Season car pools** — Keep fixed car choices or build named category entries from local metadata. Combine alternative category/drivetrain/year clauses, preview eligible cars and overlaps, then freeze exact membership. Catalog changes preserve frozen choices; used pools cannot be reopened. Race setup selects an entry and one concrete frozen member. Saving consumes the whole entry for the effective home team that season. Native forms retain invalid inputs, concurrent selections serialize through the season, and unambiguous CSV/Sheets overwrites preserve configured race identities. Admin race summaries, public matchdays and settings graphics show the concrete car with its saved pool-entry label. Custom settings templates keep `carName` and can use optional `poolEntryLabel`.
-- **Backup & Restore** — Export a full ZIP backup of all 47 entity tables, including exact seasonal pool snapshots, Discord state and public URL slugs; restore via a preview-and-confirm import flow that accepts schema versions 1 through 14, so older backups remain restorable
+- **Backup & Restore** — Export a full ZIP backup of all 47 entity tables, including exact seasonal pool snapshots, Discord state and public URL slugs; restore via a preview-and-confirm import flow that accepts schema versions 1 through 15, so older backups remain restorable
 - **Channel Archive Dialog** — Labeled destination categories with channel counts, disabled full categories, keyboard focus and Escape/cancel support. A native inline form remains available without JavaScript.
 - **Backup Workspace** — Separate export and restore panels, labeled current and backup row counts, a neutral archive preview and a clear replacement confirmation.
 - **Data Audit** — Read-only check at `/admin/data-audit` for historical aggregates, pairings, phases, succession, playoffs, public URLs, race settings and seasonal pool references. Separate eligibility information explains unknown car metadata and exact-year exclusions. Unknown years remain valid; opening the audit changes no record. See the [Data Audit wiki page](../../wiki/Data-Audit).
@@ -79,7 +79,7 @@ v1.10 introduces a full database backup/restore feature accessible via `/admin/b
 2. Review the preview: per-table row counts (current vs. backup) and schema-version match indicator.
 3. Check the **I understand** confirmation and click **Execute Import**. The database is replaced atomically.
 
-> **Schema-Version lock:** The import rejects a backup whose schema version is outside versions 1 through 14 before it
+> **Schema-Version lock:** The import rejects a backup whose schema version is outside versions 1 through 15 before it
 > writes anything. Schema 4 also validates pool references and limits preflight to 100,000 retained reference rows.
 
 ### Recovery
@@ -123,6 +123,26 @@ Backup schema 13 preserves team penalty history, One-Make definitions and their 
 remain importable; older entries keep their category definitions. Import rejects missing cars,
 mixed definitions and inconsistent One-Make snapshots before any database wipe.
 
+## Tyre selections
+
+Each race uses either Racing or Sports tyres. Both offer Hard, Medium and Soft. Racing also offers
+Intermediate and Wet as available compounds; neither can be mandatory. Mandatory compounds may be
+empty and otherwise must be dry members of the available selection. Sports requires the CTC 2027
+rules profile and a frozen, explicitly defined One-Make entry with its concrete car. A category
+with one member remains a category. Racing stays available for One-Makes.
+
+Native race forms, the private pick wizard and management corrections enforce the same policy.
+Select compounds from one family and refresh choices after changing a pool entry. Saving does not
+publish settings. Lobby graphics show the actual family; custom lobby templates can use
+`v.tyreFamily`, and settings templates can use `tyreFamily`. Existing compound-text variables retain
+their saved strings. Withheld public fields remain withheld.
+
+V37 widens typed available-tyre storage to 12 characters. Backup schema 15 restores both families
+and all five Racing compounds, with entry permissions checked before wiping live data. Schemas 1
+through 14 retain their original typed RS/RM/RH contract; historical native text such as `All` or
+Intermediate/Wet remains compatible. Equivalent native selections preserve exact saved text and
+fingerprints. The read-only audit reports known invalid settings without rewriting history.
+
 ## Season lobby rules
 
 Existing and newly created seasons use **Previous CTC rules** until management explicitly selects
@@ -143,7 +163,7 @@ require a reload; **Refresh choices** explicitly loads the current race context 
 Saving or approving settings does not publish them. Existing explicit publication actions capture
 immutable content, and public output reveals only confirmed fields.
 
-Backup schema 14 preserves the profile and race choices in settings, private revisions, corrections
+Backup schema 15 preserves the profile and race choices in settings, private revisions, corrections
 and publication captures. Schemas 1 through 13 restore the previous profile and its exact original
 fingerprints, publication hashes and masks. Current archives require explicit valid choices and
 are validated before any wipe. The read-only audit reports inconsistent lobby rules separately.

@@ -11,15 +11,17 @@ import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.LobbyRulesProfile;
 import org.ctc.domain.model.RaceStartType;
 import org.ctc.domain.model.RaceSlipstream;
+import org.ctc.domain.service.RaceTyrePolicy;
 
 public final class LobbyRulesBackupValidator {
-    private static final Set<String> TABLES = Set.of("seasons", "season_phases", "matchdays", "races", "race_settings");
+    private static final Set<String> TABLES = Set.of("seasons", "season_phases", "matchdays", "races", "race_settings", "season_car_pool_entries");
     private final int limit;
     private int retained;
-    private final Map<String, LobbyRulesProfile> seasons = new HashMap<>();
+    private final Map<String, SeasonContext> seasons = new HashMap<>();
     private final Map<String, String> phases = new HashMap<>();
     private final Map<String, String> days = new HashMap<>();
-    private final Map<String, String> races = new HashMap<>();
+    private final Map<String, RaceContext> races = new HashMap<>();
+    private final Map<String, EntryContext> entries = new HashMap<>();
     private final Map<String, Settings> settings = new LinkedHashMap<>();
 
     public LobbyRulesBackupValidator() { this(100_000); }
@@ -32,13 +34,16 @@ public final class LobbyRulesBackupValidator {
         try {
             String id = uuid(row, "id");
             switch (table) {
-                case "seasons" -> put(seasons, id, LobbyRulesArchive.profile(row));
+                case "seasons" -> put(seasons, id, new SeasonContext(LobbyRulesArchive.profile(row),
+                        "CATEGORY_POOL".equals(optionalText(row, "carPoolMode")) && "FROZEN".equals(optionalText(row, "carPoolState"))));
                 case "season_phases" -> put(phases, id, uuid(row, "season"));
                 case "matchdays" -> put(days, id, uuid(row, "phase"));
-                case "races" -> put(races, id, uuid(row, "matchday"));
+                case "races" -> put(races, id, new RaceContext(uuid(row, "matchday"), optionalUuid(row, "car"), optionalUuid(row, "carPoolEntry")));
+                case "season_car_pool_entries" -> put(entries, id, new EntryContext(uuid(row, "season"), optionalUuid(row, "oneMakeCar")));
                 case "race_settings" -> put(settings, id, new Settings(uuid(row, "race"),
                         RaceStartType.valueOf(LobbyRulesArchive.text(row, "startType")),
-                        RaceSlipstream.valueOf(LobbyRulesArchive.text(row, "slipstream"))));
+                        RaceSlipstream.valueOf(LobbyRulesArchive.text(row, "slipstream")),
+                        optionalText(row, "availableTyres"), optionalText(row, "mandatoryTyres")));
                 default -> throw new ValidationException("Unknown lobby rules reference table");
             }
         } catch (ValidationException failure) { throw failure; }
@@ -48,18 +53,24 @@ public final class LobbyRulesBackupValidator {
     public void validate() {
         for (String season : phases.values()) require(seasons.containsKey(season));
         for (String phase : days.values()) require(phases.containsKey(phase));
-        for (String day : races.values()) require(days.containsKey(day));
+        for (var race : races.values()) require(days.containsKey(race.day()));
         var configuredRaces = new HashSet<String>();
         for (var value : settings.values()) {
             require(configuredRaces.add(value.race()));
-            String day = reference(races, value.race());
-            String phase = reference(days, day);
-            var profile = seasons.get(reference(phases, phase));
-            require(profile != null);
-            try { profile.requireChoices(value.start(), value.slipstream()); }
+            var race = races.get(value.race()); require(race != null);
+            String phase = reference(days, race.day());
+            String seasonId = reference(phases, phase);
+            var season = seasons.get(seasonId);
+            require(season != null);
+            try { season.profile().requireChoices(value.start(), value.slipstream()); }
             catch (BusinessRuleException failure) {
                 throw new ValidationException("Invalid lobby choices for race " + value.race());
             }
+            var entry = entries.get(race.entry());
+            boolean oneMake = season.frozenCategoryPool() && entry != null && seasonId.equals(entry.season())
+                    && race.car() != null && race.car().equals(entry.oneMakeCar());
+            try { RaceTyrePolicy.require(season.profile(), oneMake, value.available(), value.mandatory()); }
+            catch (BusinessRuleException failure) { throw new ValidationException("Invalid tyre choices for race " + value.race()); }
         }
     }
 
@@ -80,7 +91,17 @@ public final class LobbyRulesBackupValidator {
     private static void require(boolean condition) {
         if (!condition) throw new ValidationException("Missing or ambiguous lobby rules context");
     }
-    private record Settings(String race, RaceStartType start, RaceSlipstream slipstream) { }
+    private static String optionalText(JsonNode row, String field) {
+        if (!row.hasNonNull(field)) return null;
+        var value = row.get(field);
+        if (!value.isTextual() || value.textValue().length() > 255) throw new ValidationException("Invalid lobby rules scalar field");
+        return value.textValue();
+    }
+    private static String optionalUuid(JsonNode row, String field) { return row.hasNonNull(field) ? uuid(row, field) : null; }
+    private record SeasonContext(LobbyRulesProfile profile, boolean frozenCategoryPool) { }
+    private record RaceContext(String day, String car, String entry) { }
+    private record EntryContext(String season, String oneMakeCar) { }
+    private record Settings(String race, RaceStartType start, RaceSlipstream slipstream, String available, String mandatory) { }
     public static final class ValidationException extends IllegalArgumentException {
         public ValidationException(String message) { super(message); }
     }

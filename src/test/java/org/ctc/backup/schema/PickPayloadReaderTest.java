@@ -45,6 +45,32 @@ class PickPayloadReaderTest {
         assertThatThrownBy(() -> PickPayloadReader.read(row)).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("payload");
     }
 
+    @Test
+    void givenAllFiveRacingCompounds_whenReading_thenRetainWetAvailabilityAndDryMandatory() throws Exception {
+        // given
+        var row = valid();
+        row.put("lobbyRulesProfile", "CTC_2027");
+        row.putArray("availableTyres").add("RS").add("RM").add("RH").add("I").add("W");
+        row.putArray("mandatoryTyres").add("RM");
+        // when / then
+        assertThatCode(() -> {
+            var payload = PickPayloadReader.read(row);
+            assertThat(payload.availableTyres()).hasSize(5);
+            assertThat(payload.mandatoryTyres()).containsExactly(org.ctc.domain.model.PickTyre.RM);
+        }).doesNotThrowAnyException();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"availableTyres", "mandatoryTyres"})
+    void givenDuplicateRawTyreCodes_whenReading_thenRejectBeforeSetConversion(String field) throws Exception {
+        // given
+        var row = valid();
+        row.putArray(field).add("RM").add("RM");
+        // when / then
+        assertThatThrownBy(() -> PickPayloadReader.read(row)).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("payload");
+    }
+
     private ObjectNode valid() throws Exception {
         return (ObjectNode) mapper.readTree("""
                 {"trackId":"%s","carId":"%s","carPoolEntryId":null,"laps":12,"tyreWear":2,"fuelConsumption":3,

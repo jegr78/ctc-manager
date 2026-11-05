@@ -39,7 +39,7 @@ public class MatchdayPickRevision extends BaseEntity {
         @AttributeOverride(name = "timeProgressionMode", column = @Column(name = "time_progression_mode", nullable = false, length = 24)),
         @AttributeOverride(name = "weather", column = @Column(name = "weather", nullable = false, length = 255)),
         @AttributeOverride(name = "timeOfDay", column = @Column(name = "time_of_day", nullable = false, length = 255)),
-        @AttributeOverride(name = "availableTyres", column = @Column(name = "available_tyres", nullable = false, length = 8)),
+        @AttributeOverride(name = "availableTyres", column = @Column(name = "available_tyres", nullable = false, length = 12)),
         @AttributeOverride(name = "mandatoryTyres", column = @Column(name = "mandatory_tyres", nullable = false, length = 8))})
     private PickPayload payload;
     @Convert(converter = UtcInstantConverter.class)

@@ -47,6 +47,16 @@ public final class LobbyRulesArchive {
         defaultText(version, result, "startType", "GRID_FALSE_START");
         defaultText(version, result, "slipstream", "REAL");
         choices(result);
+        if (version < 15) {
+            for (String field : java.util.List.of("availableTyres", "mandatoryTyres")) {
+                var values = result.get(field);
+                if (values != null && values.isArray()) {
+                    for (var value : values) {
+                        if (!value.isTextual() || !java.util.Set.of("RS", "RM", "RH").contains(value.textValue())) throw invalid();
+                    }
+                }
+            }
+        }
         return result;
     }
 

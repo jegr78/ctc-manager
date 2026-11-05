@@ -13,6 +13,37 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static org.assertj.core.api.Assertions.*;
 
 class PickBackupValidatorTest {
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"'RS,I',I", "'RS,W',W", "'RS,SS',None"})
+    void givenHashConsistentPublicationWithInvalidTyres_whenValidating_thenRejectTheCapturedSelection(String available, String mandatory) throws Exception {
+        // given
+        var rows = publicationFixture();
+        var attempt = rows.get("pick_publication_attempts").getFirst();
+        var content = (ObjectNode) attempt.get("content");
+        content.put("availableTyres", available).put("mandatoryTyres", mandatory);
+        attempt.put("contentHash", PickPublicationContentReader.read(content).fingerprint());
+        // when / then
+        assertThatThrownBy(() -> validate(7, rows)).isInstanceOf(PickBackupValidator.ValidationException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void givenSportsRevisionWithSavedEntry_whenValidatingSchema15_thenRequireItsExplicitOneMakeDefinition(boolean oneMake) throws Exception {
+        // given
+        var rows = fixture(); UUID entry = UUID.randomUUID();
+        rows.get("seasons").getFirst().put("lobbyRulesProfile", "CTC_2027").put("carPoolMode", "CATEGORY_POOL").put("carPoolState", "FROZEN");
+        var definition = mapper.createObjectNode().put("id", entry.toString()).put("season", season.toString());
+        if (oneMake) definition.put("oneMakeCar", car.toString());
+        rows.put("season_car_pool_entries", List.of(definition));
+        rows.put("season_car_pool_members", List.of(mapper.createObjectNode().put("id", UUID.randomUUID().toString()).put("entry", entry.toString()).put("car", car.toString())));
+        var payload = (ObjectNode) rows.get("matchday_pick_revisions").getFirst().get("payload");
+        payload.put("carPoolEntryId", entry.toString()).put("lobbyRulesProfile", "CTC_2027").put("startType", "GRID_FALSE_START").put("slipstream", "REAL");
+        payload.putArray("availableTyres").add("SS").add("SM").add("SH"); payload.putArray("mandatoryTyres").add("SM");
+        // when / then
+        if (oneMake) assertThatCode(() -> validate(15, rows)).doesNotThrowAnyException();
+        else assertThatThrownBy(() -> validate(15, rows)).isInstanceOf(PickBackupValidator.ValidationException.class);
+    }
+
     final ObjectMapper mapper = new ObjectMapper();
     final UUID season = UUID.randomUUID(), team = UUID.randomUUID(), away = UUID.randomUUID(), race = UUID.randomUUID();
     final UUID phase = UUID.randomUUID(), day = UUID.randomUUID(), match = UUID.randomUUID(), pick = UUID.randomUUID();

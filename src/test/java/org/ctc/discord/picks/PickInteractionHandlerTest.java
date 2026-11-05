@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 
 import static org.assertj.core.api.Assertions.*;
@@ -17,6 +18,47 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class PickInteractionHandlerTest {
+    @ParameterizedTest
+    @CsvSource({"'SS,SM,SH',SM", "'RS,RM,RH,I,W',RM"})
+    void givenSaved2027OneMake_whenCompletingTheWizard_thenSubmitEveryCompoundOnlyAfterConfirmation(String available, String mandatory) {
+        // given
+        UUID entry = UUID.randomUUID();
+        view = new PickTeamView(view.target(), null, null, view.carLabel(), view.trackLabel(), view.deadline(), false, false, null,
+                List.of(new PickTeamView.Choice(car, entry, "Test One-Make", true)), view.tracks(), LobbyRulesProfile.CTC_2027);
+        enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open fuel form");
+        var choices = (PickGatewayModal.Selection) response.modal.fields().stream().filter(f -> f.id().equals("available")).findFirst().orElseThrow();
+        assertThat(choices.options()).extracting(PickGatewayModal.Option::value).contains("SS", "SM", "SH", "I", "W");
+        var selected = new HashMap<>(fuel); selected.put("available", List.of(available.split(","))); selected.put("mandatory", List.of(mandatory));
+        // when
+        submitModal(selected); open("Open time form");
+        submitModal(fields("progression", "0", "weather", "S01", "daytime", "Night", "start", "ROLLING", "slipstream", "WEAK"));
+        verifyNoInteractions(submissions);
+        click("Confirm submission");
+        // then
+        var captured = ArgumentCaptor.forClass(PickPayload.class);
+        verify(submissions).submit(eq(race), eq(0L), any(), eq(actor), captured.capture());
+        assertThat(captured.getValue().carPoolEntryId()).isEqualTo(entry);
+        assertThat(captured.getValue().availableTyres()).extracting(Enum::name).containsExactlyInAnyOrder(available.split(","));
+        assertThat(captured.getValue().mandatoryTyres()).extracting(Enum::name).containsExactly(mandatory);
+        assertThat(response.last().content()).contains("Saved revision 1");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"SS,None,false", "'RS,SS',None,true", "'RS,I',I,true", "'RS,W',W,true"})
+    void givenInvalidOrCategorySportsSelection_whenSubmittingTheFuelModal_thenRemainInTheDraft(String available, String mandatory, boolean oneMake) {
+        // given
+        view = new PickTeamView(view.target(), null, null, view.carLabel(), view.trackLabel(), view.deadline(), false, false, null,
+                List.of(new PickTeamView.Choice(car, UUID.randomUUID(), "Test saved definition", oneMake)), view.tracks(), LobbyRulesProfile.CTC_2027);
+        enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open fuel form");
+        var selected = new HashMap<>(fuel); selected.put("available", List.of(available.split(","))); selected.put("mandatory", List.of(mandatory));
+        // when
+        submitModal(selected);
+        // then
+        assertThat(response.last().content()).contains("Check all required values");
+        assertThat(response.last().buttons()).extracting(PickGatewayMessage.Button::label).containsExactly("Open fuel form");
+        verifyNoInteractions(submissions);
+    }
+
     @Test
     void given2027DraftAndLaterProfileChange_whenConfirming_thenKeepCapturedChoicesAndDoNotClaimSuccessOnRejection() {
         // given

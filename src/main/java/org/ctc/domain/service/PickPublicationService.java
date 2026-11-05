@@ -228,6 +228,7 @@ public class PickPublicationService {
             }
             var values = RaceSettingsValues.from(race.getSettings());
             LobbyRulesPolicy.requireCurrent(race.getMatchday().getSeason(), LobbyRulesProfile.from(race), values.startType(), values.slipstream());
+            RaceTyrePolicy.require(race.getMatchday().getSeason(), race.getCarPoolEntry(), race.getCar(), values);
             sources.put(id, authorization.authorize(race)); contents.put(id, PickPublicationContent.from(race)); selected.add(race);
         }
         var bundle = render.apply(List.copyOf(selected));

@@ -48,7 +48,8 @@ public class PickTeamReadService {
                 ? season.getCars().stream().filter(car -> !available.usedCarIds().contains(car.getId()))
                         .map(car -> new Choice(car.getId(), null, car.getDisplayName())).toList()
                 : available.entries().stream().filter(entry -> entry.reason() == null)
-                        .flatMap(entry -> entry.cars().stream().map(car -> new Choice(car.id(), entry.id(), entry.label() + " / " + car.label()))).toList();
+                        .flatMap(entry -> entry.cars().stream().map(car -> new Choice(car.id(), entry.id(), entry.label() + " / " + car.label(),
+                                car.id().equals(entry.oneMakeCarId())))).toList();
         Set<UUID> usedTracks = races.findByMatchdaySeasonId(season.getId()).stream()
                 .filter(other -> !raceId.equals(other.getId()) && !other.isBye()
                         && (other.getPlayoffMatchup() == null || !other.getPlayoffMatchup().isBye())
