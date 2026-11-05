@@ -44,6 +44,7 @@ public class CsvImportService {
 	private final RaceLineupRepository raceLineupRepository;
 	private final SeasonPhaseService seasonPhaseService;
     private final org.ctc.domain.service.IncidentLifecycleGuard incidentGuard;
+    private final org.ctc.domain.service.RacePenaltyLifecycleGuard penaltyGuard;
 
 	/**
 	 * Returns all seasons for the import form.
@@ -295,7 +296,7 @@ public class CsvImportService {
             var previous = match == null ? List.<Race>of() : raceRepository.findByMatchId(match.getId());
             if (metadata.isPlayoff()) {
                 var playoffLegs = raceRepository.findByPlayoffMatchupId(metadata.playoffMatchupId());
-                if (playoffLegs.stream().anyMatch(incidentGuard::protects)) {
+                if (playoffLegs.stream().anyMatch(this::protectsHistory)) {
                     if (!overwrite) throw new ImportRejectedException(List.of("Incident pairing already has races; confirm results replacement"));
                     previous = playoffLegs;
                 }
@@ -308,10 +309,12 @@ public class CsvImportService {
         return plans;
     }
 
+    private boolean protectsHistory(Race race) { return incidentGuard.protects(race) || penaltyGuard.protects(race); }
+
     private void rejectOverwriteTarget(List<Race> previous, ImportMetadata metadata) {
-        if (previous.stream().anyMatch(race -> incidentGuard.protects(race) && !Objects.equals(
+        if (previous.stream().anyMatch(race -> protectsHistory(race) && !Objects.equals(
                 race.getPlayoffMatchup() == null ? null : race.getPlayoffMatchup().getId(), metadata.playoffMatchupId()))) {
-            throw new ImportRejectedException(List.of("Preserve the incident race's original regular/playoff identity"));
+            throw new ImportRejectedException(List.of("Preserve the race history's original regular/playoff identity"));
         }
         if (previous.stream().anyMatch(race -> race.getPlayoffMatchup() != null && race.getPlayoffMatchup().isComplete())) {
             throw new ImportRejectedException(List.of(PlayoffDecisionGuard.DECIDED));
@@ -327,7 +330,7 @@ public class CsvImportService {
         boolean configured = previous.stream().anyMatch(race -> race.getCarPoolEntry() != null
                 || season.getCarPoolMode() == CarPoolMode.CATEGORY_POOL && race.getCar() != null);
         boolean managed = previous.stream().anyMatch(Race::isPicksManaged);
-        if (!configured && !managed && previous.stream().noneMatch(incidentGuard::protects)) return Map.of();
+        if (!configured && !managed && previous.stream().noneMatch(this::protectsHistory)) return Map.of();
         if (configured && (season.getCarPoolMode() != CarPoolMode.CATEGORY_POOL || previous.stream()
                 .anyMatch(race -> (race.getCar() == null) != (race.getCarPoolEntry() == null)))) {
             throw new ImportRejectedException(List.of("Cannot overwrite an incomplete category pool selection. Configure or clear it in race setup first."));
@@ -356,7 +359,7 @@ public class CsvImportService {
     }
 
     private static ImportRejectedException ambiguousCategoryOverwrite() {
-        return new ImportRejectedException(List.of("The category pool selection overwrite is ambiguous. For protected selections, private picks and incident cases, match each leg to a distinct home team or edit its results individually."));
+        return new ImportRejectedException(List.of("The category pool selection overwrite is ambiguous. For protected selections, private picks, penalty corrections and incident cases, match each leg to a distinct home team or edit its results individually."));
     }
 
     private record PairingPlan(Match match, Team home, Team away, Map<Integer, List<ImportRow>> rows,

@@ -65,7 +65,7 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 		}
 	}
 
-	private String buildHtml(Race race) throws IOException {
+	String buildHtml(Race race) throws IOException {
 		if (race.getHomeTeam() == null || race.getAwayTeam() == null) {
 			throw new IllegalStateException("Race has no teams assigned");
 		}
@@ -88,8 +88,9 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 			throw new IllegalStateException("Team card not found for " + awayTeam.getShortName());
 		}
 
-		int homeTotal = resultRows.stream().mapToInt(DriverResultRow::homePoints).sum();
-		int awayTotal = resultRows.stream().mapToInt(DriverResultRow::awayPoints).sum();
+		var penaltyTotals = scoringService.calculateRaceTotals(race, homeTeam.getId());
+        int homeTotal = penaltyTotals.home().official();
+        int awayTotal = penaltyTotals.away().official();
 
 		String seasonName = race.getPlayoffMatchup() != null
 				? race.getPlayoffMatchup().getRound().getPlayoff().getName()
@@ -99,9 +100,12 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 		ctx.setVariable("seasonYear", String.valueOf(season.getYear()));
 		ctx.setVariable("matchdayName", race.getMatchday().getLabel());
 		ctx.setVariable("seasonName", seasonName);
+		ctx.setVariable("homeTeamName", homeTeam.getShortName());
+        ctx.setVariable("awayTeamName", awayTeam.getShortName());
 		ctx.setVariable("homeCardBase64", homeCardBase64);
 		ctx.setVariable("awayCardBase64", awayCardBase64);
 		ctx.setVariable("homeTotal", homeTotal);
+        ctx.setVariable("penaltyTotals", penaltyTotals);
 		ctx.setVariable("awayTotal", awayTotal);
 		ctx.setVariable("homeIsWinner", homeTotal > awayTotal);
 		ctx.setVariable("awayIsWinner", awayTotal > homeTotal);

@@ -72,6 +72,9 @@
         .footer .team-total.winner { text-decoration: underline; text-decoration-color: #f5c542; text-underline-offset: 12px; text-decoration-thickness: 6px; }
         .footer .team-total:last-child { text-align: right; }
         .footer .season-name { flex: 1; text-align: center; font-size: 42px; font-weight: 700; color: #9a9aa6; }
+        .penalty-summary { flex: none; display: flex; justify-content: space-between; gap: 24px;
+            padding: 8px 90px; background: #121217; font-size: 15px; line-height: 1.5; }
+        .penalty-summary p { max-width: 48%; overflow-wrap: anywhere; }
     </style>
 </head>
 <body>
@@ -114,6 +117,10 @@
         </div>
     </div>
 
+    <div th:if="${penaltyTotals != null and penaltyTotals.hasPenalties()}" class="penalty-summary">
+        <p th:text="${homeTeamName + ': ' + penaltyTotals.home.summary()}"></p>
+        <p th:text="${awayTeamName + ': ' + penaltyTotals.away.summary()}"></p>
+    </div>
     <div class="footer">
         <div class="team-total" th:classappend="${homeIsWinner ? 'winner' : ''}" th:text="${homeTotal}"></div>
         <div class="season-name" th:text="${seasonName}"></div>

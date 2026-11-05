@@ -32,6 +32,8 @@ import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.Race;
+import org.ctc.domain.model.RaceResult;
+import org.ctc.domain.model.RacePenaltyRevision;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.MatchdayRepository;
@@ -49,6 +51,7 @@ public class MatchService {
     private final ScoreWriteLockService scoreLocks;
     private final PickLifecycleGuard pickGuard;
     private final IncidentLifecycleGuard incidentGuard;
+    private final RacePenaltyLifecycleGuard penaltyGuard;
 
 	private final MatchRepository matchRepository;
 	private final MatchdayRepository matchdayRepository;
@@ -154,12 +157,11 @@ public class MatchService {
 	}
 
 	private static LocalDateTime latestRaceResultUpdate(Match match) {
-		return match.getRaces().stream()
-				.flatMap(r -> r.getResults().stream())
-				.map(r -> r.getUpdatedAt())
-				.filter(Objects::nonNull)
-				.max(LocalDateTime::compareTo)
-				.orElse(null);
+        return match.getRaces().stream()
+                .flatMap(race -> java.util.stream.Stream.concat(
+                        race.getResults().stream().map(RaceResult::getUpdatedAt),
+                        race.getPenaltyRevisions().stream().map(RacePenaltyRevision::getCreatedAt)))
+                .filter(Objects::nonNull).max(LocalDateTime::compareTo).orElse(null);
 	}
 
 	@Transactional
@@ -229,6 +231,7 @@ public class MatchService {
 		if (!isHome && !isAway) {
 			throw new BusinessRuleException("Walkover team must be one of the match's two teams.");
 		}
+        penaltyGuard.requireNoHistory(raceRepository.findByMatchId(matchId));
 		Team team = teamRepository.findById(walkoverTeamId)
 				.orElseThrow(() -> new EntityNotFoundException("Team", walkoverTeamId));
 		match.setWalkoverTeam(team);
@@ -375,6 +378,7 @@ public class MatchService {
 		match.getRaces().forEach(PlayoffDecisionGuard::requireOpen);
         pickGuard.requireNoHistory(match.getRaces());
         incidentGuard.requireMatchDeletion(match);
+        penaltyGuard.requireNoHistory(match.getRaces());
 		matchRepository.delete(match);
 		log.info("Deleted match: {} vs {}", match.getHomeTeam().getShortName(),
 				match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "bye");

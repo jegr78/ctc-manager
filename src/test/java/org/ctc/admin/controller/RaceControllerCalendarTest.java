@@ -110,7 +110,7 @@ class RaceControllerCalendarTest {
 				false, false, false,
 				false, false,
 				calendarAvailable, hasCalendarEvent, canCreateCalendarEvent,
-				false, false, false, org.ctc.domain.service.RaceCarPresentation.from(race));
+				false, false, false, org.ctc.domain.service.RaceCarPresentation.from(race), org.ctc.domain.model.RacePenaltyTotals.calculate(0, 0, 0, 0));
 	}
 
 	@Test

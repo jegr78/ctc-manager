@@ -26,6 +26,10 @@
                     <div th:if="${race.car != null}"><dt>Car</dt><dd th:text="${race.car}"></dd></div>
                     <div th:if="${race.poolEntryLabel != null}"><dt>Pool entry</dt><dd class="pool-entry-label" th:text="${race.poolEntryLabel}"></dd></div>
                 </dl>
+                <dl class="match-meta" th:if="${race.penaltyTotals != null and race.penaltyTotals.hasPenalties()}">
+                    <div><dt th:text="${race.homeTeamShortName}"></dt><dd th:text="${race.penaltyTotals.home.summary()}"></dd></div>
+                    <div><dt th:text="${race.awayTeamShortName}"></dt><dd th:text="${race.penaltyTotals.away.summary()}"></dd></div>
+                </dl>
                 <p class="race-empty text-dim" th:unless="${race.hasResults}">No driver results recorded.</p>
                 <details th:if="${race.hasResults}" class="race-driver-results">
                     <summary><span>Driver results</span><span class="result-count" th:text="${race.results.size() + ' drivers'}"></span></summary>

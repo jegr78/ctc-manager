@@ -12,8 +12,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -47,8 +45,7 @@ class MatchResultsGraphicServiceTest {
 
 		race.getResults().addAll(List.of(homeResult, awayResult));
 
-		when(scoringService.isDriverInTeam(eq(homeResult), any(), eq(homeTeam.getId()))).thenReturn(true);
-		when(scoringService.isDriverInTeam(eq(awayResult), any(), eq(homeTeam.getId()))).thenReturn(false);
+        when(scoringService.calculateRaceTotals(race, homeTeam.getId())).thenReturn(RacePenaltyTotals.calculate(homePoints, awayPoints, 0, 0));
 
 		return race;
 	}

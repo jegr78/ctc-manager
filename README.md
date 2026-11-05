@@ -19,6 +19,7 @@ The active season is unique. Deactivate the current season before activating ano
 - **Seasons & Matchdays** — League and Swiss-system formats with configurable rounds
 - **Teams & Sub-Teams** — Parent/child team hierarchy with sub-team lineups per matchday
 - **Drivers** — PSN ID tracking, season-team assignments, fuzzy name matching
+- **Team penalty points** — Record both complete penalty totals per race leg, offset their difference and floor official team scores at zero. Immutable corrections retain reasons and managers internally; driver points stay unchanged. See [Team penalty points](../../wiki/Team-Penalty-Points).
 - **Race Results & Scoring** — Position points (20-2), qualifying points (3-2-1), fastest lap bonus (2)
 - **Error Pages** — Consistent CTC styling, status-specific guidance and a native return to seasons. A history button appears only after navigation from another local admin page; development exception details stay collapsed.
 - **Standings & Rankings** — Season and all-time standings for teams and drivers. The admin has native season, phase and group navigation, labeled searches and keyboard sorting that preserves ranking positions across filters and pages. Driver rankings cover the entire selected phase.
@@ -41,7 +42,7 @@ The active season is unique. Deactivate the current season before activating ano
 - **Race Attachments** — Upload files or link external resources to races
 - **Docker** — Local development and production deployment with MariaDB
 - **Season car pools** — Keep fixed car choices or build named category entries from local metadata. Combine alternative category/drivetrain/year clauses, preview eligible cars and overlaps, then freeze exact membership. Catalog changes preserve frozen choices; used pools cannot be reopened. Race setup selects an entry and one concrete frozen member. Saving consumes the whole entry for the effective home team that season. Native forms retain invalid inputs, concurrent selections serialize through the season, and unambiguous CSV/Sheets overwrites preserve configured race identities. Admin race summaries, public matchdays and settings graphics show the concrete car with its saved pool-entry label. Custom settings templates keep `carName` and can use optional `poolEntryLabel`.
-- **Backup & Restore** — Export a full ZIP backup of all 46 entity tables, including exact seasonal pool snapshots, Discord state and public URL slugs; restore via a preview-and-confirm import flow that accepts schema versions 1 through 12, so older backups remain restorable
+- **Backup & Restore** — Export a full ZIP backup of all 47 entity tables, including exact seasonal pool snapshots, Discord state and public URL slugs; restore via a preview-and-confirm import flow that accepts schema versions 1 through 13, so older backups remain restorable
 - **Channel Archive Dialog** — Labeled destination categories with channel counts, disabled full categories, keyboard focus and Escape/cancel support. A native inline form remains available without JavaScript.
 - **Backup Workspace** — Separate export and restore panels, labeled current and backup row counts, a neutral archive preview and a clear replacement confirmation.
 - **Data Audit** — Read-only check at `/admin/data-audit` for historical aggregates, pairings, phases, succession, playoffs, public URLs, race settings and seasonal pool references. Separate eligibility information explains unknown car metadata and exact-year exclusions. Unknown years remain valid; opening the audit changes no record. See the [Data Audit wiki page](../../wiki/Data-Audit).
@@ -70,7 +71,7 @@ v1.10 introduces a full database backup/restore feature accessible via `/admin/b
 
 1. Navigate to `/admin/backup` in the admin sidebar.
 2. Click **Export Backup** — a ZIP file (`ctc-backup-<ISO-instant>.zip`) downloads immediately.
-3. Store the ZIP in a safe location. Each export captures all 46 entity tables (including Discord global config, idempotency tracking and public URL slugs).
+3. Store the ZIP in a safe location. Each export captures all 47 entity tables (including Discord global config, idempotency tracking and public URL slugs).
 
 ### Import
 
@@ -78,7 +79,7 @@ v1.10 introduces a full database backup/restore feature accessible via `/admin/b
 2. Review the preview: per-table row counts (current vs. backup) and schema-version match indicator.
 3. Check the **I understand** confirmation and click **Execute Import**. The database is replaced atomically.
 
-> **Schema-Version lock:** The import rejects a backup whose schema version is outside versions 1 through 12 before it
+> **Schema-Version lock:** The import rejects a backup whose schema version is outside versions 1 through 13 before it
 > writes anything. Schema 4 also validates pool references and limits preflight to 100,000 retained reference rows.
 
 ### Recovery
@@ -116,9 +117,30 @@ snapshot. The home team selects one concrete member car, and every driver uses t
 Each category or One-Make entry is available once per home team across the entire season,
 including playoffs. Pending picks retain the existing reservation rules.
 
-Backup schema 12 preserves One-Make definitions and their exact frozen members. Schemas 1–11
+Backup schema 13 preserves team penalty history, One-Make definitions and their exact frozen members. Schemas 1–11
 remain importable; older entries keep their category definitions. Import rejects missing cars,
 mixed definitions and inconsistent One-Make snapshots before any database wipe.
+
+## Team penalty points
+
+Open a race and select **Team penalty points** after entering the final driver classification.
+One retrospective penalty second equals one additional team penalty point. Enter both complete
+team totals and an internal correction reason. For gross points `80:70` and penalties `20:10`,
+the net deduction is `10:0` and the official score is `70:70`. Offset the complete totals first,
+then apply a zero floor to each official score. Driver points remain unchanged.
+
+Each leg is adjusted separately before match/playoff aggregation. Corrections and zero resets
+retain their immutable history. Later result edits or an unambiguous CSV/Sheets replacement
+retain the penalties and use current driver points. A decided playoff must be explicitly reopened
+before correction. Permanent history prevents ordinary deletion, participant reassignment and
+manual quick-score replacement or conversion to a walkover, including after a zero reset.
+
+Official totals feed standings, winners, alltime team statistics and results views. Regenerate
+existing result/provisional graphics and the public site, then explicitly publish the correction.
+Saving penalties sends no Discord message. Public output contains numerical adjustments; reasons
+and manager identities remain internal. Schema 13 validates and restores all correction revisions;
+legacy schemas 1 through 12 import without penalty history. The read-only audit reports invalid
+history and skips unsafe aggregate comparisons.
 
 ## Quick Start
 

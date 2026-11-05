@@ -135,11 +135,11 @@ public class BackupImportService {
      * {@code SUPPORTED_SCHEMA_VERSIONS.toString()}, where {@code Set.of(1, 2)} produces
      * a hash-randomised order that breaks message-matching assertions.
      */
-    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12));
+    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13));
 
     /** Tables an older schema version never exported; they may be absent when the manifest announces no rows. */
     static final Set<String> INCIDENT_TABLES = Set.of("incident_match_contexts", "incident_report_windows", "incident_reports", "incident_report_revisions", "incident_report_events", "incident_deliveries", "incident_thread_publications", "incident_rulings", "incident_ruling_revisions", "incident_ruling_publications");
-    static final Map<Integer, Set<String>> TABLES_ABSENT_IN_SCHEMA = Map.of(
+    static final Map<Integer, Set<String>> TABLES_ABSENT_IN_SCHEMA = beforePenalties(Map.of(
             1, beforeIncidents("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "discord_global_config", "discord_post", "site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
             2, beforeIncidents("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
             3, beforeIncidents("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
@@ -149,7 +149,16 @@ public class BackupImportService {
             7, beforeIncidents(),
             8, Set.of("incident_deliveries", "incident_thread_publications", "incident_rulings", "incident_ruling_revisions", "incident_ruling_publications"),
             9, Set.of("incident_thread_publications", "incident_rulings", "incident_ruling_revisions", "incident_ruling_publications"),
-            10, Set.of("incident_rulings", "incident_ruling_revisions", "incident_ruling_publications"));
+            10, Set.of("incident_rulings", "incident_ruling_revisions", "incident_ruling_publications")));
+
+    private static Map<Integer, Set<String>> beforePenalties(Map<Integer, Set<String>> previous) {
+        var versions = new LinkedHashMap<Integer, Set<String>>();
+        for (int version = 1; version < 13; version++) {
+            var absent = new java.util.HashSet<>(previous.getOrDefault(version, Set.of()));
+            absent.add("race_penalty_revisions"); versions.put(version, Set.copyOf(absent));
+        }
+        return Map.copyOf(versions);
+    }
 
     private static Set<String> beforeIncidents(String... olderTables) {
         var tables = new java.util.HashSet<>(INCIDENT_TABLES);
@@ -776,6 +785,7 @@ public class BackupImportService {
      */
     private void validateRestorableRows(Path staged, BackupManifest manifest) throws BackupArchiveException {
         var activeSeasonValidator = new org.ctc.backup.schema.ActiveSeasonBackupValidator();
+        var penaltyValidator = new org.ctc.backup.schema.RacePenaltyBackupValidator(manifest.schemaVersion());
         var poolValidator = new org.ctc.backup.schema.CarPoolBackupValidator(manifest.schemaVersion());
         var pickValidator = new org.ctc.backup.schema.PickBackupValidator(manifest.schemaVersion());
         var incidentValidator = new org.ctc.backup.schema.IncidentBackupValidator(manifest.schemaVersion());
@@ -788,12 +798,14 @@ public class BackupImportService {
                 if (entry != null) {
                     counts.put(ref.tableName(), readRows(zf, entry, inflatedBytes, row -> {
                         activeSeasonValidator.accept(ref.tableName(), row);
+                        penaltyValidator.accept(ref.tableName(), row);
                         poolValidator.accept(ref.tableName(), row);
                         pickValidator.accept(ref.tableName(), row);
                         incidentValidator.accept(ref.tableName(), row);
                     }));
                 }
             }
+            penaltyValidator.validate();
             poolValidator.validate();
             assertRowCountsMatchManifest(counts, manifest);
             pickValidator.validate();
@@ -811,7 +823,7 @@ public class BackupImportService {
         } catch (org.ctc.backup.schema.IncidentBackupValidator.ValidationException ex) {
             throw new BackupArchiveException(Reason.DATA_MISMATCH, ex.getMessage(), ex);
         } catch (IllegalArgumentException ex) {
-            throw new BackupArchiveException(Reason.DATA_MISMATCH, "Invalid category pool data: " + ex.getMessage(), ex);
+            throw new BackupArchiveException(Reason.DATA_MISMATCH, "Invalid archive data: " + ex.getMessage(), ex);
         } catch (IOException ex) {
             throw new BackupArchiveException(Reason.MANIFEST_INVALID, "ZIP read failure", ex);
         }

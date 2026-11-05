@@ -25,6 +25,7 @@ import org.springframework.context.ApplicationEventPublisher;
 class MatchServicePreviewDiffPublishTest {
     @org.mockito.Mock private ScoreWriteLockService scoreLocks;
     @Mock private IncidentLifecycleGuard incidentGuard;
+    @Mock private RacePenaltyLifecycleGuard penaltyGuard;
 
 	@Mock
 	private MatchRepository matchRepository;

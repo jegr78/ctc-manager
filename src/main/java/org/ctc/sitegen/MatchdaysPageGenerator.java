@@ -38,6 +38,7 @@ public class MatchdaysPageGenerator {
     private final SeasonPhaseService seasonPhaseService;
     private final SeasonPhaseGroupRepository seasonPhaseGroupRepository;
     private final PickDisclosureService disclosure;
+    private final org.ctc.domain.service.ScoringService scoring;
 
     public void generateIndex(GenerationContext ctx, SiteGeneratorService.GenerationResult result) throws IOException {
         var season = ctx.season();
@@ -250,8 +251,10 @@ public class MatchdaysPageGenerator {
 
         String awayShortName = race.getAwayTeam() != null ? race.getAwayTeam().getShortName() : "Bye";
 
-        int homeTotal = pointsForTeam(results, homeTeam);
-        int awayTotal = pointsForTeam(results, race.getAwayTeam());
+        var totals = race.getResults().isEmpty() ? RacePenaltyTotals.calculate(0, 0, 0, 0)
+                : scoring.calculateRaceTotals(race, homeTeam == null ? null : homeTeam.getId());
+        int homeTotal = totals.home().official();
+        int awayTotal = totals.away().official();
 
         var publicPick = disclosure.forPublic(race.getId());
 
@@ -260,16 +263,7 @@ public class MatchdaysPageGenerator {
         boolean awayTeamWon = hasResults && awayTotal > homeTotal;
         return new RaceView(homeShortName, awayShortName,
                 publicPick.trackName(), publicPick.carName(), homeTotal, awayTotal, hasResults,
-                homeTeamWon, awayTeamWon, results, publicPick.poolEntryLabel());
-    }
-    private int pointsForTeam(List<RaceView.ResultView> results, Team team) {
-        if (team == null) {
-            return 0;
-        }
-        return results.stream()
-                .filter(r -> (team.isSubTeam() ? r.teamShortName() : r.scoringTeamShortName())
-                        .equals(team.getShortName()))
-                .mapToInt(RaceView.ResultView::pointsTotal).sum();
+                homeTeamWon, awayTeamWon, results, publicPick.poolEntryLabel(), totals);
     }
 
 }

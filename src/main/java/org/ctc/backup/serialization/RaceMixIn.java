@@ -5,7 +5,7 @@ import org.ctc.domain.model.*;
 
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler",
-		"settings", "results", "attachments",
+		"settings", "results", "attachments", "penaltyRevisions",
 		"homeTeam", "awayTeam", "homeScore", "awayScore",
 		"bye", "allSettings", "calendarEvent"})
 public abstract class RaceMixIn {

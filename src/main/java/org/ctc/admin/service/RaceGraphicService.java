@@ -62,7 +62,13 @@ public class RaceGraphicService {
             String url = generator.generate(race);
             String attachmentName = race.getMatchday().getLabel() + "-"
                     + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-" + suffix;
-            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
+            var attachment = race.getAttachments().stream()
+                    .filter(existing -> existing.getType() == AttachmentType.FILE && url.equals(existing.getUrl()))
+                    .findFirst().orElseGet(() -> {
+                        var created = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
+                        race.getAttachments().add(created); return created;
+                    });
+            attachment.setName(attachmentName);
             raceAttachmentRepository.save(attachment);
         } catch (IOException e) {
             log.error("{} generation failed for race {}", suffix, raceId, e);

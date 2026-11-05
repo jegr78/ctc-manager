@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/layout :: layout('Team penalty points', ~{::section})}">
+<body>
+<section>
+    <a class="back-link" th:href="@{/admin/races/{id}(id=${penalty.race.id})}">&larr; Back to Race</a>
+    <h1>Team penalty points</h1>
+    <p><span th:text="${penalty.race.homeTeam.shortName}"></span> vs <span th:text="${penalty.race.awayTeam.shortName}"></span></p>
+    <p>Driver results already include time penalties. One retrospective penalty second equals one additional team penalty point. Enter the complete additional penalty-point total for each team.
+        The totals are offset; only the team with more penalty points receives the difference as a deduction.
+        The official team score cannot fall below zero.</p>
+    <div class="card">
+        <h2>Current race score</h2>
+        <div class="penalty-score-grid" id="penalty-score-breakdown">
+            <article th:each="team : ${penalty.teamScores()}">
+                <h3 th:text="${team.team}"></h3>
+                <dl>
+                    <div><dt>Gross points</dt><dd th:text="${team.score.gross}"></dd></div>
+                    <div><dt>Penalty total</dt><dd th:text="${team.score.penalty}"></dd></div>
+                    <div><dt>Net deduction</dt><dd th:text="${team.score.deduction}"></dd></div>
+                    <div><dt>Official score</dt><dd><strong th:text="${team.score.official}"></strong></dd></div>
+                </dl>
+            </article>
+        </div>
+    </div>
+    <div class="card mt-md">
+        <h2>Record a correction</h2>
+        <p class="alert alert-warning" th:if="${!canCorrect}">Corrections require driver results and an open, non-bye matchup. Reopen a decided playoff before changing its points.</p>
+        <form th:action="@{/admin/races/{id}/penalties(id=${penalty.race.id})}" th:object="${penaltyForm}" method="post" id="penalty-form">
+            <div class="field-error" role="alert" th:if="${#fields.hasAnyErrors()}"><p th:each="error : ${#fields.allErrors()}" th:text="${error}"></p></div>
+            <fieldset th:disabled="${!canCorrect}">
+                <legend>Complete team penalty totals</legend>
+                <input type="hidden" th:field="*{homeTeamId}"><input type="hidden" th:field="*{awayTeamId}">
+                <input type="hidden" th:field="*{expectedRevision}"><input type="hidden" th:field="*{fingerprint}"><input type="hidden" th:field="*{generation}">
+                <div class="form-row">
+                    <div class="form-group"><label for="homePenalty" th:text="${penalty.race.homeTeam.shortName + ' penalty points'}"></label>
+                        <input id="homePenalty" type="number" min="0" max="2147483647" required th:field="*{homePenalty}">
+                        <p class="field-error" th:if="${#fields.hasErrors('homePenalty')}" th:errors="*{homePenalty}"></p></div>
+                    <div class="form-group"><label for="awayPenalty" th:text="${penalty.race.awayTeam.shortName + ' penalty points'}"></label>
+                        <input id="awayPenalty" type="number" min="0" max="2147483647" required th:field="*{awayPenalty}">
+                        <p class="field-error" th:if="${#fields.hasErrors('awayPenalty')}" th:errors="*{awayPenalty}"></p></div>
+                </div>
+                <div class="form-group"><label for="reason">Internal correction reason</label>
+                    <textarea id="reason" rows="3" maxlength="2000" required th:field="*{reason}"></textarea>
+                    <p class="field-error" th:if="${#fields.hasErrors('reason')}" th:errors="*{reason}"></p>
+                    <p class="form-hint">The reason and manager identity remain internal. Enter zero to reset a total; previous corrections stay in the history.</p></div>
+                <button class="btn btn-primary" type="submit">Save team penalty points</button>
+            </fieldset>
+        </form>
+    </div>
+    <div class="card mt-md">
+        <h2>Correction history</h2>
+        <p th:if="${penalty.history.isEmpty()}">No team penalty correction recorded.</p>
+        <div class="table-scroll" role="region" aria-label="Internal penalty correction history" tabindex="0" th:if="${!penalty.history.isEmpty()}">
+            <table id="penalty-history">
+                <thead><tr><th>Revision</th><th>Recorded</th><th>Manager</th><th>Home penalty</th><th>Away penalty</th><th>Gross at correction</th><th>Internal reason</th></tr></thead>
+                <tbody><tr th:each="row : ${penalty.history}">
+                    <td th:text="${row.revisionNumber}"></td><td th:text="${#temporals.format(row.createdAt, 'yyyy-MM-dd HH:mm:ss')}"></td>
+                    <td th:text="${row.actorId}"></td><td th:text="${row.homePenalty}"></td><td th:text="${row.awayPenalty}"></td>
+                    <td th:text="${row.homeGross + ' : ' + row.awayGross}"></td><td th:text="${row.reason}"></td>
+                </tr></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+</body>
+</html>

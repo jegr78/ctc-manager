@@ -93,3 +93,10 @@ Every finding was triaged by hand. Two led to source changes; the rest are struc
 |------|----------|-------|--------|-----------|
 | SQL_INJECTION_JDBC | `db.migration.V32__AddIncidentRulings.migrate` | 1 | suppressed | Executes only bundled `/db/schema/incident_rulings.sql` DDL with the literal MariaDB timestamp-token rewrite, following V31. No request, archive or stored values enter SQL text. Reevaluate if the resource source or rewrite becomes input-controlled. |
 | EI_EXPOSE_REP2 | `IncidentRulingService` constructor | 1 | suppressed | Retains Spring's shared transaction-scoped EntityManager proxy for current report/ruling/publication reads under the reporting-window lock. Copying it would break persistence-context identity. The EXACT constructor annotation follows `IncidentThreadPublicationService`; other rules remain enabled. Reevaluate if caller-owned mutable data is accepted. |
+
+
+## Team penalty migration
+
+| Rule | Location | Count | Decision | Rationale |
+|---|---|---|---|---|
+| SQL_INJECTION_JDBC | `db.migration.V35__AddRacePenaltyRevisions.migrate` | 1 | suppressed | Executes fixed bundled `/db/schema/race_penalty_revisions.sql` DDL. The only rewrite selects `DATETIME(6)` for MariaDB in place of literal `TIMESTAMP(6)` tokens, following V32. No request, archive or stored values enter SQL text. The checksum covers the bundled resource; H2/MariaDB round trips preserve microsecond audit times beyond the native TIMESTAMP range. Reevaluate if the source or rewrite becomes input-controlled. |
