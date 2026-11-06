@@ -21,6 +21,10 @@ _Avoid_: Edited original finishing position
 One leg in which every participating driver uses the same concrete car and race setup.
 _Avoid_: Match
 
+**Matchday**:
+A round containing multiple team pairings, with one shared pick opening and an ordinary pick deadline.
+_Avoid_: Match, race
+
 **Match**:
 A pairing of teams that contains one or more race legs.
 _Avoid_: Race
@@ -60,16 +64,32 @@ A pending pick's claim on its car or pool entry and track for its effective home
 _Avoid_: Publication, approval
 
 **Pick deadline**:
-The ordinary team-submission cutoff for a target. The exact cutoff moment is already closed.
+The ordinary team-submission cutoff shared by a matchday’s matches unless an individual match has a deadline override. The exact cutoff moment is already closed.
 _Avoid_: Approval deadline, publication time
 
-**Manual opening**:
-Management permission for an unapproved pick to remain editable independently of its ordinary cutoff.
-_Avoid_: New deadline, approval
+**Pick opening**:
+Management's manual opening of a whole matchday for team picks. A planned matchday can remain closed; opening never bypasses the applicable deadline.
+_Avoid_: Per-race opening, scheduled start, deadline override
 
-**Manual close**:
-A management decision that prevents further team confirmations for an unapproved pick.
-_Avoid_: Deadline expiry
+**Active matchday**:
+A matchday explicitly opened for picks that has not been closed or completed all its matches.
+_Avoid_: Prepared matchday, current season
+
+**Match pick-deadline override**:
+An individual pairing's submission cutoff that replaces the matchday's ordinary cutoff for that match's race legs.
+_Avoid_: Matchday opening, individual race deadline
+
+**Legacy manual opening**:
+A historical management exception that opened one unapproved pick independently of its ordinary cutoff.
+_Avoid_: Matchday pick opening
+
+**Pick closing**:
+Closure of a whole matchday's team-pick collection, either by management or after every match is completed.
+_Avoid_: Deadline expiry, individual race closure
+
+**Legacy manual close**:
+A historical management decision that prevented further team confirmations for one unapproved pick.
+_Avoid_: Matchday pick closing
 
 **Approval**:
 Management acceptance of one confirmed revision as the race's current setup.
