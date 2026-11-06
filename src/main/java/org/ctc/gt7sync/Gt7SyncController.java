@@ -48,10 +48,11 @@ public class Gt7SyncController {
         }
 		try {
 			var result = syncService.executeSync(
-					form.getSelectedCars(), form.getSelectedTracks(), form.getSelectedMetadata(), form.getPreviewId());
+					form.getSelectedCars(), form.getSelectedTracks(), form.getSelectedMetadata(), form.getPreviewId(), form.getSelectedTrackImages());
 
 			String msg = result.carsImported() + " cars and " + result.tracksImported() + " tracks imported in " + result.durationSeconds() + "s";
 			msg += "; " + result.carsUpdated() + " car metadata updates";
+            msg += "; " + result.trackImagesUpdated() + " track images updated";
 			if (!result.errors().isEmpty()) {
 				msg += " (" + result.errors().size() + " warnings)";
 			}

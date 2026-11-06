@@ -19,6 +19,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -46,7 +48,7 @@ class Gt7SyncPreviewE2ETest extends PlaywrightConfig {
                 new TrackEntry("Test-Track-2", "Test Track Two", "Test Country", SyncStatus.NEW),
                 new TrackEntry("Test-Existing-Track", "Test Existing Track", "Test Country", SyncStatus.EXISTS));
         when(syncService.fetchAndPreview()).thenReturn(new Gt7SyncPreview(cars, tracks));
-        when(syncService.executeSync(anyList(), anyList(), anyList(), any())).thenReturn(new Gt7SyncService.SyncResult(24, 2, List.of(), 1));
+        when(syncService.executeSync(anyList(), anyList(), anyList(), any(), anyList())).thenReturn(new Gt7SyncService.SyncResult(24, 2, List.of(), 1));
         openPreview();
         var carSection = page.locator("#sync-cars");
         var trackSection = page.locator("#sync-tracks");
@@ -63,10 +65,10 @@ class Gt7SyncPreviewE2ETest extends PlaywrightConfig {
         assertThat(page.locator("[data-sync-selection]")).hasText("24 cars and 2 tracks selected");
         carSection.locator("[data-sync-clear=selectedCars]").click();
         assertThat(page.locator("[data-sync-selection]")).hasText("0 cars and 2 tracks selected");
-        trackSection.locator("[data-sync-clear]").click();
+        trackSection.locator("[data-sync-clear=selectedTracks]").click();
         assertThat(page.locator("#importBtn")).isDisabled();
         carSection.locator("[data-sync-select=selectedCars]").click();
-        trackSection.locator("[data-sync-select]").click();
+        trackSection.locator("[data-sync-select=selectedTracks]").click();
         trackSection.locator("[data-list-search]").fill("does not match");
         assertThat(trackSection.locator("[data-list-empty]")).isVisible();
         assertThat(page.locator("[data-sync-selection]")).hasText("24 cars and 2 tracks selected");
@@ -75,7 +77,7 @@ class Gt7SyncPreviewE2ETest extends PlaywrightConfig {
         assertThat(page.locator(".alert-success")).containsText("24 cars and 2 tracks imported");
         ArgumentCaptor<List<String>> carCaptor = ArgumentCaptor.captor();
         ArgumentCaptor<List<String>> trackCaptor = ArgumentCaptor.captor();
-        verify(syncService).executeSync(carCaptor.capture(), trackCaptor.capture(), eq(List.of()), any());
+        verify(syncService).executeSync(carCaptor.capture(), trackCaptor.capture(), eq(List.of()), any(), eq(List.of()));
         assertThat(carCaptor.getValue()).containsExactlyInAnyOrderElementsOf(ids);
         assertThat(trackCaptor.getValue()).containsExactlyInAnyOrder("Test Track One", "Test Track Two");
     }
@@ -113,7 +115,7 @@ class Gt7SyncPreviewE2ETest extends PlaywrightConfig {
                     "", SyncStatus.UPDATE, proposal, java.util.UUID.randomUUID(), true, ""));
         }
         when(syncService.fetchAndPreview()).thenReturn(new Gt7SyncPreview(cars, List.of(), previewId, List.of()));
-        when(syncService.executeSync(anyList(), anyList(), anyList(), any()))
+        when(syncService.executeSync(anyList(), anyList(), anyList(), any(), anyList()))
                 .thenReturn(new Gt7SyncService.SyncResult(0, 0, List.of(), 1, 1));
         openPreview();
         assertThat(page.locator("#importBtn")).isDisabled();
@@ -125,7 +127,45 @@ class Gt7SyncPreviewE2ETest extends PlaywrightConfig {
         assertThat(page.locator("#importBtn")).isEnabled();
         page.locator("#importBtn").click();
         assertThat(page.locator(".alert-success")).containsText("1 car metadata updates");
-        verify(syncService).executeSync(eq(List.of()), eq(List.of()), eq(List.of("car1000")), eq(previewId));
+        verify(syncService).executeSync(eq(List.of()), eq(List.of()), eq(List.of("car1000")), eq(previewId), eq(List.of()));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"1280,true", "390,true", "390,false"})
+    void givenMissingTrackImage_whenExplicitlySelected_thenNativeAndEnhancedFormsSubmitOnlyThatTrack(int width, boolean javascript) throws Exception {
+        // given
+        context.close();
+        context = browser.newContext(new com.microsoft.playwright.Browser.NewContextOptions()
+                .setViewportSize(width, 900).setJavaScriptEnabled(javascript));
+        page = context.newPage();
+        var id = java.util.UUID.randomUUID();
+        when(syncService.fetchAndPreview()).thenReturn(new Gt7SyncPreview(List.of(), List.of(
+                new TrackEntry("4bf61b", "Test SUGO <track>", "Japan", SyncStatus.IMAGE_UPDATE, id),
+                new TrackEntry("abcdef", "Test manual image", "Japan", SyncStatus.EXISTS, java.util.UUID.randomUUID()))));
+        when(syncService.executeSync(anyList(), anyList(), anyList(), any(), anyList()))
+                .thenReturn(new Gt7SyncService.SyncResult(0, 0, List.of(), 1, 0, 1));
+        openPreview();
+        assertThat(page.locator("[name=selectedTrackImages]")).hasCount(1);
+        assertThat(page.getByLabel("Load missing image for Test SUGO <track>")).not().isChecked();
+        if (javascript) {
+            assertThat(page.locator("#importBtn")).isDisabled();
+            page.locator("#sync-tracks [data-list-status]").selectOption("IMAGE_UPDATE");
+            assertThat(page.locator("#sync-tracks [data-list-entry]:visible")).hasCount(1);
+            page.locator("[data-sync-select=selectedTrackImages]").click();
+            assertThat(page.locator("[data-sync-track-images-selection]")).hasText("1 track images selected");
+        } else {
+            page.getByLabel("Load missing image for Test SUGO <track>").check();
+        }
+        // when / then
+        assertThat(page.locator("#importBtn")).isEnabled();
+        java.nio.file.Files.createDirectories(java.nio.file.Path.of(".screenshots"));
+        page.screenshot(new com.microsoft.playwright.Page.ScreenshotOptions()
+                .setPath(java.nio.file.Path.of(".screenshots/gt7-track-images-" + width + "-" + javascript + ".png"))
+                .setAnimations(com.microsoft.playwright.options.ScreenshotAnimations.DISABLED).setFullPage(true));
+        page.locator("#importBtn").click();
+        assertThat(page).hasURL(url("/admin/gt7-sync"));
+        assertThat(page.locator(".alert-success")).containsText("1 track images updated");
+        verify(syncService).executeSync(eq(List.of()), eq(List.of()), eq(List.of()), any(), eq(List.of(id)));
     }
 
     private void openPreview() {

@@ -70,7 +70,7 @@ class Gt7SyncControllerTest {
 	@Test
 	void givenSelectedItems_whenPostExecute_thenRedirectsWithSuccessFlash() throws Exception {
 		var result = new Gt7SyncService.SyncResult(3, 2, List.of(), 5);
-		when(syncService.executeSync(anyList(), anyList(), anyList(), any())).thenReturn(result);
+		when(syncService.executeSync(anyList(), anyList(), anyList(), any(), anyList())).thenReturn(result);
 
 		mockMvc.perform(post("/admin/gt7-sync/execute")
 						.param("selectedCars", "gt7-1", "gt7-2")
@@ -83,7 +83,7 @@ class Gt7SyncControllerTest {
 	@Test
 	void givenNoSelections_whenPostExecute_thenRedirectsWithSuccessFlash() throws Exception {
 		var result = new Gt7SyncService.SyncResult(0, 0, List.of(), 1);
-		when(syncService.executeSync(anyList(), anyList(), anyList(), any())).thenReturn(result);
+		when(syncService.executeSync(anyList(), anyList(), anyList(), any(), anyList())).thenReturn(result);
 
 		mockMvc.perform(post("/admin/gt7-sync/execute"))
 				.andExpect(status().is3xxRedirection())
@@ -93,7 +93,7 @@ class Gt7SyncControllerTest {
 
 	@Test
 	void givenServiceThrowsRuntimeException_whenPostExecute_thenRedirectsWithErrorFlash() throws Exception {
-		when(syncService.executeSync(anyList(), anyList(), anyList(), any())).thenThrow(new RuntimeException("Scrape failed"));
+		when(syncService.executeSync(anyList(), anyList(), anyList(), any(), anyList())).thenThrow(new RuntimeException("Scrape failed"));
 
 		mockMvc.perform(post("/admin/gt7-sync/execute")
 						.param("selectedCars", "gt7-1"))
@@ -105,7 +105,7 @@ class Gt7SyncControllerTest {
 	@Test
 	void givenSyncResultWithWarnings_whenPostExecute_thenRedirectsWithSuccessFlash() throws Exception {
 		var result = new Gt7SyncService.SyncResult(2, 1, List.of("Image download failed"), 3);
-		when(syncService.executeSync(anyList(), anyList(), anyList(), any())).thenReturn(result);
+		when(syncService.executeSync(anyList(), anyList(), anyList(), any(), anyList())).thenReturn(result);
 
 		mockMvc.perform(post("/admin/gt7-sync/execute")
 						.param("selectedCars", "gt7-1"))
@@ -116,19 +116,44 @@ class Gt7SyncControllerTest {
     @Test
     void givenMetadataSelection_whenExecute_thenPassesSnapshotAndReportsUpdatesSeparately() throws Exception {
         var previewId = java.util.UUID.randomUUID();
-        when(syncService.executeSync(anyList(), anyList(), anyList(), any()))
+        when(syncService.executeSync(anyList(), anyList(), anyList(), any(), anyList()))
                 .thenReturn(new Gt7SyncService.SyncResult(0, 0, List.of(), 1, 2));
         mockMvc.perform(post("/admin/gt7-sync/execute")
                 .param("selectedMetadata", "car3531", "car3599").param("previewId", previewId.toString()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attribute("successMessage", org.hamcrest.Matchers.containsString("2 car metadata updates")));
-        verify(syncService).executeSync(eq(List.of()), eq(List.of()), eq(List.of("car3531", "car3599")), eq(previewId));
+        verify(syncService).executeSync(eq(List.of()), eq(List.of()), eq(List.of("car3531", "car3599")), eq(previewId), eq(List.of()));
     }
 
     @Test
     void givenInvalidSnapshotId_whenExecute_thenReportsFormErrorWithoutImport() throws Exception {
         mockMvc.perform(post("/admin/gt7-sync/execute").param("previewId", "invalid"))
                 .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("errorMessage", "Invalid sync selection. Fetch and review the catalog again."));
+        org.mockito.Mockito.verifyNoInteractions(syncService);
+    }
+
+    @Test
+    void givenTrackImageSelection_whenExecute_thenPassesExistingIdsAndReportsImageUpdates() throws Exception {
+        // given
+        var id = java.util.UUID.randomUUID();
+        when(syncService.executeSync(anyList(), anyList(), anyList(), any(), anyList()))
+                .thenReturn(new Gt7SyncService.SyncResult(0, 0, List.of("Image unavailable for Test other track"), 1, 0, 1));
+        // when / then
+        mockMvc.perform(post("/admin/gt7-sync/execute").param("selectedTrackImages", id.toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/gt7-sync"))
+                .andExpect(flash().attribute("successMessage", org.hamcrest.Matchers.containsString("1 track images updated")))
+                .andExpect(flash().attribute("syncWarnings", List.of("Image unavailable for Test other track")));
+        verify(syncService).executeSync(eq(List.of()), eq(List.of()), eq(List.of()), eq(null), eq(List.of(id)));
+    }
+
+    @Test
+    void givenInvalidTrackImageId_whenExecute_thenReportsBindingFailureWithoutCallingService() throws Exception {
+        // when / then
+        mockMvc.perform(post("/admin/gt7-sync/execute").param("selectedTrackImages", "not-a-uuid"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/gt7-sync"))
                 .andExpect(flash().attribute("errorMessage", "Invalid sync selection. Fetch and review the catalog again."));
         org.mockito.Mockito.verifyNoInteractions(syncService);
     }

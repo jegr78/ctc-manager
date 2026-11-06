@@ -12,5 +12,6 @@ public class Gt7SyncForm {
     private List<String> selectedCars = new ArrayList<>();
     private List<String> selectedTracks = new ArrayList<>();
     private List<String> selectedMetadata = new ArrayList<>();
+    private List<UUID> selectedTrackImages = new ArrayList<>();
     private UUID previewId;
 }

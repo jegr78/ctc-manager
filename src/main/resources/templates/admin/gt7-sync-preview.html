@@ -4,7 +4,7 @@
 <body>
 <section class="gt7-sync" data-sync-preview>
     <div class="toolbar"><div><a th:href="@{/admin/gt7-sync}" class="back-link">← Back to GT7 Sync</a><h1>GT7 Sync Preview</h1></div></div>
-    <p class="admin-list-intro text-dim">Choose new entries to import and metadata updates to apply. Existing car identities, images and race links are retained.</p>
+    <p class="admin-list-intro text-dim">Choose new entries, car metadata updates and missing track images separately. Existing car identities, images and race links are retained.</p>
     <div th:each="warning : ${preview.warnings}" class="alert alert-warning" th:text="${warning}"></div>
     <nav class="entity-section-nav" aria-label="Catalog comparison sections"><a href="#sync-cars">Cars</a><a href="#sync-tracks">Tracks</a></nav>
     <form th:action="@{/admin/gt7-sync/execute}" method="post" data-sync-form data-sync-action="import">
@@ -41,22 +41,25 @@
         </div>
         <div class="admin-list sync-catalog" id="sync-tracks" data-admin-list data-page-size="20" data-unit="track" data-plural="tracks">
             <div class="card admin-list-card">
-                <div class="toolbar"><h2>Tracks</h2><p class="text-dim sync-catalog-summary"><strong th:text="${preview.newTrackCount}"></strong> new · <span th:text="${preview.existingTrackCount}"></span> already in your catalog</p></div>
+                <div class="toolbar"><h2>Tracks</h2><p class="text-dim sync-catalog-summary"><strong th:text="${preview.newTrackCount}"></strong> new · <span th:text="${preview.existingTrackCount}"></span> already in your catalog · <span th:text="${preview.trackImageUpdateCount}"></span> missing images</p></div>
                 <div class="admin-list-controls" data-list-tools hidden>
                     <label for="trackSearch"><span>Search tracks</span><input type="search" id="trackSearch" data-list-search placeholder="Track name or country" autocomplete="off"></label>
-                    <label for="trackStatus"><span>Status</span><select id="trackStatus" data-list-status><option value="all">All entries</option><option value="NEW">New</option><option value="EXISTS">Already imported</option></select></label>
+                    <label for="trackStatus"><span>Status</span><select id="trackStatus" data-list-status><option value="all">All entries</option><option value="NEW">New</option><option value="EXISTS">Already imported</option><option value="IMAGE_UPDATE">Missing track image</option></select></label>
                     <button type="button" class="btn btn-secondary" data-list-reset disabled>Reset filters</button>
                     <p class="admin-list-count text-dim" data-list-count role="status"></p>
                 </div>
                 <div class="sync-selection-tools" data-sync-tools hidden><button type="button" class="btn btn-secondary" data-sync-select="selectedTracks">Select all new tracks</button><button type="button" class="btn btn-secondary" data-sync-clear="selectedTracks">Deselect all tracks</button></div>
+                <div class="sync-selection-tools" data-sync-tools hidden><button type="button" class="btn btn-secondary" data-sync-select="selectedTrackImages">Select all missing track images</button><button type="button" class="btn btn-secondary" data-sync-clear="selectedTrackImages">Deselect track images</button></div>
+                <p class="form-hint">Select missing images explicitly. Existing images and track assignments are retained.</p>
                 <div class="table-scroll" role="region" aria-label="Tracks comparison" tabindex="0">
                     <table id="tracksTable" data-list-table>
-                        <thead><tr><th scope="col" class="sync-check-column">Import</th><th scope="col">Status</th><th scope="col" class="sortable" data-col="2" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Name" disabled>Name</button></th><th scope="col" class="sortable" data-col="3" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Country" disabled>Country</button></th></tr></thead>
+                        <thead><tr><th scope="col" class="sync-check-column">Import</th><th scope="col">Status</th><th scope="col" class="sortable" data-col="2" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Name" disabled>Name</button></th><th scope="col" class="sortable" data-col="3" aria-sort="none"><button type="button" class="admin-sort-button" aria-label="Sort by Country" disabled>Country</button></th><th scope="col">Load missing image</th></tr></thead>
                         <tbody><tr th:each="track : ${preview.tracks}" class="track-row" data-list-entry th:attr="data-search=${track.name + ' ' + (track.country ?: '')},data-status=${track.status.name()}">
                             <td><input th:if="${track.status.name() == 'NEW'}" type="checkbox" name="selectedTracks" th:value="${track.name}" th:attr="aria-label=${'Import ' + track.name}" checked class="track-check"><span th:unless="${track.status.name() == 'NEW'}" class="text-dim">—</span></td>
-                            <td><span th:if="${track.status.name() == 'NEW'}" class="badge badge-active">New</span><span th:unless="${track.status.name() == 'NEW'}" class="sync-existing">Already imported</span></td>
+                            <td><span th:if="${track.status.name() == 'NEW'}" class="badge badge-active">New</span><span th:unless="${track.status.name() == 'NEW'}" class="sync-existing" th:text="${track.status.label}"></span></td>
                             <td><strong th:text="${track.name}"></strong></td>
                             <td th:text="${track.country}"></td>
+                            <td><input th:if="${track.status.name() == 'IMAGE_UPDATE'}" type="checkbox" name="selectedTrackImages" th:value="${track.existingTrackId}" th:attr="aria-label=${'Load missing image for ' + track.name}"><span th:unless="${track.status.name() == 'IMAGE_UPDATE'}" class="text-dim">—</span></td>
                         </tr></tbody>
                     </table>
                 </div>
@@ -66,8 +69,8 @@
             </div>
         </div>
         <div class="sync-import-bar">
-            <div><p data-sync-selection role="status" th:text="${preview.newCarCount + ' cars and ' + preview.newTrackCount + ' tracks selected'}"></p><p data-sync-metadata-selection role="status">0 car metadata updates selected</p><p class="sync-selection-hint text-dim">Selection includes other pages and entries outside the current filters.</p><p class="sync-progress text-dim" data-sync-progress role="status" hidden>Importing selected entries and downloading images. This may take a moment.</p></div>
-            <div class="actions"><button type="submit" id="importBtn" class="btn btn-primary" th:disabled="${preview.newCarCount + preview.newTrackCount + preview.metadataUpdateCount == 0}">Import Selected</button><a th:href="@{/admin/gt7-sync}" id="cancelLink" class="btn btn-secondary">Cancel</a></div>
+            <div><p data-sync-selection role="status" th:text="${preview.newCarCount + ' cars and ' + preview.newTrackCount + ' tracks selected'}"></p><p data-sync-metadata-selection role="status">0 car metadata updates selected</p><p data-sync-track-images-selection role="status">0 track images selected</p><p class="sync-selection-hint text-dim">Selection includes other pages and entries outside the current filters.</p><p class="sync-progress text-dim" data-sync-progress role="status" hidden>Importing selected entries and downloading images. This may take a moment.</p></div>
+            <div class="actions"><button type="submit" id="importBtn" class="btn btn-primary" th:disabled="${preview.newCarCount + preview.newTrackCount + preview.metadataUpdateCount + preview.trackImageUpdateCount == 0}">Import Selected</button><a th:href="@{/admin/gt7-sync}" id="cancelLink" class="btn btn-secondary">Cancel</a></div>
         </div>
     </form>
     <script defer th:src="@{/admin/js/management-list.js}"></script>

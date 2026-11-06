@@ -11,7 +11,9 @@
         preview.querySelector('[data-sync-selection]').textContent = cars + ' cars and ' + tracks + ' tracks selected';
         var metadata = preview.querySelectorAll('[name="selectedMetadata"]:checked').length;
         preview.querySelector('[data-sync-metadata-selection]').textContent = metadata + ' car metadata updates selected';
-        submit.disabled = cars + tracks + metadata === 0;
+        var trackImages = preview.querySelectorAll('[name="selectedTrackImages"]:checked').length;
+        preview.querySelector('[data-sync-track-images-selection]').textContent = trackImages + ' track images selected';
+        submit.disabled = cars + tracks + metadata + trackImages === 0;
     }
     if (preview) {
         preview.querySelectorAll('[data-sync-select], [data-sync-clear]').forEach(function (button) {

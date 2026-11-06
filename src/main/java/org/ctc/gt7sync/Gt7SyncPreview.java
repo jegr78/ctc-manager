@@ -13,9 +13,10 @@ public record Gt7SyncPreview(List<CarEntry> cars, List<TrackEntry> tracks, UUID 
     public long getExistingCarCount() { return cars.stream().filter(c -> c.status() != SyncStatus.NEW).count(); }
     public long getMetadataUpdateCount() { return cars.stream().filter(CarEntry::metadataSelectable).count(); }
     public long getNewTrackCount() { return tracks.stream().filter(t -> t.status() == SyncStatus.NEW).count(); }
-    public long getExistingTrackCount() { return tracks.stream().filter(t -> t.status() == SyncStatus.EXISTS).count(); }
+    public long getExistingTrackCount() { return tracks.stream().filter(t -> t.status() != SyncStatus.NEW).count(); }
+    public long getTrackImageUpdateCount() { return tracks.stream().filter(t -> t.status() == SyncStatus.IMAGE_UPDATE).count(); }
     public enum SyncStatus {
-        NEW("New"), EXISTS("Already imported"), UPDATE("Metadata update"), REVIEW("Metadata review required"), AMBIGUOUS("Identity review required");
+        NEW("New"), EXISTS("Already imported"), IMAGE_UPDATE("Missing track image"), UPDATE("Metadata update"), REVIEW("Metadata review required"), AMBIGUOUS("Identity review required");
         private final String label;
         SyncStatus(String label) { this.label = label; }
         public String getLabel() { return label; }
@@ -35,5 +36,9 @@ public record Gt7SyncPreview(List<CarEntry> cars, List<TrackEntry> tracks, UUID 
                     metadata.modelYearEvidence(), metadata.proposedModelYearEvidence()).filter(Objects::nonNull).collect(Collectors.joining(" | "));
         }
     }
-    public record TrackEntry(String id, String name, String country, SyncStatus status) {}
+    public record TrackEntry(String id, String name, String country, SyncStatus status, UUID existingTrackId) {
+        public TrackEntry(String id, String name, String country, SyncStatus status) {
+            this(id, name, country, status, null);
+        }
+    }
 }

@@ -78,15 +78,15 @@ public class Gt7ScraperService {
 
 	Map<String, String> extractBaseIdChunks(String indexJs) {
 		var map = new HashMap<String, String>();
-		Pattern p = Pattern.compile("\"\\./([a-f0-9]{6})-([^\"]+\\.js)\"");
+		Pattern p = Pattern.compile("import\\(\\s*([\"'`])\\./([a-f0-9]{6}-[\\w-]+\\.js)\\1\\s*\\)");
 		Matcher m = p.matcher(indexJs);
 		while (m.find()) {
-			map.put(m.group(1), m.group(1) + "-" + m.group(2));
+			map.put(m.group(2).substring(0, 6), m.group(2));
 		}
 		return map;
 	}
 
-	private List<ScrapedTrack> resolveTrackImagesParallel(List<ScrapedTrack> tracks, Map<String, String> imageChunkMap) {
+	List<ScrapedTrack> resolveTrackImagesParallel(List<ScrapedTrack> tracks, Map<String, String> imageChunkMap) {
 		var baseIdsToResolve = tracks.stream()
 				.map(ScrapedTrack::baseId)
 				.filter(Objects::nonNull)
@@ -99,10 +99,8 @@ public class Gt7ScraperService {
 				CompletableFuture.runAsync(() -> {
 					try {
 						String chunkJs = fetchText(BASE_URL + "/common/dist/gt7/tracklist/assets/" + imageChunkMap.get(baseId));
-						Matcher m = Pattern.compile("\"(/common/dist/gt7/tracklist/assets/[^\"]+\\.png)\"").matcher(chunkJs);
-						if (m.find()) {
-							imageUrlMap.put(baseId, BASE_URL + m.group(1));
-						}
+						String imageUrl = extractTrackImageUrl(baseId, chunkJs);
+						if (imageUrl != null) imageUrlMap.put(baseId, imageUrl);
 					} catch (IOException e) {
 						log.warn("Failed to resolve image for baseId {}: {}", baseId, e.getMessage());
 					}
@@ -113,9 +111,18 @@ public class Gt7ScraperService {
 		log.info("Resolved {} track images in parallel", imageUrlMap.size());
 
 		return tracks.stream()
-				.map(t -> new ScrapedTrack(t.id(), t.name(), t.country(), t.baseId(), imageUrlMap.get(t.baseId())))
+				.map(t -> new ScrapedTrack(t.id(), t.name(), t.country(), t.baseId(),
+                        t.baseId() == null ? null : imageUrlMap.get(t.baseId())))
 				.toList();
 	}
+
+    String extractTrackImageUrl(String baseId, String chunkJs) {
+        if (baseId == null || !baseId.matches("[a-f0-9]{6}")) return null;
+        var pattern = Pattern.compile("([\"'`])(/common/dist/gt7/tracklist/assets/"
+                + Pattern.quote(baseId) + "-[\\w-]+\\.png)\\1");
+        var match = pattern.matcher(chunkJs);
+        return match.find() ? BASE_URL + match.group(2) : null;
+    }
 
 	public Map<String, String> parseTunersJs(String tunersJs) {
 		var map = new HashMap<String, String>();
@@ -223,7 +230,7 @@ public class Gt7ScraperService {
 		return Jsoup.connect(url).timeout(10_000).maxBodySize(4 * 1024 * 1024);
 	}
 
-	private String fetchText(String url) throws IOException {
+	String fetchText(String url) throws IOException {
 		return externalConnection(url).ignoreContentType(true).execute().body();
 	}
 
