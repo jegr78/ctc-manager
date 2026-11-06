@@ -100,7 +100,7 @@
                     </thead>
                     <tbody>
                         <tr th:each="result : ${race.results}">
-                            <td class="td-numeric" th:text="${result.position}"></td>
+                            <td class="td-numeric" th:text="${result.classificationLabel}"></td>
                             <td>
                                 <span class="td-label"
                                       th:text="${driverTeamMap != null ? driverTeamMap[result.driver.id] : '?'}"></span>

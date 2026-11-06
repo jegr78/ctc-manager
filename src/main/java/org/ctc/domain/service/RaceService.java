@@ -42,6 +42,7 @@ public class RaceService {
     private final PickLifecycleGuard pickGuard;
     private final IncidentLifecycleGuard incidentGuard;
     private final RacePenaltyLifecycleGuard penaltyGuard;
+    private final RaceDisqualificationLifecycleGuard disqualificationGuard;
     private final PickReservationService reservations;
 
 	public RaceListData getRaceListData(UUID matchdayId, UUID seasonId) {
@@ -271,6 +272,7 @@ public class RaceService {
                 if (rejection == null) rejection = pickGuard.identityRejection(plan.race(), matchdayId, plan.home(), plan.away());
                 if (rejection == null) rejection = incidentGuard.identityRejection(plan.race(), matchdayId, plan.home(), plan.away());
                 if (rejection == null) rejection = penaltyGuard.identityRejection(plan.race(), matchdayId, plan.home(), plan.away());
+                if (rejection == null) rejection = disqualificationGuard.identityRejection(plan.race(), matchdayId, plan.home(), plan.away());
             }
             if (rejection != null) return new SaveResult(false, rejection, id, matchdayId);
             var tyreInputs = NativeTyreInputs.resolve(race, carPoolEntryId, carId, lockedSeason.getLobbyRulesProfile(), availableTyres, mandatoryTyres);
@@ -318,21 +320,34 @@ public class RaceService {
 			throw new BusinessRuleException(NO_RACE_SCORING);
 		}
 
-		race.getResults().clear();
+        var supplied = results.stream().filter(r -> r.driverId() != null).toList();
+        var driverIds = new java.util.HashSet<UUID>();
+        var positions = new java.util.HashSet<Integer>();
+        for (var row : supplied) {
+            if (!driverIds.add(row.driverId())) throw new BusinessRuleException("A driver may appear only once in a race");
+            if (row.position() < 1 || row.position() > 12 || row.qualiPosition() < 1 || row.qualiPosition() > 12)
+                throw new BusinessRuleException("Result positions must be between 1 and 12");
+            if (!positions.add(row.position())) throw new BusinessRuleException("Results require unique finishing positions");
+        }
+        disqualificationGuard.requireRetainedDrivers(race, driverIds);
+        var existing = race.getResults().stream().collect(java.util.stream.Collectors.toMap(r -> r.getDriver().getId(), r -> r));
+        // Resolve every incoming driver before mutating the retained result collection.
+        var drivers = supplied.stream().collect(java.util.stream.Collectors.toMap(RaceResultData::driverId,
+                rd -> driverRepository.findById(rd.driverId()).orElseThrow()));
+        race.getResults().removeIf(r -> !driverIds.contains(r.getDriver().getId()));
+        for (var rd : supplied) {
+            var result = existing.get(rd.driverId());
+            if (result == null) {
+                result = new RaceResult(race, drivers.get(rd.driverId()), rd.position(), rd.qualiPosition(), rd.fastestLap());
+                race.getResults().add(result);
+            } else {
+                result.setPosition(rd.position()); result.setQualiPosition(rd.qualiPosition()); result.setFastestLap(rd.fastestLap());
+            }
+        }
+        scoringService.calculatePoints(race.getResults(), race.getMatchday().getPhase().getRaceScoring());
+
+        // Flush retained rows and orphan removals before querying all legs for their totals.
 		raceRepository.saveAndFlush(race);
-
-		for (var rd : results) {
-			if (rd.driverId() == null) {
-				continue;
-			}
-
-			var driver = driverRepository.findById(rd.driverId()).orElseThrow();
-			var result = new RaceResult(race, driver, rd.position(), rd.qualiPosition(), rd.fastestLap());
-			scoringService.calculatePoints(result, race.getMatchday().getPhase().getRaceScoring());
-			race.getResults().add(result);
-		}
-
-		raceRepository.save(race);
 		if (race.getResults().isEmpty()) {
 			scoringService.recomputeMatchScoresFromAllLegs(race);
 		} else {
@@ -359,8 +374,8 @@ public class RaceService {
 			throw new BusinessRuleException("A walkover match has no score");
 		}
         var legs = race.getMatch() == null ? List.of(race) : raceRepository.findByMatchId(race.getMatch().getId());
-        if (legs.stream().anyMatch(penaltyGuard::protects)) {
-            throw new BusinessRuleException("Quick scores cannot replace a match with team penalty history; enter or correct each leg's driver results");
+        if (legs.stream().anyMatch(penaltyGuard::protects) || legs.stream().anyMatch(disqualificationGuard::protects)) {
+            throw new BusinessRuleException("Quick scores cannot replace a match with penalty or DSQ history; enter or correct each leg's driver results");
         }
 		if (race.getMatch() != null) {
 			race.getMatch().setHomeScore(race.hasTeamOverrides() ? awayScore : homeScore);
@@ -381,6 +396,7 @@ public class RaceService {
         pickGuard.requireNoHistory(List.of(race));
         incidentGuard.requireNoHistory(List.of(race));
         penaltyGuard.requireNoHistory(List.of(race));
+        disqualificationGuard.requireNoHistory(List.of(race));
 		PlayoffDecisionGuard.requireOpen(race);
 		var matchdayId = race.getMatchday().getId();
 		var match = race.getMatch();
@@ -622,7 +638,13 @@ public class RaceService {
 	}
 
 	public record ResultsFormData(RaceData data, Race race, RaceScoring raceScoring, RaceCarPresentation carPresentation) {
+	    public Map<UUID, ResultStatus> resultStatuses() {
+            return race.getResults().stream().collect(java.util.stream.Collectors.toMap(r -> r.getDriver().getId(),
+                    r -> new ResultStatus(r.getId(), r.isDisqualified(), r.getClassificationLabel())));
+        }
 	}
+
+    public record ResultStatus(UUID resultId, boolean disqualified, String classificationLabel) {}
 
 	public record RaceFormData(RaceData data, List<Matchday> matchdays, List<Team> teams,
 	                           List<Car> seasonCars, List<Track> seasonTracks,

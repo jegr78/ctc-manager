@@ -13,6 +13,11 @@ public record RaceView(String homeTeamShortName, String awayTeamShortName, Strin
 
 	public record ResultView(String driverPsnId, String teamShortName, String scoringTeamShortName,
 	                         int position, int qualiPosition,
-	                         boolean fastestLap, int pointsTotal, String driverProfileUrl) {
+	                         boolean fastestLap, int pointsTotal, String driverProfileUrl, boolean disqualified, int recordedPosition) {
+        public ResultView(String driverPsnId, String teamShortName, String scoringTeamShortName, int position, int qualiPosition,
+                          boolean fastestLap, int pointsTotal, String driverProfileUrl) {
+            this(driverPsnId, teamShortName, scoringTeamShortName, position, qualiPosition, fastestLap, pointsTotal, driverProfileUrl, false, position);
+        }
+        public String getClassificationLabel() { return disqualified ? "DSQ" : Integer.toString(position); }
 	}
 }

@@ -16,7 +16,7 @@ import lombok.ToString;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = {"race", "driver"})
+@ToString(exclude = {"race", "driver", "disqualificationRevisions"})
 public class RaceResult extends BaseEntity {
 
 	@Id
@@ -45,6 +45,21 @@ public class RaceResult extends BaseEntity {
 
 	@Column(nullable = false)
 	private boolean fastestLap;
+
+    @Column(nullable = false)
+    private boolean disqualified;
+
+    @OneToMany(mappedBy = "result")
+    @OrderBy("revisionNumber ASC")
+    private java.util.List<RaceDisqualificationRevision> disqualificationRevisions = new java.util.ArrayList<>();
+
+    @Transient
+    public int getClassificationPosition() { return RaceClassification.position(this); }
+
+    @Transient
+    public String getClassificationLabel() {
+        return disqualified ? "DSQ" : Integer.toString(getClassificationPosition());
+    }
 
 	@Column(nullable = false)
 	private int pointsRace;

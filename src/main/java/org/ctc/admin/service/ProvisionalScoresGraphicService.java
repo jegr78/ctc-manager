@@ -188,14 +188,14 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 		String driverName = result.getDriver() != null ? result.getDriver().getPsnId() : "?";
 		return new ProvisionalRow(
 				driverName,
-				result.getPosition(),
+				result.getClassificationPosition(),
 				result.getQualiPosition(),
 				result.isFastestLap(),
 				result.getPointsRace(),
 				result.getPointsQuali(),
 				result.getPointsFl(),
 				result.getPointsTotal(),
-				isGuest);
+				isGuest, result.isDisqualified());
 	}
 
 	private String renderTemplate(Context ctx) throws IOException {
@@ -238,6 +238,11 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 	}
 
 	public record ProvisionalRow(String driverName, int position, int qualiPosition, boolean fastestLap,
-	                              int ptsRace, int ptsQuali, int ptsFl, int total, boolean isGuest) {
+	                              int ptsRace, int ptsQuali, int ptsFl, int total, boolean isGuest, boolean disqualified) {
+        public ProvisionalRow(String driverName, int position, int qualiPosition, boolean fastestLap, int ptsRace,
+                              int ptsQuali, int ptsFl, int total, boolean isGuest) {
+            this(driverName, position, qualiPosition, fastestLap, ptsRace, ptsQuali, ptsFl, total, isGuest, false);
+        }
+        public String getClassificationLabel() { return disqualified ? "DSQ" : Integer.toString(position); }
 	}
 }

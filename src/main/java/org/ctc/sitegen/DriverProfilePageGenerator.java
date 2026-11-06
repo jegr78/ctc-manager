@@ -149,8 +149,8 @@ public class DriverProfilePageGenerator {
         context.setVariable("totalRaces", results.size());
         context.setVariable("totalPoints", total);
         context.setVariable("averagePoints", results.isEmpty() ? 0.0 : (double) total / results.size());
-        context.setVariable("bestPosition", results.isEmpty() ? null :
-                results.stream().mapToInt(RaceResult::getPosition).min().orElse(0));
+        context.setVariable("bestPosition", results.stream().filter(r -> !r.isDisqualified())
+                .map(RaceResult::getClassificationPosition).min(Integer::compareTo).orElse(null));
 
         context.setVariable("currentPage", "driver");
         context.setVariable("seasonSlug", siteSlugger.slugify(season.getDisplayLabel()));

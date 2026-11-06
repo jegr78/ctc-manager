@@ -2914,3 +2914,11 @@ body:has(.archive-dialog[open]) { overflow: hidden; }
 #penalty-history { min-width: 64rem; table-layout: fixed; }
 #penalty-history th:last-child { width: 32%; }
 #penalty-history td:last-child { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Preserve readable DSQ evidence columns inside the existing keyboard-scrollable region. */
+.dsq-history-table { min-width: 1080px; table-layout: fixed; }
+.dsq-history-table th:nth-child(1) { width: 70px; }
+.dsq-history-table th:nth-child(2) { width: 150px; }
+.dsq-history-table th:nth-child(3) { width: 170px; }
+.dsq-history-table th:nth-child(4), .dsq-history-table th:nth-child(5) { width: 110px; }
+.dsq-history-table th:nth-child(6) { width: 160px; }

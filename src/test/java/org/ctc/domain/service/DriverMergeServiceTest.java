@@ -41,7 +41,8 @@ class DriverMergeServiceTest {
 	@Mock
 	private ScoringService scoringService;
 
-	@InjectMocks
+	@org.mockito.Mock private org.ctc.domain.repository.RaceDisqualificationRevisionRepository disqualifications;
+    @InjectMocks
 	private DriverMergeService driverMergeService;
 
 	private Driver createDriver(UUID id, String psnId) {

@@ -5,6 +5,18 @@ Individual reporters retain their own incident cases under a separate reporting 
 
 ## Language
 
+**Driver disqualification (DSQ)**:
+A race-specific exclusion from race-position points. The driver's qualifying and fastest-lap bonuses remain; the separate team penalty is entered by management.
+_Avoid_: Zero total points, deletion of the result
+
+**Recorded finishing position**:
+The original finishing position supplied for a driver in a race, retained when a disqualification is set or cleared.
+_Avoid_: Effective classification
+
+**Effective classification**:
+The recorded finishing order after excluding disqualified drivers for race-position points and classified results. Removing a disqualification restores the corresponding positions and points.
+_Avoid_: Edited original finishing position
+
 **Race**:
 One leg in which every participating driver uses the same concrete car and race setup.
 _Avoid_: Match

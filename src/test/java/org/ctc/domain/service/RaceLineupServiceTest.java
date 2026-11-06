@@ -41,7 +41,8 @@ class RaceLineupServiceTest {
 	@Mock
 	private ScoringService scoringService;
 
-	@InjectMocks
+	@org.mockito.Mock private org.ctc.domain.service.RaceDisqualificationLifecycleGuard disqualificationGuard;
+    @InjectMocks
 	private RaceLineupService service;
 
 

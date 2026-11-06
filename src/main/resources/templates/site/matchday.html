@@ -37,7 +37,7 @@
                         <div class="race-mobile-head" aria-hidden="true"><span>Pos</span><span>Driver</span><span>Pts</span><span></span></div>
                         <details th:each="result : ${race.results}" class="driver-result">
                             <summary>
-                                <span class="result-position"><span class="sr-only">Position </span><span th:text="${result.position}"></span></span>
+                                <span class="result-position"><span class="sr-only">Position </span><span th:text="${result.classificationLabel}"></span></span>
                                 <span class="result-driver"><span class="result-driver-name" th:text="${result.driverPsnId}"></span><span class="result-team" th:text="${result.teamShortName}"></span></span>
                                 <span class="result-points"><span class="result-points-value" th:text="${result.pointsTotal}"></span><span class="sr-only"> points</span></span>
                                 <span class="result-chevron" aria-hidden="true">⌄</span>
@@ -60,7 +60,7 @@
                                     <tr th:each="result : ${race.results}">
                                         <td class="font-bold"><a class="entity-link" th:href="${result.driverProfileUrl}" th:text="${result.driverPsnId}"></a></td>
                                         <td class="text-dim" th:text="${result.teamShortName}"></td>
-                                        <td class="text-center" th:text="${result.position}"></td>
+                                        <td class="text-center" th:text="${result.classificationLabel}"></td>
                                         <td class="text-center" th:text="${result.qualiPosition}"></td>
                                         <td class="text-center" th:text="${result.fastestLap ? 'FL' : ''}"></td>
                                         <td class="text-right font-bold" th:text="${result.pointsTotal}"></td>

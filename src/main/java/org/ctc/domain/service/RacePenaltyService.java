@@ -107,14 +107,15 @@ public class RacePenaltyService {
         return row.getRevisionNumber();
     }
 
-    private static String fingerprint(Race race, ScoringService.RaceScoreSnapshot snapshot) {
+    static String fingerprint(Race race, ScoringService.RaceScoreSnapshot snapshot) {
         var content = new StringBuilder(RacePenaltyHistory.identity(race).toString());
         snapshot.drivers().stream().sorted(Comparator.comparing(result -> result.driverId().toString()))
                 .forEach(result -> content.append('|').append(result.resultId()).append(':').append(result.driverId())
                         .append(':').append(result.position()).append(':').append(result.qualifyingPosition())
                         .append(':').append(result.fastestLap()).append(':').append(result.racePoints())
                         .append(':').append(result.qualifyingPoints()).append(':').append(result.fastestLapPoints())
-                        .append(':').append(result.totalPoints()).append(':').append(result.firstTeam()));
+                        .append(':').append(result.totalPoints()).append(':').append(result.firstTeam())
+                        .append(result.disqualified() ? ":DSQ" : ""));
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content.toString().getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException failure) {

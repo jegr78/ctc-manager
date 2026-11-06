@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class RaceLineupService {
     private final ScoreWriteLockService scoreLocks;
+    private final RaceDisqualificationLifecycleGuard disqualificationGuard;
 
 	private final RaceRepository raceRepository;
 	private final RaceLineupRepository raceLineupRepository;
@@ -119,6 +120,9 @@ public class RaceLineupService {
 				.filter(driverId -> !guestAssignments.containsKey(driverId))
 				.toList();
 
+        var retainedDrivers = race.getResults().stream().map(r -> r.getDriver().getId())
+                .filter(id -> !droppedGuestDriverIds.contains(id)).collect(Collectors.toSet());
+        disqualificationGuard.requireRetainedDrivers(race, retainedDrivers);
 		raceLineupRepository.deleteAll(existing);
 		raceLineupRepository.flush();
 

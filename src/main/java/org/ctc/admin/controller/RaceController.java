@@ -209,6 +209,7 @@ public class RaceController {
 	@GetMapping("/{id}/results")
 	public String results(@PathVariable UUID id, Model model) {
 		var data = raceFormDataService.getResultsFormData(id);
+		model.addAttribute("resultStatuses", data.resultStatuses());
 		model.addAttribute("raceForm", toRaceForm(data.data()));
 		model.addAttribute("race", data.race());
         model.addAttribute("carPresentation", data.carPresentation());

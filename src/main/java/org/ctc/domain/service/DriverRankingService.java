@@ -231,8 +231,8 @@ public class DriverRankingService {
 			totalQualiPoints += result.getPointsQuali();
 			totalFlPoints += result.getPointsFl();
 			racesCount++;
-			if (result.getPosition() < bestPosition) {
-				bestPosition = result.getPosition();
+			if (!result.isDisqualified() && result.getClassificationPosition() < bestPosition) {
+				bestPosition = result.getClassificationPosition();
 			}
 			raceResults.add(result);
 		}
@@ -276,6 +276,8 @@ public class DriverRankingService {
 		public int getBestPosition() {
 			return bestPosition == Integer.MAX_VALUE ? 0 : bestPosition;
 		}
+
+        public String getBestPositionLabel() { return getBestPosition() == 0 ? "-" : "P" + getBestPosition(); }
 
 		public double getAveragePoints() {
 			return racesCount > 0 ? (double) totalPoints / racesCount : 0;

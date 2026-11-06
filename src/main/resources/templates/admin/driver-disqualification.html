@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/layout :: layout('Driver disqualification', ~{::section})}">
+<body><section>
+    <a class="back-link" th:href="@{/admin/races/{id}/results(id=${disqualification.race.id})}">&larr; Back to Race Results</a>
+    <h1>Driver disqualification</h1>
+    <p><strong th:text="${disqualification.result.driver.psnId}"></strong> &middot;
+        <span th:text="${disqualification.race.matchday.label}"></span> &middot;
+        <span th:text="${disqualification.race.homeTeam.shortName + ' vs ' + (disqualification.race.awayTeam?.shortName ?: 'Bye')}"></span></p>
+    <p>A DSQ removes race-position points and advances following drivers for race scoring. Qualifying and fastest lap bonuses remain.
+        The recorded finishing position stays unchanged. Enter the separate 20 team penalty points manually in the complete team totals.</p>
+    <p><a th:href="@{/admin/races/{id}/penalties(id=${disqualification.race.id})}">Review team penalty points</a></p>
+    <div class="card">
+        <h2>Current driver result</h2>
+        <dl>
+            <div><dt>Classification</dt><dd id="dsq-current-classification" th:text="${disqualification.result.classificationLabel}"></dd></div>
+            <div><dt>Recorded finishing position</dt><dd th:text="${disqualification.result.position}"></dd></div>
+            <div><dt>Race / qualifying / fastest lap points</dt><dd th:text="${disqualification.result.pointsRace + ' / ' + disqualification.result.pointsQuali + ' / ' + disqualification.result.pointsFl}"></dd></div>
+            <div><dt>Total driver points</dt><dd th:text="${disqualification.result.pointsTotal}"></dd></div>
+        </dl>
+    </div>
+    <div class="card mt-md">
+        <h2>Record a correction</h2>
+        <p class="alert alert-warning" th:if="${!disqualification.correctable}">Corrections require a played race and an open pairing. Reopen a decided playoff before changing driver results.</p>
+        <form th:action="@{/admin/races/{race}/results/{result}/disqualification(race=${disqualification.race.id},result=${disqualification.result.id})}"
+              th:object="${disqualificationForm}" method="post" id="disqualification-form">
+            <div class="field-error" role="alert" th:if="${#fields.hasAnyErrors()}"><p th:each="error : ${#fields.allErrors()}" th:text="${error}"></p></div>
+            <fieldset th:disabled="${!disqualification.correctable}">
+                <legend>Driver classification correction</legend>
+                <input type="hidden" th:field="*{expectedRevision}"><input type="hidden" th:field="*{fingerprint}"><input type="hidden" th:field="*{generation}">
+                <div class="form-group"><label for="disqualified">Classification status</label>
+                    <select id="disqualified" th:field="*{disqualified}" required><option value="false">Classified</option><option value="true">Disqualified (DSQ)</option></select>
+                    <p class="field-error" th:if="${#fields.hasErrors('disqualified')}" th:errors="*{disqualified}"></p></div>
+                <div class="form-group"><label for="reason">Internal correction reason</label>
+                    <textarea id="reason" rows="3" maxlength="2000" required th:field="*{reason}"></textarea>
+                    <p class="field-error" th:if="${#fields.hasErrors('reason')}" th:errors="*{reason}"></p>
+                    <p class="form-hint">The reason and manager identity stay internal. Every correction, including clearing a DSQ, remains in the history.</p></div>
+                <button class="btn btn-primary" type="submit">Save driver disqualification</button>
+            </fieldset>
+        </form>
+    </div>
+    <div class="card mt-md">
+        <h2>Correction history</h2>
+        <p th:if="${disqualification.history.isEmpty()}">No driver disqualification recorded.</p>
+        <div class="table-scroll" role="region" aria-label="Internal disqualification history" tabindex="0" th:if="${!disqualification.history.isEmpty()}">
+            <table id="disqualification-history" class="dsq-history-table"><thead><tr><th>Revision</th><th>Recorded</th><th>Manager</th><th>Previous status</th><th>New status</th><th>Finishing position at correction</th><th>Internal reason</th></tr></thead>
+                <tbody><tr th:each="row : ${disqualification.history}">
+                    <td th:text="${row.revisionNumber}"></td><td th:text="${#temporals.format(row.createdAt, 'yyyy-MM-dd HH:mm:ss')}"></td><td th:text="${row.actorId}"></td>
+                    <td th:text="${row.previousDisqualified ? 'DSQ' : 'Classified'}"></td><td th:text="${row.disqualified ? 'DSQ' : 'Classified'}"></td>
+                    <td th:text="${row.recordedPosition}"></td><td th:text="${row.reason}"></td>
+                </tr></tbody></table>
+        </div>
+    </div>
+</section></body></html>

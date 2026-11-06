@@ -28,6 +28,7 @@ class MatchServiceTest {
     @org.mockito.Mock private ScoreWriteLockService scoreLocks;
     @Mock private IncidentLifecycleGuard incidentGuard;
     @Mock private RacePenaltyLifecycleGuard penaltyGuard;
+    @org.mockito.Mock private org.ctc.domain.service.RaceDisqualificationLifecycleGuard disqualificationGuard;
     @Mock private PickLifecycleGuard pickGuard;
 
 	@Mock

@@ -45,6 +45,7 @@ public class CsvImportService {
 	private final SeasonPhaseService seasonPhaseService;
     private final org.ctc.domain.service.IncidentLifecycleGuard incidentGuard;
     private final org.ctc.domain.service.RacePenaltyLifecycleGuard penaltyGuard;
+    private final org.ctc.domain.service.RaceDisqualificationLifecycleGuard disqualificationGuard;
 
 	/**
 	 * Returns all seasons for the import form.
@@ -302,6 +303,8 @@ public class CsvImportService {
                 }
             }
             rejectOverwriteTarget(previous, metadata);
+            if (previous.stream().anyMatch(disqualificationGuard::protects))
+                throw new ImportRejectedException(List.of("Results-only imports cannot replace permanent DSQ history; correct driver results in the native editor"));
             var reused = mapProtectedLegs(season, matchday, previous, rows);
             plans.add(new PairingPlan(match, home, away, rows, reused, reused.isEmpty() ? previous : List.of()));
         }
@@ -309,7 +312,7 @@ public class CsvImportService {
         return plans;
     }
 
-    private boolean protectsHistory(Race race) { return incidentGuard.protects(race) || penaltyGuard.protects(race); }
+    private boolean protectsHistory(Race race) { return incidentGuard.protects(race) || penaltyGuard.protects(race) || disqualificationGuard.protects(race); }
 
     private void rejectOverwriteTarget(List<Race> previous, ImportMetadata metadata) {
         if (previous.stream().anyMatch(race -> protectsHistory(race) && !Objects.equals(

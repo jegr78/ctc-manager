@@ -30,6 +30,7 @@ public class MatchdayService {
     private final PickLifecycleGuard pickGuard;
     private final IncidentLifecycleGuard incidentGuard;
     private final RacePenaltyLifecycleGuard penaltyGuard;
+    private final RaceDisqualificationLifecycleGuard disqualificationGuard;
 
     private final MatchdayRepository matchdayRepository;
     private final SeasonRepository seasonRepository;
@@ -155,6 +156,7 @@ public class MatchdayService {
         pickGuard.requireNoHistory(matchday.getRaces());
         incidentGuard.requireNoHistory(matchday.getRaces());
         penaltyGuard.requireNoHistory(matchday.getRaces());
+        disqualificationGuard.requireNoHistory(matchday.getRaces());
         matchday.getMatches().forEach(incidentGuard::requireMatchDeletion);
         matchdayRepository.delete(matchday);
         log.info("Deleted matchday: {}", matchday.getLabel());

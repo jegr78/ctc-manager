@@ -244,8 +244,8 @@ public class MatchdaysPageGenerator {
                     String driverSlug = slugs.driver(r.getDriver().getId());
                     String driverProfileUrl = driverUrlPrefix + driverSlug + ".html";
                     return new RaceView.ResultView(r.getDriver().getPsnId(), teamShortName, scoringTeamShortName,
-                            r.getPosition(), r.getQualiPosition(), r.isFastestLap(), r.getPointsTotal(),
-                            driverProfileUrl);
+                            r.getClassificationPosition(), r.getQualiPosition(), r.isFastestLap(), r.getPointsTotal(),
+                            driverProfileUrl, r.isDisqualified(), r.getPosition());
                 })
                 .toList();
 

@@ -182,7 +182,8 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 			boolean homeIsGuest = i < homeResults.size() && resolveGuest(raceId, homeResults.get(i));
 			boolean awayIsGuest = i < awayResults.size() && resolveGuest(raceId, awayResults.get(i));
 			rows.add(new DriverResultRow(homeName, homeNick, homePoints, awayPoints, awayName, awayNick,
-					homeIsGuest, awayIsGuest));
+					homeIsGuest, awayIsGuest, i < homeResults.size() && homeResults.get(i).isDisqualified(),
+                    i < awayResults.size() && awayResults.get(i).isDisqualified()));
 		}
 		return rows;
 	}
@@ -199,6 +200,10 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 
 	public record DriverResultRow(String homeDriver, String homeNickname, int homePoints,
 	                              int awayPoints, String awayDriver, String awayNickname,
-	                              boolean homeIsGuest, boolean awayIsGuest) {
+	                              boolean homeIsGuest, boolean awayIsGuest, boolean homeDisqualified, boolean awayDisqualified) {
+        public DriverResultRow(String homeDriver, String homeNickname, int homePoints, int awayPoints, String awayDriver,
+                               String awayNickname, boolean homeIsGuest, boolean awayIsGuest) {
+            this(homeDriver, homeNickname, homePoints, awayPoints, awayDriver, awayNickname, homeIsGuest, awayIsGuest, false, false);
+        }
 	}
 }

@@ -104,6 +104,7 @@ public class DataAuditService {
 
 		auditResultPoints(races, findings.get(Category.RESULT_POINTS));
         auditTeamPenalties(races, findings.get(Category.TEAM_PENALTIES));
+        auditDisqualifications(races, findings.get(Category.DRIVER_DISQUALIFICATIONS));
 		auditMatchAggregates(matches, legs, findings.get(STALE_AGGREGATE));
 		auditPlayoffAggregates(matchups, legs, findings.get(STALE_AGGREGATE));
 		auditPairings(matches, findings.get(PAIRING));
@@ -132,6 +133,7 @@ public class DataAuditService {
             for (var result : race.getResults()) {
                 var expected = new org.ctc.domain.model.RaceResult(race, result.getDriver(), result.getPosition(),
                         result.getQualiPosition(), result.isFastestLap());
+                expected.setDisqualified(result.isDisqualified());
                 if (scoring != null && scoring.canParse()) scoringService.calculatePoints(expected, scoring);
                 boolean differs = scoring == null || !scoring.canParse() || expected.getPointsRace() != result.getPointsRace()
                         || expected.getPointsQuali() != result.getPointsQuali() || expected.getPointsFl() != result.getPointsFl()
@@ -256,7 +258,22 @@ public class DataAuditService {
     }
 
     private static boolean validPenaltyHistory(List<Race> races) {
-        return races.stream().allMatch(race -> org.ctc.domain.model.RacePenaltyHistory.problems(race).isEmpty());
+        return races.stream().allMatch(race -> org.ctc.domain.model.RacePenaltyHistory.problems(race).isEmpty()
+                && race.getResults().stream().allMatch(result -> org.ctc.domain.model.RaceDisqualificationHistory.problems(result).isEmpty()));
+    }
+
+    private static void auditDisqualifications(List<Race> races, List<DataAuditFinding> findings) {
+        for (var race : races) {
+            if (!org.ctc.domain.model.RaceClassification.hasUniqueFinishingPositions(race.getResults()))
+                findings.add(new DataAuditFinding(Category.DRIVER_DISQUALIFICATIONS, AMBIGUOUS, "Race " + race.getId(),
+                        "Recorded finishing positions are ambiguous or outside 1 to 12.", "Review the original classification before recording a DSQ."));
+            for (var result : race.getResults()) {
+                var problems = org.ctc.domain.model.RaceDisqualificationHistory.problems(result);
+                if (!problems.isEmpty()) findings.add(new DataAuditFinding(Category.DRIVER_DISQUALIFICATIONS, AMBIGUOUS,
+                        "Race " + race.getId() + " result " + result.getId(), String.join("; ", problems),
+                        "Review the original disqualification evidence. Do not rewrite or discard history."));
+            }
+        }
     }
 
 	private void auditMatchAggregates(List<Match> matches, Legs legs, List<DataAuditFinding> out) {

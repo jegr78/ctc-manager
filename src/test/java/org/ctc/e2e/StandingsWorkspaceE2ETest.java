@@ -154,7 +154,11 @@ class StandingsWorkspaceE2ETest extends PlaywrightConfig {
         drivers = List.of(higher, lower);
         page.navigate(url("/admin/standings?phase=" + phase.getId()));
         var table = page.locator("#driverRankingTable");
-        var averages = table.locator("td[data-sort-value]");
+        int averageColumn = ((Number) table.getByRole(AriaRole.BUTTON,
+                new com.microsoft.playwright.Locator.GetByRoleOptions().setName("Sort by Average Points"))
+                .evaluate("button => button.closest('th').cellIndex")).intValue();
+        var averages = table.locator("tbody tr td:nth-child(" + (averageColumn + 1) + ")[data-sort-value]");
+        assertThat(averages).hasCount(2);
         assertThat(averages.first()).hasText(averages.last().innerText());
         table.getByRole(AriaRole.BUTTON, new com.microsoft.playwright.Locator.GetByRoleOptions().setName("Sort by Average Points")).click();
         assertThat(table.locator("tbody tr").first()).containsText("Test_Lower_average");

@@ -106,3 +106,9 @@ Every finding was triaged by hand. Two led to source changes; the rest are struc
 | Rule | Location | Count | Decision | Rationale |
 |------|----------|-------|----------|-----------|
 | SQL_INJECTION_JDBC | `db.migration.V37__ExtendPickTyres.migrate` | 1 | suppressed | Executes only fixed bundled `/db/schema/pick_tyres_v37.sql` DDL. H2 replaces the literal `MODIFY COLUMN` keyword pair with `ALTER COLUMN`; MariaDB uses the packaged text. No request, archive or stored values enter SQL text. The checksum covers the resource; H2/MariaDB persistence and new-connection probes cover complete tyre values and constraints. Reevaluate if the resource path, SQL source or rewrite becomes input-controlled. |
+
+## Disqualification history migration
+
+| Rule | Location | Count | Decision | Rationale |
+|---|---|---|---|---|
+| SQL_INJECTION_JDBC | `db.migration.V38__AddRaceDisqualifications.migrate` | 1 | suppressed | Executes only fixed bundled `/db/schema/race_disqualification_revisions.sql` DDL. The trusted JDBC dialect selects the literal `TIMESTAMP(6)` to `DATETIME(6)` rewrite; no request, archive, database value or external path enters SQL text. The resource checksum covers its contents. H2/MariaDB persistence and roundtrip cases verify flags, history and exact microsecond timestamps beyond 2038. Reevaluate if the source or rewrite becomes input-controlled. |

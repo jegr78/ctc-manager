@@ -134,7 +134,7 @@
                                 <span th:text="${row.driverName}"></span>
                                 <span class="guest-marker" th:if="${row.isGuest}" aria-label="Guest driver">&#x2605;</span>
                             </td>
-                            <td th:text="${row.driverName != 'n/a' ? row.position : ''}"></td>
+                            <td th:text="${row.driverName != 'n/a' ? row.classificationLabel : ''}"></td>
                             <td th:text="${row.driverName != 'n/a' ? row.qualiPosition : ''}"></td>
                             <td><span class="fl-marker" th:if="${row.fastestLap}">FL</span></td>
                             <td th:text="${row.driverName != 'n/a' ? row.ptsRace : ''}"></td>
@@ -182,7 +182,7 @@
                                 <span th:text="${row.driverName}"></span>
                                 <span class="guest-marker" th:if="${row.isGuest}" aria-label="Guest driver">&#x2605;</span>
                             </td>
-                            <td th:text="${row.driverName != 'n/a' ? row.position : ''}"></td>
+                            <td th:text="${row.driverName != 'n/a' ? row.classificationLabel : ''}"></td>
                             <td th:text="${row.driverName != 'n/a' ? row.qualiPosition : ''}"></td>
                             <td><span class="fl-marker" th:if="${row.fastestLap}">FL</span></td>
                             <td th:text="${row.driverName != 'n/a' ? row.ptsRace : ''}"></td>

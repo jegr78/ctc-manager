@@ -47,6 +47,7 @@ public class PlayoffService {
 	private final RaceLineupRepository raceLineupRepository;
     private final PlayoffCarSelectionService carSelections;
     private final RacePenaltyLifecycleGuard penaltyGuard;
+    private final RaceDisqualificationLifecycleGuard disqualificationGuard;
 
 	static final int MAX_REASON_LENGTH = 500;
 	private static final Pattern CONTROL_CHARACTERS = Pattern.compile("\\p{Cntrl}|[\\u2028\\u2029]");
@@ -285,6 +286,7 @@ public class PlayoffService {
 		requireUndecided(matchup);
         var legs = raceRepository.findByPlayoffMatchupId(matchupId);
         penaltyGuard.requireNoHistory(legs);
+        disqualificationGuard.requireNoHistory(legs);
         String rejection = walkoverRejection(matchup, legs);
 		if (rejection != null) {
 			throw new IllegalStateException(rejection);

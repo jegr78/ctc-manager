@@ -49,6 +49,7 @@ class RaceResultRestorerTest {
                   "position": 2,
                   "qualiPosition": 4,
                   "fastestLap": true,
+                  "disqualified": false,
                   "pointsRace": 18,
                   "pointsQuali": 6,
                   "pointsFl": 1,
@@ -85,6 +86,7 @@ class RaceResultRestorerTest {
         verify(ps).setInt(4, 2);
         verify(ps).setInt(5, 4);
         verify(ps).setBoolean(6, true);
+        verify(ps).setBoolean(13, false);
         verify(ps).setInt(7, 18);
         verify(ps).setInt(8, 6);
         verify(ps).setInt(9, 1);

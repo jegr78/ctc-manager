@@ -150,7 +150,8 @@
                         </td>
                         <td th:text="${ranking.team != null ? ranking.team.shortName : '-'}"></td>
                         <td class="td-right" th:text="${ranking.racesCount}"></td>
-                        <td class="td-right" th:text="${ranking.bestPosition}"></td>
+                        <td class="td-right" th:attr="data-sort-value=${ranking.bestPosition > 0 ? ranking.bestPosition : 2147483647}"
+                            th:text="${ranking.bestPosition > 0 ? ranking.bestPosition : '-'}"></td>
                         <td class="td-right" th:attr="data-sort-value=${ranking.averagePoints}" th:text="${#numbers.formatDecimal(ranking.averagePoints, 1, 1)}"></td>
                         <td class="td-right td-numeric-bold" th:text="${ranking.totalPoints}"></td>
                     </tr>

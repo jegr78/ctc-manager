@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface RaceResultRepository extends JpaRepository<RaceResult, UUID> {
+    @Query(value = "select rr.* from race_results rr join races r on r.id = rr.race_id where r.playoff_matchup_id = :matchupId and rr.disqualified = true order by rr.id for update", nativeQuery = true)
+    List<RaceResult> findDisqualifiedPlayoffResultsForUpdate(UUID matchupId);
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     Optional<RaceResult> findFirstByRaceMatchdayPhaseRaceScoringId(UUID scoringId);
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
@@ -17,19 +19,19 @@ public interface RaceResultRepository extends JpaRepository<RaceResult, UUID> {
 	@EntityGraph(attributePaths = {"driver"})
 	List<RaceResult> findByRaceId(UUID raceId);
 
-	@EntityGraph(attributePaths = {"driver", "race"})
+	@EntityGraph(attributePaths = {"driver", "race", "race.results"})
 	List<RaceResult> findByDriverId(UUID driverId);
 
 	Optional<RaceResult> findByRaceIdAndDriverId(UUID raceId, UUID driverId);
 
-	@EntityGraph(attributePaths = {"driver", "race"})
+	@EntityGraph(attributePaths = {"driver", "race", "race.results"})
 	@Query("SELECT rr FROM RaceResult rr WHERE rr.race.matchday.phase.season.id = :seasonId")
 	List<RaceResult> findByRaceMatchdaySeasonId(UUID seasonId);
 
-	@EntityGraph(attributePaths = {"driver", "race"})
+	@EntityGraph(attributePaths = {"driver", "race", "race.results"})
 	List<RaceResult> findByRacePlayoffMatchupIsNull();
 
-	@EntityGraph(attributePaths = {"driver", "race"})
+	@EntityGraph(attributePaths = {"driver", "race", "race.results"})
 	@Query("SELECT rr FROM RaceResult rr WHERE rr.race.playoffMatchup IS NULL AND rr.race.matchday.phase.season.id IN :seasonIds")
 	List<RaceResult> findByRacePlayoffMatchupIsNullAndRaceMatchdaySeasonIdIn(List<UUID> seasonIds);
 
@@ -41,14 +43,14 @@ public interface RaceResultRepository extends JpaRepository<RaceResult, UUID> {
 	 * <p><strong>Tracked Behavior Change (v1.9 / D-19):</strong> Used by
 	 * {@code DriverRankingService.calculateAlltimeRanking} to include PLAYOFF results in alltime totals.
 	 */
-	@EntityGraph(attributePaths = {"driver", "race"})
+	@EntityGraph(attributePaths = {"driver", "race", "race.results"})
 	@Query("SELECT rr FROM RaceResult rr WHERE rr.race.matchday.phase.season.id IN :seasonIds")
 	List<RaceResult> findByRaceMatchdaySeasonIdIn(List<UUID> seasonIds);
 
-	@EntityGraph(attributePaths = {"driver", "race"})
+	@EntityGraph(attributePaths = {"driver", "race", "race.results"})
 	List<RaceResult> findByRaceMatchdayPhaseId(UUID phaseId);
 
-	@EntityGraph(attributePaths = {"driver", "race"})
+	@EntityGraph(attributePaths = {"driver", "race", "race.results"})
 	List<RaceResult> findByRacePlayoffMatchupRoundPlayoffPhaseId(UUID phaseId);
 
 	/**
