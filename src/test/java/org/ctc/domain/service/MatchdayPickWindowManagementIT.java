@@ -167,11 +167,23 @@ class MatchdayPickWindowManagementIT extends PickPersistenceIT {
     @Test
     void givenMixedOrdinaryAndPlayoffLegsOnOneBridge_whenChangingItsException_thenRejectAnAmbiguousScope() {
         var pairing = playoff(true);
+        var canonical = windows.readPairing(pairing.playoff(), true);
         tx.executeWithoutResult(status -> {
             var race = new Race(); race.setMatchday(entityManager.find(Matchday.class, pairing.day()));
             race.setMatch(entityManager.find(Match.class, pairing.bridge())); entityManager.persist(race);
+            entityManager.find(Matchday.class, pairing.day()).setPicksOpen(false);
         });
         assertThatThrownBy(() -> windows.readPairing(pairing.bridge(), false)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("context");
+        assertThatThrownBy(() -> windows.readPairing(pairing.playoff(), true)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("context");
+        assertThatThrownBy(() -> windows.savePairing(canonical.id(), true, LocalDateTime.of(2036, 1, 1, 20, 0),
+                canonical.version(), canonical.scope(), manager())).isInstanceOf(BusinessRuleException.class).hasMessageContaining("context");
+        var day = windows.readMatchday(pairing.day());
+        assertThatThrownBy(() -> save(day, true)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("context");
+        assertThat(windows.readMatchday(pairing.day()).open()).isFalse();
+        tx.executeWithoutResult(status -> {
+            assertThat(entityManager.find(Match.class, pairing.bridge()).getPickDeadlineOverride()).isNull();
+            assertThat(entityManager.find(PlayoffMatchup.class, pairing.playoff()).getPickDeadlineOverride()).isNull();
+        });
     }
 
     @Test

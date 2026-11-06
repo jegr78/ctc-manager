@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -54,6 +56,9 @@ public final class PickWindowBackupValidator {
         }
         for (var match : matches.values()) if (match.cutoff() != null) daySeason(match.day());
         for (var pairing : pairings.values()) if (pairing.cutoff() != null) playoffSeason(pairing);
+        var matchRows = races.stream().filter(race -> race.match() != null).collect(Collectors.groupingBy(Race::match));
+        var pairingRows = races.stream().filter(race -> race.playoff() != null).collect(Collectors.groupingBy(Race::playoff));
+        var checkedMatches = new HashSet<UUID>(); var checkedPairings = new HashSet<UUID>();
         for (var race : races) {
             var day = days.get(race.day()); var match = matches.get(race.match()); var pairing = pairings.get(race.playoff());
             boolean active = day != null && day.open() || match != null && match.cutoff() != null || pairing != null && pairing.cutoff() != null;
@@ -61,7 +66,19 @@ public final class PickWindowBackupValidator {
             UUID season = daySeason(race.day());
             if (race.match() != null && (match == null || !race.day().equals(match.day()))) throw invalid();
             if (race.playoff() != null && (pairing == null || !season.equals(playoffSeason(pairing)))) throw invalid();
+            if (race.match() != null && checkedMatches.add(race.match())) validateBridge(matchRows.get(race.match()));
+            if (race.playoff() != null && checkedPairings.add(race.playoff())) {
+                var rows = pairingRows.get(race.playoff());
+                if (rows.stream().anyMatch(row -> !race.day().equals(row.day()))
+                        || rows.stream().map(Race::match).filter(java.util.Objects::nonNull).distinct().limit(2).count() > 1) throw invalid();
+                for (var row : rows) if (row.match() != null && checkedMatches.add(row.match())) validateBridge(matchRows.get(row.match()));
+            }
         }
+    }
+
+    private void validateBridge(List<Race> rows) {
+        var canonical = rows.stream().map(Race::playoff).filter(java.util.Objects::nonNull).findFirst();
+        if (canonical.isPresent() && rows.stream().anyMatch(row -> !canonical.get().equals(row.playoff()))) throw invalid();
     }
 
     private UUID daySeason(UUID id) {

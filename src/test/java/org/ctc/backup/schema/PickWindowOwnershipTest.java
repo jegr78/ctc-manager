@@ -63,4 +63,23 @@ class PickWindowOwnershipTest {
         assertThatThrownBy(graph(true, true, true, false, false)::validate).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("canonical");
     }
 
+    @ParameterizedTest @ValueSource(booleans = {true, false})
+    void givenAMixedBridgeWithNewWindowSettings_whenValidating_thenRejectUnrelatedOrdinaryRaces(boolean open) {
+        var validator = graph(true, open, !open, false, false);
+        validator.accept("races", row(UUID.randomUUID()).put("matchday", dayA.toString()).put("match", match.toString()));
+        assertThatThrownBy(validator::validate).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("ownership");
+    }
+    @Test
+    void givenAClosedLegacyMixedBridgeWithoutOverrides_whenValidating_thenPreserveRestoreCompatibility() {
+        var validator = graph(true, false, false, false, false);
+        validator.accept("races", row(UUID.randomUUID()).put("matchday", dayA.toString()).put("match", match.toString()));
+        assertThatCode(validator::validate).doesNotThrowAnyException();
+    }
+    @ParameterizedTest @ValueSource(booleans = {true, false})
+    void givenAnActiveCanonicalPairingAcrossDifferentDays_whenValidating_thenRejectTheEntirePairing(boolean bridge) {
+        var validator = graph(bridge, true, false, false, false);
+        validator.accept("races", row(UUID.randomUUID()).put("matchday", dayB.toString()).put("playoffMatchup", pair.toString()));
+        assertThatThrownBy(validator::validate).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("ownership");
+    }
+
 }

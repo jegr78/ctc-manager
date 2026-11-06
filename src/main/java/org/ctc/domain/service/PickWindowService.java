@@ -154,6 +154,13 @@ public class PickWindowService {
         var bridges = rows.stream().map(Race::getMatch).filter(Objects::nonNull).map(Match::getId).distinct().toList();
         if (bridges.size() > 1 || match != null && !bridges.isEmpty() && !bridges.contains(match.getId())) throw unavailable();
         if (match == null && !bridges.isEmpty()) match = matches.findById(bridges.getFirst()).orElseThrow(PickWindowService::unavailable);
+        if (match != null && matchup != null) {
+            UUID bridgeId = match.getId(), canonicalId = matchup.getId();
+            var bridgeRows = lockedRows == null ? races.findByMatchId(bridgeId)
+                    : lockedRows.stream().filter(race -> race.getMatch() != null && bridgeId.equals(race.getMatch().getId())).toList();
+            if (bridgeRows.stream().anyMatch(race -> race.getPlayoffMatchup() == null
+                    || !canonicalId.equals(race.getPlayoffMatchup().getId()))) throw unavailable();
+        }
         if (lockedRows != null && matchup != null) refresh(matchup);
         var owner = matchup == null ? null : playoffOwner(matchup.getId(), lockedRows != null);
         if (owner != null && !day.getSeason().getId().equals(owner.seasonId())) throw unavailable();
