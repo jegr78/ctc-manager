@@ -101,4 +101,41 @@ class IncidentThreadPermissionsTest {
         switch(cause) {case "guild" -> channelGuild="101";case "channel" -> channelId="201";case "forum" -> type=15;case "bot" -> member=new AccessMember(new BotUser("799","Test foreign","0000"),member.roles());case "rights" -> botRights(BOT&~THREAD_SEND);default -> throw new AssertionError(cause);}
         assertThatThrownBy(() -> IncidentThreadPermissions.requirePublic(guild,target(),member,roles,"700","100","200")).isInstanceOf(BusinessRuleException.class);
     }
+    List<PermissionOverwrite> updates() {
+        return IncidentThreadPermissions.staffUpdates(guild, target(), member, roles, "700", "100", channelId, List.of("500"), Set.of("300", "400"));
+    }
+    @Test void givenEffectiveInheritedStaffAccess_whenPreparingGrant_thenNeedNoPermissionManagement() {
+        botRights(BOT);assertThat(updates()).isEmpty();
+    }
+    @Test void givenAnAbsentStaffOverwrite_whenPreparingGrant_thenGrantOnlyReadAndThreadParticipation() {
+        overwrites.removeIf(row -> row.id().equals("500"));role("500", "0", false, null);
+        long required = VIEW | (1L << 16) | THREAD_SEND;
+        assertThat(updates()).containsExactly(new PermissionOverwrite("500", 0, Long.toString(required), "0"));
+    }
+    @Test void givenExistingStaffDenyAndUnrelatedBits_whenPreparingGrant_thenMergeOnlyRequiredBits() {
+        role("500", "0", false, null);overwrites.removeIf(row -> row.id().equals("500"));
+        var unrelated = java.math.BigInteger.ONE.shiftLeft(90);
+        var deny = unrelated.setBit(11).setBit(10).setBit(16).setBit(38);
+        overwrites.add(new PermissionOverwrite("500", 0, unrelated.setBit(14).toString(), deny.toString()));
+        var before = List.copyOf(overwrites);
+        var result = updates().getFirst();
+        assertThat(result.allow()).isEqualTo(unrelated.setBit(14).setBit(10).setBit(16).setBit(38).toString());
+        assertThat(result.deny()).isEqualTo(unrelated.setBit(11).toString());
+        assertThat(overwrites).containsExactlyElementsOf(before);
+    }
+    @Test void givenMissingAccessAndNoBotPermissionManagement_whenPreparingGrant_thenReject() {
+        overwrites.removeIf(row -> row.id().equals("500"));botRights(BOT);
+        assertThatThrownBy(this::updates).isInstanceOf(BusinessRuleException.class);
+        botRights(BOT | (1L << 28));assertThat(updates()).hasSize(1);
+    }
+    @ParameterizedTest @ValueSource(strings = {"100", "300", "999"})
+    void givenAnEveryoneParticipantOrMissingStaffRole_whenPreparingGrant_thenRejectTheWholePlan(String role) {
+        assertThatThrownBy(() -> IncidentThreadPermissions.staffUpdates(guild, target(), member, roles,
+                "700", "100", channelId, List.of("500", role), Set.of("300", "400"))).isInstanceOf(BusinessRuleException.class);
+    }
+    @Test void givenDuplicateStaffRoles_whenPreparingGrant_thenReject() {
+        assertThatThrownBy(() -> IncidentThreadPermissions.staffUpdates(guild, target(), member, roles,
+                "700", "100", channelId, List.of("500", "500"), Set.of("300", "400"))).isInstanceOf(BusinessRuleException.class);
+    }
+
 }

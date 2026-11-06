@@ -36,6 +36,7 @@ class DiscordIncidentThreadSenderIT {
     @RegisterExtension static WireMockExtension wm=WireMockExtension.newInstance().options(options().dynamicPort()).build();
     @DynamicPropertySource static void endpoint(DynamicPropertyRegistry properties){properties.add("app.discord.base-url",() -> wm.baseUrl()+"/api/v10");}
     @Autowired DiscordIncidentThreadSender sender;
+    @Autowired DiscordRestClient client;
     @MockitoBean DiscordGlobalConfigRepository configs;
     @MockitoBean java.time.Clock clock;
     static final java.time.Instant NOW=java.time.Instant.parse("2026-11-03T12:00:00Z");
@@ -47,13 +48,20 @@ class DiscordIncidentThreadSenderIT {
     IncidentThreadClaim claim(IncidentThreadStage stage,int index) {
         boolean privateSide=privateSide(stage);String starter=privateSide?"601":"801";
         var work=new IncidentThreadClaim.Work(stage,index,"INC-TEST",stage==IncidentThreadStage.PRIVATE_REFERENCE?"[CTC INC-TEST REFERENCE]":"[CTC INC-TEST "+(privateSide?"PRIVATE":"PUBLIC")+":"+index+"]","Incident INC-TEST · Test party",stage==IncidentThreadStage.PRIVATE_REFERENCE?"Test match discussion https://discord.com/channels/100/801\n[CTC INC-TEST REFERENCE]":content(privateSide,index),content(privateSide,0),"test-stable-nonce",stage==IncidentThreadStage.PRIVATE_STARTER||stage==IncidentThreadStage.PUBLIC_STARTER?null:starter,stage==IncidentThreadStage.PRIVATE_BODY||stage==IncidentThreadStage.PUBLIC_BODY||stage==IncidentThreadStage.PRIVATE_REFERENCE?starter:null);
-        return new IncidentThreadClaim(UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID(),1,"test-generation",NOW.plusSeconds(600),new IncidentThreadClaim.Destination("100","200","300",List.of("500"),config.getStewardsForumTagIds().isEmpty()?List.of():List.of("900"),Set.of("400")),work);
+        return new IncidentThreadClaim(UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID(),1,"test-generation",NOW.plusSeconds(600),new IncidentThreadClaim.Destination("100","200","300",List.of(config.getIncidentStaffRoleIds().split(",")),config.getStewardsForumTagIds().isEmpty()?List.of():List.of("900"),Set.of("400")),work);
     }
     String parent(int type,boolean broad) {
         return json(Map.of("id","300","guild_id","100","type",type,"flags",type==15?16:0,"permission_overwrites",List.of(Map.of("id","100","type",0,"allow",broad?"1024":"0","deny",broad?"0":"1024"),Map.of("id","500","type",0,"allow","1024","deny","0")),"available_tags",List.of(Map.of("id","900","name","Test Review","moderated",false))));
     }
     String thread(String id,String parent,boolean archived) {return json(Map.of("id",id,"guild_id","100","type",11,"parent_id",parent,"name","Incident INC-TEST · Test party","thread_metadata",Map.of("archived",archived,"locked",false,"archive_timestamp","2026-11-03T12:00:00Z")));}
     Map<String,Object> message(String id,String channel,String body) {return Map.of("id",id,"channel_id",channel,"content",body,"author",Map.of("id","700"),"nonce","test-stable-nonce");}
+    String matchPermissions(boolean granted) {
+        long staff = (1L << 10) | (1L << 16) | (1L << 38);
+        return json(Map.of("id", "200", "guild_id", "100", "type", 0, "permission_overwrites", granted
+                ? List.of(Map.of("id", "100", "type", 0, "allow", "0", "deny", "1024"),
+                        Map.of("id", "500", "type", 0, "allow", Long.toString(staff), "deny", "0"))
+                : List.of(Map.of("id", "100", "type", 0, "allow", "0", "deny", "1024"))));
+    }
     @BeforeEach void setup() throws Exception {
         wm.resetAll();when(clock.instant()).thenReturn(NOW);
         config=new DiscordGlobalConfig();config.setGuildId("100");config.setStewardsChannelId("300");config.setIncidentStaffRoleIds("500");when(configs.findFirstByOrderByIdAsc()).thenReturn(config);
@@ -62,10 +70,29 @@ class DiscordIncidentThreadSenderIT {
         wm.stubFor(get(urlEqualTo("/api/v10/guilds/100/members/700")).willReturn(okJson("{\"user\":{\"id\":\"700\"},\"roles\":[\"701\"]}")));
         wm.stubFor(get(urlEqualTo("/api/v10/guilds/100/roles")).willReturn(okJson("[{\"id\":\"100\",\"permissions\":\"1024\"},{\"id\":\"400\",\"permissions\":\"0\"},{\"id\":\"500\",\"permissions\":\"0\"},{\"id\":\"701\",\"permissions\":\"8\",\"managed\":true,\"tags\":{\"bot_id\":\"700\"}}]")));
         wm.stubFor(get(urlEqualTo("/api/v10/channels/300")).willReturn(okJson(parent(0,false))));
-        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).willReturn(okJson("{\"id\":\"200\",\"guild_id\":\"100\",\"type\":0,\"permission_overwrites\":[]}")));
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).willReturn(okJson(matchPermissions(true))));
         wm.stubFor(get(urlEqualTo("/api/v10/channels/300/messages/601")).willReturn(okJson(json(message("601","300",content(true,0))))));
         wm.stubFor(get(urlEqualTo("/api/v10/channels/200/messages/801")).willReturn(okJson(json(message("801","200",content(false,0))))));
     }
+    @Test void givenStewardsCannotReadTheMatchChannel_whenDisclosing_thenGrantAndVerifyBeforePosting() {
+        long needed = (1L << 10) | (1L << 16) | (1L << 38);
+        String before = json(Map.of("id", "200", "guild_id", "100", "type", 0,
+                "permission_overwrites", List.of(Map.of("id", "100", "type", 0, "allow", "0", "deny", "1024"))));
+        String after = json(Map.of("id", "200", "guild_id", "100", "type", 0,
+                "permission_overwrites", List.of(Map.of("id", "100", "type", 0, "allow", "0", "deny", "1024"),
+                        Map.of("id", "500", "type", 0, "allow", Long.toString(needed), "deny", "0"))));
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).inScenario("Test staff grant").whenScenarioStateIs("Started").willReturn(okJson(before)));
+        wm.stubFor(put(urlEqualTo("/api/v10/channels/200/permissions/500")).inScenario("Test staff grant").whenScenarioStateIs("Started")
+                .willReturn(noContent()).willSetStateTo("Granted"));
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).inScenario("Test staff grant").whenScenarioStateIs("Granted").willReturn(okJson(after)));
+        wm.stubFor(post(urlEqualTo("/api/v10/channels/200/messages")).inScenario("Test staff grant").whenScenarioStateIs("Granted")
+                .willReturn(okJson(json(message("801", "200", content(false, 0))))));
+        assertThat(sender.send(claim(IncidentThreadStage.PUBLIC_STARTER, 0)).disposition()).isEqualTo(IncidentSendResult.Disposition.SENT);
+        wm.verify(1, putRequestedFor(urlEqualTo("/api/v10/channels/200/permissions/500"))
+                .withRequestBody(equalToJson(json(Map.of("type", 0, "allow", Long.toString(needed), "deny", "0")))));
+        wm.verify(1, postRequestedFor(urlEqualTo("/api/v10/channels/200/messages")));
+    }
+
     @Test void givenStaffOnlyTextParent_whenSendingDetails_thenCreateANewControlledStarterWithNoMentions() {
         wm.stubFor(post(urlEqualTo("/api/v10/channels/300/messages")).willReturn(okJson(json(message("601","300",content(true,0))))));
         var result=sender.send(claim(IncidentThreadStage.PRIVATE_STARTER,0));assertThat(result.disposition()).isEqualTo(IncidentSendResult.Disposition.SENT);assertThat(result.messageId()).isEqualTo("601");assertThat(result.threadId()).isNull();
@@ -223,4 +250,71 @@ class DiscordIncidentThreadSenderIT {
         assertThat(sender.send(claim(stage,mutation.equals("unarchive")?1:0)).disposition()).isEqualTo(IncidentSendResult.Disposition.REJECTED);
         if(mutation.equals("unarchive"))wm.verify(1,patchRequestedFor(urlEqualTo(path)));else wm.verify(1,postRequestedFor(urlEqualTo(path)));
     }
+    @Test void givenSufficientStewardAccess_whenPosting_thenMakeNoPermissionWrites() {
+        wm.stubFor(post(urlEqualTo("/api/v10/channels/200/messages")).willReturn(okJson(json(message("801", "200", content(false, 0))))));
+        assertThat(sender.send(claim(IncidentThreadStage.PUBLIC_STARTER, 0)).disposition()).isEqualTo(IncidentSendResult.Disposition.SENT);
+        wm.verify(0, putRequestedFor(anyUrl()));
+    }
+    @ParameterizedTest @ValueSource(ints = {403, 500})
+    void givenPermissionGrantIsRejectedOrUncertain_whenDisclosing_thenNeverPostAndDoNotReplayThePut(int status) {
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).willReturn(okJson(matchPermissions(false))));
+        wm.stubFor(put(urlEqualTo("/api/v10/channels/200/permissions/500")).willReturn(aResponse().withStatus(status)));
+        assertThat(sender.send(claim(IncidentThreadStage.PUBLIC_STARTER, 0)).disposition()).isEqualTo(IncidentSendResult.Disposition.REJECTED);
+        wm.verify(1, putRequestedFor(urlEqualTo("/api/v10/channels/200/permissions/500")));
+        wm.verify(0, postRequestedFor(anyUrl()));
+    }
+    @Test void givenDiscordAcknowledgesWithoutEffectiveAccess_whenDisclosing_thenRejectBeforePublishing() {
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).willReturn(okJson(matchPermissions(false))));
+        wm.stubFor(put(urlEqualTo("/api/v10/channels/200/permissions/500")).willReturn(noContent()));
+        assertThat(sender.send(claim(IncidentThreadStage.PUBLIC_STARTER, 0)).disposition()).isEqualTo(IncidentSendResult.Disposition.REJECTED);
+        wm.verify(1, putRequestedFor(anyUrl()));wm.verify(0, postRequestedFor(anyUrl()));
+    }
+    @Test void givenMissingStaffAccess_whenReconcilingExistingEvidence_thenRemainReadOnly() {
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).willReturn(okJson(matchPermissions(false))));
+        assertThat(sender.verify(claim(IncidentThreadStage.PUBLIC_STARTER, 0), "801").disposition()).isEqualTo(IncidentSendResult.Disposition.REJECTED);
+        wm.verify(0, putRequestedFor(anyUrl()));wm.verify(0, postRequestedFor(anyUrl()));
+    }
+    @Test void givenThePrivateDisclosureStage_whenSending_thenLeaveTheMatchChannelPermissionsAlone() {
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).willReturn(okJson(matchPermissions(false))));
+        wm.stubFor(post(urlEqualTo("/api/v10/channels/300/messages")).willReturn(okJson(json(message("601", "300", content(true, 0))))));
+        assertThat(sender.send(claim(IncidentThreadStage.PRIVATE_STARTER, 0)).disposition()).isEqualTo(IncidentSendResult.Disposition.SENT);
+        wm.verify(0, putRequestedFor(anyUrl()));
+    }
+
+    @Test void givenTwoStaffRolesAndAPartialGrantFailure_whenRetrying_thenKeepTheFirstGrantAndFinishBeforePosting() {
+        config.setIncidentStaffRoleIds("500,550");
+        wm.stubFor(get(urlEqualTo("/api/v10/guilds/100/roles")).willReturn(okJson("[{\"id\":\"100\",\"permissions\":\"0\"},{\"id\":\"400\",\"permissions\":\"0\"},{\"id\":\"500\",\"permissions\":\"0\"},{\"id\":\"550\",\"permissions\":\"0\"},{\"id\":\"701\",\"permissions\":\"8\",\"managed\":true,\"tags\":{\"bot_id\":\"700\"}}]")));
+        String both = matchPermissions(true).replace("[{", "[{\"id\":\"550\",\"type\":0,\"allow\":\"274877973504\",\"deny\":\"0\"},{");
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).inScenario("Test partial grant").whenScenarioStateIs("Started").willReturn(okJson(matchPermissions(false))));
+        wm.stubFor(put(urlEqualTo("/api/v10/channels/200/permissions/500")).inScenario("Test partial grant").whenScenarioStateIs("Started").willReturn(noContent()).willSetStateTo("First granted"));
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).inScenario("Test partial grant").whenScenarioStateIs("First granted").willReturn(okJson(matchPermissions(true))));
+        wm.stubFor(put(urlEqualTo("/api/v10/channels/200/permissions/550")).willReturn(aResponse().withStatus(403)));
+        assertThat(sender.send(claim(IncidentThreadStage.PUBLIC_STARTER, 0)).disposition()).isEqualTo(IncidentSendResult.Disposition.REJECTED);
+        wm.verify(0, postRequestedFor(anyUrl()));
+        wm.stubFor(put(urlEqualTo("/api/v10/channels/200/permissions/550")).inScenario("Test partial grant").whenScenarioStateIs("First granted").willReturn(noContent()).willSetStateTo("Both granted"));
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).inScenario("Test partial grant").whenScenarioStateIs("Both granted").willReturn(okJson(both)));
+        wm.stubFor(post(urlEqualTo("/api/v10/channels/200/messages")).inScenario("Test partial grant").whenScenarioStateIs("Both granted").willReturn(okJson(json(message("801", "200", content(false, 0))))));
+        assertThat(sender.send(claim(IncidentThreadStage.PUBLIC_STARTER, 0)).disposition()).isEqualTo(IncidentSendResult.Disposition.SENT);
+        wm.verify(1, putRequestedFor(urlEqualTo("/api/v10/channels/200/permissions/500")));
+        wm.verify(2, putRequestedFor(urlEqualTo("/api/v10/channels/200/permissions/550")));
+        wm.verify(1, postRequestedFor(anyUrl()));
+    }
+    @Test void givenAMergedStaffOverwrite_whenGranting_thenUseTheRoleEndpointAndExactBitfields() {
+        wm.stubFor(put(urlEqualTo("/api/v10/channels/200/permissions/500")).willReturn(noContent()));
+        assertDoesNotThrow(() -> client.grantIncidentStaffAccess("200", new org.ctc.discord.dto.PermissionOverwrite("500", 0, "274877973504", "2048"), NOW.plusSeconds(60)));
+        wm.verify(1, putRequestedFor(urlEqualTo("/api/v10/channels/200/permissions/500"))
+                .withRequestBody(equalToJson("{\"type\":0,\"allow\":\"274877973504\",\"deny\":\"2048\"}")));
+    }
+    @Test void givenAnUncertainPermissionResponse_whenGranting_thenRequireFreshReadsInsteadOfReplayingOldBits() {
+        wm.stubFor(put(urlEqualTo("/api/v10/channels/200/permissions/500")).willReturn(serverError()));
+        assertThatThrownBy(() -> client.grantIncidentStaffAccess("200", new org.ctc.discord.dto.PermissionOverwrite("500", 0, "1024", "0"), NOW.plusSeconds(60)))
+                .isInstanceOf(org.ctc.discord.exception.DiscordTransientException.class);
+        wm.verify(1, putRequestedFor(urlEqualTo("/api/v10/channels/200/permissions/500")));
+    }
+    @Test void givenAnExpiredPermissionLease_whenGranting_thenMakeNoRequest() {
+        assertThatThrownBy(() -> client.grantIncidentStaffAccess("200", new org.ctc.discord.dto.PermissionOverwrite("500", 0, "1024", "0"), NOW.minusSeconds(1)))
+                .isInstanceOf(org.ctc.discord.exception.DiscordTransientException.class);
+        wm.verify(0, putRequestedFor(anyUrl()));
+    }
+
 }

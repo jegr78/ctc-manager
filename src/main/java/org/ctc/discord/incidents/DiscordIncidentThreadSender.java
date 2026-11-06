@@ -29,6 +29,7 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
         try {
             requireLive(claim);
             var prepared = prepare(claim);var work = claim.work();var target = claim.destination();
+            if (!privateSide(claim)) prepared = ensureStaffAccess(claim, prepared);
             String parent = parent(claim);
             switch (work.stage()) {
                 case PRIVATE_STARTER, PUBLIC_STARTER -> {
@@ -84,6 +85,7 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
         if (!outbound.isEnabled()) return rejected("OUTBOUND_DISABLED");
         try {
             var prepared = prepare(claim);var work = claim.work();
+            if (!privateSide(claim)) require(staffUpdates(claim, prepared).isEmpty());
             if (remoteId == null || remoteId.isEmpty()) return verifyMissing(claim, prepared);
             require(snowflake(remoteId));
             switch (work.stage()) {
@@ -141,10 +143,29 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
         var roles = discord.fetchIncidentRoles(target.guildId());var stewards = discord.fetchIncidentChannel(target.stewardsChannelId());
         IncidentThreadPermissions.requirePrivate(guild, stewards, member, roles, bot.id(), target.guildId(), target.stewardsChannelId(),
                 new HashSet<>(target.staffRoles()), target.participantRoles(), target.forumTags());
-        if (privateSide(claim)) return new Prepared(bot.id(), stewards);
+        if (privateSide(claim)) return new Prepared(bot.id(), stewards, guild, member, roles);
         var match = discord.fetchIncidentChannel(target.matchChannelId());
         IncidentThreadPermissions.requirePublic(guild, match, member, roles, bot.id(), target.guildId(), target.matchChannelId());
-        return new Prepared(bot.id(), match);
+        return new Prepared(bot.id(), match, guild, member, roles);
+    }
+
+    private Prepared ensureStaffAccess(IncidentThreadClaim claim, Prepared prepared) throws DiscordApiException {
+        for (int attempt = 0; attempt < claim.destination().staffRoles().size(); attempt++) {
+            var updates = staffUpdates(claim, prepared);
+            if (updates.isEmpty()) return prepared;
+            requireLive(claim);
+            discord.grantIncidentStaffAccess(claim.destination().matchChannelId(), updates.getFirst(), claim.validUntil());
+            requireLive(claim);
+            prepared = prepare(claim);
+        }
+        require(staffUpdates(claim, prepared).isEmpty());
+        return prepared;
+    }
+
+    private List<org.ctc.discord.dto.PermissionOverwrite> staffUpdates(IncidentThreadClaim claim, Prepared prepared) {
+        var target = claim.destination();
+        return IncidentThreadPermissions.staffUpdates(prepared.guild(), prepared.parent(), prepared.member(), prepared.roles(),
+                prepared.botId(), target.guildId(), target.matchChannelId(), target.staffRoles(), target.participantRoles());
     }
 
     private void verifyStarter(IncidentThreadClaim claim, String botId, String forumThread) throws DiscordApiException {
@@ -307,5 +328,5 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
     private static IncidentThreadResult sent(String message, String thread) {return new IncidentThreadResult(IncidentSendResult.Disposition.SENT, message, thread, null);}
     private static IncidentThreadResult rejected(String code) {return new IncidentThreadResult(IncidentSendResult.Disposition.REJECTED, null, null, code);}
     private static IncidentThreadResult uncertain(String code) {return new IncidentThreadResult(IncidentSendResult.Disposition.UNCERTAIN, null, null, code);}
-    private record Prepared(String botId, IncidentChannel parent) { }
+    private record Prepared(String botId, IncidentChannel parent, AccessGuild guild, AccessMember member, List<IncidentRole> roles) { }
 }
