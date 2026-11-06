@@ -14,7 +14,6 @@ public final class MatchdayPickView {
                       boolean manualOpen, boolean manualClosed, String teamEditing, boolean targetValid,
                       List<PickReviewForm.Action> actions, boolean correctable) {
         public Row { actions = List.copyOf(actions); }
-        public boolean isOpeningAvailable() { return !manualOpen && actions.contains(PickReviewForm.Action.OPEN_MISSING); }
     }
     public record Overview(UUID seasonId, UUID matchdayId, PickState state, List<Choice> seasons, List<Choice> matchdays, List<Row> rows) {
         public Overview { seasons = List.copyOf(seasons); matchdays = List.copyOf(matchdays); rows = List.copyOf(rows); }

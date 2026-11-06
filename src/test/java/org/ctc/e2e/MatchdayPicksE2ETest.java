@@ -125,7 +125,7 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
         // given
         page.setViewportSize(width, height);
         String matchdayPath = "/admin/matchdays/" + fixture.matchday().getId();
-        page.navigate(url(matchdayPath));
+        page.navigate(url(matchdayPath)); capture("pick-deadline-matchday-" + viewport);
         assertThat(page.locator("#matchday-picks")).containsText("Europe/Berlin");
         page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Edit pick deadline").setExact(true)).click();
         assertThat(page.locator("#pickDeadline")).hasValue("2035-01-01T12:00");
@@ -140,14 +140,9 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
         assertThat(back).hasAttribute("href", matchdayPath);
         back.focus(); assertThat(back).isFocused(); capture("pick-review-return-" + viewport);
         back.press("Enter"); assertThat(page).hasURL(url(matchdayPath));
-        page.navigate(url(path()));
+        page.navigate(url(path())); capture("pick-deadline-review-" + viewport);
         assertThat(page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Edit pick deadline").setExact(true)))
                 .hasAttribute("href", matchdayPath + "/edit-pairings");
-        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Open submission without deadline")).click();
-        page.getByLabel("Decision reason", new Page.GetByLabelOptions().setExact(true)).fill("Test manual opening from visible status");
-        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save review decision")).click();
-        assertThat(page.locator("#pick-status")).containsText("Open without a new deadline");
-        assertThat(page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Open submission without deadline"))).hasCount(0);
         page.navigate(url("/admin/matchday-picks?seasonId=" + fixture.season().getId()));
         assertThat(page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Back to matchday").setExact(true))).hasCount(0);
     }

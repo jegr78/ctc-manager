@@ -1198,3 +1198,7 @@ The following live actions belong to a separately authorized operator rollout:
 - [ ] Retire the manual Google Forms process only through an explicit operator decision after
   successful acceptance. Preserve historical Forms and responses; do not migrate or delete them
   automatically.
+
+### Finding the pick deadline
+
+The matchday workspace always shows **Pick deadline & event window**, including when Discord announcements are disabled. Use **Edit pick deadline** there or directly from team-pick review status. The deadline applies to every home race on that matchday in Europe/Berlin. Saving does not publish an announcement. The filtered picks overview links back to its selected matchday.
