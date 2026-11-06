@@ -77,6 +77,8 @@ public final class PickWindowBackupValidator {
     }
 
     private void validateBridge(List<Race> rows) {
+        var owner = matches.get(rows.getFirst().match());
+        if (owner == null || rows.stream().anyMatch(row -> !owner.day().equals(row.day()))) throw invalid();
         var canonical = rows.stream().map(Race::playoff).filter(java.util.Objects::nonNull).findFirst();
         if (canonical.isPresent() && rows.stream().anyMatch(row -> !canonical.get().equals(row.playoff()))) throw invalid();
     }

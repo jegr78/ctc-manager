@@ -192,6 +192,7 @@ public class PickWindowService {
     }
 
     private void validateOpening(DayScope current) {
+        for (var match : current.matches()) pairing(match.getId(), false, current.allRaces());
         var canonical = new java.util.HashSet<UUID>();
         for (var race : current.races()) {
             if (race.getMatch() != null && !current.day().getId().equals(race.getMatch().getMatchday().getId())) throw unavailable();

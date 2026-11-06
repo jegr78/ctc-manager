@@ -236,6 +236,30 @@ class MatchdayPickWindowManagementIT extends PickPersistenceIT {
         }
     }
 
+    @Test
+    void givenAClosedLegacyOrdinaryMatchWithAForeignLeg_whenOpening_thenRejectWithoutChangingTheFlag() {
+        var context = tx.execute(status -> {
+            entityManager.find(Matchday.class, fixture.matchday().getId()).setPicksOpen(false);
+            var foreign = helper.createSeason("Test foreign ordinary leg " + java.util.UUID.randomUUID());
+            var phase = entityManager.createQuery("select p from SeasonPhase p where p.season.id = :id and p.phaseType = :type", SeasonPhase.class)
+                    .setParameter("id", foreign.getId()).setParameter("type", PhaseType.REGULAR).getSingleResult();
+            var day = new Matchday(phase, "Test foreign ordinary day", 1); entityManager.persist(day);
+            var race = new Race(); race.setMatchday(day); race.setMatch(entityManager.find(Match.class, fixture.match().getId())); entityManager.persist(race); entityManager.flush();
+            return new java.util.UUID[]{foreign.getId(), race.getId()};
+        });
+        try {
+            var view = windows.readMatchday(fixture.matchday().getId());
+            assertThatThrownBy(() -> save(view, true)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("context");
+            var after = windows.readMatchday(view.id());
+            assertThat(after.open()).isFalse(); assertThat(after.version()).isEqualTo(view.version());
+        } finally {
+            tx.executeWithoutResult(status -> {
+                entityManager.remove(entityManager.find(Race.class, context[1])); entityManager.flush();
+                helper.deleteSeasonCascade(entityManager.find(Season.class, context[0]));
+            });
+        }
+    }
+
     private record PlayoffPairing(java.util.UUID day, java.util.UUID bridge, java.util.UUID playoff) { }
     private PlayoffPairing playoff(boolean withBridge) {
         return tx.execute(status -> {

@@ -82,4 +82,21 @@ class PickWindowOwnershipTest {
         assertThatThrownBy(validator::validate).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("ownership");
     }
 
+
+    @ParameterizedTest @ValueSource(booleans = {true, false})
+    void givenAnOrdinaryMatchAcrossDaysWithNewWindowSettings_whenValidating_thenRejectItsForeignMembers(boolean open) {
+        conflictingBridge = !open;
+        var validator = graph(false, open, false, false, false);
+        validator.accept("races", row(UUID.randomUUID()).put("matchday", dayA.toString()).put("match", match.toString()));
+        validator.accept("races", row(UUID.randomUUID()).put("matchday", dayB.toString()).put("match", match.toString()));
+        assertThatThrownBy(validator::validate).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("ownership");
+    }
+    @Test
+    void givenAClosedLegacyOrdinaryMatchAcrossDaysWithoutOverrides_whenValidating_thenPreserveCompatibility() {
+        var validator = graph(false, false, false, false, false);
+        validator.accept("races", row(UUID.randomUUID()).put("matchday", dayA.toString()).put("match", match.toString()));
+        validator.accept("races", row(UUID.randomUUID()).put("matchday", dayB.toString()).put("match", match.toString()));
+        assertThatCode(validator::validate).doesNotThrowAnyException();
+    }
+
 }
