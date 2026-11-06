@@ -42,6 +42,8 @@ class PickWindowArchiveTest {
     void givenNewSettingsMasqueradingAsAnOldArchive_whenNormalizing_thenReject() {
         assertThatThrownBy(() -> PickWindowArchive.normalize(16, "matchdays", row().put("picksOpen", true))).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> PickWindowArchive.normalize(16, "matches", row().put("pickDeadlineOverride", "2035-01-01T20:00"))).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> PickWindowArchive.normalize(16, "matches", row().put("pickWindowVersion", new java.math.BigInteger("18446744073709551616"))))
+                .isInstanceOf(IllegalArgumentException.class);
     }
     @Test
     void givenInconsistentPlayoffBridge_whenValidating_thenRejectWithoutRepairingItsOverride() {

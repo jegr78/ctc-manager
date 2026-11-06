@@ -54,7 +54,32 @@ class MatchdayPickWindowConcurrencyIT extends PickPersistenceIT {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void givenAPlayoffLegMovedWhileTheEditorWaits_whenSavingEitherRoute_thenRejectTheChangedCanonicalPairing(boolean matchRoute) throws Exception {
-        var ids = tx.execute(status -> {
+        var ids = playoffFixture();
+        var view = windows.readPairing(matchRoute ? ids[1] : ids[0], !matchRoute);
+        var manager = new ManagementPickActor("test-window-manager", epoch.managementGeneration());
+        concurrentChange(() -> {
+            var moved = entityManager.find(Race.class, ids[2]); moved.setMatchday(entityManager.find(Matchday.class, ids[3]));
+            moved.setMatch(entityManager.find(Match.class, ids[4]));
+        }, () -> { windows.savePairing(view.id(), !matchRoute, LocalDateTime.of(2036, 1, 1, 20, 0), view.version(), view.scope(), manager); return null; }, "matchdays");
+        tx.executeWithoutResult(status -> assertThat(entityManager.find(PlayoffMatchup.class, ids[0]).getPickDeadlineOverride()).isNull());
+    }
+
+    @Test
+    void givenPlayoffMetadataChangedDuringTheLockWait_whenSaving_thenCompareCurrentScalarOwnership() throws Exception {
+        var ids = playoffFixture();
+        var otherPhase = tx.execute(status -> {
+            var phase = new SeasonPhase(entityManager.find(Season.class, fixture.season().getId()), PhaseType.PLACEMENT, PhaseLayout.BRACKET, 20);
+            phase.setLabel("Test changed playoff context"); entityManager.persist(phase); entityManager.flush(); return phase.getId();
+        });
+        var view = windows.readPairing(ids[0], true);
+        var manager = new ManagementPickActor("test-window-manager", epoch.managementGeneration());
+        concurrentChange(() -> entityManager.find(Playoff.class, ids[5]).setPhase(entityManager.find(SeasonPhase.class, otherPhase)),
+                () -> { windows.savePairing(view.id(), true, LocalDateTime.of(2036, 1, 1, 20, 0), view.version(), view.scope(), manager); return null; }, "context changed");
+        tx.executeWithoutResult(status -> assertThat(entityManager.find(PlayoffMatchup.class, ids[0]).getPickDeadlineOverride()).isNull());
+    }
+
+    private UUID[] playoffFixture() {
+        return tx.execute(status -> {
             var season = entityManager.find(Season.class, fixture.season().getId());
             var phase = new SeasonPhase(season, PhaseType.PLAYOFF, PhaseLayout.BRACKET, 10); phase.setLabel("Test concurrent playoff"); entityManager.persist(phase);
             var playoff = new Playoff(phase, "Test concurrent playoff"); entityManager.persist(playoff);
@@ -69,15 +94,8 @@ class MatchdayPickWindowConcurrencyIT extends PickPersistenceIT {
             for (int leg = 0; leg < 2; leg++) {
                 var race = new Race(); race.setMatchday(day); race.setMatch(bridge); race.setPlayoffMatchup(pairing); entityManager.persist(race); moving = race;
             }
-            entityManager.flush(); return new UUID[]{pairing.getId(), bridge.getId(), moving.getId(), other.getId(), otherBridge.getId()};
+            entityManager.flush(); return new UUID[]{pairing.getId(), bridge.getId(), moving.getId(), other.getId(), otherBridge.getId(), playoff.getId()};
         });
-        var view = windows.readPairing(matchRoute ? ids[1] : ids[0], !matchRoute);
-        var manager = new ManagementPickActor("test-window-manager", epoch.managementGeneration());
-        concurrentChange(() -> {
-            var moved = entityManager.find(Race.class, ids[2]); moved.setMatchday(entityManager.find(Matchday.class, ids[3]));
-            moved.setMatch(entityManager.find(Match.class, ids[4]));
-        }, () -> { windows.savePairing(view.id(), !matchRoute, LocalDateTime.of(2036, 1, 1, 20, 0), view.version(), view.scope(), manager); return null; }, "matchdays");
-        tx.executeWithoutResult(status -> assertThat(entityManager.find(PlayoffMatchup.class, ids[0]).getPickDeadlineOverride()).isNull());
     }
 
     private void concurrentChange(Runnable change, java.util.concurrent.Callable<?> waiting, String message) throws Exception {
@@ -98,8 +116,11 @@ class MatchdayPickWindowConcurrencyIT extends PickPersistenceIT {
                 assertThat(attempted.await(15, TimeUnit.SECONDS)).isTrue();
                 assertThatThrownBy(() -> writer.get(200, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
                 release.countDown(); owner.get(15, TimeUnit.SECONDS);
-                assertThatThrownBy(() -> writer.get(15, TimeUnit.SECONDS)).hasCauseInstanceOf(BusinessRuleException.class)
-                        .cause().hasMessageContainingAny(message, "Selections changed while saving.");
+                var rejected = catchThrowable(() -> writer.get(15, TimeUnit.SECONDS));
+                assertThat(rejected).hasCauseInstanceOf(BusinessRuleException.class);
+                String reason = rejected.getCause().getMessage();
+                assertThat(reason.contains(message) || reason.startsWith("Selections changed while saving."))
+                        .as("current context rejection or MariaDB's explicit snapshot-conflict rejection: %s", reason).isTrue();
             } finally { release.countDown(); owner.get(15, TimeUnit.SECONDS); }
         }
     }

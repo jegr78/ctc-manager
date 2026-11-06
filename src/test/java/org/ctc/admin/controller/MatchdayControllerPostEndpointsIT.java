@@ -52,6 +52,8 @@ class MatchdayControllerPostEndpointsIT {
 	@Autowired
 	TestHelper helper;
 
+    @Autowired org.ctc.admin.service.PickWindowAdminService pickWindows;
+
 	@Autowired
 	MatchRepository matchRepository;
 
@@ -225,13 +227,17 @@ class MatchdayControllerPostEndpointsIT {
 	void givenValidForm_whenPostSavePairings_thenRedirectToDetailWithSuccessFlash() throws Exception {
 		Matchday md = seedMatchday("EP2", "https://discord.com/api/webhooks/721/tok-ep2");
 
+        var window = pickWindows.matchdayForm(md.getId());
 		mockMvc.perform(MockMvcRequestBuilders.post("/admin/matchdays/" + md.getId() + "/save-pairings")
 						.with(csrf())
 						.param("id", md.getId().toString())
+                        .param("expectedVersion", window.getExpectedVersion().toString())
+                        .param("expectedScope", window.getExpectedScope())
+                        .param("expectedGeneration", window.getExpectedGeneration())
 						.param("pickDeadline", "2026-06-01T20:00:00")
 						.param("scheduledWeekend", "2026-06-08"))
 				.andExpect(status().is3xxRedirection())
-				.andExpect(flash().attribute("successMessage", "Pairings saved."));
+				.andExpect(flash().attribute("successMessage", "Matchday picks settings saved."));
 	}
 
 	@Test

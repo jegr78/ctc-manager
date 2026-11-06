@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout('Matchday picks &amp; event window', ~{::section})}">
 <body>
-<section class="entity-editor planning-editor">
+<section class="entity-editor planning-editor pick-window-editor">
     <a th:href="@{/admin/matchdays/{id}(id=${matchday.id})}" class="back-link">&larr; Back to Matchday</a>
     <h1 th:text="'Matchday picks &amp; event window: ' + ${matchday.label}"></h1>
     <div class="card">

@@ -36,6 +36,22 @@ class MatchdayPickWindowManagementIT extends PickPersistenceIT {
     }
 
     @Test
+    void givenIncorrectVersionWithTheCurrentFingerprint_whenSaving_thenRejectWithoutChangingTheWindow() {
+        var view = windows.readMatchday(fixture.matchday().getId());
+        for (long incorrect : new long[]{-1, view.version() + 1}) {
+            assertThatThrownBy(() -> windows.saveMatchday(view.id(), false, view.deadline(), view.weekend(), incorrect, view.scope(), manager()))
+                    .isInstanceOf(BusinessRuleException.class).hasMessageContaining("changed");
+        }
+        assertThat(windows.readMatchday(view.id()).open()).isTrue();
+    }
+
+    @Test
+    void givenTheLastUnfinishedMatch_whenSavingAWholeMatchQuickScore_thenCloseTheMatchday() {
+        raceService.quickScore(fixture.race().getId(), 20, 17);
+        assertThat(windows.readMatchday(fixture.matchday().getId()).open()).isFalse();
+    }
+
+    @Test
     void givenStaleWindowVersion_whenSaving_thenRejectWithoutChangingItsCurrentFlag() {
         var view = windows.readMatchday(fixture.matchday().getId()); save(view, false);
         assertThatThrownBy(() -> save(view, true)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("changed");

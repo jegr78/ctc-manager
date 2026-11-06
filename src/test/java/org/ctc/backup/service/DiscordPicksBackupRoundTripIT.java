@@ -232,7 +232,7 @@ class DiscordPicksBackupRoundTripIT {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"missing-revisions", "missing-decisions", "unmanaged", "cross-team", "orphan-track", "duplicate-request", "forged-version", "changed-settings", "dropped-correction", "disguised-v4"})
+    @ValueSource(strings = {"missing-revisions", "missing-decisions", "unmanaged", "cross-team", "orphan-track", "duplicate-request", "forged-version", "changed-settings", "dropped-correction", "disguised-v4", "window-flag", "window-version", "window-deadline", "window-legacy"})
     void givenMalformedPrivateHistory_whenStagingOrExecuting_thenRejectBeforeWipeAndKeepLiveHistory(String kind) throws Exception {
         // given
         byte[] valid = export();
@@ -482,7 +482,20 @@ class DiscordPicksBackupRoundTripIT {
     private byte[] malformed(byte[] valid, String kind) throws IOException {
         var files = unzip(valid);
         var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
-        if (kind.startsWith("missing-")) {
+        if (kind.equals("window-legacy")) {
+            manifest.put("schema_version", 16);
+        } else if (kind.startsWith("window-")) {
+            String file = kind.equals("window-deadline") ? "data/matches.json" : "data/matchdays.json";
+            var rows = (ArrayNode) JSON.readTree(files.get(file));
+            var row = (ObjectNode) rows.get(0);
+            switch (kind) {
+                case "window-flag" -> row.put("picksOpen", "true");
+                case "window-version" -> row.put("pickWindowVersion", -1);
+                case "window-deadline" -> row.put("pickDeadlineOverride", "2027-03-28T02:30");
+                default -> throw new AssertionError(kind);
+            }
+            files.put(file, JSON.writeValueAsBytes(rows));
+        } else if (kind.startsWith("missing-")) {
             files.remove("data/matchday-pick-" + (kind.equals("missing-revisions") ? "revisions" : "decisions") + ".json");
         } else if (kind.equals("disguised-v4")) {
             manifest.put("schema_version", 4);
