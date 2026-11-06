@@ -13,6 +13,7 @@ public final class MatchdayPickWindowRules {
     public static LocalDateTime deadline(Race race) {
         var match = race.getMatch();
         var playoff = race.getPlayoffMatchup();
+        if (match != null && match.getPickDeadlineOverride() != null || playoff != null && playoff.getPickDeadlineOverride() != null) requireOwnedDeadline(race);
         if (playoff != null) {
             if (match != null && match.getPickDeadlineOverride() != null
                     && !Objects.equals(match.getPickDeadlineOverride(), playoff.getPickDeadlineOverride())) {
@@ -22,6 +23,20 @@ public final class MatchdayPickWindowRules {
         }
         return match != null && match.getPickDeadlineOverride() != null
                 ? match.getPickDeadlineOverride() : race.getMatchday().getPickDeadline();
+    }
+
+    private static void requireOwnedDeadline(Race race) {
+        var day = race.getMatchday();
+        if (day == null || day.getSeason() == null || day.getSeason().getId() == null
+                || race.getMatch() != null && (race.getMatch().getMatchday() == null || !Objects.equals(day.getId(), race.getMatch().getMatchday().getId()))) {
+            throw new BusinessRuleException("The pick deadline ownership requires management review");
+        }
+        var playoff = race.getPlayoffMatchup();
+        if (playoff != null && (playoff.getRound() == null || playoff.getRound().getPlayoff() == null
+                || playoff.getRound().getPlayoff().getSeason() == null
+                || !day.getSeason().getId().equals(playoff.getRound().getPlayoff().getSeason().getId()))) {
+            throw new BusinessRuleException("The pick deadline ownership requires management review");
+        }
     }
 
     public static boolean complete(List<Match> matches, List<Race> races, int expectedLegs) {

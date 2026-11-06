@@ -67,6 +67,7 @@ public class PickWindowService {
             requireActor(actor); requireVersion(current.day().getPickWindowVersion(), expectedVersion);
             requireScope(dayScope(current.day()), expectedScope); validateDeadline(deadline);
             if (weekend != null && weekend.length() > 64) throw new BusinessRuleException("The event window must not exceed 64 characters");
+            if (open) validateOpening(current);
             if (open && complete(current)) throw new BusinessRuleException("All matches are completed; picks cannot be opened");
             long next = next(current.day().getPickWindowVersion());
             if (open) clearLegacyClosures(current, actor);
@@ -168,6 +169,17 @@ public class PickWindowService {
         if (rows.size() != 1) throw unavailable();
         var row = rows.getFirst();
         return new PlayoffOwner((UUID) row[0], (UUID) row[1], (UUID) row[2], (UUID) row[3]);
+    }
+
+    private void validateOpening(DayScope current) {
+        var canonical = new java.util.HashSet<UUID>();
+        for (var race : current.races()) {
+            if (race.getMatch() != null && !current.day().getId().equals(race.getMatch().getMatchday().getId())) throw unavailable();
+            if (race.getPlayoffMatchup() != null && canonical.add(race.getPlayoffMatchup().getId())) {
+                var pair = pairing(race.getPlayoffMatchup().getId(), true, current.allRaces());
+                if (!current.day().getId().equals(pair.day().getId())) throw unavailable();
+            }
+        }
     }
 
     private void clearLegacyClosures(DayScope current, ManagementPickActor actor) {

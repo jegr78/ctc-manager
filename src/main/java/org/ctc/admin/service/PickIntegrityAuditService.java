@@ -43,7 +43,7 @@ public class PickIntegrityAuditService {
         var picks = new HashMap<java.util.UUID, MatchdayPick>();
         try {
             for (var entity : schema.getExportOrder()) {
-                if (!PickBackupValidator.supports(entity.tableName())) continue;
+                if (!PickBackupValidator.supports(entity.tableName()) && !org.ctc.backup.schema.PickWindowBackupValidator.supports(entity.tableName())) continue;
                 for (var row : exports.fetchAllForBackup(entity.entityClass())) {
                     if (row instanceof Race race && race.isPicksManaged()) managedRaces.add(race);
                     if (row instanceof MatchdayPick pick) picks.put(pick.getRace().getId(), pick);
@@ -76,7 +76,7 @@ public class PickIntegrityAuditService {
             return List.of(new DataAuditFinding(DataAuditFinding.Category.LOBBY_RULES,
                     DataAuditFinding.Resolution.AMBIGUOUS, "Season lobby rules", failure.getMessage(),
                     "Compare the saved season profile and race choices with authoritative records; do not rewrite historical settings or publication evidence."));
-        } catch (IllegalArgumentException failure) {
+        } catch (IllegalArgumentException | BusinessRuleException failure) {
             return List.of(new DataAuditFinding(DataAuditFinding.Category.PRIVATE_PICKS,
                     DataAuditFinding.Resolution.AMBIGUOUS, "Private picks and channel bindings", failure.getMessage(),
                     "Review channel bindings, the original target and immutable history against authoritative records; preserve revisions and receipts."));

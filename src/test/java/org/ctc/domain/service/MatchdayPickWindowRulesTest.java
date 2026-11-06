@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.*;
 
 class MatchdayPickWindowRulesTest {
     final Matchday day = PhaseTestFixtures.matchdayInRegularPhase(new Season("Test picks", 2027, 1), "Test round", 1);
+    { day.getSeason().setId(UUID.randomUUID()); }
     final LocalDateTime ordinary = LocalDateTime.of(2027, 1, 10, 20, 0);
     final LocalDateTime exception = ordinary.plusDays(2);
 
@@ -29,7 +30,7 @@ class MatchdayPickWindowRulesTest {
     void givenCanonicalPlayoffException_whenResolvingItsBridgeRace_thenUseThePairingDeadline() {
         // given
         day.setPickDeadline(ordinary); var match = match(); var race = race(match);
-        var playoff = new PlayoffMatchup(); playoff.setId(UUID.randomUUID()); playoff.setPickDeadlineOverride(exception); race.setPlayoffMatchup(playoff);
+        var playoff = playoff(); playoff.setId(UUID.randomUUID()); playoff.setPickDeadlineOverride(exception); race.setPlayoffMatchup(playoff);
         // when / then
         assertThat(MatchdayPickWindowRules.deadline(race)).isEqualTo(exception);
     }
@@ -81,7 +82,7 @@ class MatchdayPickWindowRulesTest {
 
     @Test
     void givenAnUndecidedThenDecidedPlayoffBridge_whenCheckingCompletion_thenUseItsExplicitDecision() {
-        var match = match(); var race = race(match); var playoff = new PlayoffMatchup(); playoff.setId(UUID.randomUUID());
+        var match = match(); var race = race(match); var playoff = playoff(); playoff.setId(UUID.randomUUID());
         race.setPlayoffMatchup(playoff);
         assertThat(MatchdayPickWindowRules.complete(List.of(match), List.of(race), 2)).isFalse();
         playoff.setWinner(match.getHomeTeam());
@@ -91,7 +92,7 @@ class MatchdayPickWindowRulesTest {
     @Test
     void givenConflictingBridgeDeadlines_whenResolving_thenRejectInsteadOfChoosingOne() {
         var match = match(); match.setPickDeadlineOverride(ordinary); var race = race(match);
-        var playoff = new PlayoffMatchup(); playoff.setPickDeadlineOverride(exception); race.setPlayoffMatchup(playoff);
+        var playoff = playoff(); playoff.setPickDeadlineOverride(exception); race.setPlayoffMatchup(playoff);
         assertThatThrownBy(() -> MatchdayPickWindowRules.deadline(race)).isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class);
         playoff.setPickDeadlineOverride(null);
         assertThatThrownBy(() -> MatchdayPickWindowRules.deadline(race)).isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class);
@@ -106,10 +107,15 @@ class MatchdayPickWindowRulesTest {
 
     @Test
     void givenMixedOrForeignPairingOwnership_whenCheckingCompletion_thenDoNotCloseTheRound() {
-        var match = match(); var playoff = new PlayoffMatchup(); playoff.setId(UUID.randomUUID()); playoff.setWinner(match.getHomeTeam());
+        var match = match(); var playoff = playoff(); playoff.setId(UUID.randomUUID()); playoff.setWinner(match.getHomeTeam());
         var bridge = race(match); bridge.setPlayoffMatchup(playoff); var ordinary = race(match);
         assertThat(MatchdayPickWindowRules.complete(List.of(match), List.of(bridge, ordinary), 2)).isFalse();
         assertThat(MatchdayPickWindowRules.complete(List.of(), List.of(bridge), 2)).isFalse();
+    }
+
+    PlayoffMatchup playoff() {
+        var value = new PlayoffMatchup(new PlayoffRound(new Playoff(day.getPhase(), "Test owned playoff"), "Test round", 0), 0);
+        value.setId(UUID.randomUUID()); return value;
     }
 
     Match match() {
