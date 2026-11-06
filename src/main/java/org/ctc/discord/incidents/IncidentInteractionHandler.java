@@ -32,7 +32,7 @@ public class IncidentInteractionHandler implements PickGatewayInteractionHandler
             try {
                 var modal = sessions.withAction(event, (session, action) -> {
                     if (!action.name().equals("open-report")) return null;
-                    session.clearActions(); return form(session.action("fields", MODAL));
+                    session.clearActions(); return form(session.action("fields", MODAL), session.payload);
                 });
                 if (modal != null) { reply.openModal(modal); return; }
             } catch (BusinessRuleException unavailable) { reply.replyPrivate(UNAVAILABLE); return; }
@@ -89,16 +89,23 @@ public class IncidentInteractionHandler implements PickGatewayInteractionHandler
                 var saved = reads.load(actor, action.ids().getFirst());
                 if (!view.editable() || !saved.summary().editable()) throw unavailable();
                 prepare(session, actor, view, saved.summary().raceId(), saved.summary());
-                if (action.name().equals("edit")) nextForm(session, reply);
+                if (action.name().equals("edit")) { session.payload = saved.payload(); nextForm(session, reply); }
                 else {
                     session.clearActions(); send(reply, "Confirm withdrawal of " + escape(saved.summary().reference()) + ". Earlier revisions remain stored.",
                             List.of(button(session, "confirm-withdraw", "Confirm withdrawal"), button(session, "menu", "Cancel")), null);
                 }
             }
+            case "clear-footage" -> {
+                requireCandidate(session, actor);
+                var saved = session.payload;
+                if (!view.editable() || session.reportId == null || saved == null || !hasLongFootage(saved)) throw unavailable();
+                session.payload = new org.ctc.domain.model.IncidentPayload(saved.getInvolvedDrivers(), saved.getReplayTimestamp(), saved.getDescription(), "");
+                nextForm(session, reply);
+            }
             case "fields" -> {
                 requireCandidate(session, actor);
                 if (!view.editable()) throw unavailable();
-                session.payload = payload(event.values()); review(session, 0, reply);
+                session.payload = payload(event.values(), session.payload); review(session, 0, reply);
             }
             case "review" -> { requireCandidate(session, actor); review(session, action.page(), reply); }
             case "confirm-submit", "confirm-edit", "confirm-withdraw" -> confirm(session, action.name(), actor, reply);
@@ -130,14 +137,18 @@ public class IncidentInteractionHandler implements PickGatewayInteractionHandler
         var rows = view.cases().subList(start, Math.min(start + 10, view.cases().size()));
         var buttons = navigation(session, "cases", view.cases().size(), page); buttons.add(button(session, "menu", "Back"));
         var selection = new PickGatewayMessage.Selection(session.action(new Action("case", SELECT, rows.stream().map(IncidentReporterView.CaseChoice::id).toList(), 0)),
-                "My reports", rows.stream().map(row -> new PickGatewayModal.Option(option(row.reference() + " | " + row.state() + " | Revision " + row.revision()), row.id().toString())).toList());
-        send(reply, escape(view.label()) + "\nYour saved reports, page " + (page + 1) + ".", buttons, selection);
+                "My reports", rows.stream().map(row -> new PickGatewayModal.Option(option(row.state() + " | " + row.reference() + " | Revision " + row.revision()), row.id().toString())).toList());
+        send(reply, escape(view.label()) + "\nYour saved reports, page " + (page + 1) + "."
+                + (view.cases().stream().anyMatch(row -> row.state().equals("WITHDRAWN"))
+                    ? "\nWithdrawn reports remain in your history and will not be disclosed after the deadline." : ""), buttons, selection);
     }
 
     private void casePage(Session session, AuthorizedIncidentActor actor, IncidentReporterView view, UUID id, int requested, PickGatewayResponse.Continuation reply) {
         var saved = reads.load(actor, id); var item = saved.summary();
         var pages = pages(item.reference() + " | " + item.state() + " | Revision " + item.revision() + "\n" + raceLabel(view, item.raceId())
-                + "\nReporting party: " + item.party() + "\n" + body(saved.payload()));
+                + "\nReporting party: " + item.party()
+                + (item.state().equals("WITHDRAWN") ? "\nThis report was withdrawn. It remains in your history and will not be disclosed after the deadline." : "")
+                + "\n" + body(saved.payload()));
         int page = Math.min(Math.max(requested, 0), pages.size() - 1); session.clearActions(); var buttons = new ArrayList<PickGatewayMessage.Button>();
         if (page > 0) buttons.add(actionButton(session, "case-page", "Previous", List.of(id), page - 1));
         if (page + 1 < pages.size()) buttons.add(actionButton(session, "case-page", "Next", List.of(id), page + 1));
@@ -157,8 +168,15 @@ public class IncidentInteractionHandler implements PickGatewayInteractionHandler
         session.label = raceLabel(view, race); session.reportingParty = saved == null ? actor.party().getLabel() : saved.party();
     }
     private void nextForm(Session session, PickGatewayResponse.Continuation reply) {
-        session.clearActions(); send(reply, escape(session.label) + "\nEnter the four incident fields, then review before confirming."
-                + (session.reportId == null ? "" : "\nEnter complete replacement values. Earlier revisions remain stored."), List.of(button(session, "open-report", "Enter report")), null);
+        session.clearActions();
+        var buttons = new ArrayList<PickGatewayMessage.Button>();
+        buttons.add(button(session, "open-report", "Enter report"));
+        if (hasLongFootage(session.payload)) buttons.add(button(session, "clear-footage", "Clear footage in draft"));
+        String guidance = session.reportId == null ? "Enter the four incident fields, then review before confirming."
+                : hasLongText(session.payload)
+                    ? "Saved fields within Discord's limits are prefilled. Longer description or footage fields are blank: leave them blank to keep the saved text, or enter a replacement. Use Clear footage in draft to remove longer saved footage."
+                    : "Your saved values are prefilled. Review your changes before confirming.";
+        send(reply, escape(session.label) + "\n" + guidance + "\nNothing is saved until confirmation. Earlier revisions remain stored.", buttons, null);
     }
     private void review(Session session, int requested, PickGatewayResponse.Continuation reply) {
         if (session.payload == null) throw unavailable();
@@ -179,7 +197,7 @@ public class IncidentInteractionHandler implements PickGatewayInteractionHandler
                     : reports.edit(session.reportId, session.windowVersion, session.reportVersion, session.request, actor, session.payload);
         }
         String message = receipt.action() == IncidentEventKind.SUBMITTED ? "Stored " + receipt.caseReference() + " revision " + receipt.revisionNumber() + ". Neutral receipt delivery is pending."
-                : receipt.action() == IncidentEventKind.WITHDRAWN ? "Stored withdrawal of " + receipt.caseReference() + ". Its history remains available."
+                : receipt.action() == IncidentEventKind.WITHDRAWN ? "Stored withdrawal of " + receipt.caseReference() + ". Its history remains available; it will not be disclosed after the deadline. The original neutral receipt may remain in the channel."
                 : "Stored changes to " + receipt.caseReference() + " revision " + receipt.revisionNumber() + ".";
         send(reply, escape(message), List.of(button(session, "cases", "My reports")), null);
     }

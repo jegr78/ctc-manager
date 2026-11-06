@@ -50,6 +50,111 @@ class IncidentInteractionHandlerTest {
     }
 
     @Test
+    void givenOwnStoredCase_whenOpeningEdit_thenPrefillAllConfirmedFieldsWithoutSavingOrAnotherLookup() {
+        // given
+        ownCase(); command(); click("My reports"); select(report); click("Edit report");
+        clearInvocations(reads, access);
+        // when
+        click("Enter report");
+        // then
+        var defaults = response.modal.fields().stream().map(PickGatewayModal.Text.class::cast)
+                .collect(java.util.stream.Collectors.toMap(PickGatewayModal.Text::id, field -> String.valueOf(field.value())));
+        assertThat(defaults).containsEntry("drivers", payload.getInvolvedDrivers()).containsEntry("replay", payload.getReplayTimestamp())
+                .containsEntry("description", payload.getDescription()).containsEntry("links", payload.getEvidenceLinks());
+        assertThat(response.deferred).isFalse();
+        verifyNoInteractions(reports); verifyNoMoreInteractions(reads, access);
+    }
+
+    @Test
+    void givenWithdrawnOwnCaseWithLongReference_whenListing_thenShowItsStatusBeforeTheReference() {
+        // given
+        var saved = new IncidentReporterView.CaseChoice(report, race, "INC-" + report, "WITHDRAWN", "Test original party", 4, 2, false);
+        view = new IncidentReporterView(context, window, 7, true, view.label(), view.races(), List.of(saved));
+        // when
+        command(); click("My reports");
+        // then
+        assertThat(last().selection().options().getFirst().label()).startsWith("WITHDRAWN");
+        assertThat(last().content()).contains("history", "not be disclosed");
+        verifyNoInteractions(reports);
+    }
+
+    @Test
+    void givenNewerConfirmedRevisionBeforeEdit_whenKeepingDefaults_thenUseItsValuesAndVersionOnlyAfterConfirmation() {
+        // given
+        ownCase(); command(); click("My reports"); select(report);
+        var latest = new IncidentPayload("Test newer ä🚗", "lap 5 at 10:13.200", "Test latest\nsecond line", "");
+        var summary = new IncidentReporterView.CaseChoice(report, race, "INC-test", "ACTIVE", "Test original party", 5, 4, true);
+        when(reads.load(actor, report)).thenReturn(new IncidentReporterView.CaseDetail(summary, latest));
+        // when
+        click("Edit report"); click("Enter report");
+        var defaults = modalDefaults();
+        assertThat(defaults).isEqualTo(fields(latest.getInvolvedDrivers(), latest.getReplayTimestamp(), latest.getDescription(), ""));
+        dispatch(PickGatewayInteraction.Kind.MODAL, response.modal.id(), defaults);
+        verifyNoInteractions(reports);
+        click("Confirm changes");
+        // then
+        verify(reports).edit(eq(report), eq(7L), eq(5L), any(), eq(actor), eq(latest));
+        assertThat(payload.getDescription()).isEqualTo("Test private incident marker");
+    }
+
+    @Test
+    void givenAbandonedEdit_whenStartingANewReport_thenLeaveEveryFieldEmptyAndSaveNothing() {
+        // given
+        ownCase(); command(); click("My reports"); select(report); click("Edit report"); click("Enter report");
+        // when
+        command(); click("New report"); click("Enter report");
+        // then
+        assertThat(response.modal.fields()).allMatch(field -> field instanceof PickGatewayModal.Text text && text.value() == null);
+        verifyNoInteractions(reports);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"user", "channel", "restore"})
+    void givenPreparedPrivateEdit_whenAuthorityOfTheSessionChanges_thenDoNotExposeThePrefilledModal(String changed) {
+        // given
+        ownCase(); command(); click("My reports"); select(report); click("Edit report");
+        String action = button("Enter report"); clearInvocations(reads, access);
+        if (changed.equals("user")) eventUser = "499999999999999999";
+        else if (changed.equals("channel")) eventChannel = "299999999999999999";
+        else epoch.afterRestore(null);
+        // when
+        dispatch(PickGatewayInteraction.Kind.BUTTON, action, Map.of());
+        // then
+        assertThat(response.modal).isNull(); assertThat(response.text).doesNotContain(payload.getDescription());
+        verifyNoInteractions(reports); verifyNoMoreInteractions(reads, access);
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void givenSavedTextAboveDiscordLimits_whenKeepingOrClearingLongFootage_thenPreserveAllOtherTextUntilConfirmation(boolean clearFootage) {
+        // given
+        ownCase(); var saved = new IncidentPayload("Test long report", "lap 3", "🚗".repeat(10000), "https://example.invalid/" + "x".repeat(7000));
+        when(reads.load(actor, report)).thenReturn(new IncidentReporterView.CaseDetail(view.cases().getFirst(), saved));
+        command(); click("My reports"); select(report);
+        while (last().buttons().stream().anyMatch(button -> button.label().equals("Next"))) click("Next");
+        click("Edit report"); assertThat(last().content()).contains("leave them blank", "keep the saved text");
+        if (clearFootage) click("Clear footage in draft");
+        click("Enter report");
+        assertThat(response.modal.fields().stream().filter(field -> field.id().equals("description")))
+                .allMatch(field -> field instanceof PickGatewayModal.Text text && text.value() == null && !text.required());
+        // when
+        dispatch(PickGatewayInteraction.Kind.MODAL, response.modal.id(), fields(saved.getInvolvedDrivers(), saved.getReplayTimestamp(), "", ""));
+        while (last().buttons().stream().anyMatch(button -> button.label().equals("Next"))) click("Next");
+        verifyNoInteractions(reports); click("Confirm changes");
+        // then
+        var submitted = ArgumentCaptor.forClass(IncidentPayload.class);
+        verify(reports).edit(eq(report), eq(7L), eq(3L), any(), eq(actor), submitted.capture());
+        assertThat(submitted.getValue().getDescription()).isEqualTo(saved.getDescription());
+        assertThat(submitted.getValue().getEvidenceLinks()).isEqualTo(clearFootage ? "" : saved.getEvidenceLinks());
+        assertThat(saved.getEvidenceLinks()).hasSizeGreaterThan(4000);
+    }
+
+    Map<String, List<String>> modalDefaults() {
+        return response.modal.fields().stream().map(PickGatewayModal.Text.class::cast)
+                .collect(java.util.stream.Collectors.toMap(PickGatewayModal.Text::id, text -> List.of(text.value() == null ? "" : text.value())));
+    }
+
+    @Test
     void givenMatchChannelEntry_whenStarting_thenAcknowledgePrivatelyAndOfferNewAndOwnReports() {
         command(); assertThat(response.deferred).isTrue(); assertThat(response.initial).isNull();
         assertThat(last().content()).contains("Test pairing"); assertThat(last().buttons()).extracting(PickGatewayMessage.Button::label).contains("New report", "My reports");
@@ -114,7 +219,7 @@ class IncidentInteractionHandlerTest {
     @Test
     void givenOwnStoredCase_whenEditingAndWithdrawing_thenUseOriginalVersionsAndNoNewSubmit() {
         ownCase(); command(); click("My reports"); select(report); assertThat(last().content()).contains("Test private incident marker");
-        click("Edit report"); click("Enter report"); assertThat(response.modal.fields()).allMatch(field -> field instanceof PickGatewayModal.Text text && text.value() == null);
+        click("Edit report"); click("Enter report"); assertThat(response.modal.fields()).allMatch(field -> field instanceof PickGatewayModal.Text text && text.value() != null);
         dispatch(PickGatewayInteraction.Kind.MODAL, response.modal.id(), fields("Test changed guest", "00:00", "Test corrected description", ""));
         click("Confirm changes"); verify(reports).edit(eq(report), eq(7L), eq(3L), any(), eq(actor), any());
         command(); click("My reports"); select(report); click("Withdraw report"); click("Confirm withdrawal");

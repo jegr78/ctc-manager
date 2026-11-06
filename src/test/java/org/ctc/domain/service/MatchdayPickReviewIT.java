@@ -227,6 +227,35 @@ class MatchdayPickReviewIT extends PickPersistenceIT {
         tx.executeWithoutResult(status -> assertThat(entityManager.find(Race.class, fixture.race().getId()).getSettings()).isNull());
     }
 
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(CarCategory.class)
+    void givenSelectedCarClassification_whenReviewingAndApproving_thenShowTheSameGt7FilterInInternalSettings(CarCategory category) throws Exception {
+        // given
+        tx.executeWithoutResult(status -> entityManager.find(Car.class, payload.carId()).setCategory(category));
+        submit();
+        String expected = switch (category) {
+            case GR_1 -> "Gr.1"; case GR_2 -> "Gr.2"; case GR_3 -> "Gr.3"; case GR_4 -> "Gr.4"; case GR_B -> "Gr.B";
+            case GR_N, GR_X -> "—";
+        };
+        // when
+        var comparison = admin.detail(fixture.race().getId()).comparison();
+        // then
+        assertThat(comparison).anySatisfy(value -> {
+            assertThat(value.label()).isEqualTo("Filter by Category");
+            assertThat(value.existing()).isEqualTo("—"); assertThat(value.submitted()).isEqualTo(expected);
+        });
+        mvc.perform(decision(PickReviewForm.Action.APPROVE, "Test GT7 category review")).andExpect(status().is3xxRedirection());
+        assertThat(admin.detail(fixture.race().getId()).comparison()).anySatisfy(value -> {
+            assertThat(value.label()).isEqualTo("Filter by Category");
+            assertThat(value.existing()).isEqualTo(expected); assertThat(value.submitted()).isEqualTo(expected);
+            assertThat(value.changed()).isFalse();
+        });
+        var response = mvc.perform(get("/admin/races/" + fixture.race().getId())).andExpect(status().isOk()).andReturn();
+        var document = org.jsoup.Jsoup.parse(response.getResponse().getContentAsString());
+        assertThat(document.select(".detail-fields .label").stream().filter(label -> label.text().equals("Filter by Category"))
+                .findFirst().orElseThrow().nextElementSibling().text()).isEqualTo(expected);
+    }
+
     @Test
     void givenSubmittedPickAndNativeOverviewFilters_whenLoading_thenKeepExactSeasonMatchdayStateAndTarget() throws Exception {
         // given

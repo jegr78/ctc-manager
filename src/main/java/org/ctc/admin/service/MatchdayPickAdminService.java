@@ -201,11 +201,13 @@ public class MatchdayPickAdminService {
     }
     private List<Value> values(PickSetupSnapshot snapshot) {
         var v = snapshot.settings();
+        var car = snapshot.carId() == null ? null : cars.findById(snapshot.carId()).orElseThrow();
         return List.of(new Value("Season rules", snapshot.lobbyRulesProfile().getLabel()),
                 new Value("Start type", v.startType() == null ? "Not set" : v.startType().getLabel()),
                 new Value("Race slipstream", v.slipstream() == null ? "Not set" : v.slipstream().getLabel()),
                 new Value("Track", snapshot.trackId() == null ? "Not set" : tracks.findById(snapshot.trackId()).orElseThrow().getName()),
-                new Value("Car", snapshot.carId() == null ? "Not set" : cars.findById(snapshot.carId()).orElseThrow().getDisplayName()),
+                new Value("Car", car == null ? "Not set" : car.getDisplayName()),
+                new Value("Filter by Category", org.ctc.domain.service.RaceCarPresentation.lobbyCategory(car)),
                 new Value("Pool entry", snapshot.entryId() == null ? "None" : entries.findById(snapshot.entryId()).orElseThrow().getLabel()),
                 new Value("Laps", text(v.laps())), new Value("Tyre wear", text(v.tyreWear())), new Value("Fuel consumption", text(v.fuelConsumption())),
                 new Value("Refuelling litres/second", text(v.refuelingSpeed())), new Value("Initial fuel", text(v.initialFuel())),

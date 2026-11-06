@@ -66,6 +66,8 @@
             <a th:href="@{/admin/seasons/{id}(id=${race.matchday.season.id})}" class="detail-link" th:text="${race.matchday.season.displayLabel}"></a>
             <span class="label">Track</span>
             <span th:text="${race.track?.name ?: '-'}"></span>
+            <span class="label">Filter by Category</span>
+            <span th:text="${carPresentation.lobbyCategory}"></span>
             <span class="label">Car</span>
             <span th:text="${race.car?.displayName ?: '-'}"></span>
             <span th:if="${carPresentation?.poolEntryLabel != null}" class="label">Pool entry</span>

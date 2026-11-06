@@ -2,6 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/layout :: layout('Team picks review', ~{::section})}">
 <body>
 <section class="entity-editor pick-review-workspace">
+    <p th:if="${overview.matchdayId != null}"><a class="back-link" th:href="@{/admin/matchdays/{id}(id=${overview.matchdayId})}">Back to matchday</a></p>
     <h1>Team picks review</h1>
     <p class="text-dim mb-md">Review confidential home-race submissions. Approval applies internal settings; publishing remains a separate management action.</p>
     <p class="mb-md"><a class="btn btn-secondary" th:href="@{/admin/pick-publications}">Review unconfirmed publications</a></p>

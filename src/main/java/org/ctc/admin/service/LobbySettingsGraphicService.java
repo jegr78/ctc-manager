@@ -69,6 +69,7 @@ public class LobbySettingsGraphicService extends AbstractGraphicService implemen
 		Map<String, Object> v = new HashMap<>();
 		v.put("roomName", buildRoomName(season.getYear(), race.getMatchday().getLabel(), home, away));
 		v.put("track", race.getTrack().getName());
+        v.put("categoryFilter", org.ctc.domain.service.RaceCarPresentation.lobbyCategory(race.getCar()));
 		v.put("laps", settings.getNumberOfLaps());
         v.put("lobbyRulesProfile", profile.getLabel());
         v.put("startType", settings.getStartType().getLabel());
