@@ -4,7 +4,7 @@
 <section class="entity-editor pick-review-workspace">
     <h1>Team picks review</h1>
     <p class="text-dim mb-md">Review confidential home-race submissions. Approval applies internal settings; publishing remains a separate management action.</p>
-    <p><a th:href="@{/admin/pick-publications}">Review unconfirmed publications</a></p>
+    <p class="mb-md"><a class="btn btn-secondary" th:href="@{/admin/pick-publications}">Review unconfirmed publications</a></p>
     <form th:action="@{/admin/matchday-picks}" method="get" class="card entity-editor-form">
         <fieldset><legend>Season</legend>
             <div class="form-group"><label for="review-season">Season to review</label>
