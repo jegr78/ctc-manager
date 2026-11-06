@@ -28,8 +28,7 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
         boolean posting = false;
         try {
             requireLive(claim);
-            var prepared = prepare(claim);var work = claim.work();var target = claim.destination();
-            if (!privateSide(claim)) prepared = ensureStaffAccess(claim, prepared);
+            var prepared = prepareForSend(claim);var work = claim.work();var target = claim.destination();
             String parent = parent(claim);
             switch (work.stage()) {
                 case PRIVATE_STARTER, PUBLIC_STARTER -> {
@@ -65,7 +64,7 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
                         requireLive(claim);discord.modifyChannel(thread.id(), ChannelModifyRequest.unarchive(),claim.validUntil());
                         thread = discord.fetchIncidentChannel(work.threadId());requireThread(claim, thread, work.threadId());
                         require(!thread.threadMetadata().archived() && !thread.threadMetadata().locked());
-                        prepared = prepare(claim);
+                        prepared = prepareForSend(claim);
                     }
                     requireLive(claim);posting = true;
                     var message = discord.createBotMessage(thread.id(), work.nonce(), work.content(),claim.validUntil());
@@ -149,14 +148,21 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
         return new Prepared(bot.id(), match, guild, member, roles);
     }
 
+    private Prepared prepareForSend(IncidentThreadClaim claim) throws DiscordApiException {
+        var prepared = prepare(claim);
+        return privateSide(claim) ? prepared : ensureStaffAccess(claim, prepared);
+    }
+
     private Prepared ensureStaffAccess(IncidentThreadClaim claim, Prepared prepared) throws DiscordApiException {
         for (int attempt = 0; attempt < claim.destination().staffRoles().size(); attempt++) {
             var updates = staffUpdates(claim, prepared);
             if (updates.isEmpty()) return prepared;
             requireLive(claim);
-            discord.grantIncidentStaffAccess(claim.destination().matchChannelId(), updates.getFirst(), claim.validUntil());
+            var updated = updates.getFirst();
+            discord.grantIncidentStaffAccess(claim.destination().matchChannelId(), updated, claim.validUntil());
             requireLive(claim);
             prepared = prepare(claim);
+            require(staffUpdates(claim, prepared).stream().noneMatch(row -> row.id().equals(updated.id())));
         }
         require(staffUpdates(claim, prepared).isEmpty());
         return prepared;

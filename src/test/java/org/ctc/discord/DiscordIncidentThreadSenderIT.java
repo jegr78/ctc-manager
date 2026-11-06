@@ -317,4 +317,42 @@ class DiscordIncidentThreadSenderIT {
         wm.verify(0, putRequestedFor(anyUrl()));
     }
 
+    @Test void givenStaffAccessDisappearsWhileUnarchiving_whenPostingPublicBody_thenRepairItBeforePosting() {
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).inScenario("Test public reopen").whenScenarioStateIs("Started").willReturn(okJson(matchPermissions(true))));
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/801")).inScenario("Test public reopen").whenScenarioStateIs("Started").willReturn(okJson(thread("801", "200", true))));
+        wm.stubFor(patch(urlEqualTo("/api/v10/channels/801")).inScenario("Test public reopen").whenScenarioStateIs("Started").willReturn(okJson(thread("801", "200", false))).willSetStateTo("Staff missing"));
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/801")).inScenario("Test public reopen").whenScenarioStateIs("Staff missing").willReturn(okJson(thread("801", "200", false))));
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).inScenario("Test public reopen").whenScenarioStateIs("Staff missing").willReturn(okJson(matchPermissions(false))));
+        wm.stubFor(put(urlEqualTo("/api/v10/channels/200/permissions/500")).inScenario("Test public reopen").whenScenarioStateIs("Staff missing").willReturn(noContent()).willSetStateTo("Staff restored"));
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).inScenario("Test public reopen").whenScenarioStateIs("Staff restored").willReturn(okJson(matchPermissions(true))));
+        wm.stubFor(post(urlEqualTo("/api/v10/channels/801/messages")).inScenario("Test public reopen").whenScenarioStateIs("Staff restored").willReturn(okJson(json(message("802", "801", content(false, 1))))));
+        assertThat(sender.send(claim(IncidentThreadStage.PUBLIC_BODY, 1)).disposition()).isEqualTo(IncidentSendResult.Disposition.SENT);
+        wm.verify(1, putRequestedFor(urlEqualTo("/api/v10/channels/200/permissions/500")));
+        wm.verify(1, postRequestedFor(urlEqualTo("/api/v10/channels/801/messages")));
+    }
+
+    @Test void givenMultipleStaffRolesAndAnUnverifiedFirstGrant_whenDisclosing_thenStopImmediatelyWithoutRepeatingIt() {
+        config.setIncidentStaffRoleIds("500,550");
+        wm.stubFor(get(urlEqualTo("/api/v10/guilds/100/roles")).willReturn(okJson("[{\"id\":\"100\",\"permissions\":\"0\"},{\"id\":\"400\",\"permissions\":\"0\"},{\"id\":\"500\",\"permissions\":\"0\"},{\"id\":\"550\",\"permissions\":\"0\"},{\"id\":\"701\",\"permissions\":\"8\",\"managed\":true,\"tags\":{\"bot_id\":\"700\"}}]")));
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).willReturn(okJson(matchPermissions(false))));
+        wm.stubFor(put(urlEqualTo("/api/v10/channels/200/permissions/500")).willReturn(noContent()));
+        assertThat(sender.send(claim(IncidentThreadStage.PUBLIC_STARTER, 0)).disposition()).isEqualTo(IncidentSendResult.Disposition.REJECTED);
+        wm.verify(1, putRequestedFor(urlEqualTo("/api/v10/channels/200/permissions/500")));
+        wm.verify(0, putRequestedFor(urlEqualTo("/api/v10/channels/200/permissions/550")));
+        wm.verify(0, postRequestedFor(anyUrl()));
+    }
+
+    @Test void givenAnEarlierStaffRoleLosesAccessDuringTheLastGrant_whenDisclosing_thenRejectTheIncompleteFinalSnapshot() {
+        config.setIncidentStaffRoleIds("500,550");
+        wm.stubFor(get(urlEqualTo("/api/v10/guilds/100/roles")).willReturn(okJson("[{\"id\":\"100\",\"permissions\":\"0\"},{\"id\":\"400\",\"permissions\":\"0\"},{\"id\":\"500\",\"permissions\":\"0\"},{\"id\":\"550\",\"permissions\":\"0\"},{\"id\":\"701\",\"permissions\":\"8\",\"managed\":true,\"tags\":{\"bot_id\":\"700\"}}]")));
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).inScenario("Test revoked earlier staff").whenScenarioStateIs("Started").willReturn(okJson(matchPermissions(false))));
+        wm.stubFor(put(urlEqualTo("/api/v10/channels/200/permissions/500")).inScenario("Test revoked earlier staff").whenScenarioStateIs("Started").willReturn(noContent()).willSetStateTo("First granted"));
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).inScenario("Test revoked earlier staff").whenScenarioStateIs("First granted").willReturn(okJson(matchPermissions(true))));
+        wm.stubFor(put(urlEqualTo("/api/v10/channels/200/permissions/550")).inScenario("Test revoked earlier staff").whenScenarioStateIs("First granted").willReturn(noContent()).willSetStateTo("First revoked"));
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/200")).inScenario("Test revoked earlier staff").whenScenarioStateIs("First revoked").willReturn(okJson(matchPermissions(true).replace("\"500\"", "\"550\""))));
+        wm.stubFor(post(urlEqualTo("/api/v10/channels/200/messages")).willReturn(okJson(json(message("801", "200", content(false, 0))))));
+        assertThat(sender.send(claim(IncidentThreadStage.PUBLIC_STARTER, 0)).disposition()).isEqualTo(IncidentSendResult.Disposition.REJECTED);
+        wm.verify(2, putRequestedFor(anyUrl()));wm.verify(0, postRequestedFor(anyUrl()));
+    }
+
 }
