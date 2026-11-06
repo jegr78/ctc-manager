@@ -131,6 +131,7 @@ public class TemplatePreviewService {
         var v = new HashMap<String, Object>();
         v.put("roomName", "CTC – Season – Matchday – Home vs. Away");
         v.put("track", "Track · Layout");
+        v.put("categoryFilter", "Gr.3");
         v.put("laps", "—");
         v.put("weatherMethod", "Preset Weather");
         v.put("weather", "S01");
