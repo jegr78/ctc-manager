@@ -180,12 +180,12 @@
 		<dependency>
 			<groupId>com.google.apis</groupId>
 			<artifactId>google-api-services-calendar</artifactId>
-			<version>v3-rev20260925-2.0.0</version>
+			<version>v3-rev20261030-2.9.2</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.auth</groupId>
 			<artifactId>google-auth-library-oauth2-http</artifactId>
-			<version>1.56.0</version>
+			<version>1.57.0</version>
 		</dependency>
 		<!-- Guava override: pin to 33.4.x so AbstractFuture uses VarHandle instead of
 		     sun.misc.Unsafe on Java 9+. Suppresses the terminally-deprecated Unsafe
