@@ -17,7 +17,7 @@ public final class PickWindowArchive {
         if (!(row instanceof ObjectNode object)) throw new IllegalArgumentException("Pick window row must be an object");
         var copy = object.deepCopy();
         if (version < 17) {
-            if (copy.has("pickWindowVersion") && (!copy.path("pickWindowVersion").isIntegralNumber() || copy.path("pickWindowVersion").longValue() != 0)
+            if (copy.has("pickWindowVersion") && (!copy.path("pickWindowVersion").isIntegralNumber() || !copy.path("pickWindowVersion").canConvertToLong() || copy.path("pickWindowVersion").longValue() != 0)
                     || table.equals("matchdays") && copy.has("picksOpen") && (!copy.path("picksOpen").isBoolean() || copy.path("picksOpen").booleanValue())
                     || !table.equals("matchdays") && copy.hasNonNull("pickDeadlineOverride")) {
                 throw new IllegalArgumentException("Pick window settings require backup schema 17");

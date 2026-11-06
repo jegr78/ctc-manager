@@ -76,7 +76,9 @@ class PickPlayoffLifecycleIT {
         seeding.seedTeam(first, teamIds.get(0), 1);
         seeding.seedTeam(first, teamIds.get(1), 2);
         race = playoffService.addRaceToMatchup(first, null, null, LocalDateTime.of(2035, 1, 1, 20, 0)).getId();
-        tx.executeWithoutResult(status -> races.findById(race).orElseThrow().getMatchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0)));
+        tx.executeWithoutResult(status -> {
+            var day = races.findById(race).orElseThrow().getMatchday(); day.setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0)); day.setPicksOpen(true);
+        });
         payload = new PickPayload(track, car, null, 12, 2, 3, 4, PickInitialFuel.DEFAULT, 1,
                 TimeProgressionMode.MULTIPLIER, 0, "S01", "Sunset", Set.of(PickTyre.RS), Set.of());
         when(collection.isAvailable()).thenReturn(true);
@@ -139,7 +141,7 @@ class PickPlayoffLifecycleIT {
         UUID incomplete = tx.execute(status -> {
             var matchup = matchups.findById(second).orElseThrow();
             var day = new Matchday(matchup.getRound().getPlayoff().getPhase(), "Test newly ready target", 201);
-            day.setPickDeadline(LocalDateTime.of(2035, 1, 2, 12, 0));
+            day.setPickDeadline(LocalDateTime.of(2035, 1, 2, 12, 0)); day.setPicksOpen(true);
             day = days.save(day);
             var target = new Race();
             target.setMatchday(day);

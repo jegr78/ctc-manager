@@ -15,7 +15,7 @@
             <div class="alert alert-error" th:if="${#fields.hasErrors('*')}"><p th:each="err : ${#fields.allErrors()}" th:text="${err}"></p></div>
             <fieldset>
                 <legend>Pick collection</legend>
-                <label for="picksOpen"><input type="checkbox" id="picksOpen" th:field="*{picksOpen}" role="switch" aria-describedby="picksOpen-hint"> Open picks for this matchday</label>
+                <label class="form-check" for="picksOpen"><input type="checkbox" id="picksOpen" th:field="*{picksOpen}" role="switch" aria-describedby="picksOpen-hint"> Open picks for this matchday</label>
                 <p id="picksOpen-hint" class="text-dim form-hint--sm">Applies to every match. Prepared matchdays stay closed until you open them here. Picks close automatically after all matches are completed. A configured deadline still applies; individual match exceptions change only that match's cutoff.</p>
             </fieldset>
             <fieldset>

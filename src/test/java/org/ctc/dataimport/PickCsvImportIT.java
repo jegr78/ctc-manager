@@ -61,6 +61,7 @@ class PickCsvImportIT {
             fixture.race().setPicksManaged(true);
             fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0));
             fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0));
+            fixture.matchday().setPicksOpen(true);
             var car1 = cars.save(new Car("Test pick CSV", UUID.randomUUID().toString()));
             var car2 = cars.save(new Car("Test pick CSV", UUID.randomUUID().toString()));
             var track1 = tracks.save(new Track("Test pick CSV " + UUID.randomUUID()));

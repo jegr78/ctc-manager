@@ -43,6 +43,7 @@ class PickIntegrityAuditIT {
         fixture.race().setPicksManaged(true);
         fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0));
         fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0));
+            fixture.matchday().setPicksOpen(true);
         var car = cars.save(new Car("Test pick audit", UUID.randomUUID().toString()));
         var track = tracks.save(new Track("Test pick audit " + UUID.randomUUID()));
         fixture.season().getCars().add(car);

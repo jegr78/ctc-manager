@@ -100,6 +100,7 @@ class PickPublicationDiscordIT {
             fixture.season().setPicksCollectionEnabled(true);
             fixture.race().setPicksManaged(true); fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0));
             fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0));
+            fixture.matchday().setPicksOpen(true);
             fixture.match().setDiscordChannelId(CHANNEL); fixture.match().setDiscordChannelWebhookUrl(wm.baseUrl() + WEBHOOK);
             fixture.match().setDiscordTeaser("Test explicit preview");
             var car = cars.save(new Car("Test private publication", UUID.randomUUID().toString()));

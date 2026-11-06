@@ -40,8 +40,7 @@ final class PickInteractionViews {
         var text = new StringBuilder(escape(view.target().label())).append("\nState: ").append(view.target().state())
                 .append("\nSeason rules: ").append(view.lobbyRulesProfile().getLabel())
                 .append("\n").append(escape(view.target().reason())).append("\nDeadline: ").append(escape(view.deadline()))
-                .append("\nMatchday picks: ").append(view.matchdayOpen() ? "Open" : "Closed")
-                .append("\nLegacy individual closure: ").append(view.manualClosed() ? "Yes" : "No");
+                .append("\nMatchday picks: ").append(view.matchdayOpen() ? "Open" : "Closed");
         if (view.returnReason() != null) text.append("\nReturn reason: ").append(escape(view.returnReason()));
         if (view.payload() != null) text.append("\n\nCurrent ").append(receipt(view.receipt())).append("\n")
                 .append(payload(view.payload(), view.trackLabel(), view.carLabel()));

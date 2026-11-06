@@ -39,8 +39,9 @@ public class PickWindowService {
     public record DayWindow(UUID id, boolean open, LocalDateTime deadline, String weekend, long version, String scope, String generation) { }
     public record PairingWindow(UUID id, boolean playoff, UUID matchdayId, LocalDateTime defaultDeadline,
                                 LocalDateTime override, long version, String scope, String generation) { }
-    private record DayScope(Matchday day, List<Match> matches, List<Race> races) { }
-    private record Pairing(Matchday day, Match match, PlayoffMatchup playoff) {
+    private record DayScope(Matchday day, List<Match> matches, List<Race> races, List<Race> allRaces) { }
+    private record PlayoffOwner(UUID roundId, UUID playoffId, UUID phaseId, UUID seasonId) { }
+    private record Pairing(Matchday day, Match match, PlayoffMatchup playoff, PlayoffOwner owner) {
         long version() { return playoff != null ? playoff.getPickWindowVersion() : match.getPickWindowVersion(); }
         LocalDateTime override() { return playoff != null ? playoff.getPickDeadlineOverride() : match.getPickDeadlineOverride(); }
     }
@@ -80,7 +81,7 @@ public class PickWindowService {
         writes.execute(() -> {
             var before = pairing(id, playoff);
             var current = lockDay(before.day().getId());
-            var pair = pairing(id, playoff, current.races());
+            var pair = pairing(id, playoff, current.allRaces());
             requireActor(actor);
             if (!current.day().getId().equals(pair.day().getId())) throw unavailable();
             requireVersion(pair.version(), expectedVersion); requireScope(pairingScope(pair), expectedScope); validateDeadline(override);
@@ -112,12 +113,12 @@ public class PickWindowService {
         if (day.getSeason() == null) throw unavailable();
         var owner = seasons.findByIdForUpdate(day.getSeason().getId()).orElseThrow(PickWindowService::unavailable);
         var all = races.findBySeasonForSelectionUpdate(owner.getId());
-        entityManager.refresh(day, LockModeType.PESSIMISTIC_WRITE);
-        entityManager.refresh(day.getPhase(), LockModeType.PESSIMISTIC_WRITE);
+        refresh(day);
+        refresh(day.getPhase());
         if (!owner.getId().equals(day.getSeason().getId())) throw unavailable();
         var members = matches.findByMatchdayIdForUpdate(id);
-        for (var match : members) entityManager.refresh(match, LockModeType.PESSIMISTIC_WRITE);
-        return new DayScope(day, members, all.stream().filter(race -> id.equals(race.getMatchday().getId())).toList());
+        for (var match : members) refresh(match);
+        return new DayScope(day, members, all.stream().filter(race -> id.equals(race.getMatchday().getId())).toList(), all);
     }
 
     private Pairing pairing(UUID id, boolean playoff) {
@@ -128,40 +129,52 @@ public class PickWindowService {
         Match match = playoff ? null : matches.findById(id).orElseThrow(PickWindowService::unavailable);
         PlayoffMatchup matchup = playoff ? playoffs.findById(id).orElseThrow(PickWindowService::unavailable) : null;
         if (lockedRows != null) {
-            if (match != null) entityManager.refresh(match, LockModeType.PESSIMISTIC_WRITE);
-            if (matchup != null) entityManager.refresh(matchup, LockModeType.PESSIMISTIC_WRITE);
+            if (match != null) refresh(match);
+            if (matchup != null) refresh(matchup);
         }
         var rows = lockedRows == null ? (playoff ? races.findByPlayoffMatchupId(id) : races.findByMatchId(id))
                 : lockedRows.stream().filter(race -> playoff
                     ? race.getPlayoffMatchup() != null && id.equals(race.getPlayoffMatchup().getId())
                     : race.getMatch() != null && id.equals(race.getMatch().getId())).toList();
-        if (playoff && rows.isEmpty()) throw new BusinessRuleException("Configure the playoff pairing's races before setting its pick deadline");
+        var canonicalIds = rows.stream().map(Race::getPlayoffMatchup).filter(Objects::nonNull)
+                .map(PlayoffMatchup::getId).distinct().toList();
+        if (canonicalIds.size() > 1 || !canonicalIds.isEmpty() && rows.stream().anyMatch(race -> race.getPlayoffMatchup() == null)) throw unavailable();
+        if (matchup == null && !canonicalIds.isEmpty()) matchup = playoffs.findById(canonicalIds.getFirst()).orElseThrow(PickWindowService::unavailable);
+        if (matchup != null) {
+            UUID ownerId = matchup.getId();
+            rows = lockedRows == null ? races.findByPlayoffMatchupId(ownerId)
+                    : lockedRows.stream().filter(race -> race.getPlayoffMatchup() != null && ownerId.equals(race.getPlayoffMatchup().getId())).toList();
+            if (rows.isEmpty()) throw new BusinessRuleException("Configure the playoff pairing's races before setting its pick deadline");
+        }
         var day = match == null ? rows.getFirst().getMatchday() : match.getMatchday();
         if (rows.stream().anyMatch(race -> !day.getId().equals(race.getMatchday().getId()))) {
             throw new BusinessRuleException("The pairing spans different matchdays; management must review its deadline context");
         }
-        var matchups = rows.stream().map(Race::getPlayoffMatchup).filter(Objects::nonNull).map(PlayoffMatchup::getId).distinct().toList();
         var bridges = rows.stream().map(Race::getMatch).filter(Objects::nonNull).map(Match::getId).distinct().toList();
-        if (matchups.size() > 1 || bridges.size() > 1
-                || !matchups.isEmpty() && rows.stream().anyMatch(race -> race.getPlayoffMatchup() == null)) throw unavailable();
-        if (matchup == null && !matchups.isEmpty()) matchup = playoffs.findById(matchups.getFirst()).orElseThrow(PickWindowService::unavailable);
+        if (bridges.size() > 1 || match != null && !bridges.isEmpty() && !bridges.contains(match.getId())) throw unavailable();
         if (match == null && !bridges.isEmpty()) match = matches.findById(bridges.getFirst()).orElseThrow(PickWindowService::unavailable);
-        if (lockedRows != null && matchup != null) {
-            entityManager.refresh(matchup, LockModeType.PESSIMISTIC_WRITE);
-            entityManager.refresh(matchup.getRound(), LockModeType.PESSIMISTIC_WRITE);
-            entityManager.refresh(matchup.getRound().getPlayoff(), LockModeType.PESSIMISTIC_WRITE);
-            entityManager.refresh(matchup.getRound().getPlayoff().getPhase(), LockModeType.PESSIMISTIC_WRITE);
-        }
-        if (matchup != null && !day.getSeason().getId().equals(matchup.getRound().getPlayoff().getSeason().getId())) throw unavailable();
+        if (lockedRows != null && matchup != null) refresh(matchup);
+        var owner = matchup == null ? null : playoffOwner(matchup.getId(), lockedRows != null);
+        if (owner != null && !day.getSeason().getId().equals(owner.seasonId())) throw unavailable();
         if (match != null && !day.getId().equals(match.getMatchday().getId())) throw unavailable();
-        return new Pairing(day, match, matchup);
+        return new Pairing(day, match, matchup, owner);
+    }
+
+    private PlayoffOwner playoffOwner(UUID id, boolean current) {
+        var query = entityManager.createQuery("select m.round.id, m.round.playoff.id, m.round.playoff.phase.id, m.round.playoff.phase.season.id "
+                + "from PlayoffMatchup m where m.id = :id", Object[].class).setParameter("id", id);
+        if (current) query.setLockMode(LockModeType.PESSIMISTIC_WRITE);
+        var rows = query.getResultList();
+        if (rows.size() != 1) throw unavailable();
+        var row = rows.getFirst();
+        return new PlayoffOwner((UUID) row[0], (UUID) row[1], (UUID) row[2], (UUID) row[3]);
     }
 
     private void clearLegacyClosures(DayScope current, ManagementPickActor actor) {
         for (var race : current.races()) {
             var pick = picks.findByRaceId(race.getId()).orElse(null);
             if (pick == null) continue;
-            entityManager.refresh(pick, LockModeType.PESSIMISTIC_WRITE);
+            refresh(pick);
             if (!pick.matchesTarget(race)) throw unavailable();
             if (pick.getState() != PickState.APPROVED && pick.isManualClosed()) {
                 pick.resumeWithinMatchday(); picks.save(pick);
@@ -169,6 +182,10 @@ public class PickWindowService {
                         actor.userId(), "Central matchday opening", clock.instant()));
             }
         }
+    }
+
+    private void refresh(Object row) {
+        entityManager.refresh(org.hibernate.Hibernate.unproxy(row), LockModeType.PESSIMISTIC_WRITE);
     }
 
     private boolean complete(DayScope current) {
@@ -205,9 +222,9 @@ public class PickWindowService {
                 pair.match() == null ? null : pair.match().getPickWindowVersion(),
                 pair.match() == null || pair.match().getHomeTeam() == null ? null : pair.match().getHomeTeam().getId(),
                 pair.match() == null || pair.match().getAwayTeam() == null ? null : pair.match().getAwayTeam().getId(),
-                pair.playoff() == null ? null : pair.playoff().getRound().getPlayoff().getPhase().getId(),
-                pair.playoff() == null ? null : pair.playoff().getRound().getId(),
-                pair.playoff() == null ? null : pair.playoff().getRound().getPlayoff().getId(),
+                pair.owner() == null ? null : pair.owner().phaseId(),
+                pair.owner() == null ? null : pair.owner().roundId(),
+                pair.owner() == null ? null : pair.owner().playoffId(),
                 pair.playoff() == null ? null : pair.playoff().getId(), pair.playoff() == null ? null : pair.playoff().getPickWindowVersion(),
                 pair.playoff() == null || pair.playoff().getTeam1() == null ? null : pair.playoff().getTeam1().getId(),
                 pair.playoff() == null || pair.playoff().getTeam2() == null ? null : pair.playoff().getTeam2().getId());

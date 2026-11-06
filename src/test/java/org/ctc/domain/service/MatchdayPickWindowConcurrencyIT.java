@@ -7,10 +7,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.ctc.domain.exception.BusinessRuleException;
-import org.ctc.domain.model.Match;
-import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.ctc.domain.picks.ManagementPickActor;
-import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.SeasonLockingRepositoryImpl;
+import org.springframework.test.util.AopTestUtils;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +24,7 @@ import static org.mockito.Mockito.doAnswer;
 class MatchdayPickWindowConcurrencyIT extends PickPersistenceIT {
     @Autowired PickWindowService windows;
     @Autowired PickSessionEpoch epoch;
-    @MockitoSpyBean SeasonRepository lockedSeasons;
+    @MockitoSpyBean SeasonLockingRepositoryImpl lockedSeasons;
 
     @Test
     void givenConfirmationWaitingForTheSeasonLock_whenManagementClosesTheRound_thenUseTheCommittedClosedFlag() throws Exception {
@@ -49,6 +51,35 @@ class MatchdayPickWindowConcurrencyIT extends PickPersistenceIT {
         assertThat(windows.readPairing(view.id(), false).override()).isEqualTo(LocalDateTime.of(2036, 1, 1, 20, 0));
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void givenAPlayoffLegMovedWhileTheEditorWaits_whenSavingEitherRoute_thenRejectTheChangedCanonicalPairing(boolean matchRoute) throws Exception {
+        var ids = tx.execute(status -> {
+            var season = entityManager.find(Season.class, fixture.season().getId());
+            var phase = new SeasonPhase(season, PhaseType.PLAYOFF, PhaseLayout.BRACKET, 10); phase.setLabel("Test concurrent playoff"); entityManager.persist(phase);
+            var playoff = new Playoff(phase, "Test concurrent playoff"); entityManager.persist(playoff);
+            var round = new PlayoffRound(playoff, "Test final", 0); entityManager.persist(round);
+            var pairing = new PlayoffMatchup(round, 0); pairing.setTeam1(entityManager.find(Team.class, fixture.homeTeam().getId()));
+            pairing.setTeam2(entityManager.find(Team.class, fixture.awayTeam().getId())); entityManager.persist(pairing);
+            var day = new Matchday(phase, "Test original round", 1); entityManager.persist(day);
+            var other = new Matchday(phase, "Test changed round", 2); entityManager.persist(other);
+            var bridge = new Match(day, pairing.getTeam1(), pairing.getTeam2()); entityManager.persist(bridge);
+            var otherBridge = new Match(other, pairing.getTeam1(), pairing.getTeam2()); entityManager.persist(otherBridge);
+            Race moving = null;
+            for (int leg = 0; leg < 2; leg++) {
+                var race = new Race(); race.setMatchday(day); race.setMatch(bridge); race.setPlayoffMatchup(pairing); entityManager.persist(race); moving = race;
+            }
+            entityManager.flush(); return new UUID[]{pairing.getId(), bridge.getId(), moving.getId(), other.getId(), otherBridge.getId()};
+        });
+        var view = windows.readPairing(matchRoute ? ids[1] : ids[0], !matchRoute);
+        var manager = new ManagementPickActor("test-window-manager", epoch.managementGeneration());
+        concurrentChange(() -> {
+            var moved = entityManager.find(Race.class, ids[2]); moved.setMatchday(entityManager.find(Matchday.class, ids[3]));
+            moved.setMatch(entityManager.find(Match.class, ids[4]));
+        }, () -> { windows.savePairing(view.id(), !matchRoute, LocalDateTime.of(2036, 1, 1, 20, 0), view.version(), view.scope(), manager); return null; }, "matchdays");
+        tx.executeWithoutResult(status -> assertThat(entityManager.find(PlayoffMatchup.class, ids[0]).getPickDeadlineOverride()).isNull());
+    }
+
     private void concurrentChange(Runnable change, java.util.concurrent.Callable<?> waiting, String message) throws Exception {
         var held = new CountDownLatch(1); var release = new CountDownLatch(1); var attempted = new CountDownLatch(1);
         try (var workers = Executors.newVirtualThreadPerTaskExecutor()) {
@@ -62,13 +93,13 @@ class MatchdayPickWindowConcurrencyIT extends PickPersistenceIT {
             try {
                 assertThat(held.await(15, TimeUnit.SECONDS)).isTrue();
                 doAnswer(call -> { attempted.countDown(); return call.callRealMethod(); })
-                        .when(lockedSeasons).findByIdForUpdate(fixture.season().getId());
+                        .when(AopTestUtils.<SeasonLockingRepositoryImpl>getUltimateTargetObject(lockedSeasons)).findByIdForUpdate(fixture.season().getId());
                 var writer = workers.submit(waiting);
                 assertThat(attempted.await(15, TimeUnit.SECONDS)).isTrue();
                 assertThatThrownBy(() -> writer.get(200, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
                 release.countDown(); owner.get(15, TimeUnit.SECONDS);
                 assertThatThrownBy(() -> writer.get(15, TimeUnit.SECONDS)).hasCauseInstanceOf(BusinessRuleException.class)
-                        .cause().hasMessageContaining(message);
+                        .cause().hasMessageContainingAny(message, "Selections changed while saving.");
             } finally { release.countDown(); owner.get(15, TimeUnit.SECONDS); }
         }
     }

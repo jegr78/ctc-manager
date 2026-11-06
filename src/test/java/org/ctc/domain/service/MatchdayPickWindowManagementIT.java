@@ -16,6 +16,7 @@ class MatchdayPickWindowManagementIT extends PickPersistenceIT {
     @Autowired PickSessionEpoch epoch;
     @Autowired RaceService raceService;
     @Autowired MatchService matchService;
+    @Autowired PlayoffService playoffService;
     @Autowired org.ctc.backup.lock.ImportLockService importLock;
 
     private ManagementPickActor manager() { return new ManagementPickActor("test-window-manager", epoch.managementGeneration()); }
@@ -121,6 +122,63 @@ class MatchdayPickWindowManagementIT extends PickPersistenceIT {
         try { assertThatThrownBy(() -> save(view, false)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("restore"); }
         finally { importLock.unlock(); }
         assertThat(windows.readMatchday(view.id()).open()).isTrue();
+    }
+
+    @Test
+    void givenPlayoffBridge_whenChangingTheDeadlineFromEitherWorkspace_thenKeepOneCanonicalExceptionForBothLegs() {
+        var pairing = playoff(true);
+        var bridge = windows.readPairing(pairing.bridge(), false);
+        var cutoff = LocalDateTime.of(2036, 1, 1, 20, 0);
+        windows.savePairing(bridge.id(), false, cutoff, bridge.version(), bridge.scope(), manager());
+        var canonical = windows.readPairing(pairing.playoff(), true);
+        assertThat(canonical.override()).isEqualTo(cutoff); assertThat(canonical.version()).isEqualTo(bridge.version() + 1);
+        tx.executeWithoutResult(status -> {
+            var rows = entityManager.createQuery("select r from Race r where r.playoffMatchup.id = :id", Race.class).setParameter("id", pairing.playoff()).getResultList();
+            assertThat(rows).hasSize(2).allSatisfy(race -> assertThat(MatchdayPickWindowRules.deadline(race)).isEqualTo(cutoff));
+        });
+        windows.savePairing(canonical.id(), true, null, canonical.version(), canonical.scope(), manager());
+        assertThat(windows.readPairing(pairing.bridge(), false).override()).isNull();
+    }
+
+    @Test
+    void givenAnOpenStandalonePlayoffRound_whenTheLastPairingIsDecided_thenCloseItsRoundOnly() {
+        var pairing = playoff(false);
+        playoffService.setWinnerManually(pairing.playoff(), fixture.homeTeam().getId(), "Test adjudication of final pairing");
+        assertThat(windows.readMatchday(pairing.day()).open()).isFalse();
+        assertThat(windows.readMatchday(fixture.matchday().getId()).open()).isTrue();
+    }
+
+    @Test
+    void givenMixedOrdinaryAndPlayoffLegsOnOneBridge_whenChangingItsException_thenRejectAnAmbiguousScope() {
+        var pairing = playoff(true);
+        tx.executeWithoutResult(status -> {
+            var race = new Race(); race.setMatchday(entityManager.find(Matchday.class, pairing.day()));
+            race.setMatch(entityManager.find(Match.class, pairing.bridge())); entityManager.persist(race);
+        });
+        assertThatThrownBy(() -> windows.readPairing(pairing.bridge(), false)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("context");
+    }
+
+    private record PlayoffPairing(java.util.UUID day, java.util.UUID bridge, java.util.UUID playoff) { }
+    private PlayoffPairing playoff(boolean withBridge) {
+        return tx.execute(status -> {
+            var season = entityManager.find(Season.class, fixture.season().getId());
+            var phase = new SeasonPhase(season, PhaseType.PLAYOFF, PhaseLayout.BRACKET, 10);
+            phase.setLabel("Test playoff picks"); entityManager.persist(phase);
+            var playoff = new Playoff(phase, "Test playoff picks"); entityManager.persist(playoff);
+            var round = new PlayoffRound(playoff, "Test final", 0); entityManager.persist(round);
+            var pairing = new PlayoffMatchup(round, 0); pairing.setTeam1(entityManager.find(Team.class, fixture.homeTeam().getId()));
+            pairing.setTeam2(entityManager.find(Team.class, fixture.awayTeam().getId())); entityManager.persist(pairing);
+            var day = new Matchday(phase, "Test final picks", 1); day.setPicksOpen(true); entityManager.persist(day);
+            Match bridge = withBridge ? new Match(day, pairing.getTeam1(), pairing.getTeam2()) : null;
+            if (bridge != null) entityManager.persist(bridge);
+            for (int leg = 0; leg < 2; leg++) {
+                var race = new Race(); race.setMatchday(day); race.setMatch(bridge); race.setPlayoffMatchup(pairing);
+                race.setDateTime(LocalDateTime.of(2035, 1, 1, 20, leg)); race.setPicksManaged(true);
+                race.setHomeTeamOverride(leg == 0 ? pairing.getTeam1() : pairing.getTeam2());
+                race.setAwayTeamOverride(leg == 0 ? pairing.getTeam2() : pairing.getTeam1()); entityManager.persist(race);
+            }
+            entityManager.flush(); return new PlayoffPairing(day.getId(), bridge == null ? null : bridge.getId(), pairing.getId());
+        });
     }
 
 }
