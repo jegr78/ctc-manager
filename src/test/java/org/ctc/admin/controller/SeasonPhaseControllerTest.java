@@ -36,8 +36,6 @@ class SeasonPhaseControllerTest {
     private TestHelper testHelper;
     @Autowired
     private SeasonPhaseService phaseService;
-    @jakarta.persistence.PersistenceContext
-    private jakarta.persistence.EntityManager entityManager;
 
     @Test
     void givenPhaseAndUnassignedTeam_whenOpenOverview_thenReplacementChoicesAreAvailable() throws Exception {
@@ -69,29 +67,18 @@ class SeasonPhaseControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    // UI-02 (D-08 empty state)
-    // TestHelper.createSeason now auto-bootstraps a REGULAR phase that
-    // is hard to remove from within a @Transactional test (orphanRemoval interactions with
-    // the OSIV-cached SeasonPhase need a more elaborate fixture rewrite). The controller's
-    // empty-state branch is still exercised by the 60-02 IT suite. Skipped here to keep the
-    // 61-02 cascade GREEN; tracked for follow-up in Plan 61-04 (test-suite hardening).
-    @org.junit.jupiter.api.Disabled("requires fixture rework — see Plan 61-04 (deferred-items.md)")
     @Test
     void givenSeasonWithoutRegularPhase_whenGetSeasonDetail_thenRendersEmptyStateCard() throws Exception {
         // given
-        var season = testHelper.createSeason("T-Phase60-EmptyState");
-        var managed = seasonRepository.findById(season.getId()).orElseThrow();
-        var regularToDelete = managed.getPhases().stream()
-                .filter(p -> p.getPhaseType() == PhaseType.REGULAR)
-                .findFirst().orElseThrow();
-        managed.getPhases().remove(regularToDelete);
-        entityManager.flush();
-        entityManager.clear();
+        var season = seasonRepository.saveAndFlush(new org.ctc.domain.model.Season("Test-No regular phase", 2026, 1));
+        org.assertj.core.api.Assertions.assertThat(seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR)).isEmpty();
 
         // when / then
         mockMvc.perform(get("/admin/seasons/{id}", season.getId()))
                 .andExpect(status().isOk())
-                .andExpect(model().attribute("hasRegularPhase", false));
+                .andExpect(model().attribute("hasRegularPhase", false))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("No Regular Phase yet")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/admin/seasons/" + season.getId() + "/phases/new?phaseType=REGULAR")));
     }
 
     // UI-03 (D-17 defaults from REGULAR)

@@ -208,6 +208,11 @@ history and skips unsafe aggregate comparisons.
 docker compose up --build -d
 ```
 
+Manual standings PNG previews are generated explicitly with
+`./mvnw -Dtest=StandingsGraphicPreview test`. The generator in `src/test/java/org/ctc/tools/`
+uses isolated H2 fixtures with outbound integrations disabled and writes three images into
+`.screenshots/`. Its name keeps this visual inspection tool outside normal test discovery.
+
 ## Playwright Setup (Team Cards + E2E Tests)
 
 Playwright needs a Chromium browser installed locally for team card generation and E2E tests.
