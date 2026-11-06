@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class DriverMergeService {
     private final ScoreWriteLockService scoreLocks;
+    private final RaceDisqualificationRevisionRepository disqualifications;
 
 	private final DriverRepository driverRepository;
 	private final SeasonDriverRepository seasonDriverRepository;
@@ -85,6 +86,10 @@ public class DriverMergeService {
 	@Transactional
 	public MergeResult merge(UUID sourceId, UUID targetId) {
         scoreLocks.lockAllSeasons();
+        var raceResults = raceResultRepository.findByDriverId(sourceId);
+        if (!disqualifications.findDriverHistoryForUpdate(sourceId).isEmpty()
+                || raceResults.stream().anyMatch(org.ctc.domain.model.RaceResult::isDisqualified))
+            throw new BusinessRuleException("Cannot merge a source driver with DSQ state or permanent DSQ history");
 		if (sourceId.equals(targetId)) {
 			throw new BusinessRuleException("Cannot merge driver with itself");
 		}
@@ -138,7 +143,6 @@ public class DriverMergeService {
 		}
 
 		// Reassign RaceResult entries, dropping duplicates.
-		var raceResults = raceResultRepository.findByDriverId(sourceId);
 		int raceResultsReassigned = 0;
 		int raceResultsDropped = 0;
 		for (var rr : raceResults) {

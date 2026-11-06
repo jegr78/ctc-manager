@@ -100,6 +100,12 @@ public final class RacePenaltyBackupValidator {
         return new RacePenaltyHistory.Identity(uuid(race, "id"), seasonId, phaseId, dayId, matchId, playoffId, home, away);
     }
 
+    RacePenaltyHistory.Identity identityForRace(UUID raceId) {
+        var race = index("races").get(raceId);
+        if (race == null) fail("Missing team penalty race reference");
+        return identity(race);
+    }
+
     private UUID parent(UUID team) {
         var row = index("teams").get(team);
         return row.hasNonNull("parentTeam") ? reference(row, "parentTeam", "teams") : team;

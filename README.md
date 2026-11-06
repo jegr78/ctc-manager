@@ -20,6 +20,7 @@ The active season is unique. Deactivate the current season before activating ano
 - **Teams & Sub-Teams** — Parent/child team hierarchy with sub-team lineups per matchday
 - **Drivers** — PSN ID tracking, season-team assignments, fuzzy name matching
 - **Team penalty points** — Record both complete penalty totals per race leg, offset their difference and floor official team scores at zero. Immutable corrections retain reasons and managers internally; driver points stay unchanged. See [Team penalty points](../../wiki/Team-Penalty-Points).
+- **Driver disqualifications** — Record or clear a DSQ for one saved driver result. Race points shift to the following drivers, qualifying and fastest lap bonuses remain, and permanent internal history preserves the original position. Enter the separate 20 team penalty points manually. See [Driver disqualifications](../../wiki/Driver-Disqualifications).
 - **Race Results & Scoring** — Position points (20-2), qualifying points (3-2-1), fastest lap bonus (2)
 - **Error Pages** — Consistent CTC styling, status-specific guidance and a native return to seasons. A history button appears only after navigation from another local admin page; development exception details stay collapsed.
 - **Standings & Rankings** — Season and all-time standings for teams and drivers. The admin has native season, phase and group navigation, labeled searches and keyboard sorting that preserves ranking positions across filters and pages. Driver rankings cover the entire selected phase.
@@ -42,7 +43,7 @@ The active season is unique. Deactivate the current season before activating ano
 - **Race Attachments** — Upload files or link external resources to races
 - **Docker** — Local development and production deployment with MariaDB
 - **Season car pools** — Keep fixed car choices or build named category entries from local metadata. Combine alternative category/drivetrain/year clauses, preview eligible cars and overlaps, then freeze exact membership. Catalog changes preserve frozen choices; used pools cannot be reopened. Race setup selects an entry and one concrete frozen member. Saving consumes the whole entry for the effective home team that season. Native forms retain invalid inputs, concurrent selections serialize through the season, and unambiguous CSV/Sheets overwrites preserve configured race identities. Admin race summaries, public matchdays and settings graphics show the concrete car with its saved pool-entry label. Custom settings templates keep `carName` and can use optional `poolEntryLabel`.
-- **Backup & Restore** — Export a full ZIP backup of all 47 entity tables, including exact seasonal pool snapshots, Discord state and public URL slugs; restore via a preview-and-confirm import flow that accepts schema versions 1 through 15, so older backups remain restorable
+- **Backup & Restore** — Export a full ZIP backup of all 48 entity tables, including exact seasonal pool snapshots, Discord state and public URL slugs; restore via a preview-and-confirm import flow that accepts schema versions 1 through 16, so older backups remain restorable
 - **Channel Archive Dialog** — Labeled destination categories with channel counts, disabled full categories, keyboard focus and Escape/cancel support. A native inline form remains available without JavaScript.
 - **Backup Workspace** — Separate export and restore panels, labeled current and backup row counts, a neutral archive preview and a clear replacement confirmation.
 - **Data Audit** — Read-only check at `/admin/data-audit` for historical aggregates, pairings, phases, succession, playoffs, public URLs, race settings and seasonal pool references. Separate eligibility information explains unknown car metadata and exact-year exclusions. Unknown years remain valid; opening the audit changes no record. See the [Data Audit wiki page](../../wiki/Data-Audit).
@@ -71,7 +72,7 @@ v1.10 introduces a full database backup/restore feature accessible via `/admin/b
 
 1. Navigate to `/admin/backup` in the admin sidebar.
 2. Click **Export Backup** — a ZIP file (`ctc-backup-<ISO-instant>.zip`) downloads immediately.
-3. Store the ZIP in a safe location. Each export captures all 47 entity tables (including Discord global config, idempotency tracking and public URL slugs).
+3. Store the ZIP in a safe location. Each export captures all 48 entity tables (including Discord global config, idempotency tracking and public URL slugs).
 
 ### Import
 
@@ -79,7 +80,7 @@ v1.10 introduces a full database backup/restore feature accessible via `/admin/b
 2. Review the preview: per-table row counts (current vs. backup) and schema-version match indicator.
 3. Check the **I understand** confirmation and click **Execute Import**. The database is replaced atomically.
 
-> **Schema-Version lock:** The import rejects a backup whose schema version is outside versions 1 through 15 before it
+> **Schema-Version lock:** The import rejects a backup whose schema version is outside versions 1 through 16 before it
 > writes anything. Schema 4 also validates pool references and limits preflight to 100,000 retained reference rows.
 
 ### Recovery
@@ -362,3 +363,29 @@ of the Spring Boot BOM. A runtime dependency check rejects its known vulnerable 
 
 Scheduled local backups and the two-daily/one-monthly retention are described in the
 [backup runbook](deploy/guides/backups.md). One user timer runs backups; errors stay in the local journal.
+
+## Driver disqualifications
+
+Save the driver results, then select **Review DSQ** beside a driver in the race result editor.
+Choose **Disqualified (DSQ)** or **Classified** and record an internal reason. DSQ removes only
+race-position points and advances the following drivers for race scoring. Qualifying and fastest
+lap bonuses remain. The editor retains the original finishing position; public results, default
+graphics and driver history show DSQ or the effective position. A DSQ does not count as a driver's
+best finishing position.
+
+Each correction reaggregates match and playoff totals immediately. The separate 20 team penalty
+points are entered manually as part of the team's complete total. No DSQ action changes those
+saved totals automatically. Reopen a decided playoff before correcting its results, regenerate
+existing graphics and the public site, then explicitly publish the correction.
+
+Native result edits preserve result IDs, DSQ status and history. Results-only CSV and Sheets
+imports reject history-bearing targets before mutation. Permanent evidence also prevents ordinary
+result/guest deletion, participant reassignment, source-driver merging and quick-score replacement,
+even after clearing a DSQ. Native forms reject stale revision, result-fingerprint and restore tokens.
+Correct duplicate finishing positions before recording a DSQ; unrelated historical gaps remain.
+
+V38 and backup schema 16 add the result flag and the 48th entity table. Typed backup/restore retains
+exact ownership, revision IDs, reasons, actors and microsecond timestamps. Schemas 1 through 15
+default missing flags to false without inventing history. Both staging and execute validate DSQ
+state and history before deleting live data. The read-only Data Audit reports inconsistent evidence
+with record IDs; it never repairs history or discloses internal reasons in public output.

@@ -21,6 +21,7 @@ import static org.mockito.Mockito.verify;
 class RaceCategorySaveTest {
     @Mock private IncidentLifecycleGuard incidentGuard;
     @Mock private RacePenaltyLifecycleGuard penaltyGuard;
+    @org.mockito.Mock private org.ctc.domain.service.RaceDisqualificationLifecycleGuard disqualificationGuard;
     @Mock RaceRepository raceRepository;
     @Mock MatchRepository matchRepository;
     @Mock MatchdayRepository matchdayRepository;

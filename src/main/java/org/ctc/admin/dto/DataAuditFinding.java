@@ -7,6 +7,7 @@ public record DataAuditFinding(Category category, Resolution resolution, String 
 		STALE_AGGREGATE("Stale match and matchup aggregates", "#191"),
         RESULT_POINTS("Race points inconsistent with their scoring scheme", ""),
         TEAM_PENALTIES("Team penalty history and official scores", "#342"),
+        DRIVER_DISQUALIFICATIONS("Driver disqualifications and classification", "#347"),
 		PAIRING("Pairing and walkover inconsistencies", "#199"),
 		PHASE_GROUP("Phase and group inconsistencies", "#190"),
         SEASON_CONFIGURATION("Ambiguous active season", ""),

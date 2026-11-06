@@ -12,7 +12,7 @@ import org.ctc.domain.model.RaceResult;
  * Externalised Jackson annotations for {@link RaceResult}.
  */
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "classificationPosition", "classificationLabel", "disqualificationRevisions"})
 public abstract class RaceResultMixIn {
 
     @JsonIdentityReference(alwaysAsId = true)

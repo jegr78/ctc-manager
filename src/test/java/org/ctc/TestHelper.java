@@ -31,6 +31,7 @@ public class TestHelper {
 	private final RaceRepository raceRepository;
 	private final RaceLineupRepository raceLineupRepository;
 	private final DriverRepository driverRepository;
+    private final RaceDisqualificationRevisionRepository disqualifications;
 	private final SeasonDriverRepository seasonDriverRepository;
 	private final PlayoffService playoffService;
     private final org.ctc.domain.repository.PlayoffRepository playoffRepository;
@@ -59,6 +60,7 @@ public class TestHelper {
     @Transactional
 	public void deleteSeasonCascade(Season season) {
 		UUID seasonId = season.getId();
+        disqualifications.deleteAll(disqualifications.findBySeasonId(seasonId)); disqualifications.flush();
         deleteIncidentHistory(seasonId);
         deletePickHistory(seasonId);
 		raceLineupRepository.deleteAll(raceLineupRepository.findByRaceMatchdaySeasonId(seasonId));

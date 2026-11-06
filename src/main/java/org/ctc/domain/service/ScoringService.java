@@ -30,11 +30,14 @@ public class ScoringService {
 	private final RaceRepository raceRepository;
 
 	public void calculatePoints(RaceResult result, RaceScoring scoring) {
+        calculatePoints(result, scoring, RaceClassification.position(result));
+    }
+
+    private void calculatePoints(RaceResult result, RaceScoring scoring, int position) {
 		int[] racePoints = scoring.getRacePointsArray();
 		int[] qualiPoints = scoring.getQualiPointsArray();
 
-		int rp = result.getPosition() >= 1 && result.getPosition() <= racePoints.length
-				? racePoints[result.getPosition() - 1] : 0;
+		int rp = position >= 1 && position <= racePoints.length ? racePoints[position - 1] : 0;
 		int qp = result.getQualiPosition() >= 1 && result.getQualiPosition() <= qualiPoints.length
 				? qualiPoints[result.getQualiPosition() - 1] : 0;
 		int fp = result.isFastestLap() ? scoring.getFastestLapPoints() : 0;
@@ -50,7 +53,7 @@ public class ScoringService {
 	}
 
 	public void calculatePoints(List<RaceResult> results, RaceScoring scoring) {
-		results.forEach(r -> calculatePoints(r, scoring));
+		results.forEach(r -> calculatePoints(r, scoring, RaceClassification.position(r, results)));
 	}
 
 	public int calculateTeamTotal(List<RaceResult> teamResults) {
@@ -199,7 +202,7 @@ public class ScoringService {
 
     public record ScoredDriver(UUID resultId, UUID driverId, int position, int qualifyingPosition,
                                boolean fastestLap, int racePoints, int qualifyingPoints, int fastestLapPoints,
-                               int totalPoints, boolean firstTeam) {}
+                               int totalPoints, boolean firstTeam, boolean disqualified) {}
     public record RaceScoreSnapshot(RacePenaltyTotals totals, List<ScoredDriver> drivers) {
         public RaceScoreSnapshot { drivers = List.copyOf(drivers); }
     }
@@ -216,7 +219,7 @@ public class ScoringService {
             var driver = new ScoredDriver(result.getId(), result.getDriver().getId(), result.getPosition(),
                     result.getQualiPosition(), result.isFastestLap(), result.getPointsRace(), result.getPointsQuali(),
                     result.getPointsFl(), result.getPointsTotal(),
-                    isDriverInTeam(result, current, firstTeamId, lineups.get(result.getDriver().getId())));
+                    isDriverInTeam(result, current, firstTeamId, lineups.get(result.getDriver().getId())), result.isDisqualified());
             drivers.add(driver);
             if (driver.firstTeam()) first = addPoints(first, driver.totalPoints());
             else second = addPoints(second, driver.totalPoints());

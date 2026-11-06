@@ -23,6 +23,7 @@ class RaceServiceTest {
     @org.mockito.Mock private ScoreWriteLockService scoreLocks;
     @Mock private IncidentLifecycleGuard incidentGuard;
     @Mock private RacePenaltyLifecycleGuard penaltyGuard;
+    @org.mockito.Mock private org.ctc.domain.service.RaceDisqualificationLifecycleGuard disqualificationGuard;
 
     @Mock private RaceRepository raceRepository;
     @Mock private MatchRepository matchRepository;
@@ -305,7 +306,6 @@ class RaceServiceTest {
 
         when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
         when(driverRepository.findById(driverId)).thenReturn(Optional.of(driver));
-        when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
         when(scoringService.calculateRaceTotals(race, race.getHomeTeam().getId())).thenReturn(RacePenaltyTotals.calculate(0, 0, 0, 0));
         // when
@@ -313,7 +313,7 @@ class RaceServiceTest {
 
         // then
         assertThat(message).contains("Results saved");
-        verify(scoringService).calculatePoints(any(RaceResult.class), eq(race.getMatchday().getPhase().getRaceScoring()));
+        verify(scoringService).calculatePoints(eq(race.getResults()), eq(race.getMatchday().getPhase().getRaceScoring()));
         verify(scoringService).aggregateMatchScores(race);
     }
 
@@ -327,7 +327,6 @@ class RaceServiceTest {
         var rd = new RaceService.RaceResultData(null, null, null, 0, 0, false);
 
         when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
-        when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // when
         service.saveResults(raceId, List.of(rd));

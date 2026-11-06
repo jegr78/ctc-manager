@@ -26,6 +26,7 @@ import static org.mockito.Mockito.*;
 class CsvImportServiceTest {
     @Mock private org.ctc.domain.service.IncidentLifecycleGuard incidentGuard;
     @Mock private org.ctc.domain.service.RacePenaltyLifecycleGuard penaltyGuard;
+    @org.mockito.Mock private org.ctc.domain.service.RaceDisqualificationLifecycleGuard disqualificationGuard;
 
 	@Mock
 	private DriverMatchingService driverMatchingService;

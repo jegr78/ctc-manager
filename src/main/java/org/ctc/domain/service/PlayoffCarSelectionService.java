@@ -29,6 +29,7 @@ public class PlayoffCarSelectionService {
     private final PickLifecycleGuard pickGuard;
     private final IncidentLifecycleGuard incidentGuard;
     private final RacePenaltyLifecycleGuard penaltyGuard;
+    private final RaceDisqualificationLifecycleGuard disqualificationGuard;
 
     public void lock(Playoff playoff) {
         try {
@@ -54,6 +55,7 @@ public class PlayoffCarSelectionService {
             for (var change : changes) {
                 incidentGuard.requirePlayoffIdentity(change.matchup(), change.team1(), change.team2());
                 penaltyGuard.requirePlayoffIdentity(change.matchup(), change.team1(), change.team2());
+                disqualificationGuard.requirePlayoffIdentity(change.matchup(), change.team1(), change.team2());
                 for (var race : rows) {
                     if (race.getPlayoffMatchup() == null || !race.getPlayoffMatchup().getId().equals(change.matchup().getId())) continue;
                     Team home = race.projectPlayoffHome(change.team1());
@@ -61,6 +63,7 @@ public class PlayoffCarSelectionService {
                     pickGuard.requireIdentity(race, race.getMatchday().getId(), home, away);
                     incidentGuard.requireIdentity(race, race.getMatchday().getId(), home, away);
                     penaltyGuard.requireIdentity(race, race.getMatchday().getId(), home, away);
+                    disqualificationGuard.requireIdentity(race, race.getMatchday().getId(), home, away);
                     if (!PickTargetRules.isScheduledTarget(race) && PickTargetRules.isScheduledTarget(race, home, away)) newlyEligible.add(race);
                     var previousHome = race.getHomeTeam();
                     if (Objects.equals(previousHome == null ? null : previousHome.getId(), home == null ? null : home.getId())) continue;

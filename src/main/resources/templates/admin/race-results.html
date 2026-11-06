@@ -5,7 +5,7 @@
 <section>
     <a th:href="@{/admin/races/{id}(id=${race.id})}" class="back-link">&larr; Back to Race</a>
     <h1>
-        Results: <span th:text="${race.homeTeam.shortName}"></span> vs <span th:text="${race.awayTeam.shortName}"></span>
+        Results: <span th:text="${race.homeTeam.shortName}"></span> vs <span th:text="${race.awayTeam?.shortName ?: 'Bye'}"></span>
     </h1>
     <p class="text-dim mb-md">
         <span th:text="${race.matchday.label}"></span> —
@@ -27,6 +27,7 @@
                     <tr>
                         <th>Team</th>
                         <th>Driver (PSN ID)</th>
+                        <th>Classification / DSQ</th>
                         <th class="td-center">Pos</th>
                         <th class="td-center">Quali</th>
                         <th class="td-center">FL</th>
@@ -34,7 +35,8 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="result, iter : ${raceForm.results}" class="result-row">
+                    <tr th:each="result, iter : ${raceForm.results}" th:with="saved=${resultStatuses[result.driverId]}"
+                        th:attr="data-disqualified=${saved != null and saved.disqualified}" class="result-row">
                         <td>
                             <span th:text="${result.teamShortName}" class="results-team-name"></span>
                             <input type="hidden" th:name="'results[' + ${iter.index} + '].driverId'" th:value="${result.driverId}">
@@ -42,6 +44,9 @@
                             <input type="hidden" th:name="'results[' + ${iter.index} + '].teamShortName'" th:value="${result.teamShortName}">
                         </td>
                         <td class="results-driver-name" th:text="${result.driverPsnId}"></td>
+                        <td><span class="classification-label" th:text="${saved?.classificationLabel ?: 'Pending'}"></span>
+                            <a th:if="${saved != null}" th:href="@{/admin/races/{race}/results/{result}/disqualification(race=${race.id},result=${saved.resultId})}"
+                               th:aria-label="${'Review disqualification for ' + result.driverPsnId}">Review DSQ</a></td>
                         <td class="td-center">
                             <input type="number" class="pos-input results-pos-input" th:name="'results[' + ${iter.index} + '].position'"
                                    th:value="${result.position}" min="1" max="12" required>
@@ -65,7 +70,7 @@
                 </tbody>
                 <tfoot>
                     <tr class="results-totals-row">
-                        <td colspan="5" class="results-totals-label">Team Totals</td>
+                        <td colspan="6" class="results-totals-label">Team Totals</td>
                         <td class="td-center" id="teamTotals"></td>
                     </tr>
                 </tfoot>
@@ -97,7 +102,15 @@
                 var fl = row.querySelector('.fl-input').checked;
                 var team = row.querySelector('td span').textContent.trim();
 
-                var rp = (pos >= 1 && pos <= racePoints.length) ? racePoints[pos - 1] : 0;
+                var disqualified = row.dataset.disqualified === 'true';
+                var classifiedPosition = pos;
+                rows.forEach(function(other) {
+                    if (other.dataset.disqualified === 'true' && (parseInt(other.querySelector('.pos-input').value) || 0) < pos) classifiedPosition--;
+                });
+                if (disqualified) classifiedPosition = 0;
+                row.querySelector('.classification-label').textContent = disqualified ? 'DSQ' : (classifiedPosition > 0 ? classifiedPosition : 'Pending');
+
+                var rp = (classifiedPosition >= 1 && classifiedPosition <= racePoints.length) ? racePoints[classifiedPosition - 1] : 0;
                 var qp = (quali >= 1 && quali <= qualiPoints.length) ? qualiPoints[quali - 1] : 0;
                 var fp = fl ? flPoints : 0;
                 var total = rp + qp + fp;

@@ -102,6 +102,7 @@ public class BackupExportService {
     private final IncidentRulingRevisionRepository rulingRevisions;
     private final IncidentRulingPublicationRepository rulingPublications;
     private final RacePenaltyRevisionRepository penaltyRevisions;
+    private final RaceDisqualificationRevisionRepository disqualificationRevisions;
 
 
 	private final String uploadDirRaw;
@@ -156,6 +157,7 @@ public class BackupExportService {
             IncidentThreadPublicationRepository incidentThreads,
             IncidentRulingRepository incidentRulings, IncidentRulingRevisionRepository rulingRevisions, IncidentRulingPublicationRepository rulingPublications,
             RacePenaltyRevisionRepository penaltyRevisions,
+            RaceDisqualificationRevisionRepository disqualificationRevisions,
 			@Value("${app.upload-dir:data/dev/uploads}") String uploadDirRaw
 	) {
 		this.backupSchema = backupSchema;
@@ -204,6 +206,7 @@ public class BackupExportService {
         this.incidentThreads = incidentThreads;
         this.incidentRulings = incidentRulings; this.rulingRevisions = rulingRevisions; this.rulingPublications = rulingPublications;
         this.penaltyRevisions = penaltyRevisions;
+        this.disqualificationRevisions = disqualificationRevisions;
 		this.uploadDirRaw = uploadDirRaw;
 	}
 
@@ -232,6 +235,7 @@ public class BackupExportService {
 		this.repositoriesByEntityClass.put(Match.class, matchRepository);
 		this.repositoriesByEntityClass.put(Race.class, raceRepository);
         this.repositoriesByEntityClass.put(RacePenaltyRevision.class, penaltyRevisions);
+        this.repositoriesByEntityClass.put(RaceDisqualificationRevision.class, disqualificationRevisions);
 		this.repositoriesByEntityClass.put(RaceLineup.class, raceLineupRepository);
 		this.repositoriesByEntityClass.put(RaceResult.class, raceResultRepository);
 		this.repositoriesByEntityClass.put(RaceSettings.class, raceSettingsRepository);

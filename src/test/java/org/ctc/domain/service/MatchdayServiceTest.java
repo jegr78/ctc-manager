@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 class MatchdayServiceTest {
     @Mock private IncidentLifecycleGuard incidentGuard;
     @Mock private RacePenaltyLifecycleGuard penaltyGuard;
+    @org.mockito.Mock private org.ctc.domain.service.RaceDisqualificationLifecycleGuard disqualificationGuard;
     @Mock private PickLifecycleGuard pickGuard;
 
     @Mock private MatchdayRepository matchdayRepository;

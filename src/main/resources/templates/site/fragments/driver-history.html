@@ -12,7 +12,7 @@
         <details th:each="row : ${rows}" class="history-entry">
             <summary><span class="history-identity"><span class="history-matchday" th:text="${row.result.race.matchday.label}"></span>
                     <span class="guest-label" th:if="${row.guest}"><span class="guest-marker" aria-label="Guest driver">&#x2605;</span> as guest for <span th:text="${row.fieldingTeamName}"></span></span></span>
-                <span class="history-position" th:text="${'P' + row.result.position}"></span>
+                <span class="history-position" th:text="${row.result.disqualified ? 'DSQ' : 'P' + row.result.classificationPosition}"></span>
                 <span><span class="history-points" th:text="${row.result.pointsTotal}"></span><span class="sr-only"> points</span></span>
                 <span class="result-chevron" aria-hidden="true">⌄</span></summary>
             <div class="history-details"><dl>
@@ -35,7 +35,7 @@
                     <span class="guest-label" th:if="${row.guest}">as guest for <span th:text="${row.fieldingTeamName}"></span></span></td>
                 <td><th:block th:replace="~{site/fragments/driver-history :: opponent}"></th:block></td>
                 <td class="text-dim" th:text="${row.trackName ?: '-'}"></td>
-                <td class="text-center" th:text="${row.result.position}"></td><td class="text-center" th:text="${row.result.qualiPosition}"></td>
+                <td class="text-center" th:text="${row.result.classificationLabel}"></td><td class="text-center" th:text="${row.result.qualiPosition}"></td>
                 <td class="text-center" th:text="${row.result.fastestLap ? 'FL' : ''}"></td><td class="text-right font-bold" th:text="${row.result.pointsTotal}"></td>
             </tr></tbody>
         </table></div>

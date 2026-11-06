@@ -286,7 +286,8 @@ public class SeasonManagementService {
                 var legs = match.getRaces();
                 var firstLeg = legs.stream().filter(leg -> !leg.hasTeamOverrides()).findFirst()
                         .or(() -> legs.stream().findFirst());
-                boolean resultEntryRequired = legs.stream().anyMatch(leg -> !leg.getPenaltyRevisions().isEmpty());
+                boolean resultEntryRequired = legs.stream().anyMatch(leg -> !leg.getPenaltyRevisions().isEmpty()
+                        || leg.getResults().stream().anyMatch(result -> result.isDisqualified() || !result.getDisqualificationRevisions().isEmpty()));
                 boolean open = !match.isBye() && match.getWalkoverTeam() == null && match.getHomeScore() == null && !resultEntryRequired;
                 mdPairings.add(new SwissPairing(match,
                         open ? firstLeg.map(Race::getId).orElse(null) : null,

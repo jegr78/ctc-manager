@@ -34,8 +34,8 @@ public class RaceResultRestorer implements EntityRestorer {
     private static final String INSERT_SQL =
             "INSERT INTO race_results (id, race_id, driver_id, position, quali_position, "
           + "fastest_lap, points_race, points_quali, points_fl, points_total, "
-          + "created_at, updated_at) "
-          + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+          + "created_at, updated_at, disqualified) "
+          + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     @Override
     public String tableName() {
@@ -57,6 +57,7 @@ public class RaceResultRestorer implements EntityRestorer {
             ps.setInt(10, row.get("pointsTotal").asInt());
             ps.setTimestamp(11, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
             ps.setTimestamp(12, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
+            ps.setBoolean(13, row.get("disqualified").booleanValue());
         });
         log.debug("RaceResultRestorer: restored {} rows", rows.size());
     }

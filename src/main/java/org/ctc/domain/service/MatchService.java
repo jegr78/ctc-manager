@@ -52,6 +52,7 @@ public class MatchService {
     private final PickLifecycleGuard pickGuard;
     private final IncidentLifecycleGuard incidentGuard;
     private final RacePenaltyLifecycleGuard penaltyGuard;
+    private final RaceDisqualificationLifecycleGuard disqualificationGuard;
 
 	private final MatchRepository matchRepository;
 	private final MatchdayRepository matchdayRepository;
@@ -231,6 +232,7 @@ public class MatchService {
 			throw new BusinessRuleException("Walkover team must be one of the match's two teams.");
 		}
         penaltyGuard.requireNoHistory(raceRepository.findByMatchId(matchId));
+        disqualificationGuard.requireNoHistory(raceRepository.findByMatchId(matchId));
 		Team team = teamRepository.findById(walkoverTeamId)
 				.orElseThrow(() -> new EntityNotFoundException("Team", walkoverTeamId));
 		match.setWalkoverTeam(team);
@@ -378,6 +380,7 @@ public class MatchService {
         pickGuard.requireNoHistory(match.getRaces());
         incidentGuard.requireMatchDeletion(match);
         penaltyGuard.requireNoHistory(match.getRaces());
+        disqualificationGuard.requireNoHistory(match.getRaces());
 		matchRepository.delete(match);
 		log.info("Deleted match: {} vs {}", match.getHomeTeam().getShortName(),
 				match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "bye");
