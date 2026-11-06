@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.ctc.discord.DiscordRestClient.*;
+import org.ctc.discord.dto.PermissionOverwrite;
 import org.ctc.domain.exception.BusinessRuleException;
 
 public final class IncidentThreadPermissions {
@@ -14,6 +15,8 @@ public final class IncidentThreadPermissions {
     private static final BigInteger VIEW = BigInteger.ONE.shiftLeft(10);
     private static final BigInteger CREATE = BigInteger.ONE.shiftLeft(35);
     private static final BigInteger MANAGE = BigInteger.ONE.shiftLeft(34);
+    private static final BigInteger MANAGE_ROLES = BigInteger.ONE.shiftLeft(28);
+    private static final BigInteger STAFF = VIEW.setBit(16).setBit(38);
     private static final BigInteger SEND = VIEW.setBit(11).setBit(16).setBit(38);
 
     private IncidentThreadPermissions() { }
@@ -67,6 +70,28 @@ public final class IncidentThreadPermissions {
         var inventory = validate(guild, channel, member, roles, botId, guildId, channelId);
         require(channel.type() == 0);
         requireBotRights(guild, channel, member, inventory, botId, guildId);
+    }
+
+    public static List<PermissionOverwrite> staffUpdates(AccessGuild guild, IncidentChannel channel,
+            AccessMember member, List<IncidentRole> roles, String botId, String guildId, String channelId,
+            List<String> staff, Set<String> participants) {
+        var inventory = validate(guild, channel, member, roles, botId, guildId, channelId);
+        require(channel.type() == 0);
+        var bot = requireBotRights(guild, channel, member, inventory, botId, guildId);
+        if (!(staff != null && !staff.isEmpty() && new HashSet<>(staff).size() == staff.size() && participants != null)) throw unavailable();
+        var updates = new java.util.ArrayList<PermissionOverwrite>();
+        for (var role : staff) {
+            require(inventory.containsKey(role) && !guildId.equals(role) && !participants.contains(role));
+            var permissions = effective(guildId, null, List.of(role), inventory, channel);
+            if (has(permissions, ADMIN) || has(permissions, STAFF)) continue;
+            var current = channel.permissionOverwrites().stream()
+                    .filter(row -> row.type() == 0 && row.id().equals(role)).findFirst().orElse(null);
+            var allow = current == null ? BigInteger.ZERO : bits(current.allow());
+            var deny = current == null ? BigInteger.ZERO : bits(current.deny());
+            updates.add(new PermissionOverwrite(role, 0, allow.or(STAFF).toString(), deny.andNot(STAFF).toString()));
+        }
+        if (!updates.isEmpty()) require(has(bot, ADMIN) || has(bot, MANAGE_ROLES));
+        return List.copyOf(updates);
     }
 
     private static Map<String, BigInteger> validate(AccessGuild guild, IncidentChannel channel,

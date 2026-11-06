@@ -92,6 +92,13 @@ public class DiscordRestClient {
     public IncidentChannel fetchIncidentChannel(String channelId) throws DiscordApiException {
         return execute(() -> bot.get().uri("/channels/{channelId}",channelId).retrieve().body(IncidentChannel.class));
     }
+    public void grantIncidentStaffAccess(String channelId, PermissionOverwrite overwrite, Instant validUntil) throws DiscordApiException {
+        execute(() -> deadline(bot.put().uri("/channels/{channelId}/permissions/{roleId}", channelId, overwrite.id()), validUntil)
+                .attribute(DiscordRateLimitInterceptor.UNCERTAIN_CREATION, true)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("type", 0, "allow", overwrite.allow(), "deny", overwrite.deny()))
+                .retrieve().toBodilessEntity());
+    }
     public IncidentChannel startIncidentMessageThread(String channelId,String starterId,String name) throws DiscordApiException {
         return startIncidentMessageThread(channelId,starterId,name,null);
     }

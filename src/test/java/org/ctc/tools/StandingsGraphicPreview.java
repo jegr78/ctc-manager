@@ -1,4 +1,6 @@
-package org.ctc.admin.service;
+package org.ctc.tools;
+
+import org.ctc.admin.service.StandingsGraphicService;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -8,20 +10,36 @@ import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonPhase;
 import org.ctc.domain.repository.SeasonRepository;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.ctc.admin.TestDataService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.datasource.url=jdbc:h2:mem:standings-preview;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.datasource.username=sa",
+        "spring.datasource.password=",
+        "ctc.outbound.enabled=false",
+        "app.discord.dev-seed.enabled=false",
+        "app.discord.picks.enabled=false",
+        "app.discord.incidents.delivery-enabled=false",
+        "app.seed.generate-team-cards=false",
+        "app.upload-dir=target/manual-standings-preview/uploads",
+        "ctc.site.output-dir=target/manual-standings-preview/site"
+})
 @ActiveProfiles({"dev"})
 @Tag("preview")
 @Transactional
-@Disabled("manual: re-enable + run via ./mvnw -Dtest=StandingsGraphicPreviewTest test to regenerate previews into .screenshots/")
-class StandingsGraphicPreviewTest {
+class StandingsGraphicPreview {
+
+    @Autowired private TestDataService testData;
+
+    @BeforeEach void seedPreviewData() { testData.seed(); }
 
 	@Autowired
 	StandingsGraphicService standingsGraphicService;

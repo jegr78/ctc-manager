@@ -50,19 +50,20 @@ authorization facts through REST.
 
 In the Developer Portal, click **OAuth2 → URL Generator**.
 
-**Scopes** (single checkbox):
+**Scopes:**
 
-- ✅ `bot`
+- `bot`
+- `applications.commands` for the explicitly registered `/picks` and `/incidents` workflows. Discord includes this scope by default with `bot`.
 
-Do **not** check `applications.commands` — CTC Manager is outbound-only and
-does not register slash-commands (per design spec § 2.2 D-Outbound-Only).
+Command registration and the outgoing Gateway connection are separate, explicit setup steps.
 
-**Bot Permissions** — the minimum set for the full v1.13 feature scope:
+**Bot permissions** for the current integration:
 
 | Permission | Purpose |
 |------------|---------|
 | View Channels | Required for every REST call against a guild |
 | Manage Channels | Create per-match channels + archive |
+| Manage Roles | Grant configured stewards missing access on the incident match channel after cutoff; required only when a grant is necessary |
 | Manage Webhooks | Create the per-channel webhook in a new match channel |
 | Send Messages | Bot-direct posts (when not using a webhook) |
 | Embed Links | Embed previews in match-channel posts |
@@ -78,7 +79,7 @@ does not register slash-commands (per design spec § 2.2 D-Outbound-Only).
 
 - ❌ `Administrator` — over-privileged; bypasses the post-create permission audit
 - ❌ `Create Private Threads` — race-result forum threads are public by design
-- ❌ `Kick Members` / `Ban Members` / `Manage Server` / `Manage Roles` — out of scope; bot only reads roles, never assigns them
+- ❌ `Kick Members` / `Ban Members` / `Manage Server` — outside the integration; incident access uses channel overwrites and does not assign guild roles
 - ❌ All Voice permissions — bot posts in text channels only
 - ❌ `Mention Everyone` — match-channel posts do not @everyone
 - ❌ `Use External Emojis` — emoji resolution uses only the configured guild's custom emojis (via `DiscordEmojiCache`)
@@ -1109,6 +1110,20 @@ Messages in Threads for the relevant text/thread destinations, plus the permissi
 post in the selected forum. Confirm current channel overwrites and required forum tags. The sender
 checks the actual destination and audience before each detailed post and fails closed when it
 cannot prove them. A changed configuration cannot silently redirect an existing captured case.
+
+Stewards do not need match-channel access before incidents are disclosed. For an actual report
+processed after cutoff, the sender checks every configured staff role before posting the public
+starter or thread content. It grants missing View Channel, Read Message History and Send Messages
+in Threads on that match channel only. It preserves unrelated allow/deny bits and other overwrites;
+it does not grant channel, role or thread management to staff. If access is already sufficient,
+no overwrite is written. The bot additionally needs Manage Roles to make a missing grant.
+
+Each changed role is read back before public posting. A rejected or unverified grant stops disclosure
+and remains visible in delivery status; retry uses fresh permissions and keeps completed grants.
+Ambiguous permission responses are not blindly replayed. Remote reconciliation verifies without
+changing access. Report submission, an open window and matches without reports do not grant access.
+The Discord overwrite endpoint replaces that one role's bitfield, so avoid editing the same staff
+overwrite manually while disclosure is running. Staff access remains after disclosure.
 
 At cutoff, only the final active revision is captured. Public discussion identifies the reporting
 team or shared organization and includes involved drivers, replay notation, description and evidence
