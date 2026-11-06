@@ -16,18 +16,31 @@ public final class RaceTyreFormChoices {
                                String available, String mandatory) {
         boolean sports = profile == LobbyRulesProfile.CTC_2027 && selection != null && selection.category() && selection.frozen()
                 && selection.entries().stream().anyMatch(entry -> entry.id().equals(entryId) && entry.oneMakeCarId() != null);
-        var usable = Arrays.stream(PickTyre.values()).filter(tyre -> tyre.getFamily() == PickTyreFamily.RACING || sports).toList();
-        var required = usable.stream().filter(tyre -> !tyre.isWet()).toList();
+        var usable = Arrays.stream(PickTyre.values()).filter(tyre -> !tyre.isWet())
+                .filter(tyre -> tyre.getFamily() == PickTyreFamily.RACING || sports).toList();
         var selected = state(available, false, usable);
+        var required = usable.stream().filter(tyre -> selected.codes().contains(tyre.name())).toList();
         var selectedRequired = state(mandatory, true, required);
         return new Options(usable, required, selected.codes(), selectedRequired.codes(), selected.retained(), selectedRequired.retained());
+    }
+
+    public static Options fromPick(LobbyRulesProfile profile, RaceService.CarSelectionForm selection, UUID entryId,
+                                    List<PickTyre> available, List<PickTyre> mandatory) {
+        return from(profile, selection, entryId, text(available), text(mandatory));
+    }
+
+    private static String text(List<PickTyre> tyres) {
+        return tyres == null ? null : tyres.stream().map(tyre -> tyre == null ? "" : tyre.name()).collect(Collectors.joining(","));
     }
 
     private static Selection state(String text, boolean mandatory, List<PickTyre> allowed) {
         try {
             var parsed = PickTyreText.read(text, mandatory);
-            if (parsed.isPresent() && allowed.containsAll(parsed.get())) {
-                var codes = parsed.get().stream().map(Enum::name).collect(Collectors.toUnmodifiableSet());
+            if (parsed.isPresent()) {
+                var visible = parsed.get().stream().filter(tyre -> mandatory || !tyre.isWet()).toList();
+                if (!mandatory && !parsed.get().isEmpty() && visible.isEmpty()) return new Selection(Set.of(), text);
+                if (!allowed.containsAll(visible)) return new Selection(Set.of(), text);
+                var codes = visible.stream().map(Enum::name).collect(Collectors.toUnmodifiableSet());
                 return new Selection(mandatory && codes.isEmpty() ? Set.of("None") : codes, null);
             }
         } catch (BusinessRuleException invalid) {

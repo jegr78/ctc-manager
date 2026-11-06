@@ -53,7 +53,7 @@ The active season is unique. Deactivate the current season before activating ano
 - **Confidential team picks.** Private Discord dialogs, immutable history and management review keep approval separate from explicit publication. The Gateway defaults off and seasons opt in individually; use the [operator rollout checklist](docs/operations/discord-integration.md#operator-rollout-checklist). Current backups preserve bindings, private history and confirmed field masks, with the documented defaults for supported earlier schemas.
 - **Discord Integration** — Per-match Discord channels with 11 structured posts (team cards, settings, lineups, schedule, results, match preview, matchday overview, power rankings, standings), forum-thread linking for race-results + standings, auto-edit on schedule/preview changes, pre-flight gates and stale-detection signals. See [Discord Integration wiki page](../../wiki/Discord-Integration) and [`docs/operations/discord-integration.md`](docs/operations/discord-integration.md).
 - **Private team channels** — Configure exact season/team/channel bindings and inspect outgoing Gateway health under Discord Config → Private team picks. Current private-channel access controls team authority. Command registration is an explicit management action, and the consumer defaults off until the operator enables it.
-- **Private picks dialogs** — The `/picks` workflow offers home-race selection, searchable local car/track catalogs and staged entry of every race setup value. Review the full summary before confirming. Authorized channel members can retrieve the latest saved revision; unfinished drafts expire after 30 minutes and never replace it. Collection uses the explicit Gateway and season opt-ins.
+- **Private picks dialogs** — The `/picks` workflow offers home-race selection, searchable track catalogs and category-first vehicle selection. Each catalog page has at most 25 choices. Explicit One-Makes resolve their fixed car; categories show their eligible members. Replace picks prefills the latest saved values. Race setup and dependent mandatory-tyre choices use separate steps. Review the full summary before confirming. Authorized channel members can retrieve the latest saved revision; unfinished drafts expire after 30 minutes and never replace it. Collection uses the explicit Gateway and season opt-ins.
 - **Picks management review** — Review exact revisions and their history from race or matchday workspaces. Open missing submissions or return corrections without a new deadline, close team editing, and approve complete picks atomically. Differing internal settings require explicit replacement consent. Later corrections retain the approved revision and team lock; publication remains separate.
 - **Pick publication** — Existing settings, lobby and explicit preview controls capture exact approved content. Public pages show only confirmed disclosed fields; lobby-only output keeps the car withheld. Later edits remain private. Season opt-in reviews existing settings explicitly, and unconfirmed Discord deliveries have a native verification/retirement screen.
 - **Discord Role Selection** — A labeled native selection works without JavaScript. Optional search filters roles by name or ID, preserves the selected role and retains saved IDs missing from the cache.
@@ -127,13 +127,15 @@ mixed definitions and inconsistent One-Make snapshots before any database wipe.
 ## Tyre selections
 
 Each race uses either Racing or Sports tyres. Both offer Hard, Medium and Soft. Racing also offers
-Intermediate and Wet as available compounds; neither can be mandatory. Mandatory compounds may be
+Intermediate and Wet automatically whenever Racing is selected; neither can be deselected or mandatory. Mandatory compounds may be
 empty and otherwise must be dry members of the available selection. Sports requires the CTC 2027
 rules profile and a frozen, explicitly defined One-Make entry with its concrete car. A category
 with one member remains a category. Racing stays available for One-Makes.
 
 Native race forms, the private pick wizard and management corrections enforce the same policy.
-Select compounds from one family and refresh choices after changing a pool entry. Saving does not
+Select dry compounds from one family. Mandatory choices follow the selected available dry compounds.
+The private wizard asks for mandatory tyres afterwards; native forms update them immediately with
+JavaScript or through **Update mandatory choices** without it. Refresh after changing a pool entry. Saving does not
 publish settings. Lobby graphics show the actual family; custom lobby templates can use
 `v.tyreFamily`, and settings templates can use `tyreFamily`. Existing compound-text variables retain
 their saved strings. Withheld public fields remain withheld.

@@ -786,9 +786,14 @@ An approved or closed target offers viewing without team editing.
 
 Start a new entry or replacement and choose a track and car from the target season. Search or
 page through large catalogs. Category seasons use the existing frozen entry/member policy.
-Complete the race-values, fuel/tyres and time/weather forms, opening each from its private button.
+Choose the season category or One-Make before its cars. Explicit One-Makes resolve their fixed car.
+Catalogs have search and pages of at most 25 options. Replacement prefills the latest saved values
+and opens the page containing the saved choice. Complete race values and tyre family, fuel and
+available dry compounds, mandatory tyres, then time/weather, opening each form from its private button.
+Mandatory choices contain only the selected available dry compounds and None. Racing automatically
+includes Intermediate and Wet, which cannot be deselected or mandatory.
 Equal Conditions is distinct from 0x; Default fuel and None mandatory tyres are explicit choices.
-Review all 13 values, then select **Confirm submission**. Only a committed transaction produces
+Review the complete setup, then select **Confirm submission**. Only a committed transaction produces
 a saved receipt. A newer team revision rejects an older draft instead of overwriting it.
 
 An unfinished draft belongs to its invoking user and channel and expires 30 minutes after entry.

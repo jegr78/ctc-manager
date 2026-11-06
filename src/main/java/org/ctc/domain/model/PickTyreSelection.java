@@ -1,12 +1,28 @@
 package org.ctc.domain.model;
 
 import java.util.Objects;
+import java.util.EnumSet;
 import java.util.Set;
 import org.ctc.domain.exception.BusinessRuleException;
 
 /** Complete selection validation; partial public projections intentionally do not call this. */
 public final class PickTyreSelection {
     private PickTyreSelection() { }
+
+    /** New user input only; historical payloads retain their original compound sets. */
+    public static Set<PickTyre> withAutomaticWetTyres(LobbyRulesProfile profile, Set<PickTyre> selected) {
+        if (selected == null) throw new BusinessRuleException("Pick requires a non-empty available tyre set");
+        require(profile, selected, Set.of());
+        if (selected.stream().allMatch(PickTyre::isWet)) {
+            throw new BusinessRuleException("Choose at least one available dry tyre compound");
+        }
+        var available = EnumSet.copyOf(selected);
+        if (available.iterator().next().getFamily() == PickTyreFamily.RACING) {
+            available.add(PickTyre.I);
+            available.add(PickTyre.W);
+        }
+        return Set.copyOf(available);
+    }
 
     public static PickTyreFamily require(LobbyRulesProfile profile, Set<PickTyre> available, Set<PickTyre> mandatory) {
         if (available == null || available.isEmpty() || available.stream().anyMatch(Objects::isNull)) {

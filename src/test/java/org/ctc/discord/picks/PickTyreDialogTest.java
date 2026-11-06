@@ -18,45 +18,69 @@ import static org.assertj.core.api.Assertions.*;
 
 class PickTyreDialogTest {
     @ParameterizedTest
-    @CsvSource({"CTC_2027,true,8,7", "CTC_2027,false,5,4", "LEGACY,true,5,4"})
-    void givenSavedEntryAndProfile_whenOpeningFuelModal_thenOfferPermittedFamiliesAndOnlyDryMandatory(
-            LobbyRulesProfile profile, boolean oneMake, int availableCount, int mandatoryCount) {
+    @CsvSource({"CTC_2027,true", "CTC_2027,false", "LEGACY,true"})
+    void givenSavedEntryAndProfile_whenChoosingFamily_thenOfferSportsOnlyFor2027OneMake(
+            LobbyRulesProfile profile, boolean oneMake) {
         // given / when
-        var modal = PickInteractionViews.modal("test", "fuel", profile, oneMake);
-        var available = selection(modal, "available"); var mandatory = selection(modal, "mandatory");
+        var rules = PickInteractionViews.modal("test", "rules", profile, oneMake);
+        var fuel = PickInteractionViews.modal("test", "fuel", profile, oneMake);
         // then
-        assertThat(modal.fields()).hasSize(4);
-        assertThat(available.options()).hasSize(availableCount);
-        assertThat(available.maxValues()).isEqualTo(5);
-        assertThat(mandatory.options()).hasSize(mandatoryCount);
-        assertThat(mandatory.options()).extracting(PickGatewayModal.Option::value).doesNotContain("I", "W");
-        assertThat(mandatory.maxValues()).isEqualTo(3);
+        assertThat(rules.fields()).hasSize(profile == LobbyRulesProfile.CTC_2027 && oneMake ? 5 : 4);
+        assertThat(fuel.fields()).hasSize(3);
+        assertThat(selection(fuel, "available").options()).extracting(PickGatewayModal.Option::value)
+                .containsExactly("RS", "RM", "RH");
+        assertThat(selection(fuel, "available").maxValues()).isEqualTo(3);
         if (profile == LobbyRulesProfile.CTC_2027 && oneMake) {
-            assertThat(available.options()).extracting(PickGatewayModal.Option::value).contains("SS", "SM", "SH");
-        } else assertThat(available.options()).extracting(PickGatewayModal.Option::value).doesNotContain("SS", "SM", "SH");
-    }
-
-    @Test
-    void givenFiveRacingCompounds_whenValidatingFuel_thenAcceptWetAvailabilityWithDryMandatory() {
-        // given / when / then
-        assertThatCode(() -> PickInteractionViews.validateStage("fuel", fuel("RS,RM,RH,I,W", "RM"), LobbyRulesProfile.CTC_2027, false))
-                .doesNotThrowAnyException();
-    }
-
-    @Test
-    void givenSaved2027OneMake_whenValidatingSports_thenAcceptItsSingleFamily() {
-        // given / when / then
-        assertThatCode(() -> PickInteractionViews.validateStage("fuel", fuel("SS,SM,SH", "SM"), LobbyRulesProfile.CTC_2027, true))
-                .doesNotThrowAnyException();
+            assertThat(selection(rules, "family").options()).extracting(PickGatewayModal.Option::value)
+                    .containsExactly("RACING", "SPORTS");
+        } else assertThat(rules.fields()).extracting(PickGatewayModal.Field::id).doesNotContain("family");
     }
 
     @ParameterizedTest
-    @CsvSource({"'RS,I',I,CTC_2027,true", "'RS,W',W,CTC_2027,true", "'RS,SS',None,CTC_2027,true",
-            "SS,None,CTC_2027,false", "SS,None,LEGACY,true", "'SS,SM',RS,CTC_2027,true", "'RS,RS',None,CTC_2027,true"})
-    void givenInvalidOrUnpermittedTyres_whenValidatingFuel_thenRejectBeforeAdvancingTheDraft(
-            String available, String mandatory, LobbyRulesProfile profile, boolean oneMake) {
+    @CsvSource({"RACING,'RS,RH',RH", "SPORTS,'SS,SH',SH"})
+    void givenFamilyAndAvailableDryCompounds_whenOpeningMandatory_thenOfferOnlyTheAvailableSubset(
+            String family, String available, String mandatory) {
+        // given
+        var context = fuel(available);
+        context.put("family", List.of(family)); context.put("mandatory", List.of(mandatory));
+        // when
+        var modal = PickInteractionViews.modal("test", "mandatory", LobbyRulesProfile.CTC_2027, true, context);
+        // then
+        assertThat(selection(modal, "mandatory").options()).extracting(PickGatewayModal.Option::value)
+                .containsExactly("None", available.split(",")[0], available.split(",")[1]);
+        assertThat(selection(modal, "mandatory").options().stream().filter(PickGatewayModal.Option::defaultSelected))
+                .extracting(PickGatewayModal.Option::value).containsExactly(mandatory);
+        assertThatCode(() -> PickInteractionViews.validateStage("fuel", fuel(available), LobbyRulesProfile.CTC_2027, true, context))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> PickInteractionViews.validateStage("mandatory", Map.of("mandatory", List.of(mandatory)),
+                LobbyRulesProfile.CTC_2027, true, context)).doesNotThrowAnyException();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"RACING,SS", "SPORTS,RS"})
+    void givenEligibleOneMakeButForgedCompoundFamily_whenSubmittingFuel_thenRequireThePreviouslyChosenFamily(String family, String available) {
         // given / when / then
-        assertThatThrownBy(() -> PickInteractionViews.validateStage("fuel", fuel(available, mandatory), profile, oneMake))
+        assertThatThrownBy(() -> PickInteractionViews.validateStage("fuel", fuel(available), LobbyRulesProfile.CTC_2027,
+                true, Map.of("family", List.of(family)))).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"'RS,I',CTC_2027,true", "'RS,W',CTC_2027,true", "'RS,SS',CTC_2027,true",
+            "SS,CTC_2027,false", "SS,LEGACY,true", "'RS,RS',CTC_2027,true"})
+    void givenInvalidOrUnpermittedTyres_whenValidatingFuel_thenRejectBeforeAdvancingTheDraft(
+            String available, LobbyRulesProfile profile, boolean oneMake) {
+        // given / when / then
+        assertThatThrownBy(() -> PickInteractionViews.validateStage("fuel", fuel(available), profile, oneMake))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"'RS,RH',I", "'RS,RH',W", "'RS,RH',SS", "'RS,RH',RM", "'RS,RH','None,RS'", "'RS,RH','RS,RS'"})
+    void givenForgedMandatorySelection_whenValidating_thenRejectWetOtherFamilyMissingOrDuplicateCompounds(
+            String available, String mandatory) {
+        // given / when / then
+        assertThatThrownBy(() -> PickInteractionViews.validateStage("mandatory",
+                Map.of("mandatory", Arrays.asList(mandatory.split(","))), LobbyRulesProfile.CTC_2027, true, fuel(available)))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -80,9 +104,9 @@ class PickTyreDialogTest {
         return (PickGatewayModal.Selection) modal.fields().stream().filter(value -> value.id().equals(field)).findFirst().orElseThrow();
     }
 
-    private static Map<String, List<String>> fuel(String available, String mandatory) {
+    private static Map<String, List<String>> fuel(String available) {
         var values = new HashMap<>(PickInteractionViewsTest.valid("fuel"));
-        values.put("available", Arrays.asList(available.split(","))); values.put("mandatory", Arrays.asList(mandatory.split(",")));
+        values.put("available", Arrays.asList(available.split(",")));
         return values;
     }
 
@@ -92,7 +116,8 @@ class PickTyreDialogTest {
         session.car = new Choice(UUID.randomUUID(), UUID.randomUUID(), "Test saved entry", oneMake);
         session.track = new Choice(UUID.randomUUID(), null, "Test track");
         session.fields.putAll(PickInteractionViewsTest.valid("rules"));
-        session.fields.putAll(fuel("SS,SM,SH", "SM"));
+        session.fields.putAll(fuel("SS,SM,SH"));
+        session.fields.put("family", List.of("SPORTS")); session.fields.put("mandatory", List.of("SM"));
         session.fields.putAll(PickInteractionViewsTest.valid("time"));
         session.fields.put("start", List.of("GRID_FALSE_START")); session.fields.put("slipstream", List.of("REAL"));
         return session;

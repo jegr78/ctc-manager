@@ -82,7 +82,8 @@ public class MatchdayPickController {
         model.addAttribute("choices", choices);
         model.addAttribute("fuels", org.ctc.domain.model.PickInitialFuel.values());
         var profile = form.getLobbyRulesProfile();
-        var tyres = org.ctc.domain.service.RaceTyreFormChoices.from(profile, choices.carSelection(), form.getCarPoolEntryId(), null, null);
+        var tyres = org.ctc.domain.service.RaceTyreFormChoices.fromPick(profile, choices.carSelection(), form.getCarPoolEntryId(),
+                form.getAvailableTyres(), form.getMandatoryTyres());
         model.addAttribute("availableTyreChoices", tyres.available());
         model.addAttribute("mandatoryTyreChoices", tyres.mandatory());
         model.addAttribute("startTypes", profile == null ? java.util.List.of() : profile.getStartTypes());

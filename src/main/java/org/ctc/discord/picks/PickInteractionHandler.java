@@ -37,7 +37,7 @@ public class PickInteractionHandler implements PickGatewayInteractionHandler {
                     String stage = action.name().substring(5);
                     session.clearActions();
                     reply.openModal(modal(session.action(stage, MODAL), stage, session.lobbyRulesProfile,
-                            session.car != null && session.car.oneMake()));
+                            session.car != null && session.car.oneMake(), session.fields));
                     return true;
                 });
                 if (opened) return;
@@ -89,40 +89,80 @@ public class PickInteractionHandler implements PickGatewayInteractionHandler {
             return;
         }
         if (!view.target().editable()) { showStatus(session, view, reply); return; }
+        if (name.equals("entries")) {
+            catalog(session, "entry", entries(view.cars()), "", -1, reply); return;
+        }
         if (name.equals("edit")) {
             session.version = view.target().version();
             session.lobbyRulesProfile = view.lobbyRulesProfile();
-            session.fields.clear(); session.track = null; session.car = null; session.payload = null;
-            catalog(session, "track", view.tracks(), "", 0, reply); return;
+            var current = view.payload();
+            session.entryId = current == null ? null : current.carPoolEntryId();
+            session.fields.clear(); session.fields.putAll(draftFields(current));
+            session.track = current == null ? null : view.tracks().stream()
+                    .filter(choice -> choice.id().equals(current.trackId())).findFirst().orElse(null);
+            session.car = current == null ? null : view.cars().stream()
+                    .filter(choice -> choice.id().equals(current.carId())
+                            && java.util.Objects.equals(choice.entryId(), current.carPoolEntryId()))
+                    .findFirst().orElse(null);
+            session.payload = null;
+            catalog(session, "track", view.tracks(), "", -1, reply); return;
         }
         if (name.startsWith("page-")) {
             String type = name.substring(5);
-            catalog(session, type, type.equals("track") ? view.tracks() : view.cars(), action.query(), action.page(), reply); return;
+            catalog(session, type, catalogChoices(session, type, view), action.query(), action.page(), reply); return;
         }
-        if (name.equals("track") || name.equals("car")) {
-            String value = one(event.values(), "selection");
+        if (name.equals("track") || name.equals("entry") || name.equals("car")) {
+            String value = event.kind() == BUTTON && action.choices().size() == 1
+                    ? action.choices().getFirst().id().toString() : one(event.values(), "selection");
             Choice chosen = action.choices().stream().filter(choice -> choice.id().toString().equals(value)).findFirst()
                     .orElseThrow(() -> new BusinessRuleException("Invalid choice"));
-            var current = name.equals("track") ? view.tracks() : view.cars();
+            var current = catalogChoices(session, name, view);
             if (!current.contains(chosen)) throw new BusinessRuleException("Catalog changed");
-            if (name.equals("track")) { session.track = chosen; catalog(session, "car", view.cars(), "", 0, reply); }
-            else { session.car = chosen; next(session, "rules", "Enter race values: laps, tyre wear, fuel consumption and refuelling speed.", reply); }
+            if (name.equals("track")) {
+                session.track = chosen;
+                String next = entries(view.cars()).isEmpty() ? "car" : "entry";
+                catalog(session, next, catalogChoices(session, next, view), "", -1, reply);
+            } else if (name.equals("entry")) {
+                session.entryId = chosen.id();
+                if (session.car != null && !chosen.id().equals(session.car.entryId())) session.car = null;
+                var cars = catalogChoices(session, "car", view);
+                if (chosen.oneMake()) {
+                    if (cars.size() != 1 || !cars.getFirst().oneMake()) throw new BusinessRuleException("One-Make catalog changed");
+                    selectCar(session, cars.getFirst(), reply);
+                } else {
+                    catalog(session, "car", cars, "", -1, reply);
+                }
+            } else {
+                selectCar(session, chosen, reply);
+            }
             return;
         }
+        boolean oneMake = session.car != null && session.car.oneMake();
         try {
-            validateStage(name, event.values(), session.lobbyRulesProfile, session.car != null && session.car.oneMake());
+            validateStage(name, event.values(), session.lobbyRulesProfile, oneMake, session.fields);
         } catch (IllegalArgumentException invalid) {
             next(session, name, "Check all required values and allowed ranges. Mandatory tyres must be available; choose None on its own.", reply); return;
         }
         if (name.startsWith("search-")) {
             String type = name.substring(7);
             String query = event.values().getOrDefault("query", List.of("")).getFirst();
-            catalog(session, type, type.equals("track") ? view.tracks() : view.cars(), query, 0, reply); return;
+            catalog(session, type, catalogChoices(session, type, view), query, 0, reply); return;
+        }
+        if (name.equals("rules") && family(session.lobbyRulesProfile, oneMake, session.fields)
+                != family(session.lobbyRulesProfile, oneMake, event.values())) {
+            session.fields.remove("available"); session.fields.put("mandatory", List.of("None"));
         }
         session.fields.putAll(event.values());
+        if (name.equals("fuel")) {
+            var mandatory = session.fields.getOrDefault("mandatory", List.of("None"));
+            if (!mandatory.equals(List.of("None")) && !session.fields.get("available").containsAll(mandatory)) {
+                session.fields.put("mandatory", List.of("None"));
+            }
+        }
         switch (name) {
-            case "rules" -> next(session, "fuel", "Choose initial fuel, stops and tyre sets.", reply);
-            case "fuel" -> next(session, "time", "Choose time progression and enter weather and time of day.", reply);
+            case "rules" -> next(session, "fuel", "Choose initial fuel, stops and available dry tyres. Racing always includes Intermediate and Wet.", reply);
+            case "fuel" -> next(session, "mandatory", "Choose None or mandatory compounds from your available dry tyres.", reply);
+            case "mandatory" -> next(session, "time", "Choose time progression and enter weather and time of day.", reply);
             case "time" -> {
                 session.payload = payload(session);
                 session.clearActions();
@@ -132,6 +172,39 @@ public class PickInteractionHandler implements PickGatewayInteractionHandler {
             }
             default -> throw new BusinessRuleException("Invalid dialog stage");
         }
+    }
+
+    private void selectCar(Session session, Choice chosen, PickGatewayResponse.Continuation reply) {
+        session.car = chosen;
+        if (!sportsAllowed(session.lobbyRulesProfile, chosen.oneMake())
+                && session.fields.getOrDefault("family", List.of("RACING")).equals(List.of("SPORTS"))) {
+            session.fields.put("family", List.of("RACING"));
+            session.fields.remove("available"); session.fields.put("mandatory", List.of("None"));
+        }
+        next(session, "rules", "Car: " + escape(chosen.label()) + "\nEnter race values and choose the tyre family where available.", reply);
+    }
+
+    private static List<Choice> catalogChoices(Session session, String type, PickTeamView view) {
+        return switch (type) {
+            case "track" -> view.tracks();
+            case "entry" -> entries(view.cars());
+            case "car" -> view.cars().stream().filter(choice -> session.entryId == null
+                    ? choice.entryId() == null : session.entryId.equals(choice.entryId())).toList();
+            default -> throw new BusinessRuleException("Invalid catalog");
+        };
+    }
+
+    private static List<Choice> entries(List<Choice> cars) {
+        var entries = new java.util.LinkedHashMap<java.util.UUID, Choice>();
+        for (var car : cars) {
+            if (car.entryId() == null) continue;
+            if (car.entryLabel() == null || car.entryLabel().isBlank()) throw new BusinessRuleException("Pool entry label is unavailable");
+            var entry = new Choice(car.entryId(), car.entryId(), (car.oneMake() ? "One-Make: " : "Category: ") + car.entryLabel(),
+                    car.oneMake(), car.entryLabel());
+            var previous = entries.putIfAbsent(entry.id(), entry);
+            if (previous != null && !previous.equals(entry)) throw new BusinessRuleException("Pool entry catalog changed");
+        }
+        return entries.values().stream().sorted(java.util.Comparator.comparing(Choice::label).thenComparing(Choice::id)).toList();
     }
 
     private void showStatus(Session session, PickTeamView view, PickGatewayResponse.Continuation reply) {
@@ -159,16 +232,32 @@ public class PickInteractionHandler implements PickGatewayInteractionHandler {
 
     private void catalog(Session session, String type, List<Choice> choices, String query, int requested, PickGatewayResponse.Continuation reply) {
         session.clearActions();
-        var page = PickCatalogSelector.page(choices, query, requested);
+        var selected = switch (type) {
+            case "track" -> session.track;
+            case "car" -> session.car;
+            case "entry" -> choices.stream().filter(choice -> choice.id().equals(session.entryId)).findFirst().orElse(null);
+            default -> throw new BusinessRuleException("Invalid catalog");
+        };
+        var page = PickCatalogSelector.page(choices, query, requested < 0 ? PickCatalogSelector.pageContaining(choices, query, selected) : requested);
+        String caption = type.equals("entry") ? "category or One-Make" : type;
         var buttons = new ArrayList<PickGatewayMessage.Button>();
         if (page.page() > 0) buttons.add(new PickGatewayMessage.Button(session.action(new Action("page-" + type, BUTTON, List.of(), List.of(), page.page() - 1, query)), "Previous"));
         if (page.page() + 1 < page.pages()) buttons.add(new PickGatewayMessage.Button(session.action(new Action("page-" + type, BUTTON, List.of(), List.of(), page.page() + 1, query)), "Next"));
-        buttons.add(button(session, "open-search-" + type, "Search " + type + " catalog"));
+        buttons.add(button(session, "open-search-" + type, type.equals("entry") ? "Search categories and One-Makes" : "Search " + type + " catalog"));
+        if (selected != null && choices.contains(selected)) {
+            buttons.add(new PickGatewayMessage.Button(session.action(new Action(type, BUTTON, List.of(selected), List.of(), 0, "")),
+                    "Keep selected " + caption));
+        }
+        if (type.equals("car") && session.entryId != null) {
+            buttons.add(button(session, "entries", "Change category or One-Make"));
+        }
         var selection = page.choices().isEmpty() ? null : new PickGatewayMessage.Selection(
-                session.action(new Action(type, SELECT, page.choices(), List.of(), page.page(), query)), "Choose " + type,
-                page.choices().stream().map(choice -> new PickGatewayModal.Option(optionLabel(choice.label()), choice.id().toString())).toList());
-        send(reply, escape(session.label) + "\nChoose " + type + ". Page " + (page.page() + 1) + "/" + page.pages()
-                + ", " + page.count() + " matching choices.\nSearch: " + escape(query), buttons, selection);
+                session.action(new Action(type, SELECT, page.choices(), List.of(), page.page(), query)), "Choose " + caption,
+                page.choices().stream().map(choice -> new PickGatewayModal.Option(optionLabel(choice.label()), choice.id().toString(),
+                        choice.equals(selected))).toList());
+        send(reply, escape(session.label) + "\nChoose " + caption + ". Page " + (page.page() + 1) + "/" + page.pages()
+                + ", " + page.count() + " matching choices.\nSearch: " + escape(query)
+                + (selected != null && choices.contains(selected) ? "\nSelected: " + escape(selected.label()) : ""), buttons, selection);
     }
 
     private void next(Session session, String stage, String message, PickGatewayResponse.Continuation reply) {

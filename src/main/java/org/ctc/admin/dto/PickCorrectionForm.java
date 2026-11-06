@@ -39,7 +39,8 @@ public class PickCorrectionForm {
     public PickPayload payload() {
         return new PickPayload(trackId, carId, carPoolEntryId, laps, tyreWear, fuelConsumption, refuelingSpeed,
                 initialFuel, requiredPitStops, timeProgressionMode, timeProgressionMultiplier, weather, timeOfDay,
-                unique(availableTyres), unique(mandatoryTyres), lobbyRulesProfile, startType, slipstream);
+                PickTyreSelection.withAutomaticWetTyres(lobbyRulesProfile, unique(availableTyres)),
+                unique(mandatoryTyres), lobbyRulesProfile, startType, slipstream);
     }
 
     private static Set<PickTyre> unique(List<PickTyre> values) {

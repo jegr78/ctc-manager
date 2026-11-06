@@ -30,9 +30,26 @@ final class NativeTyreInputs {
             return new Values(null, null);
         }
         PickTyreSelection.require(profile, selected.get(), required.get());
-        String resolvedAvailable = preserve(saved == null ? null : saved.getAvailableTyres(), selected.get(), false);
+        String resolvedAvailable = saved != null && sameContext && sameDrySelection(saved.getAvailableTyres(), selected.get())
+                ? saved.getAvailableTyres()
+                : preserve(null, PickTyreSelection.withAutomaticWetTyres(profile, selected.get()), false);
         String resolvedMandatory = preserve(saved == null ? null : saved.getMandatoryTyres(), required.get(), true);
         return new Values(resolvedAvailable, resolvedMandatory);
+    }
+
+    private static boolean sameDrySelection(String saved, Set<PickTyre> submitted) {
+        try {
+            var original = PickTyreText.read(saved, false);
+            if (original.isEmpty() || original.get().isEmpty()) return false;
+            return original.get().stream().allMatch(tyre -> tyre.getFamily() == submitted.iterator().next().getFamily())
+                    && dry(original.get()).equals(dry(submitted));
+        } catch (BusinessRuleException malformedHistory) {
+            return false;
+        }
+    }
+
+    private static Set<PickTyre> dry(Set<PickTyre> tyres) {
+        return tyres.stream().filter(tyre -> !tyre.isWet()).collect(Collectors.toUnmodifiableSet());
     }
 
     private static String preserve(String saved, Set<PickTyre> submitted, boolean mandatory) {

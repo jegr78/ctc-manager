@@ -268,6 +268,8 @@ class CategoryPoolReleaseE2ETest extends PlaywrightConfig {
                 Map.entry("initialFuel", "Full"), Map.entry("timeOfDay", "Day"), Map.entry("weather", "Clear")).entrySet())
             page.locator("#" + field.getKey()).fill(field.getValue());
         page.locator("#availableTyres").selectOption(new String[]{"RS", "RM"});
+        if (!javaScript) page.getByText("Update mandatory choices", new Page.GetByTextOptions().setExact(true)).click();
+        assertThat(page.locator("#mandatoryTyres option")).hasCount(3);
         page.locator("#mandatoryTyres").selectOption("RM");
         page.locator("#timeProgressionMode").selectOption("MULTIPLIER");
         page.locator("#timeProgressionMultiplier").fill("0");

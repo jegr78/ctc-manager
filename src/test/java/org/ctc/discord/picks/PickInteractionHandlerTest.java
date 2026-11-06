@@ -18,19 +18,200 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class PickInteractionHandlerTest {
+    @Test
+    void givenSeveralCarsPerSeasonEntry_whenChoosingACar_thenSelectTheEntryBeforeSeeingOnlyItsCars() {
+        // given
+        UUID category = UUID.randomUUID(), oneMake = UUID.randomUUID(), secondCar = UUID.randomUUID(), otherCar = UUID.randomUUID();
+        view = new PickTeamView(target, null, null, null, null, view.deadline(), false, false, null,
+                List.of(new PickTeamView.Choice(car, category, "Test model one", false, "Test category"),
+                        new PickTeamView.Choice(secondCar, category, "Test model two", false, "Test category"),
+                        new PickTeamView.Choice(otherCar, oneMake, "Test One-Make", true, "Test One-Make")), view.tracks(), LobbyRulesProfile.CTC_2027);
+        // when
+        command(); choose(); click("Enter picks"); select(track);
+        // then
+        assertThat(response.last().selection().options()).extracting(PickGatewayModal.Option::value)
+                .containsExactlyInAnyOrder(category.toString(), oneMake.toString());
+        select(category);
+        assertThat(response.last().selection().options()).extracting(PickGatewayModal.Option::value)
+                .containsExactlyInAnyOrder(car.toString(), secondCar.toString());
+        verifyNoInteractions(submissions);
+    }
+
+    @Test
+    void givenSavedCategoryCarAndCompleteRevision_whenKeepingEveryDefault_thenSubmitTheSameValuesOnlyAfterConfirming() {
+        // given
+        UUID entry = UUID.randomUUID();
+        var saved = new PickPayload(track, car, entry, 34, 5, 4, 8, PickInitialFuel.FUEL_60, 2,
+                TimeProgressionMode.MULTIPLIER, 3, "S02; R03", "Evening",
+                Set.of(PickTyre.RM, PickTyre.RH, PickTyre.I, PickTyre.W), Set.of(PickTyre.RH),
+                LobbyRulesProfile.CTC_2027, RaceStartType.ROLLING, RaceSlipstream.WEAK);
+        target = new HomeRaceTarget(race, target.label(), PickState.SUBMITTED, 7, true, "Before the deadline");
+        var cars = java.util.stream.IntStream.range(0, 62).mapToObj(index -> new PickTeamView.Choice(
+                index == 47 ? car : UUID.randomUUID(), entry, "Test model %02d".formatted(index), false, "Test category")).toList();
+        view = new PickTeamView(target, saved, new SubmissionReceipt(race, UUID.randomUUID(), 2, 7, clock.instant(), "300"),
+                "Test model 47", "Test track", view.deadline(), false, false, null, cars, view.tracks(), LobbyRulesProfile.CTC_2027);
+        // when
+        command(); choose(); click("Replace picks"); click("Keep selected track");
+        assertThat(response.last().selection().options().stream().filter(PickGatewayModal.Option::defaultSelected))
+                .extracting(PickGatewayModal.Option::value).containsExactly(entry.toString());
+        click("Keep selected category or One-Make");
+        assertThat(response.last().content()).contains("Page 2/3", "Test model 47");
+        click("Keep selected car");
+        for (String stage : List.of("rules", "fuel", "mandatory", "time")) {
+            open("Open " + stage + " form");
+            var defaults = new HashMap<String, List<String>>();
+            for (var field : response.modal.fields()) {
+                if (field instanceof PickGatewayModal.Text text) defaults.put(text.id(), List.of(text.value()));
+                else if (field instanceof PickGatewayModal.Selection selection) {
+                    defaults.put(selection.id(), selection.options().stream().filter(PickGatewayModal.Option::defaultSelected)
+                            .map(PickGatewayModal.Option::value).toList());
+                }
+            }
+            submitModal(defaults);
+            verifyNoInteractions(submissions);
+        }
+        click("Confirm submission");
+        // then
+        verify(submissions).submit(eq(race), eq(7L), any(), eq(actor), eq(saved));
+    }
+
+    @Test
+    void givenSingletonCategory_whenChoosingIt_thenKeepTheCarStepAndDoNotGrantSportsPermission() {
+        // given
+        UUID entry = UUID.randomUUID();
+        view = new PickTeamView(target, null, null, null, null, view.deadline(), false, false, null,
+                List.of(new PickTeamView.Choice(car, entry, "Test single model", false, "Test singleton category")),
+                view.tracks(), LobbyRulesProfile.CTC_2027);
+        // when
+        command(); choose(); click("Enter picks"); select(track); select(entry);
+        // then
+        assertThat(response.last().selection().options()).extracting(PickGatewayModal.Option::value).containsExactly(car.toString());
+        select(car); open("Open rules form");
+        assertThat(response.modal.fields()).extracting(PickGatewayModal.Field::id).doesNotContain("family");
+        verifyNoInteractions(submissions);
+    }
+
+    @Test
+    void givenCategoryAndAnotherEntry_whenForgingAnotherEntryCar_thenRejectWithoutSaving() {
+        // given
+        UUID category = UUID.randomUUID(), other = UUID.randomUUID(), otherCar = UUID.randomUUID();
+        view = new PickTeamView(target, null, null, null, null, view.deadline(), false, false, null,
+                List.of(new PickTeamView.Choice(car, category, "Test selected model", false, "Test category"),
+                        new PickTeamView.Choice(otherCar, other, "Test other model", false, "Test other category")), view.tracks());
+        command(); choose(); click("Enter picks"); select(track); select(category);
+        String selection = response.last().selection().id();
+        // when
+        dispatch(PickGatewayInteraction.Kind.SELECT, selection, fields("selection", otherCar.toString()));
+        // then
+        assertThat(response.allText()).contains("unavailable"); verifyNoInteractions(submissions);
+    }
+
+    @Test
+    void givenSelectedCategoryCarWithdrawnAfterRendering_whenSelecting_thenRecheckCurrentEligibility() {
+        // given
+        UUID entry = UUID.randomUUID();
+        var oldCars = List.of(new PickTeamView.Choice(car, entry, "Test selected model", false, "Test category"));
+        view = new PickTeamView(target, null, null, null, null, view.deadline(), false, false, null, oldCars, view.tracks());
+        command(); choose(); click("Enter picks"); select(track); select(entry);
+        String selection = response.last().selection().id();
+        view = new PickTeamView(target, null, null, null, null, view.deadline(), false, false, null, List.of(), view.tracks());
+        // when
+        dispatch(PickGatewayInteraction.Kind.SELECT, selection, fields("selection", car.toString()));
+        // then
+        assertThat(response.allText()).contains("unavailable"); verifyNoInteractions(submissions);
+    }
+
+    @Test
+    void givenExplicitOneMakeWithConflictingMembers_whenSelectingIt_thenRejectInsteadOfChoosingAnArbitraryCar() {
+        // given
+        UUID entry = UUID.randomUUID();
+        view = new PickTeamView(target, null, null, null, null, view.deadline(), false, false, null,
+                List.of(new PickTeamView.Choice(car, entry, "Test first model", true, "Test One-Make"),
+                        new PickTeamView.Choice(UUID.randomUUID(), entry, "Test second model", true, "Test One-Make")), view.tracks());
+        command(); choose(); click("Enter picks"); select(track);
+        // when
+        select(entry);
+        // then
+        assertThat(response.allText()).contains("unavailable"); verifyNoInteractions(submissions);
+    }
+
+    @Test
+    void givenSportsRevision_whenChangingTheFamily_thenClearIncompatibleAvailableAndMandatoryDefaults() {
+        // given
+        UUID entry = UUID.randomUUID();
+        var saved = new PickPayload(track, car, entry, 12, 2, 3, 4, PickInitialFuel.FUEL_60, 1,
+                TimeProgressionMode.MULTIPLIER, 2, "S01", "Afternoon", Set.of(PickTyre.SS, PickTyre.SM), Set.of(PickTyre.SM),
+                LobbyRulesProfile.CTC_2027, RaceStartType.ROLLING, RaceSlipstream.WEAK);
+        target = new HomeRaceTarget(race, target.label(), PickState.SUBMITTED, 1, true, "Before the deadline");
+        view = new PickTeamView(target, saved, new SubmissionReceipt(race, UUID.randomUUID(), 1, 1, clock.instant(), "300"), "Test model", "Test track", view.deadline(), false, false, null,
+                List.of(new PickTeamView.Choice(car, entry, "Test model", true, "Test One-Make")), view.tracks(), LobbyRulesProfile.CTC_2027);
+        command(); choose(); click("Replace picks"); click("Keep selected track"); click("Keep selected category or One-Make");
+        open("Open rules form");
+        var changedRules = new HashMap<>(rules); changedRules.put("family", List.of("RACING"));
+        // when
+        submitModal(changedRules); open("Open fuel form");
+        // then
+        var available = (PickGatewayModal.Selection) response.modal.fields().stream().filter(field -> field.id().equals("available")).findFirst().orElseThrow();
+        assertThat(available.options()).extracting(PickGatewayModal.Option::value).containsExactly("RS", "RM", "RH");
+        assertThat(available.options()).noneMatch(PickGatewayModal.Option::defaultSelected);
+        submitModal(fuel); open("Open mandatory form");
+        var mandatory = (PickGatewayModal.Selection) response.modal.fields().getFirst();
+        assertThat(mandatory.options().stream().filter(PickGatewayModal.Option::defaultSelected))
+                .extracting(PickGatewayModal.Option::value).containsExactly("None");
+        verifyNoInteractions(submissions);
+    }
+
+    @Test
+    void givenSavedTrackOutsideFirstPage_whenReplacing_thenOpenItsPageWithTheSavedChoiceSelected() {
+        // given
+        target = new HomeRaceTarget(race, target.label(), PickState.SUBMITTED, 1, true, "Before the deadline");
+        var saved = view(payload(), new SubmissionReceipt(race, UUID.randomUUID(), 1, 1, clock.instant(), "300"), false, false, null);
+        var tracks = java.util.stream.IntStream.range(0, 130).mapToObj(i -> new PickTeamView.Choice(
+                i == 110 ? track : UUID.randomUUID(), null, "Test circuit %03d".formatted(i))).toList();
+        view = new PickTeamView(saved.target(), saved.payload(), saved.receipt(), saved.carLabel(), saved.trackLabel(), saved.deadline(),
+                false, false, null, saved.cars(), tracks);
+        // when
+        command(); choose(); click("Replace picks");
+        // then
+        assertThat(response.last().content()).contains("Page 5/6");
+        assertThat(response.last().selection().options().stream().filter(PickGatewayModal.Option::defaultSelected))
+                .extracting(PickGatewayModal.Option::value).containsExactly(track.toString());
+        verifyNoInteractions(submissions);
+    }
+
+    @Test
+    void givenPreviouslySubmittedValues_whenReplacing_thenPrefillExistingRulesWithoutSaving() {
+        // given
+        target = new HomeRaceTarget(race, target.label(), PickState.SUBMITTED, 1, true, "Before the deadline");
+        view = view(payload(), new SubmissionReceipt(race, UUID.randomUUID(), 1, 1, clock.instant(), "300"), false, false, null);
+        command(); choose(); click("Replace picks"); select(track); select(car);
+        // when
+        open("Open rules form");
+        // then
+        var values = response.modal.fields().stream().filter(PickGatewayModal.Text.class::isInstance)
+                .map(PickGatewayModal.Text.class::cast)
+                .collect(java.util.stream.Collectors.toMap(PickGatewayModal.Text::id, field -> String.valueOf(field.value())));
+        assertThat(values).containsEntry("laps", "12").containsEntry("wear", "2")
+                .containsEntry("consumption", "3").containsEntry("refuel", "4");
+        verifyNoInteractions(submissions);
+    }
+
     @ParameterizedTest
-    @CsvSource({"'SS,SM,SH',SM", "'RS,RM,RH,I,W',RM"})
+    @CsvSource({"'SS,SM,SH',SM", "'RS,RM,RH',RM"})
     void givenSaved2027OneMake_whenCompletingTheWizard_thenSubmitEveryCompoundOnlyAfterConfirmation(String available, String mandatory) {
         // given
         UUID entry = UUID.randomUUID();
         view = new PickTeamView(view.target(), null, null, view.carLabel(), view.trackLabel(), view.deadline(), false, false, null,
                 List.of(new PickTeamView.Choice(car, entry, "Test One-Make", true)), view.tracks(), LobbyRulesProfile.CTC_2027);
-        enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open fuel form");
+        enterCatalogs(); open("Open rules form");
+        var chosenRules = new HashMap<>(rules); chosenRules.put("family", List.of(available.startsWith("S") ? "SPORTS" : "RACING"));
+        submitModal(chosenRules); open("Open fuel form");
         var choices = (PickGatewayModal.Selection) response.modal.fields().stream().filter(f -> f.id().equals("available")).findFirst().orElseThrow();
-        assertThat(choices.options()).extracting(PickGatewayModal.Option::value).contains("SS", "SM", "SH", "I", "W");
-        var selected = new HashMap<>(fuel); selected.put("available", List.of(available.split(","))); selected.put("mandatory", List.of(mandatory));
+        assertThat(choices.options()).extracting(PickGatewayModal.Option::value)
+                .containsExactly(available.startsWith("S") ? new String[]{"SS", "SM", "SH"} : new String[]{"RS", "RM", "RH"});
+        var selected = new HashMap<>(fuel); selected.put("available", List.of(available.split(",")));
         // when
-        submitModal(selected); open("Open time form");
+        submitModal(selected); open("Open mandatory form"); submitModal(fields("mandatory", mandatory)); open("Open time form");
         submitModal(fields("progression", "0", "weather", "S01", "daytime", "Night", "start", "ROLLING", "slipstream", "WEAK"));
         verifyNoInteractions(submissions);
         click("Confirm submission");
@@ -38,7 +219,7 @@ class PickInteractionHandlerTest {
         var captured = ArgumentCaptor.forClass(PickPayload.class);
         verify(submissions).submit(eq(race), eq(0L), any(), eq(actor), captured.capture());
         assertThat(captured.getValue().carPoolEntryId()).isEqualTo(entry);
-        assertThat(captured.getValue().availableTyres()).extracting(Enum::name).containsExactlyInAnyOrder(available.split(","));
+        assertThat(captured.getValue().availableTyres()).extracting(Enum::name).containsExactlyInAnyOrder((available.startsWith("S") ? available : available + ",I,W").split(","));
         assertThat(captured.getValue().mandatoryTyres()).extracting(Enum::name).containsExactly(mandatory);
         assertThat(response.last().content()).contains("Saved revision 1");
     }
@@ -49,8 +230,10 @@ class PickInteractionHandlerTest {
         // given
         view = new PickTeamView(view.target(), null, null, view.carLabel(), view.trackLabel(), view.deadline(), false, false, null,
                 List.of(new PickTeamView.Choice(car, UUID.randomUUID(), "Test saved definition", oneMake)), view.tracks(), LobbyRulesProfile.CTC_2027);
-        enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open fuel form");
-        var selected = new HashMap<>(fuel); selected.put("available", List.of(available.split(","))); selected.put("mandatory", List.of(mandatory));
+        enterCatalogs(); open("Open rules form");
+        var chosenRules = new HashMap<>(rules); if (oneMake) chosenRules.put("family", List.of("RACING"));
+        submitModal(chosenRules); open("Open fuel form");
+        var selected = new HashMap<>(fuel); selected.put("available", List.of(available.split(",")));
         // when
         submitModal(selected);
         // then
@@ -64,7 +247,7 @@ class PickInteractionHandlerTest {
         // given
         view = new PickTeamView(view.target(), view.payload(), view.receipt(), view.carLabel(), view.trackLabel(), view.deadline(),
                 view.manualOpen(), view.manualClosed(), view.returnReason(), view.cars(), view.tracks(), LobbyRulesProfile.CTC_2027);
-        enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open fuel form"); submitModal(fuel); open("Open time form");
+        enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open fuel form"); submitModal(fuel); open("Open mandatory form"); submitModal(fields("mandatory", "None")); open("Open time form");
         assertThat(response.modal.fields()).hasSize(5);
         view = new PickTeamView(view.target(), view.payload(), view.receipt(), view.carLabel(), view.trackLabel(), view.deadline(),
                 view.manualOpen(), view.manualClosed(), view.returnReason(), view.cars(), view.tracks(), LobbyRulesProfile.LEGACY);
@@ -98,7 +281,7 @@ class PickInteractionHandlerTest {
     Response response;
     String eventUser = "300", eventChannel = "200";
     final Map<String, List<String>> rules = fields("laps", "12", "wear", "2", "consumption", "3", "refuel", "4");
-    final Map<String, List<String>> fuel = new HashMap<>(fields("initial", "DEFAULT", "stops", "1", "mandatory", "None"));
+    final Map<String, List<String>> fuel = new HashMap<>(fields("initial", "DEFAULT", "stops", "1"));
 
     @BeforeEach
     void setUp() {
@@ -131,7 +314,7 @@ class PickInteractionHandlerTest {
         var summary = response.last();
         assertThat(summary.content()).contains("Test season 2026", "Matchday 2", "Leg 2", "Track: Test track", "Car: Test car",
                 "Laps: 12", "Tyre wear: 2", "Fuel consumption: 3", "Refuelling speed: 4", "Initial fuel: Default",
-                "Required pit stops: 1", "Weather: S01; R03", "Time of day: Sunset", "Available tyres: RS, RM", "Mandatory tyres: None");
+                "Required pit stops: 1", "Weather: S01; R03", "Time of day: Sunset", "Available tyres: RS, RM, I, W", "Mandatory tyres: None");
         assertThat(summary.content()).contains(progression.equals("equal") ? "Time progression: Equal Conditions" : "Time progression: " + progression + "x");
         verifyNoInteractions(submissions);
         String confirm = button("Confirm submission");
@@ -145,7 +328,7 @@ class PickInteractionHandlerTest {
         assertThat(ids.getAllValues().getFirst()).isEqualTo(ids.getAllValues().getLast());
         var payload = payloads.getValue();
         assertThat(payload.trackId()).isEqualTo(track); assertThat(payload.carId()).isEqualTo(car);
-        assertThat(payload.mandatoryTyres()).isEmpty(); assertThat(payload.availableTyres()).containsExactlyInAnyOrder(PickTyre.RS, PickTyre.RM);
+        assertThat(payload.mandatoryTyres()).isEmpty(); assertThat(payload.availableTyres()).containsExactlyInAnyOrder(PickTyre.RS, PickTyre.RM, PickTyre.I, PickTyre.W);
         assertThat(payload.timeProgressionMultiplier()).isEqualTo(progression.equals("equal") ? null : Integer.valueOf(progression));
         assertThat(payload.weather()).isEqualTo("S01; R03");
     }
@@ -160,7 +343,7 @@ class PickInteractionHandlerTest {
         // when
         command(); choose();
         // then
-        assertThat(response.last().content()).contains("RETURNED", "Check weather order", "no new deadline", "revision 2", "by Discord user 301", "Weather: S01; R03");
+        assertThat(response.last().content()).contains("RETURNED", "Check weather order", "no new deadline", "revision 2", "by <@301>", "Weather: S01; R03");
         assertThat(response.last().buttons()).extracting(PickGatewayMessage.Button::label).contains("Replace picks");
         verify(access, atLeastOnce()).authorizeChannel("100", "200", "302");
         verifyNoInteractions(submissions);
@@ -243,10 +426,11 @@ class PickInteractionHandlerTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"mixed-none", "subset", "duplicates", "unknown"})
-    void givenInvalidTyres_whenSubmittingFuel_thenRejectWithoutAdvancing(String error) {
+    void givenInvalidTyres_whenSubmittingMandatory_thenRejectWithoutAdvancing(String error) {
         // given
         enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open fuel form");
-        var invalid = new HashMap<>(fuel);
+        submitModal(fuel); open("Open mandatory form");
+        var invalid = new HashMap<String, List<String>>();
         invalid.put("mandatory", switch (error) {
             case "mixed-none" -> List.of("None", "RS"); case "subset" -> List.of("RH");
             case "duplicates" -> List.of("RS", "RS"); default -> List.of("unknown"); });
@@ -254,7 +438,7 @@ class PickInteractionHandlerTest {
         submitModal(invalid);
         // then
         assertThat(response.last().content()).contains("Check all required values");
-        assertThat(button("Open fuel form")).isNotBlank();
+        assertThat(button("Open mandatory form")).isNotBlank();
         verifyNoInteractions(submissions);
     }
 
@@ -323,9 +507,15 @@ class PickInteractionHandlerTest {
 
     void complete(String progression) {
         enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open fuel form"); submitModal(fuel);
+        open("Open mandatory form"); submitModal(fields("mandatory", "None"));
         open("Open time form"); submitModal(fields("progression", progression, "weather", "S01; R03", "daytime", "Sunset"));
     }
-    void enterCatalogs() { command(); choose(); click("Enter picks"); select(track); select(car); }
+    void enterCatalogs() {
+        command(); choose(); click("Enter picks"); select(track);
+        var chosen = view.cars().stream().filter(choice -> choice.id().equals(car)).findFirst().orElseThrow();
+        if (chosen.entryId() != null) select(chosen.entryId());
+        if (!chosen.oneMake()) select(car);
+    }
     void command() { dispatch(PickGatewayInteraction.Kind.COMMAND, "picks", Map.of()); }
     void choose() { select(race); }
     void select(UUID id) { dispatch(PickGatewayInteraction.Kind.SELECT, response.last().selection().id(), fields("selection", id.toString())); }

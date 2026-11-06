@@ -10,6 +10,21 @@ import static org.assertj.core.api.Assertions.*;
 
 class PickCatalogSelectorTest {
     @Test
+    void givenOverOneHundredTracks_whenPagingAndSearching_thenKeepEveryChoiceWithinDiscordLimits() {
+        // given
+        var choices = new java.util.ArrayList<Choice>(IntStream.range(0, 130)
+                .mapToObj(i -> new Choice(UUID.randomUUID(), null, "Test circuit %03d".formatted(i))).toList());
+        choices.add(new Choice(UUID.randomUUID(), null, "Test Spa layout one"));
+        choices.add(new Choice(UUID.randomUUID(), null, "Test Spa layout two"));
+        // when
+        var pages = IntStream.range(0, 6).mapToObj(page -> PickCatalogSelector.page(choices, "", page)).toList();
+        // then
+        assertThat(pages).allSatisfy(page -> assertThat(page.choices()).hasSizeBetween(1, 25));
+        assertThat(pages.stream().flatMap(page -> page.choices().stream()).toList()).containsExactlyElementsOf(choices);
+        assertThat(PickCatalogSelector.page(choices, "SPA", 0).choices()).containsExactlyElementsOf(choices.subList(130, 132));
+    }
+
+    @Test
     void givenLargeLocalCatalog_whenPagingAndSearching_thenKeepDiscordLimitAndStableCompleteCoverage() {
         // given
         List<Choice> choices = IntStream.range(0, 61).mapToObj(i -> new Choice(UUID.randomUUID(), null, "Test car %02d".formatted(i))).toList();
