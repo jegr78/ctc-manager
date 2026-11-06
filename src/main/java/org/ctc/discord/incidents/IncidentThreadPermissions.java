@@ -78,7 +78,7 @@ public final class IncidentThreadPermissions {
         var inventory = validate(guild, channel, member, roles, botId, guildId, channelId);
         require(channel.type() == 0);
         var bot = requireBotRights(guild, channel, member, inventory, botId, guildId);
-        require(staff != null && !staff.isEmpty() && new HashSet<>(staff).size() == staff.size() && participants != null);
+        if (!(staff != null && !staff.isEmpty() && new HashSet<>(staff).size() == staff.size() && participants != null)) throw unavailable();
         var updates = new java.util.ArrayList<PermissionOverwrite>();
         for (var role : staff) {
             require(inventory.containsKey(role) && !guildId.equals(role) && !participants.contains(role));
