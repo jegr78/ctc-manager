@@ -154,6 +154,8 @@ public class PickWindowService {
         var bridges = rows.stream().map(Race::getMatch).filter(Objects::nonNull).map(Match::getId).distinct().toList();
         if (bridges.size() > 1 || match != null && !bridges.isEmpty() && !bridges.contains(match.getId())) throw unavailable();
         if (match == null && !bridges.isEmpty()) match = matches.findById(bridges.getFirst()).orElseThrow(PickWindowService::unavailable);
+        if (matchup != null) requireCompleteMembership(matchup.getId(), true, lockedRows);
+        if (match != null) requireCompleteMembership(match.getId(), false, lockedRows);
         if (match != null && matchup != null) {
             UUID bridgeId = match.getId(), canonicalId = matchup.getId();
             var bridgeRows = lockedRows == null ? races.findByMatchId(bridgeId)
@@ -166,6 +168,17 @@ public class PickWindowService {
         if (owner != null && !day.getSeason().getId().equals(owner.seasonId())) throw unavailable();
         if (match != null && !day.getId().equals(match.getMatchday().getId())) throw unavailable();
         return new Pairing(day, match, matchup, owner);
+    }
+
+    private void requireCompleteMembership(UUID id, boolean playoff, List<Race> lockedRows) {
+        if (lockedRows == null) return;
+        String relation = playoff ? "playoffMatchup" : "match";
+        var current = entityManager.createQuery("select r.id from Race r where r." + relation + ".id = :id order by r.id", UUID.class)
+                .setParameter("id", id).setLockMode(LockModeType.PESSIMISTIC_WRITE).getResultList();
+        var expected = lockedRows.stream().filter(race -> playoff
+                ? race.getPlayoffMatchup() != null && id.equals(race.getPlayoffMatchup().getId())
+                : race.getMatch() != null && id.equals(race.getMatch().getId())).map(Race::getId).collect(java.util.stream.Collectors.toSet());
+        if (!expected.equals(new java.util.HashSet<>(current))) throw unavailable();
     }
 
     private PlayoffOwner playoffOwner(UUID id, boolean current) {

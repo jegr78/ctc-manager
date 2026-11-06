@@ -210,6 +210,32 @@ class MatchdayPickWindowManagementIT extends PickPersistenceIT {
         }
     }
 
+    @Test
+    void givenAClosedLegacyPairingWhoseOtherLegBelongsToAnotherSeason_whenOpening_thenRejectWithoutChangingItsWindow() {
+        var pairing = playoff(false);
+        var context = tx.execute(status -> {
+            var foreign = helper.createSeason("Test foreign leg " + java.util.UUID.randomUUID());
+            var phase = new SeasonPhase(foreign, PhaseType.PLAYOFF, PhaseLayout.BRACKET, 10); phase.setLabel("Test foreign leg phase"); entityManager.persist(phase);
+            var day = new Matchday(phase, "Test foreign leg day", 1); entityManager.persist(day);
+            var rows = entityManager.createQuery("select r from Race r where r.playoffMatchup.id = :id order by r.id", Race.class)
+                    .setParameter("id", pairing.playoff()).getResultList();
+            var moved = rows.getLast(); moved.setMatchday(day);
+            entityManager.find(Matchday.class, pairing.day()).setPicksOpen(false); entityManager.flush();
+            return new java.util.UUID[]{foreign.getId(), moved.getId()};
+        });
+        try {
+            var view = windows.readMatchday(pairing.day());
+            assertThatThrownBy(() -> save(view, true)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("context");
+            var after = windows.readMatchday(pairing.day());
+            assertThat(after.open()).isFalse(); assertThat(after.version()).isEqualTo(view.version());
+        } finally {
+            tx.executeWithoutResult(status -> {
+                entityManager.find(Race.class, context[1]).setMatchday(entityManager.find(Matchday.class, pairing.day())); entityManager.flush();
+                helper.deleteSeasonCascade(entityManager.find(Season.class, context[0]));
+            });
+        }
+    }
+
     private record PlayoffPairing(java.util.UUID day, java.util.UUID bridge, java.util.UUID playoff) { }
     private PlayoffPairing playoff(boolean withBridge) {
         return tx.execute(status -> {

@@ -78,6 +78,31 @@ class MatchdayPickWindowConcurrencyIT extends PickPersistenceIT {
         tx.executeWithoutResult(status -> assertThat(entityManager.find(PlayoffMatchup.class, ids[0]).getPickDeadlineOverride()).isNull());
     }
 
+    @Test
+    void givenAPlayoffLegMovedToAnotherSeasonDuringTheLockWait_whenOpening_thenRejectTheEntireCanonicalPairing() throws Exception {
+        var ids = playoffFixture();
+        var context = tx.execute(status -> {
+            var foreign = helper.createSeason("Test concurrent foreign leg " + UUID.randomUUID());
+            var phase = new SeasonPhase(foreign, PhaseType.PLAYOFF, PhaseLayout.BRACKET, 10); phase.setLabel("Test foreign leg phase"); entityManager.persist(phase);
+            var day = new Matchday(phase, "Test foreign leg day", 1); entityManager.persist(day); entityManager.flush();
+            return new UUID[]{foreign.getId(), day.getId(), entityManager.find(Match.class, ids[1]).getMatchday().getId()};
+        });
+        try {
+            var view = windows.readMatchday(context[2]);
+            var manager = new ManagementPickActor("test-window-manager", epoch.managementGeneration());
+            concurrentChange(() -> {
+                var moved = entityManager.find(Race.class, ids[2]); moved.setMatchday(entityManager.find(Matchday.class, context[1])); moved.setMatch(null);
+            }, () -> { windows.saveMatchday(view.id(), true, view.deadline(), view.weekend(), view.version(), view.scope(), manager); return null; }, "context");
+            var after = windows.readMatchday(view.id());
+            assertThat(after.open()).isFalse(); assertThat(after.version()).isEqualTo(view.version());
+        } finally {
+            tx.executeWithoutResult(status -> {
+                var moved = entityManager.find(Race.class, ids[2]); moved.setMatchday(entityManager.find(Matchday.class, context[2])); moved.setMatch(entityManager.find(Match.class, ids[1])); entityManager.flush();
+                helper.deleteSeasonCascade(entityManager.find(Season.class, context[0]));
+            });
+        }
+    }
+
     private UUID[] playoffFixture() {
         return tx.execute(status -> {
             var season = entityManager.find(Season.class, fixture.season().getId());
