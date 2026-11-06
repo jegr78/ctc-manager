@@ -57,6 +57,14 @@ class PickTyreDialogTest {
     }
 
     @ParameterizedTest
+    @CsvSource({"RACING,SS", "SPORTS,RS"})
+    void givenEligibleOneMakeButForgedCompoundFamily_whenSubmittingFuel_thenRequireThePreviouslyChosenFamily(String family, String available) {
+        // given / when / then
+        assertThatThrownBy(() -> PickInteractionViews.validateStage("fuel", fuel(available), LobbyRulesProfile.CTC_2027,
+                true, Map.of("family", List.of(family)))).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest
     @CsvSource({"'RS,I',CTC_2027,true", "'RS,W',CTC_2027,true", "'RS,SS',CTC_2027,true",
             "SS,CTC_2027,false", "SS,LEGACY,true", "'RS,RS',CTC_2027,true"})
     void givenInvalidOrUnpermittedTyres_whenValidatingFuel_thenRejectBeforeAdvancingTheDraft(

@@ -32,6 +32,16 @@ class PickCorrectionTyreBindingTest {
         assertThat(form.payload().mandatoryTyres()).containsExactlyInAnyOrder(PickTyre.RS, PickTyre.RM, PickTyre.RH);
     }
 
+    @org.junit.jupiter.api.Test
+    void givenDryOnlyRacingCorrection_whenBuildingPayload_thenIncludeAutomaticWetCompounds() {
+        // given
+        var form = complete();
+        form.setAvailableTyres(java.util.List.of(PickTyre.RH)); form.setMandatoryTyres(java.util.List.of(PickTyre.RH));
+        // when / then
+        assertThat(form.payload().availableTyres()).containsExactlyInAnyOrder(PickTyre.RH, PickTyre.I, PickTyre.W);
+        assertThat(form.payload().mandatoryTyres()).containsExactly(PickTyre.RH);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"availableTyres", "mandatoryTyres"})
     void givenDuplicateRawCorrectionValues_whenBinding_thenRejectBeforeSetConversion(String duplicated) {
