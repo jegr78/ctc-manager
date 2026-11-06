@@ -126,6 +126,11 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
         page.setViewportSize(width, height);
         String matchdayPath = "/admin/matchdays/" + fixture.matchday().getId();
         page.navigate(url(matchdayPath));
+        assertThat(page.locator("#matchday-picks")).containsText("Europe/Berlin");
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Edit pick deadline").setExact(true)).click();
+        assertThat(page.locator("#pickDeadline")).hasValue("2035-01-01T12:00");
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save deadline and event window")).click();
+        assertThat(page).hasURL(url(matchdayPath));
         // when
         page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Review team picks").setExact(true)).click();
         page.getByLabel("Submission state", new Page.GetByLabelOptions().setExact(true)).selectOption("MISSING");
@@ -135,6 +140,14 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
         assertThat(back).hasAttribute("href", matchdayPath);
         back.focus(); assertThat(back).isFocused(); capture("pick-review-return-" + viewport);
         back.press("Enter"); assertThat(page).hasURL(url(matchdayPath));
+        page.navigate(url(path()));
+        assertThat(page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Edit pick deadline").setExact(true)))
+                .hasAttribute("href", matchdayPath + "/edit-pairings");
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Open submission without deadline")).click();
+        page.getByLabel("Decision reason", new Page.GetByLabelOptions().setExact(true)).fill("Test manual opening from visible status");
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save review decision")).click();
+        assertThat(page.locator("#pick-status")).containsText("Open without a new deadline");
+        assertThat(page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Open submission without deadline"))).hasCount(0);
         page.navigate(url("/admin/matchday-picks?seasonId=" + fixture.season().getId()));
         assertThat(page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Back to matchday").setExact(true))).hasCount(0);
     }

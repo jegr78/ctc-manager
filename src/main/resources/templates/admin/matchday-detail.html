@@ -30,8 +30,24 @@
         <div><span>Schedule</span><strong th:text="${hasSchedule ? 'Available' : 'Not scheduled'}"></strong></div>
         <div><span>Results</span><strong th:text="${hasResults ? 'Available' : 'Awaiting results'}"></strong></div>
     </div>
+    <div class="card" id="matchday-picks">
+        <h2>Pick deadline &amp; event window</h2>
+            <div class="discord-pairings-meta">
+                <p><strong>Pick Deadline:</strong>
+                    <span th:text="${matchday.pickDeadline != null ? #temporals.format(matchday.pickDeadline, 'EEE, dd MMM yyyy HH:mm') : '— not set —'}"></span>
+                </p>
+                <p><strong>Scheduled Weekend:</strong>
+                    <span th:text="${matchday.scheduledWeekend != null and !matchday.scheduledWeekend.isEmpty() ? matchday.scheduledWeekend : '— not set —'}"></span>
+                </p>
+                <a th:href="@{/admin/matchdays/{id}/edit-pairings(id=${matchday.id})}"
+                   class="btn btn-secondary btn-sm"
+                   data-testid="edit-pairings">Edit pick deadline</a>
+            </div>
+        <p class="text-dim">The deadline applies to all home-race picks on this matchday, in Europe/Berlin. Saving never publishes an announcement.</p>
+    </div>
     <nav class="workspace-sections" aria-label="Matchday sections">
         <a href="#matchday-matches">Matches</a>
+        <a href="#matchday-picks">Pick deadline</a>
         <a href="#matchday-graphics">Graphics</a>
         <a th:if="${!lineupsByTeam.isEmpty()}" href="#matchday-lineup">Lineups</a>
         <a th:if="${matchdayDiscordActive}" href="#matchday-discord">Discord</a>
@@ -220,17 +236,6 @@
 
         <div th:if="${matchdayAnnouncementActive}" class="detail-section mt-lg">
             <h2>Discord Announcements</h2>
-            <div class="discord-pairings-meta">
-                <p><strong>Pick Deadline:</strong>
-                    <span th:text="${matchday.pickDeadline != null ? #temporals.format(matchday.pickDeadline, 'EEE, dd MMM yyyy HH:mm') : '— not set —'}"></span>
-                </p>
-                <p><strong>Scheduled Weekend:</strong>
-                    <span th:text="${matchday.scheduledWeekend != null and !matchday.scheduledWeekend.isEmpty() ? matchday.scheduledWeekend : '— not set —'}"></span>
-                </p>
-                <a th:href="@{/admin/matchdays/{id}/edit-pairings(id=${matchday.id})}"
-                   class="btn btn-secondary btn-sm"
-                   data-testid="edit-pairings">Edit Pairings</a>
-            </div>
             <div class="discord-actions discord-actions--posts mt-md">
                 <span th:if="${not canPostMatchdayPairings and matchdayPairingsPost == null}"
                       class="btn btn-secondary btn-sm disabled"

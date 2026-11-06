@@ -250,10 +250,13 @@ class MatchdayPickReviewIT extends PickPersistenceIT {
             assertThat(value.existing()).isEqualTo(expected); assertThat(value.submitted()).isEqualTo(expected);
             assertThat(value.changed()).isFalse();
         });
+        verifyNoInteractions(discord);
         var response = mvc.perform(get("/admin/races/" + fixture.race().getId())).andExpect(status().isOk()).andReturn();
         var document = org.jsoup.Jsoup.parse(response.getResponse().getContentAsString());
         assertThat(document.select(".detail-fields .label").stream().filter(label -> label.text().equals("Filter by Category"))
                 .findFirst().orElseThrow().nextElementSibling().text()).isEqualTo(expected);
+        verify(discord).canPostRaceResultToForum(argThat(race -> race.getId().equals(fixture.race().getId())), any());
+        verifyNoMoreInteractions(discord); clearInvocations(discord);
     }
 
     @Test
