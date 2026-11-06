@@ -72,6 +72,7 @@ public final class PickDraftSessionStore {
         String label;
         Choice track;
         Choice car;
+        UUID entryId;
         PickPayload payload;
         LobbyRulesProfile lobbyRulesProfile = LobbyRulesProfile.LEGACY;
         Session(String guild, String channel, String user, long generation, Instant expires) {

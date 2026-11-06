@@ -10,5 +10,7 @@ public record PickGatewayModal(String id, String title, List<Field> fields) {
     public record Selection(String id, String label, List<Option> options, int minValues, int maxValues) implements Field {
         public Selection { options = List.copyOf(options); }
     }
-    public record Option(String label, String value) { }
+    public record Option(String label, String value, boolean defaultSelected) {
+        public Option(String label, String value) { this(label, value, false); }
+    }
 }

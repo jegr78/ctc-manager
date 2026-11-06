@@ -79,6 +79,10 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
     void bindPrivateChannel() {
         // given
         wm.resetAll();
+        payload = new PickPayload(payload.trackId(), payload.carId(), payload.carPoolEntryId(), payload.laps(), payload.tyreWear(),
+                payload.fuelConsumption(), payload.refuelingSpeed(), payload.initialFuel(), payload.requiredPitStops(),
+                payload.timeProgressionMode(), payload.timeProgressionMultiplier(), payload.weather(), payload.timeOfDay(),
+                Set.of(PickTyre.RS, PickTyre.RM, PickTyre.I, PickTyre.W), payload.mandatoryTyres());
         tx.executeWithoutResult(status -> {
             var config = configs.findFirstByOrderByIdAsc(); createdConfig = config == null;
             if (config == null) config = new DiscordGlobalConfig();
@@ -360,10 +364,15 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
         void complete() {
             command(); select(target);
             click(response.last().buttons().stream().anyMatch(b -> b.label().equals("Replace picks")) ? "Replace picks" : "Enter picks");
-            select(payload.trackId()); select(payload.carId());
+            select(payload.trackId());
+            var chosen = reader.load(access.authorizeChannel(GUILD, channel, user), target).cars().stream()
+                    .filter(choice -> choice.id().equals(payload.carId())).findFirst().orElseThrow();
+            if (chosen.entryId() != null) select(chosen.entryId());
+            if (!chosen.oneMake()) select(payload.carId());
             click("Open rules form"); modal(fields("laps", "12", "wear", "2", "consumption", "3", "refuel", "4"));
-            click("Open fuel form"); var values = new HashMap<>(fields("initial", "DEFAULT", "stops", "1", "mandatory", "RM"));
+            click("Open fuel form"); var values = new HashMap<>(fields("initial", "DEFAULT", "stops", "1"));
             values.put("available", List.of("RS", "RM")); modal(values);
+            click("Open mandatory form"); modal(fields("mandatory", "RM"));
             click("Open time form"); modal(fields("progression", "equal", "weather", payload.weather(), "daytime", payload.timeOfDay()));
         }
         void command() { dispatch(PickGatewayInteraction.Kind.COMMAND, "picks", Map.of()); }

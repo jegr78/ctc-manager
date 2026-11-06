@@ -34,8 +34,8 @@ class TyreFormsIT extends TyrePersistenceIT {
         // given / when
         var page = editor();
         // then
-        assertThat(options(page, "availableTyres")).containsExactlyInAnyOrder("RS", "RM", "RH", "I", "W", "SS", "SM", "SH");
-        assertThat(options(page, "mandatoryTyres")).containsExactlyInAnyOrder("None", "RS", "RM", "RH", "SS", "SM", "SH");
+        assertThat(options(page, "availableTyres")).containsExactlyInAnyOrder("RS", "RM", "RH", "SS", "SM", "SH");
+        assertThat(options(page, "mandatoryTyres")).containsExactly("None");
         assertThat(Jsoup.parse(page).select("select#availableTyres[multiple]")).hasSize(1);
         assertThat(Jsoup.parse(page).select("select#mandatoryTyres[multiple]")).hasSize(1);
     }
@@ -53,8 +53,8 @@ class TyreFormsIT extends TyrePersistenceIT {
         // when
         var page = editor();
         // then
-        assertThat(options(page, "availableTyres")).containsExactlyInAnyOrder("RS", "RM", "RH", "I", "W");
-        assertThat(options(page, "mandatoryTyres")).containsExactlyInAnyOrder("None", "RS", "RM", "RH");
+        assertThat(options(page, "availableTyres")).containsExactlyInAnyOrder("RS", "RM", "RH");
+        assertThat(options(page, "mandatoryTyres")).containsExactly("None");
     }
 
     @Test
@@ -64,8 +64,38 @@ class TyreFormsIT extends TyrePersistenceIT {
         // when
         var page = editor();
         // then
-        assertThat(options(page, "availableTyres")).containsExactlyInAnyOrder("RS", "RM", "RH", "I", "W");
-        assertThat(options(page, "mandatoryTyres")).containsExactlyInAnyOrder("None", "RS", "RM", "RH");
+        assertThat(options(page, "availableTyres")).containsExactlyInAnyOrder("RS", "RM", "RH");
+        assertThat(options(page, "mandatoryTyres")).containsExactly("None");
+    }
+
+    @Test
+    void givenOnlyRacingHardSelected_whenSavingNativeInput_thenPersistAutomaticWetTyresAndLimitMandatoryChoices() throws Exception {
+        // given
+        tx.executeWithoutResult(status -> entityManager.find(Race.class, fixture.race().getId()).setPicksManaged(false));
+        // when
+        mvc.perform(save(new String[]{"RH"}, "RH")).andExpect(status().is3xxRedirection())
+                .andExpect(flash().attributeExists("successMessage"));
+        // then
+        tx.executeWithoutResult(status -> {
+            var settings = entityManager.find(Race.class, fixture.race().getId()).getSettings();
+            assertThat(settings.getAvailableTyres()).isEqualTo("RH, I, W");
+            assertThat(settings.getMandatoryTyres()).isEqualTo("RH");
+        });
+        var page = editor();
+        assertThat(options(page, "mandatoryTyres")).containsExactlyInAnyOrder("None", "RH");
+        assertThat(Jsoup.parse(page).select("#availableTyres option[selected]").eachAttr("value")).containsExactly("RH");
+    }
+
+    @Test
+    void givenRacingAvailabilityAndSportsMandatory_whenSaving_thenRejectAndRetainTheInvalidValue() throws Exception {
+        // given / when
+        var response = mvc.perform(save(new String[]{"RS", "RM", "RH"}, "SS"))
+                .andExpect(status().is3xxRedirection()).andExpect(flash().attributeExists("errorMessage")).andReturn();
+        // then
+        var page = mvc.perform(get("/admin/races/{id}/edit", fixture.race().getId()).flashAttrs(response.getFlashMap()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(Jsoup.parse(page).select("#mandatoryTyres option[selected]").eachAttr("value")).containsExactly("SS");
+        tx.executeWithoutResult(status -> assertThat(entityManager.find(Race.class, fixture.race().getId()).getSettings()).isNull());
     }
 
     @Test
@@ -132,9 +162,9 @@ class TyreFormsIT extends TyrePersistenceIT {
                 .andReturn().getResponse().getContentAsString();
         // then
         assertThat(Jsoup.parse(page).select("input[name=availableTyres]").eachAttr("value"))
-                .containsExactlyInAnyOrder("RS", "RM", "RH", "I", "W", "SS", "SM", "SH");
-        assertThat(Jsoup.parse(page).select("input[name=mandatoryTyres]").eachAttr("value"))
                 .containsExactlyInAnyOrder("RS", "RM", "RH", "SS", "SM", "SH");
+        assertThat(Jsoup.parse(page).select("input[name=mandatoryTyres]").eachAttr("value"))
+                .containsExactlyInAnyOrder("RS", "RM");
     }
 
     @Test
@@ -153,9 +183,9 @@ class TyreFormsIT extends TyrePersistenceIT {
                 .andReturn().getResponse().getContentAsString();
         // then
         assertThat(Jsoup.parse(page).select("input[name=availableTyres]").eachAttr("value"))
-                .containsExactlyInAnyOrder("RS", "RM", "RH", "I", "W");
-        assertThat(Jsoup.parse(page).select("input[name=mandatoryTyres]").eachAttr("value"))
                 .containsExactlyInAnyOrder("RS", "RM", "RH");
+        assertThat(Jsoup.parse(page).select("input[name=mandatoryTyres]").eachAttr("value"))
+                .containsExactlyInAnyOrder("RS", "RM");
     }
 
     private void approveForCorrection() {

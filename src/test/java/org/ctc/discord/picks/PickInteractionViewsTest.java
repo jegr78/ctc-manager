@@ -12,6 +12,37 @@ import org.junit.jupiter.params.provider.CsvSource;
 import static org.assertj.core.api.Assertions.*;
 
 class PickInteractionViewsTest {
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"@everyone", "<@300>", "000", "300\n@everyone"})
+    void givenInvalidAuthorIdentifier_whenRenderingReceipt_thenUseNeutralTextWithoutInsertingMarkup(String author) {
+        // given
+        var receipt = new org.ctc.domain.picks.SubmissionReceipt(java.util.UUID.randomUUID(), java.util.UUID.randomUUID(),
+                1, 1, java.time.Instant.parse("2026-11-06T13:46:21Z"), author);
+        // when / then
+        assertThat(PickInteractionViews.receipt(receipt)).contains("by an unknown team member").doesNotContain(author);
+    }
+
+    @Test
+    void givenSavedReceipt_whenRenderingAuthor_thenUseAReadableDiscordReference() {
+        // given
+        var receipt = new org.ctc.domain.picks.SubmissionReceipt(java.util.UUID.randomUUID(), java.util.UUID.randomUUID(),
+                1, 1, java.time.Instant.parse("2026-11-06T13:46:21Z"), "300");
+        // when / then
+        assertThat(PickInteractionViews.receipt(receipt)).contains("by <@300>")
+                .doesNotContain("Discord user ");
+    }
+
+    @Test
+    void givenRacingFuelDialog_whenOpening_thenOfferOnlyDryCompoundsBeforeChoosingMandatoryTyres() {
+        // given / when
+        var modal = PickInteractionViews.modal("test", "fuel");
+        var available = (PickGatewayModal.Selection) modal.fields().stream()
+                .filter(field -> field.id().equals("available")).findFirst().orElseThrow();
+        // then
+        assertThat(available.options()).extracting(PickGatewayModal.Option::value).containsExactly("RS", "RM", "RH");
+        assertThat(modal.fields()).extracting(PickGatewayModal.Field::id).doesNotContain("mandatory");
+    }
+
     @Test
     void given2027TimeStage_whenOpeningAndValidating_thenIncludeBothChoicesWithinFiveModalFields() {
         // given / when
@@ -43,14 +74,16 @@ class PickInteractionViewsTest {
         assertThatCode(() -> PickInteractionViews.validateStage("time", time)).doesNotThrowAnyException();
         time.put("weather", List.of("x".repeat(256)));
         assertThatThrownBy(() -> PickInteractionViews.validateStage("time", time)).isInstanceOf(IllegalArgumentException.class);
-        var tyres = new HashMap<>(valid("fuel")); tyres.put("available", List.of("RS", "RM", "RH")); tyres.put("mandatory", List.of("RS", "RH"));
+        var tyres = new HashMap<>(valid("fuel")); tyres.put("available", List.of("RS", "RM", "RH"));
         assertThatCode(() -> PickInteractionViews.validateStage("fuel", tyres)).doesNotThrowAnyException();
         tyres.put("initial", List.of("FUEL_90"));
         assertThatCode(() -> PickInteractionViews.validateStage("fuel", tyres)).doesNotThrowAnyException();
         tyres.remove("initial");
         assertThatThrownBy(() -> PickInteractionViews.validateStage("fuel", tyres)).isInstanceOf(IllegalArgumentException.class);
-        var none = new HashMap<>(valid("fuel")); none.put("mandatory", List.of("None"));
-        assertThatCode(() -> PickInteractionViews.validateStage("fuel", none)).doesNotThrowAnyException();
+        assertThatCode(() -> PickInteractionViews.validateStage("mandatory", Map.of("mandatory", List.of("None")),
+                LobbyRulesProfile.LEGACY, false, tyres)).doesNotThrowAnyException();
+        assertThatCode(() -> PickInteractionViews.validateStage("mandatory", Map.of("mandatory", List.of("RS", "RH")),
+                LobbyRulesProfile.LEGACY, false, tyres)).doesNotThrowAnyException();
         var multiple = new HashMap<>(valid("time")); multiple.put("weather", List.of("S01", "R03"));
         assertThatThrownBy(() -> PickInteractionViews.validateStage("time", multiple)).isInstanceOf(IllegalArgumentException.class);
         var empty = new HashMap<>(valid("fuel")); empty.put("available", List.of());
@@ -88,7 +121,7 @@ class PickInteractionViewsTest {
     static Map<String, List<String>> valid(String stage) {
         return switch (stage) {
             case "rules" -> PickInteractionHandlerTest.fields("laps", "12", "wear", "2", "consumption", "3", "refuel", "4");
-            case "fuel" -> PickInteractionHandlerTest.fields("initial", "DEFAULT", "stops", "1", "available", "RM", "mandatory", "RM");
+            case "fuel" -> PickInteractionHandlerTest.fields("initial", "DEFAULT", "stops", "1", "available", "RM");
             default -> PickInteractionHandlerTest.fields("progression", "0", "weather", "S01", "daytime", "Sunset");
         };
     }

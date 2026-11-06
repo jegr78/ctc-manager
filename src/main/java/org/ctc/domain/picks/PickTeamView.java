@@ -17,7 +17,10 @@ public record PickTeamView(HomeRaceTarget target, PickPayload payload, Submissio
     }
     public PickTeamView { cars = List.copyOf(cars); tracks = List.copyOf(tracks); }
     @Override public String toString() { return "PickTeamView[raceId=" + target.raceId() + "]"; }
-    public record Choice(UUID id, UUID entryId, String label, boolean oneMake) {
+    public record Choice(UUID id, UUID entryId, String label, boolean oneMake, String entryLabel) {
+        public Choice(UUID id, UUID entryId, String label, boolean oneMake) {
+            this(id, entryId, label, oneMake, entryId == null ? null : label);
+        }
         public Choice(UUID id, UUID entryId, String label) { this(id, entryId, label, false); }
     }
 }

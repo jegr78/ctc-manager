@@ -13,6 +13,27 @@ import static org.assertj.core.api.Assertions.*;
 
 class PickTyreSelectionTest {
     @Test
+    void givenNewRacingAndSportsSelections_whenNormalizing_thenAddWetTyresOnlyToRacingWithoutMutatingInput() {
+        // given
+        var racing = Set.of(PickTyre.RH); var sports = Set.of(PickTyre.SH);
+        // when / then
+        assertThat(PickTyreSelection.withAutomaticWetTyres(LobbyRulesProfile.LEGACY, racing))
+                .containsExactlyInAnyOrder(PickTyre.RH, PickTyre.I, PickTyre.W);
+        assertThat(PickTyreSelection.withAutomaticWetTyres(LobbyRulesProfile.CTC_2027, sports)).containsExactly(PickTyre.SH);
+        assertThat(racing).containsExactly(PickTyre.RH);
+        assertThatThrownBy(() -> PickTyreSelection.withAutomaticWetTyres(LobbyRulesProfile.LEGACY, null))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("non-empty");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"I", "W", "I,W", ""})
+    void givenNoDryCompound_whenNormalizingNewInput_thenRequireAnExplicitDrySelection(String selected) {
+        // given / when / then
+        assertThatThrownBy(() -> PickTyreSelection.withAutomaticWetTyres(LobbyRulesProfile.CTC_2027, tyres(selected)))
+                .isInstanceOf(BusinessRuleException.class);
+    }
+
+    @Test
     void givenOriginalRacingCompounds_whenConverting_thenPreserveCanonicalOrderAndText() {
         // given
         var payload = payload(LobbyRulesProfile.LEGACY, "RH,RS,RM", "RM");

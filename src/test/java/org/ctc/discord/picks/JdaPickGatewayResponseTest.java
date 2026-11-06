@@ -26,7 +26,7 @@ class JdaPickGatewayResponseTest {
     final JdaPickGatewayResponse response = new JdaPickGatewayResponse(event);
 
     @ParameterizedTest
-    @ValueSource(strings = {"rules", "fuel", "time", "search-car", "search-track"})
+    @ValueSource(strings = {"rules", "fuel", "mandatory", "time", "search-entry", "search-car", "search-track"})
     void givenWizardStage_whenBuildingProductionModal_thenHonorSdkLimitsAndSerializeActualFieldTypes(String stage) {
         // given
         var action = mock(ModalCallbackAction.class); when(event.replyModal(any())).thenReturn(action);
@@ -37,7 +37,8 @@ class JdaPickGatewayResponseTest {
         assertThat(captured.getValue().getComponents().size()).isBetween(1, 5);
         String json = captured.getValue().toData().toString();
         assertThat(json).contains("ctc-picks:opaque");
-        if (stage.equals("fuel")) assertThat(json).contains("DEFAULT", "None", "max_values", "mandatory");
+        if (stage.equals("fuel")) assertThat(json).contains("DEFAULT", "max_values", "available").doesNotContain("mandatory");
+        if (stage.equals("mandatory")) assertThat(json).contains("None", "mandatory");
         if (stage.equals("time")) assertThat(json).contains("Equal Conditions", "0x", "weather", "daytime");
         verify(event, never()).deferReply(anyBoolean());
     }
@@ -56,14 +57,14 @@ class JdaPickGatewayResponseTest {
         future.join().replyPrivate(new PickGatewayMessage("Test private chooser",
                 List.of(new PickGatewayMessage.Button("ctc-picks:opaque-button", "Search")),
                 new PickGatewayMessage.Selection("ctc-picks:opaque-select", "Choose track",
-                        List.of(new PickGatewayModal.Option("Test track", "opaque-choice")))));
+                        List.of(new PickGatewayModal.Option("Test track", "opaque-choice", true)))));
         // then
         var rows = ArgumentCaptor.forClass(java.util.Collection.class);
         verify(followup).setComponents(rows.capture());
         assertThat(rows.getValue()).hasSize(2);
         var payload = new net.dv8tion.jda.api.utils.messages.MessageCreateBuilder().setContent("Test private chooser")
                 .setComponents(rows.getValue()).build().toData().toString();
-        assertThat(payload).contains("ctc-picks:opaque-button", "ctc-picks:opaque-select", "opaque-choice", "Test track");
+        assertThat(payload).contains("ctc-picks:opaque-button", "ctc-picks:opaque-select", "opaque-choice", "Test track", "\"default\":true");
         verify(followup).setEphemeral(true); verify(followup).setAllowedMentions(List.of());
         verify(followup).queue(any(), any());
     }
@@ -128,14 +129,14 @@ class JdaPickGatewayResponseTest {
         when(event.replyModal(any())).thenReturn(action);
         var modal = new PickGatewayModal("ctc-picks:opaque", "Private choice", List.of(
                 new PickGatewayModal.Text("notes", "Notes", true, "Test notes", 0, 200, false),
-                new PickGatewayModal.Selection("weather", "Weather", List.of(new PickGatewayModal.Option("Dry", "dry")), 1, 1)));
+                new PickGatewayModal.Selection("weather", "Weather", List.of(new PickGatewayModal.Option("Dry", "dry", true)), 1, 1)));
         // when
         response.openModal(modal);
         // then
         var captured = ArgumentCaptor.forClass(Modal.class);
         verify(event).replyModal(captured.capture());
         var payload = captured.getValue().toData().toString();
-        assertThat(payload).contains("ctc-picks:opaque", "notes", "Test notes", "weather", "dry");
+        assertThat(payload).contains("ctc-picks:opaque", "notes", "Test notes", "weather", "dry", "\"default\":true");
         assertThat(captured.getValue().getComponents()).hasSize(2);
         verify(action).queue(any(), any());
         verify(event, never()).deferReply(anyBoolean());

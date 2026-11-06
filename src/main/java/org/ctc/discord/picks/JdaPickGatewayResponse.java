@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
+import net.dv8tion.jda.api.components.selections.SelectOption;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
@@ -37,7 +38,9 @@ public class JdaPickGatewayResponse implements PickGatewayResponse {
         var rows = new java.util.ArrayList<ActionRow>();
         if (message.selection() != null) {
             var select = StringSelectMenu.create(message.selection().id()).setPlaceholder(message.selection().placeholder()).setRequiredRange(1, 1);
-            for (var option : message.selection().options()) select.addOption(option.label(), option.value());
+            for (var option : message.selection().options()) {
+                select.addOptions(SelectOption.of(option.label(), option.value()).withDefault(option.defaultSelected()));
+            }
             rows.add(ActionRow.of(select.build()));
         }
         if (!message.buttons().isEmpty()) rows.add(ActionRow.of(message.buttons().stream().map(button -> Button.secondary(button.id(), button.label())).toList()));
@@ -65,7 +68,9 @@ public class JdaPickGatewayResponse implements PickGatewayResponse {
                 }
                 case PickGatewayModal.Selection selection -> {
                     var input = StringSelectMenu.create(selection.id()).setRequiredRange(selection.minValues(), selection.maxValues());
-                    for (var option : selection.options()) input.addOption(option.label(), option.value());
+                    for (var option : selection.options()) {
+                        input.addOptions(SelectOption.of(option.label(), option.value()).withDefault(option.defaultSelected()));
+                    }
                     builder.addComponents(Label.of(selection.label(), input.build()));
                 }
             }

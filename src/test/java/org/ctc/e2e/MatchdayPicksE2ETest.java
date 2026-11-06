@@ -50,10 +50,11 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
     final List<UUID> carIds = new ArrayList<>();
 
     @ParameterizedTest
-    @CsvSource({"1440,1000,desktop", "390,844,mobile"})
-    void givenExplicit2027OneMakeWithoutJavaScript_whenSavingNativeAndCorrectingApprovedTyres_thenRetainOneFamilyAndDryRequiredCompounds(
-            int width, int height, String viewport) throws Exception {
+    @CsvSource({"1440,1000,desktop,false", "390,844,mobile,false", "1440,1000,desktop-js,true", "390,844,mobile-js,true"})
+    void givenExplicit2027OneMakeWithAndWithoutJavaScript_whenSavingNativeAndCorrectingApprovedTyres_thenRetainOneFamilyAndDryRequiredCompounds(
+            int width, int height, String viewport, boolean javascript) throws Exception {
         // given
+        if (javascript) { context.close(); context = browser.newContext(); page = context.newPage(); }
         when(collection.isConfidentialityReady()).thenReturn(true);
         tx.executeWithoutResult(status -> seasons.findById(fixture.season().getId()).orElseThrow().setLobbyRulesProfile(LobbyRulesProfile.CTC_2027));
         pools.changeMode(fixture.season().getId(), CarPoolMode.CATEGORY_POOL);
@@ -70,10 +71,13 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
             var settings = new RaceSettings(race); RaceSettingsValues.from(payload).applyTo(settings); race.setSettings(settings);
         });
         page.setViewportSize(width, height); page.navigate(url("/admin/races/" + fixture.race().getId() + "/edit"));
-        assertThat(page.locator("#availableTyres option")).hasCount(8);
+        assertThat(page.locator("#availableTyres option")).hasCount(6);
         assertThat(page.locator("#mandatoryTyres option[value=I], #mandatoryTyres option[value=W]")).hasCount(0);
         // when
         page.locator("#availableTyres").selectOption(new String[] {"SS", "SM", "SH"});
+        if (!javascript) page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Update mandatory choices")).click();
+        assertThat(page.locator("#mandatoryTyres option")).hasCount(javascript ? 4 : 5);
+        if (!javascript) assertThat(page.locator("#mandatoryTyres option[selected]")).containsText("Unavailable saved or submitted selection");
         page.locator("#mandatoryTyres").selectOption("SM"); capture("tyres-native-" + viewport);
         page.locator(".entity-editor-actions button").click();
         // then
@@ -86,14 +90,19 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
         assertThat(page.locator("#correct-mandatory-I, #correct-mandatory-W")).hasCount(0);
         for (var checkbox : page.locator("input[name=availableTyres]").all()) checkbox.uncheck();
         for (String tyre : List.of("SS", "SM", "SH")) page.locator("#correct-available-" + tyre).check();
+        if (!javascript) page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Update mandatory choices")).click();
+        assertThat(page.locator("#correct-mandatory-options .pick-check-option:not(.field-error) input[name=mandatoryTyres]")).hasCount(3);
+        if (!javascript) assertThat(page.locator("#correct-retained-mandatory-RM")).isChecked();
         for (var checkbox : page.locator("input[name=mandatoryTyres]").all()) checkbox.uncheck();
-        page.locator("#correct-mandatory-SM").check(); page.locator("#correct-available-RS").check();
+        page.locator("input[name=mandatoryTyres][value=SM]").check(); page.locator("#correct-available-RS").check();
         page.getByLabel("Reason for internal correction").fill("Test single-family Sports correction");
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save internal correction")).click();
         assertThat(page.getByRole(AriaRole.ALERT).first()).containsText("not saved");
         org.assertj.core.api.Assertions.assertThat(admin.detail(fixture.race().getId()).row().version()).isEqualTo(2);
         assertThat(page.locator("#correct-available-SS")).isChecked();
-        page.locator("#correct-available-RS").uncheck(); capture("tyres-correction-" + viewport);
+        page.locator("#correct-available-RS").uncheck();
+        if (!javascript) page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Update mandatory choices")).click();
+        page.locator("input[name=mandatoryTyres][value=SM]").check(); capture("tyres-correction-" + viewport);
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save internal correction")).click();
         org.assertj.core.api.Assertions.assertThat(admin.detail(fixture.race().getId()).row().version()).isEqualTo(3);
         tx.executeWithoutResult(status -> {
