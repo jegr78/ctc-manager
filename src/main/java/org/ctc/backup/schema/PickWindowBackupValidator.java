@@ -61,7 +61,9 @@ public final class PickWindowBackupValidator {
         var checkedMatches = new HashSet<UUID>(); var checkedPairings = new HashSet<UUID>();
         for (var race : races) {
             var day = days.get(race.day()); var match = matches.get(race.match()); var pairing = pairings.get(race.playoff());
-            boolean active = day != null && day.open() || match != null && match.cutoff() != null || pairing != null && pairing.cutoff() != null;
+            var ownerDay = match == null ? null : days.get(match.day());
+            boolean active = day != null && day.open() || ownerDay != null && ownerDay.open()
+                    || match != null && match.cutoff() != null || pairing != null && pairing.cutoff() != null;
             if (!active) continue;
             UUID season = daySeason(race.day());
             if (race.match() != null && (match == null || !race.day().equals(match.day()))) throw invalid();

@@ -99,4 +99,18 @@ class PickWindowOwnershipTest {
         assertThatCode(validator::validate).doesNotThrowAnyException();
     }
 
+
+    @Test
+    void givenAnOpenOwningMatchdayWithOnlyForeignRaceMembers_whenValidating_thenRejectTheWholeMatch() {
+        var validator = graph(false, true, false, false, false);
+        validator.accept("races", row(UUID.randomUUID()).put("matchday", dayB.toString()).put("match", match.toString()));
+        assertThatThrownBy(validator::validate).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("ownership");
+    }
+    @Test
+    void givenAClosedOwningMatchdayWithOnlyForeignRaceMembers_whenValidating_thenPreserveLegacyCompatibility() {
+        var validator = graph(false, false, false, false, false);
+        validator.accept("races", row(UUID.randomUUID()).put("matchday", dayB.toString()).put("match", match.toString()));
+        assertThatCode(validator::validate).doesNotThrowAnyException();
+    }
+
 }
