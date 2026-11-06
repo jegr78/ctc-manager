@@ -161,7 +161,7 @@ class Gt7SyncPreviewE2ETest extends PlaywrightConfig {
         java.nio.file.Files.createDirectories(java.nio.file.Path.of(".screenshots"));
         page.screenshot(new com.microsoft.playwright.Page.ScreenshotOptions()
                 .setPath(java.nio.file.Path.of(".screenshots/gt7-track-images-" + width + "-" + javascript + ".png"))
-                .setFullPage(true));
+                .setAnimations(com.microsoft.playwright.options.ScreenshotAnimations.DISABLED).setFullPage(true));
         page.locator("#importBtn").click();
         assertThat(page).hasURL(url("/admin/gt7-sync"));
         assertThat(page.locator(".alert-success")).containsText("1 track images updated");
