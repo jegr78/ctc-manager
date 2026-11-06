@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.*;
 
 class PickWindowOwnershipTest {
     private final ObjectMapper json = new ObjectMapper();
+    private boolean conflictingBridge;
     private final UUID a = UUID.randomUUID(), b = UUID.randomUUID(), phaseA = UUID.randomUUID(), phaseB = UUID.randomUUID();
     private final UUID dayA = UUID.randomUUID(), dayB = UUID.randomUUID(), match = UUID.randomUUID();
     private final UUID playoff = UUID.randomUUID(), round = UUID.randomUUID(), pair = UUID.randomUUID();
@@ -21,7 +22,9 @@ class PickWindowOwnershipTest {
         validator.accept("season_phases", row(phaseB).put("season", b.toString()));
         validator.accept("matchdays", row(dayA).put("phase", phaseA.toString()).put("picksOpen", open));
         validator.accept("matchdays", row(dayB).put("phase", phaseA.toString()).put("picksOpen", false));
-        validator.accept("matches", row(match).put("matchday", (wrongMatchday ? dayB : dayA).toString()).putNull("pickDeadlineOverride"));
+        var matchRow = row(match).put("matchday", (wrongMatchday ? dayB : dayA).toString()).putNull("pickDeadlineOverride");
+        if (conflictingBridge) matchRow.put("pickDeadlineOverride", "2034-01-01T20:00");
+        validator.accept("matches", matchRow);
         validator.accept("playoffs", row(playoff).put("phase", (foreign ? phaseB : phaseA).toString()));
         validator.accept("playoff_rounds", row(round).put("playoff", playoff.toString()));
         var pairing = row(pair).put("round", round.toString());
@@ -54,4 +57,10 @@ class PickWindowOwnershipTest {
     void givenAnOpenWindowWithAMatchFromAnotherDay_whenValidating_thenRejectTheScope() {
         assertThatThrownBy(graph(true, true, false, false, true)::validate).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("ownership");
     }
+    @Test
+    void givenAnOwnedBridgeWithConflictingOverrides_whenValidating_thenRejectItsCanonicalMismatch() {
+        conflictingBridge = true;
+        assertThatThrownBy(graph(true, true, true, false, false)::validate).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("canonical");
+    }
+
 }

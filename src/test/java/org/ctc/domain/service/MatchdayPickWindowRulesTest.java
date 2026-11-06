@@ -113,6 +113,17 @@ class MatchdayPickWindowRulesTest {
         assertThat(MatchdayPickWindowRules.complete(List.of(), List.of(bridge), 2)).isFalse();
     }
 
+    @Test
+    void givenAForeignPlayoffOverride_whenResolvingTheDeadline_thenRejectInsteadOfInheritingAnotherSeason() {
+        var race = race(match()); var foreign = new Season("Test foreign season", 2030, 1); foreign.setId(UUID.randomUUID());
+        var phase = PhaseTestFixtures.regularPhase(foreign, null, null);
+        var pairing = new PlayoffMatchup(new PlayoffRound(new Playoff(phase, "Test foreign playoff"), "Test round", 0), 0);
+        pairing.setPickDeadlineOverride(exception); race.setPlayoffMatchup(pairing);
+        assertThatThrownBy(() -> MatchdayPickWindowRules.deadline(race)).isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class).hasMessageContaining("ownership");
+        pairing.setPickDeadlineOverride(null); day.setPickDeadline(ordinary);
+        assertThat(MatchdayPickWindowRules.deadline(race)).isEqualTo(ordinary);
+    }
+
     PlayoffMatchup playoff() {
         var value = new PlayoffMatchup(new PlayoffRound(new Playoff(day.getPhase(), "Test owned playoff"), "Test round", 0), 0);
         value.setId(UUID.randomUUID()); return value;

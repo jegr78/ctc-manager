@@ -50,6 +50,7 @@ class DiscordPicksBackupRoundTripIT {
     }
     @Autowired TestHelper helper;
     @Autowired TransactionTemplate tx;
+    @Autowired jakarta.persistence.EntityManager entityManager;
     @Autowired SeasonRepository seasons;
     @Autowired TeamRepository teams;
     @Autowired CarRepository cars;
@@ -443,6 +444,39 @@ class DiscordPicksBackupRoundTripIT {
                     .extracting(MatchdayPickDecision::getKind).contains(PickDecisionKind.CLOSE, PickDecisionKind.WINDOW_OPEN);
             assertThat(revisions.findByRequestId(original.requestId()).orElseThrow().receipt()).isEqualTo(original);
         });
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void givenANewWindowInheritingAForeignPlayoff_whenStagingOrTamperingExecute_thenRejectBeforeWipe(boolean bridge) throws Exception {
+        var foreign = tx.execute(status -> {
+            var season = helper.createSeason("Test foreign pick window " + UUID.randomUUID());
+            var phase = new SeasonPhase(season, PhaseType.PLAYOFF, PhaseLayout.BRACKET, 10); phase.setLabel("Test foreign phase"); entityManager.persist(phase);
+            var playoff = new Playoff(phase, "Test foreign playoff"); entityManager.persist(playoff);
+            var round = new PlayoffRound(playoff, "Test final", 0); entityManager.persist(round);
+            var pair = new PlayoffMatchup(round, 0); pair.setTeam1(teams.findById(fixture.homeTeam().getId()).orElseThrow());
+            pair.setTeam2(teams.findById(fixture.awayTeam().getId()).orElseThrow()); pair.setPickDeadlineOverride(LocalDateTime.of(2036, 1, 1, 20, 0));
+            entityManager.persist(pair); entityManager.flush(); return new UUID[]{season.getId(), pair.getId()};
+        });
+        try {
+            byte[] valid = export(); var files = unzip(valid); var rows = (ArrayNode) JSON.readTree(files.get("data/races.json"));
+            for (var row : rows) if (row.path("id").asText().equals(fixture.race().getId().toString())) {
+                ((ObjectNode) row).put("playoffMatchup", foreign[1].toString());
+                if (!bridge) ((ObjectNode) row).putNull("match");
+            }
+            files.put("data/races.json", JSON.writeValueAsBytes(rows)); byte[] broken = zip(files);
+            assertThatThrownBy(() -> imports.stage(upload(broken))).isInstanceOfSatisfying(BackupArchiveException.class,
+                    failure -> assertThat(failure.getMessage()).contains("ownership"));
+            verify(imports, never()).wipeAllTables(anyMap());
+            var preview = imports.stage(upload(valid));
+            try {
+                Files.write(ROOT.resolve("staging/upload-" + preview.stagingId() + ".zip"), broken); clearInvocations(imports);
+                assertThatThrownBy(() -> imports.execute(preview.stagingId())).isInstanceOf(BackupImportException.class)
+                        .cause().isInstanceOfSatisfying(BackupArchiveException.class, failure -> assertThat(failure.getMessage()).contains("ownership"));
+                verify(imports, never()).wipeAllTables(anyMap());
+                tx.executeWithoutResult(status -> assertThat(revisions.findByRequestId(original.requestId()).orElseThrow().receipt()).isEqualTo(original));
+            } finally { imports.deleteStagingFile(preview.stagingId()); }
+        } finally { tx.executeWithoutResult(status -> helper.deleteSeasonCascade(seasons.findById(foreign[0]).orElseThrow())); }
     }
 
     private void removeWindowFields(Map<String, byte[]> files) throws IOException {

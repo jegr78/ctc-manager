@@ -174,6 +174,30 @@ class MatchdayPickWindowManagementIT extends PickPersistenceIT {
         assertThatThrownBy(() -> windows.readPairing(pairing.bridge(), false)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("context");
     }
 
+    @Test
+    void givenAClosedLegacyRoundReferencingAForeignPlayoff_whenOpening_thenRejectWithoutChangingTheFlagOrHistory() {
+        var pairing = playoff(false);
+        var context = tx.execute(status -> {
+            var row = entityManager.find(PlayoffMatchup.class, pairing.playoff()); var playoff = row.getRound().getPlayoff();
+            var original = playoff.getPhase().getId();
+            var foreign = helper.createSeason("Test foreign window " + java.util.UUID.randomUUID());
+            var phase = new SeasonPhase(foreign, PhaseType.PLAYOFF, PhaseLayout.BRACKET, 10); phase.setLabel("Test foreign phase"); entityManager.persist(phase);
+            entityManager.find(Matchday.class, pairing.day()).setPicksOpen(false); playoff.setPhase(phase); entityManager.flush();
+            return new java.util.UUID[]{foreign.getId(), playoff.getId(), original};
+        });
+        try {
+            var view = windows.readMatchday(pairing.day());
+            assertThatThrownBy(() -> save(view, true)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("context");
+            assertThat(windows.readMatchday(pairing.day()).open()).isFalse();
+            assertThat(windows.readMatchday(pairing.day()).version()).isEqualTo(view.version());
+        } finally {
+            tx.executeWithoutResult(status -> {
+                entityManager.find(Playoff.class, context[1]).setPhase(entityManager.find(SeasonPhase.class, context[2])); entityManager.flush();
+                helper.deleteSeasonCascade(entityManager.find(Season.class, context[0]));
+            });
+        }
+    }
+
     private record PlayoffPairing(java.util.UUID day, java.util.UUID bridge, java.util.UUID playoff) { }
     private PlayoffPairing playoff(boolean withBridge) {
         return tx.execute(status -> {
