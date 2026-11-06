@@ -2,6 +2,7 @@ package org.ctc.gt7sync;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -98,7 +99,10 @@ class Gt7TrackImageSyncTest {
         // given
         when(scraperService.scrapeTracks(true)).thenReturn(List.of(source(IMAGE)));
         // when
-        var result = sync.executeSync(List.of(), List.of(), List.of(), null, List.of(UUID.randomUUID()));
+        var reference = new java.util.concurrent.atomic.AtomicReference<Gt7SyncService.SyncResult>();
+        assertThatNoException().isThrownBy(() -> reference.set(
+                sync.executeSync(List.of(), List.of(), List.of(), null, List.of(UUID.randomUUID()))));
+        var result = reference.get();
         // then
         assertThat(result.errors()).anyMatch(message -> message.contains("no longer exists"));
         assertThat(result.trackImagesUpdated()).isZero();
@@ -115,6 +119,19 @@ class Gt7TrackImageSyncTest {
         var result = execute(track);
         // then
         assertThat(result.errors()).anyMatch(message -> message.contains("source"));
+        assertThat(result.trackImagesUpdated()).isZero();
+        verifyNoInteractions(fileStorageService);
+    }
+
+    @Test
+    void givenAmbiguousTrackSource_whenBackfill_thenDoesNotChooseARecord() throws Exception {
+        // given
+        var track = eligible(IMAGE);
+        when(scraperService.scrapeTracks(true)).thenReturn(List.of(source(IMAGE), source(IMAGE)));
+        // when
+        var result = execute(track);
+        // then
+        assertThat(result.errors()).contains("Track source is missing or ambiguous for " + NAME);
         assertThat(result.trackImagesUpdated()).isZero();
         verifyNoInteractions(fileStorageService);
     }
@@ -218,7 +235,10 @@ class Gt7TrackImageSyncTest {
     }
 
     private Gt7SyncService.SyncResult execute(Track track) throws IOException {
-        return sync.executeSync(List.of(), List.of(), List.of(), null, List.of(track.getId()));
+        var reference = new java.util.concurrent.atomic.AtomicReference<Gt7SyncService.SyncResult>();
+        assertThatNoException().isThrownBy(() -> reference.set(
+                sync.executeSync(List.of(), List.of(), List.of(), null, List.of(track.getId()))));
+        return reference.get();
     }
 
     private Track track(String name, String image) {

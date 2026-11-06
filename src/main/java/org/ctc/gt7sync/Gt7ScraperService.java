@@ -86,7 +86,7 @@ public class Gt7ScraperService {
 		return map;
 	}
 
-	private List<ScrapedTrack> resolveTrackImagesParallel(List<ScrapedTrack> tracks, Map<String, String> imageChunkMap) {
+	List<ScrapedTrack> resolveTrackImagesParallel(List<ScrapedTrack> tracks, Map<String, String> imageChunkMap) {
 		var baseIdsToResolve = tracks.stream()
 				.map(ScrapedTrack::baseId)
 				.filter(Objects::nonNull)
@@ -230,7 +230,7 @@ public class Gt7ScraperService {
 		return Jsoup.connect(url).timeout(10_000).maxBodySize(4 * 1024 * 1024);
 	}
 
-	private String fetchText(String url) throws IOException {
+	String fetchText(String url) throws IOException {
 		return externalConnection(url).ignoreContentType(true).execute().body();
 	}
 

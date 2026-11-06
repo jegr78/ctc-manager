@@ -157,6 +157,7 @@ class Gt7SyncPreviewE2ETest extends PlaywrightConfig {
             page.getByLabel("Load missing image for Test SUGO <track>").check();
         }
         // when / then
+        assertThat(page.locator("#importBtn")).isEnabled();
         java.nio.file.Files.createDirectories(java.nio.file.Path.of(".screenshots"));
         page.screenshot(new com.microsoft.playwright.Page.ScreenshotOptions()
                 .setPath(java.nio.file.Path.of(".screenshots/gt7-track-images-" + width + "-" + javascript + ".png"))
