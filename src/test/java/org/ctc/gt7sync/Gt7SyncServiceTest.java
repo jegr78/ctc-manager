@@ -56,8 +56,11 @@ class Gt7SyncServiceTest {
         when(carRepository.findAllByGt7Id("car102")).thenReturn(List.of(existing("car102")));
         when(carRepository.findAllByManufacturerAndName("Toyota", "Sports 800 '65")).thenReturn(List.of(existing("car205")));
 
-		when(trackRepository.existsByName("Deep Forest Raceway")).thenReturn(true);
-		when(trackRepository.existsByName("Nurburgring Nordschleife")).thenReturn(false);
+		var existingTrack = new Track("Deep Forest Raceway", "Switzerland");
+        existingTrack.setId(UUID.randomUUID());
+        existingTrack.setImageUrl("/uploads/existing.png");
+        when(trackRepository.findByName("Deep Forest Raceway")).thenReturn(java.util.Optional.of(existingTrack));
+		when(trackRepository.findByName("Nurburgring Nordschleife")).thenReturn(java.util.Optional.empty());
 
 		// when
 		Gt7SyncPreview preview = syncService.fetchAndPreview();
