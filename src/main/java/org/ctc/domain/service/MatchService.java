@@ -49,6 +49,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MatchService {
     private final ScoreWriteLockService scoreLocks;
+    private final PickWindowService pickWindows;
     private final PickLifecycleGuard pickGuard;
     private final IncidentLifecycleGuard incidentGuard;
     private final RacePenaltyLifecycleGuard penaltyGuard;
@@ -239,6 +240,7 @@ public class MatchService {
 		match.setHomeScore(null);
 		match.setAwayScore(null);
 		matchRepository.save(match);
+		pickWindows.closeCompletedForSeason(match.getMatchday().getSeason().getId());
 		log.info("Set walkover for match {} — team {}", matchId, walkoverTeamId);
 	}
 

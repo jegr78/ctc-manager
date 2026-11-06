@@ -781,7 +781,7 @@ Settings-bearing publication uses the confirmed-content rules below; existing UR
 
 Run `/picks` in the bound team channel. Choose the exact home race using its season, matchday,
 opponent and leg. The private view shows the latest confirmed revision, author, server timestamp,
-deadline with Europe/Berlin offset, return reason and independent management-opening/closure flags.
+effective deadline with Europe/Berlin offset, return reason and central matchday opening status. Only open matchdays appear in the selector; an existing private receipt can still refresh read-only after closure.
 An approved or closed target offers viewing without team editing.
 
 Start a new entry or replacement and choose a track and car from the target season. Search or
@@ -813,9 +813,20 @@ Choose a season, then filter matchday and submission state. A past deadline rema
 of whether a confirmed submission exists. Detail pages show the exact target, saved versions,
 original authors/timestamps, current return reason and management decision history.
 
-Choose a review decision and supply a reason. Opening a missing submission or returning an
-unapproved revision needs no replacement deadline. A manual close stops team writes; approval
-locks them and applies only the selected revision's setup. Neither action posts to Discord.
+Open **Manage picks and deadline** in the matchday workspace to set its central switch, ordinary
+pick deadline and event window. Prepared matchdays default closed. Open them manually when intake
+should begin. The switch applies to every match. Completion of all matches closes it automatically;
+removing results later does not reopen it. Empty planned matchdays do not auto-close.
+
+For an individual extension, choose **Match picks deadline** in the match workspace or **Match
+deadline exception** in pick review. The override applies to both legs. Leave it empty to inherit
+the matchday default. An exception does not open a closed matchday or affect another match.
+
+Choose a review decision and supply a reason. Returning an unapproved revision retains the
+current matchday flag and effective deadline; an expired cutoff still needs a match exception.
+Approval locks team editing and applies only the selected revision's setup. Saving these settings
+or decisions never posts to Discord. Historical individual opening/closure decisions remain stored;
+new native controls use the central matchday window.
 
 Compare existing internal values with the selected submission before approving. If they differ,
 explicitly select replacement consent. A changed submission version or an internal settings
@@ -930,11 +941,15 @@ show the token. `DISABLED`, `MISCONFIGURED`, `CONNECTING`, `CONNECTED`, `RECONNE
 ### Deadlines, failures and restore downtime
 
 A matchday deadline is interpreted in Europe/Berlin. Ordinary edits stop at the exact cutoff.
-A missing deadline, a spring clock gap or an autumn repeated time requires an explicit management
-decision. The read-only data audit reports an unreviewed ambiguous deadline for unfinished managed
-targets. It does not choose an offset or alter a deadline. A recorded opening/return stays open
-without another cutoff until management closes or approves it. Approval immediately locks team edits.
-Completed and legacy targets keep their existing lifecycle.
+A central manual opening without a configured cutoff allows intake until management closes the
+matchday or all its matches complete. When configured, the match's exception takes precedence over
+the matchday deadline, and the exact cutoff applies even to returned picks. A spring clock gap or
+an autumn repeated time is rejected for new settings. The read-only data audit reports ambiguous
+effective deadlines without choosing an offset or changing data. Approval immediately locks team edits.
+
+V39/schema 17 preserves existing immutable histories and adds typed window fields. Older archives
+restore matchdays closed with no pairing exceptions. After updating, explicitly open the intended
+matchdays in management; do not infer activation from old deadlines or individual OPEN decisions.
 
 An unfinished wizard lasts 30 minutes; private callback continuations stop after 15 minutes.
 Neither duration extends a pick deadline. A missing receipt is recovered through `/picks` and the
@@ -952,7 +967,7 @@ sessions and old confirmations. Keep outbound integrations paused during recover
 following the recovery runbook. Restore/reconnect never registers commands, publishes settings or
 rebuilds public evidence from live choices. Restart the private interaction after recovery and
 check the retained receipt/history. Valid private archives preserve exact channel bindings,
-Equal Conditions versus numeric 0x, manual openings/closures and immutable public/private versions.
+Equal Conditions versus numeric 0x, central openings/closures, legacy decision history and immutable public/private versions.
 
 ### Operator rollout checklist
 
@@ -968,7 +983,7 @@ live guild registration, messages, production changes and test-guild UAT need se
 - [ ] Perform the authorized test-guild UAT. A teammate can view the saved team revision; an
   opponent, wrong channel or revoked member cannot. An old open dialog must not bypass a revocation.
 - [ ] Exercise fixed and enabled category choices, Equal Conditions and 0x, replacement/conflict,
-  exact deadline closure, missing reopening, return and manual close. Check receipt recovery and
+  exact deadline closure, central opening/closure, match exceptions and return. Check receipt recovery and
   approval lock. Generate the existing team cards before testing settings graphics. Approval must remain private until explicit publication; lobby-only output must
   still withhold the omitted car.
 - [ ] Qualify backup/recovery using the existing isolated recovery procedure. Check IDs, immutable

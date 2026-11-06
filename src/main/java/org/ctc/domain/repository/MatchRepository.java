@@ -19,6 +19,10 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
 	@EntityGraph(attributePaths = {"homeTeam", "awayTeam"})
 	List<Match> findByMatchdayId(UUID matchdayId);
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select m from Match m where m.matchday.id = :matchdayId order by m.id")
+    List<Match> findByMatchdayIdForUpdate(UUID matchdayId);
+
 	@EntityGraph(attributePaths = {"homeTeam", "awayTeam", "matchday"})
 	@Query("SELECT m FROM Match m WHERE m.matchday.phase.season.id = :seasonId")
 	List<Match> findByMatchdaySeasonId(UUID seasonId);

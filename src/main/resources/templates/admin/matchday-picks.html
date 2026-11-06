@@ -38,7 +38,7 @@
                 <tbody><tr th:each="row : ${overview.rows}">
                     <td th:text="${row.label}"></td><td th:text="${row.state}"></td><td th:text="${row.revisionNumber ?: 'None'}"></td>
                     <td><span th:text="${row.deadlineState}"></span><br><span class="text-dim" th:text="${row.deadline}"></span></td>
-                    <td><span th:if="${row.manualOpen}">Opened, no new deadline</span><span th:if="${row.manualClosed}">Manually closed</span><span th:if="${!row.manualOpen and !row.manualClosed}">None</span></td>
+                    <td><span th:if="${row.matchdayOpen}">Matchday open</span><span th:if="${row.manualClosed}">Manually closed</span><span th:if="${!row.matchdayOpen and !row.manualClosed}">None</span></td>
                     <td><a class="btn btn-secondary btn-sm" th:href="@{/admin/matchday-picks/{id}(id=${row.raceId})}" th:attr="aria-label=${'Review ' + row.label}">Review</a></td>
                 </tr></tbody>
             </table>

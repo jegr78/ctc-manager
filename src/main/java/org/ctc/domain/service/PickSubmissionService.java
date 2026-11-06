@@ -45,8 +45,8 @@ public class PickSubmissionService {
             var acceptedAt = clock.instant();
             var decision = deadlines.assessAt(new PickDeadlinePolicy.Context(pick.getState(),
                     target.season().isPicksCollectionEnabled(), collection.isAvailable(),
-                    target.race().isPicksManaged() && targets.isEligible(target.race()), pick.isManualOpen(),
-                    pick.isManualClosed(), target.race().getMatchday().getPickDeadline()), acceptedAt);
+                    target.race().isPicksManaged() && targets.isEligible(target.race()), target.race().getMatchday().isPicksOpen(),
+                    pick.isManualClosed(), org.ctc.domain.model.MatchdayPickWindowRules.deadline(target.race())), acceptedAt);
             if (!decision.editable()) throw new BusinessRuleException(decision.reason());
             int number = pick.submit();
             picks.save(pick);

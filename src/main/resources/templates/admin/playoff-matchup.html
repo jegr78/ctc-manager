@@ -14,6 +14,7 @@
             <span th:if="${matchup.team2 == null}">TBD</span>
         </h1>
         <div class="actions">
+            <a th:if="${!legs.isEmpty()}" th:href="@{/admin/pick-windows/playoffs/{id}(id=${matchup.id})}" class="btn btn-secondary">Match picks deadline</a>
             <a th:href="@{/admin/playoffs(seasonId=${playoff.season.id})}" class="btn btn-secondary">Back to Bracket</a>
         </div>
     </div>

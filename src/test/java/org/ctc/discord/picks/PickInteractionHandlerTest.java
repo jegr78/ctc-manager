@@ -246,11 +246,11 @@ class PickInteractionHandlerTest {
     void given2027DraftAndLaterProfileChange_whenConfirming_thenKeepCapturedChoicesAndDoNotClaimSuccessOnRejection() {
         // given
         view = new PickTeamView(view.target(), view.payload(), view.receipt(), view.carLabel(), view.trackLabel(), view.deadline(),
-                view.manualOpen(), view.manualClosed(), view.returnReason(), view.cars(), view.tracks(), LobbyRulesProfile.CTC_2027);
+                view.matchdayOpen(), view.manualClosed(), view.returnReason(), view.cars(), view.tracks(), LobbyRulesProfile.CTC_2027);
         enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open fuel form"); submitModal(fuel); open("Open mandatory form"); submitModal(fields("mandatory", "None")); open("Open time form");
         assertThat(response.modal.fields()).hasSize(5);
         view = new PickTeamView(view.target(), view.payload(), view.receipt(), view.carLabel(), view.trackLabel(), view.deadline(),
-                view.manualOpen(), view.manualClosed(), view.returnReason(), view.cars(), view.tracks(), LobbyRulesProfile.LEGACY);
+                view.matchdayOpen(), view.manualClosed(), view.returnReason(), view.cars(), view.tracks(), LobbyRulesProfile.LEGACY);
         submitModal(fields("progression", "0", "weather", "S01", "daytime", "Night", "start", "ROLLING", "slipstream", "WEAK"));
         assertThat(response.last().buttons()).extracting(PickGatewayMessage.Button::label).contains("Confirm submission");
         assertThat(response.last().content()).contains("Rolling Start", "Weak");
@@ -343,7 +343,7 @@ class PickInteractionHandlerTest {
         // when
         command(); choose();
         // then
-        assertThat(response.last().content()).contains("RETURNED", "Check weather order", "no new deadline", "revision 2", "by <@301>", "Weather: S01; R03");
+        assertThat(response.last().content()).contains("RETURNED", "Check weather order", "Matchday picks: Open", "revision 2", "by <@301>", "Weather: S01; R03");
         assertThat(response.last().buttons()).extracting(PickGatewayMessage.Button::label).contains("Replace picks");
         verify(access, atLeastOnce()).authorizeChannel("100", "200", "302");
         verifyNoInteractions(submissions);

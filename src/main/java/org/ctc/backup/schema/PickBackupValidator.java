@@ -118,6 +118,7 @@ public final class PickBackupValidator {
             for (var decision : index("matchday_pick_decisions").values()) {
                 String owner = reference(decision, "pick", "matchday_picks");
                 var kind = PickDecisionKind.valueOf(text(decision, "kind", 16));
+                if (kind == PickDecisionKind.WINDOW_OPEN && version < 17) fail("Central window decisions require schema version 17");
                 if (!text(decision, "actorKind", 16).equals("MANAGEMENT")) fail("Invalid decision actor kind");
                 text(decision, "actorId", 128);
                 text(decision, "reason", 1000);
@@ -155,6 +156,7 @@ public final class PickBackupValidator {
                             case OPEN -> replay.openMissing();
                             case RETURN -> replay.returnForCorrection();
                             case CLOSE -> replay.close();
+                            case WINDOW_OPEN -> replay.resumeWithinMatchday();
                             case APPROVE -> {
                                 if (replay.getLatestRevisionNumber() == null) fail("Cannot approve a missing revision");
                                 replay.approve(replay.getLatestRevisionNumber());

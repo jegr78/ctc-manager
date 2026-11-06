@@ -55,6 +55,7 @@ class PickTargetServiceTest {
         day.setId(UUID.randomUUID());
         day.setGroup(new SeasonPhaseGroup(phase, "Test group", 0));
         day.setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0));
+        day.setPicksOpen(true);
         var match = new Match(day, home, away);
         match.setId(UUID.randomUUID());
         race.setId(UUID.randomUUID());
@@ -175,7 +176,7 @@ class PickTargetServiceTest {
     }
 
     @Test
-    void givenApprovedOrMissingDeadlineTarget_whenListing_thenKeepServerEditingReason() {
+    void givenApprovedOrOpenWithoutDeadlineTarget_whenListing_thenKeepServerEditingReason() {
         // given
         when(seasons.findById(season.getId())).thenReturn(Optional.of(season));
         when(races.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(race));
@@ -183,8 +184,8 @@ class PickTargetServiceTest {
         // when / then
         var missing = service.listHomeRaces(channel());
         assertThat(missing).hasSize(1);
-        assertThat(missing.getFirst().editable()).isFalse();
-        assertThat(missing.getFirst().reason()).contains("deadline", "management");
+        assertThat(missing.getFirst().editable()).isTrue();
+        assertThat(missing.getFirst().reason()).contains("without a pick deadline");
         var pick = new MatchdayPick(race, season, home);
         pick.submit();
         pick.approve(1);
@@ -194,6 +195,20 @@ class PickTargetServiceTest {
         assertThat(approved.getFirst().editable()).isFalse();
         assertThat(approved.getFirst().reason()).contains("Approved");
         assertThat(approved.getFirst().version()).isEqualTo(2);
+    }
+
+    @Test
+    void givenPreparedClosedRound_whenListing_thenHideItWhileKeepingKnownOwnDetailsReadOnly() {
+        // given
+        race.getMatchday().setPicksOpen(false);
+        when(seasons.findById(season.getId())).thenReturn(Optional.of(season));
+        when(races.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(race));
+        // when / then
+        assertThat(service.listHomeRaces(channel())).isEmpty();
+        var detail = service.homeRace(channel(), race.getId());
+        assertThat(detail.editable()).isFalse(); assertThat(detail.reason()).contains("Matchday", "closed");
+        race.getMatchday().setPicksOpen(true);
+        assertThat(service.listHomeRaces(channel())).extracting(org.ctc.domain.picks.HomeRaceTarget::raceId).containsExactly(race.getId());
     }
 
     @Test
@@ -234,7 +249,7 @@ class PickTargetServiceTest {
         // given
         var second = new Season("Test second season"); second.setId(UUID.randomUUID()); second.setPicksCollectionEnabled(true);
         var phase = new SeasonPhase(); phase.setId(UUID.randomUUID()); phase.setSeason(second); phase.setPhaseType(PhaseType.REGULAR); phase.setLabel("Second league");
-        var day = new Matchday(phase, "Second matchday", 2); day.setId(UUID.randomUUID()); day.setPickDeadline(race.getMatchday().getPickDeadline());
+        var day = new Matchday(phase, "Second matchday", 2); day.setId(UUID.randomUUID()); day.setPickDeadline(race.getMatchday().getPickDeadline()); day.setPicksOpen(true);
         var match = new Match(day, away, home); match.setId(UUID.randomUUID());
         var outbound = new Race(); outbound.setId(UUID.randomUUID()); outbound.setMatchday(day); outbound.setMatch(match);
         outbound.setDateTime(race.getDateTime()); outbound.setPicksManaged(true);

@@ -50,9 +50,10 @@ class MatchdayPickAdminServiceTest {
         // given
         when(environment.acceptsProfiles(any(Profiles.class))).thenReturn(true);
         // when
-        service.decide(race, form(), null);
+        var form = form(); form.setAction(PickReviewForm.Action.RETURN);
+        service.decide(race, form, null);
         // then
-        verify(reviews).close(race, 3, new ManagementPickActor("development-manager", GENERATION), "Test review reason");
+        verify(reviews).returnForCorrection(race, 3, new ManagementPickActor("development-manager", GENERATION), "Test review reason");
     }
 
     @Test

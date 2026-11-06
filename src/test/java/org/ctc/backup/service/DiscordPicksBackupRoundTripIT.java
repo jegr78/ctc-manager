@@ -69,6 +69,7 @@ class DiscordPicksBackupRoundTripIT {
     @Autowired org.ctc.admin.service.PickIntegrityAuditService integrity;
     @Autowired BackupArchiveService archives;
     @MockitoSpyBean BackupImportService imports;
+    @Autowired PickWindowService windows;
     @MockitoBean PickCollectionStatus collection;
     final ManagementPickActor manager = new ManagementPickActor("test-admin");
     TestHelper.SeasonFixture fixture;
@@ -88,6 +89,7 @@ class DiscordPicksBackupRoundTripIT {
             fixture = helper.createFullSeasonFixture("TPB" + UUID.randomUUID().toString().substring(0, 7));
             fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0));
             fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0));
+            fixture.matchday().setPicksOpen(true);
             var car1 = cars.save(new Car("Test pick backup", UUID.randomUUID().toString()));
             var car2 = cars.save(new Car("Test pick backup", UUID.randomUUID().toString()));
             var track1 = tracks.save(new Track("Test pick backup " + UUID.randomUUID()));
@@ -118,6 +120,7 @@ class DiscordPicksBackupRoundTripIT {
             var season = seasons.findById(fixture.season().getId()).orElseThrow();
             var day = helper.createMatchday(season, "Test pending target", 2);
             day.setPickDeadline(LocalDateTime.of(2035, 1, 2, 12, 0));
+            day.setPicksOpen(true);
             var match = helper.createMatch(day, teams.findById(fixture.homeTeam().getId()).orElseThrow(), teams.findById(fixture.awayTeam().getId()).orElseThrow());
             var race = helper.createRace(day, match);
             race.setPicksManaged(true);
@@ -263,6 +266,7 @@ class DiscordPicksBackupRoundTripIT {
         var files = unzip(legacy);
         var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
         manifest.put("schema_version", version);
+        removeWindowFields(files);
         var absent = new ArrayList<>(List.of("pick_publication_attempts", "pick_publication_snapshots"));
         if (version < 6) absent.add("team_pick_channel_bindings");
         if (version < 5) absent.addAll(List.of("matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"));
@@ -297,6 +301,7 @@ class DiscordPicksBackupRoundTripIT {
         var files = unzip(export());
         var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
         manifest.put("schema_version", 5);
+        removeWindowFields(files);
         for (String table : List.of("pick_publication_attempts", "pick_publication_snapshots")) {
             ((ObjectNode) manifest.get("table_counts")).remove(table);
             files.remove("data/" + table.replace('_', '-') + ".json");
@@ -373,6 +378,7 @@ class DiscordPicksBackupRoundTripIT {
         var files = unzip(export());
         var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
         manifest.put("schema_version", 13);
+        removeWindowFields(files);
         files.put("manifest.json", JSON.writeValueAsBytes(manifest));
         for (String table : List.of("seasons", "race-settings", "matchday-pick-revisions", "matchday-pick-decisions", "pick-publication-attempts")) {
             String file = "data/" + table + ".json";
@@ -415,6 +421,39 @@ class DiscordPicksBackupRoundTripIT {
     private AuthorizedPickActor actor(UUID race) {
         return new AuthorizedPickActor(race, fixture.season().getId(), fixture.homeTeam().getId(), "12345");
     }
+    @Test
+    void givenCentralWindowAndPairingExceptionWithLegacyHistory_whenRestoring_thenPreserveNewStateAndEveryOriginalReceipt() throws Exception {
+        var pairing = tx.execute(status -> races.findById(pendingRace).orElseThrow().getMatch().getId());
+        var pair = windows.readPairing(pairing, false);
+        var actor = new ManagementPickActor("test-window-manager", epoch.managementGeneration());
+        var cutoff = LocalDateTime.of(2036, 1, 2, 18, 0);
+        windows.savePairing(pairing, false, cutoff, pair.version(), pair.scope(), actor);
+        var day = windows.readMatchday(pair.matchdayId());
+        windows.saveMatchday(day.id(), true, day.deadline(), day.weekend(), day.version(), day.scope(), actor);
+        var expected = windows.readMatchday(day.id());
+        var archive = export();
+        var preview = imports.stage(upload(archive)); imports.execute(preview.stagingId());
+        var restored = windows.readMatchday(day.id());
+        assertThat(restored.open()).isTrue(); assertThat(restored.version()).isEqualTo(expected.version());
+        assertThat(windows.readPairing(pairing, false).override()).isEqualTo(cutoff);
+        tx.executeWithoutResult(status -> {
+            var pick = picks.findByRaceId(pendingRace).orElseThrow();
+            assertThat(pick.getState()).isEqualTo(PickState.RETURNED); assertThat(pick.isManualClosed()).isFalse();
+            assertThat(decisions.findAll().stream().filter(row -> row.getPick().getId().equals(pick.getId())))
+                    .extracting(MatchdayPickDecision::getKind).contains(PickDecisionKind.CLOSE, PickDecisionKind.WINDOW_OPEN);
+            assertThat(revisions.findByRequestId(original.requestId()).orElseThrow().receipt()).isEqualTo(original);
+        });
+    }
+
+    private void removeWindowFields(Map<String, byte[]> files) throws IOException {
+        for (String table : List.of("matchdays", "matches", "playoff-matchups")) {
+            String name = "data/" + table + ".json";
+            var rows = (ArrayNode) JSON.readTree(files.get(name));
+            for (var row : rows) ((ObjectNode) row).remove(List.of("picksOpen", "pickWindowVersion", "pickDeadlineOverride"));
+            files.put(name, JSON.writeValueAsBytes(rows));
+        }
+    }
+
     private byte[] export() throws IOException {
         var output = new ByteArrayOutputStream();
         archives.writeZip(output, Instant.now());

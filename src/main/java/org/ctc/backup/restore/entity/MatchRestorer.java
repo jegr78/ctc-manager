@@ -22,8 +22,8 @@ public class MatchRestorer implements EntityRestorer {
           + "home_score, away_score, bye, created_at, updated_at, "
           + "discord_channel_id, discord_channel_webhook_url, discord_teaser, "
           + "stream_link, lobby_host, race_director, streamer, "
-          + "discord_channel_archived_at, walkover_team_id) "
-          + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+          + "discord_channel_archived_at, walkover_team_id, pick_deadline_override, pick_window_version) "
+          + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     @Override
     public String tableName() {
@@ -53,6 +53,8 @@ public class MatchRestorer implements EntityRestorer {
             var forfeiting = org.ctc.backup.schema.MatchWalkoverReference.read(row.get("walkoverTeam"));
             if (forfeiting == null) ps.setNull(18, Types.OTHER);
             else ps.setObject(18, forfeiting);
+            setNullableTimestamp(ps, 19, row, "pickDeadlineOverride");
+            ps.setLong(20, row.path("pickWindowVersion").asLong(0));
         });
         log.debug("MatchRestorer: restored {} rows", rows.size());
     }

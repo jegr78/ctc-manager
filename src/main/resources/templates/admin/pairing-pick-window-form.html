@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/layout :: layout('Match picks deadline', ~{::section})}">
+<body><section class="entity-editor planning-editor">
+    <a th:href="@{/admin/matchdays/{id}(id=${window.matchdayId})}" class="back-link">&larr; Back to Matchday</a>
+    <h1>Match picks deadline</h1>
+    <div class="card">
+        <p>This exception applies to both legs of this match. It does not open a closed matchday or extend another match's deadline.</p>
+        <p>Matchday default: <span th:text="${window.defaultDeadline != null ? #temporals.format(window.defaultDeadline, 'dd MMM yyyy HH:mm') + ' Europe/Berlin' : 'No cutoff'}"></span></p>
+        <form method="post" th:action="${window.playoff ? '/admin/pick-windows/playoffs/' + window.id : '/admin/pick-windows/matches/' + window.id}" th:object="${form}">
+            <input type="hidden" th:field="*{expectedVersion}"><input type="hidden" th:field="*{expectedScope}"><input type="hidden" th:field="*{expectedGeneration}">
+            <div class="alert alert-error" th:if="${#fields.hasErrors('*')}"><p th:each="err : ${#fields.allErrors()}" th:text="${err}"></p></div>
+            <div class="form-group">
+                <label for="pickDeadlineOverride">Deadline exception, Europe/Berlin</label>
+                <input type="datetime-local" th:field="*{pickDeadlineOverride}" aria-describedby="override-hint">
+                <p id="override-hint" class="text-dim">Leave empty to use the matchday default.</p>
+                <p class="field-error" th:if="${#fields.hasErrors('pickDeadlineOverride')}" th:errors="*{pickDeadlineOverride}"></p>
+            </div>
+            <div class="entity-editor-actions"><button type="submit" class="btn btn-primary">Save match deadline</button>
+                <a th:href="@{/admin/matchdays/{id}(id=${window.matchdayId})}" class="btn btn-secondary">Back to Matchday</a></div>
+        </form>
+    </div>
+</section></body></html>

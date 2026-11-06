@@ -107,9 +107,9 @@ public class MatchdayPickAdminService {
         var actor = actor(principal, form.getExpectedGeneration());
         if (form.getAction() == null) throw new BusinessRuleException("Choose a review decision");
         switch (form.getAction()) {
-            case OPEN_MISSING -> reviews.openMissing(raceId, form.getExpectedVersion(), actor, form.getReason());
+            case OPEN_MISSING -> throw new BusinessRuleException("Open picks centrally in the matchday settings");
             case RETURN -> reviews.returnForCorrection(raceId, form.getExpectedVersion(), actor, form.getReason());
-            case CLOSE -> reviews.close(raceId, form.getExpectedVersion(), actor, form.getReason());
+            case CLOSE -> throw new BusinessRuleException("Close picks centrally in the matchday settings");
             case APPROVE -> {
                 if (form.getRevisionNumber() == null) throw new BusinessRuleException("Choose the exact current revision");
                 reviews.approve(raceId, form.getExpectedVersion(), form.getRevisionNumber(), actor, form.getReason(),
@@ -169,17 +169,16 @@ public class MatchdayPickAdminService {
         boolean identity = pick == null || pick.matchesTarget(race); boolean eligible = identity && targets.isEligible(race);
         var actions = new ArrayList<PickReviewForm.Action>();
         if (eligible && state != PickState.APPROVED) {
-            if (pick == null || pick.getLatestRevisionNumber() == null) actions.add(PickReviewForm.Action.OPEN_MISSING);
-            else { actions.add(PickReviewForm.Action.APPROVE); actions.add(PickReviewForm.Action.RETURN); }
-            actions.add(PickReviewForm.Action.CLOSE);
+            if (pick != null && pick.getLatestRevisionNumber() != null) { actions.add(PickReviewForm.Action.APPROVE); actions.add(PickReviewForm.Action.RETURN); }
         }
         var decision = deadlines.assess(new PickDeadlinePolicy.Context(state, season.isPicksCollectionEnabled(), collection.isAvailable(), eligible,
-                pick != null && pick.isManualOpen(), pick != null && pick.isManualClosed(), day.getPickDeadline()));
-        String deadline = "Not configured"; String deadlineState = "Missing deadline";
-        if (day.getPickDeadline() != null) {
-            deadline = day.getPickDeadline() + " Europe/Berlin";
+                day.isPicksOpen(), pick != null && pick.isManualClosed(), MatchdayPickWindowRules.deadline(race)));
+        String deadline = "Not configured"; String deadlineState = "No pick deadline";
+        var effectiveDeadline = MatchdayPickWindowRules.deadline(race);
+        if (effectiveDeadline != null) {
+            deadline = effectiveDeadline + " Europe/Berlin";
             try {
-                var cutoff = deadlines.resolveDeadline(day.getPickDeadline());
+                var cutoff = deadlines.resolveDeadline(effectiveDeadline);
                 deadline += " " + cutoff.atZone(ZoneId.of("Europe/Berlin")).getOffset();
                 deadlineState = clock.instant().isBefore(cutoff) ? "Before deadline" : "Deadline passed";
             } catch (BusinessRuleException ambiguous) { deadlineState = "Deadline requires management review"; }
@@ -187,8 +186,10 @@ public class MatchdayPickAdminService {
         return new Row(race.getId(), season.getId(), day.getId(), PickTargetService.label(season, race, seasonRaces), season.getDisplayLabel(), day.getLabel(),
                 state, pick == null ? 0 : pick.getVersion(), pick == null ? null : pick.getLatestRevisionNumber(),
                 pick == null ? null : pick.getApprovedRevisionNumber(), deadline, deadlineState,
-                pick != null && pick.isManualOpen(), pick != null && pick.isManualClosed(), identity ? decision.reason() : "Target identity changed; resolve before review",
-                identity, actions, identity && state == PickState.APPROVED);
+                day.isPicksOpen(), pick != null && pick.isManualClosed(), identity ? decision.reason() : "Target identity changed; resolve before review",
+                identity, actions, identity && state == PickState.APPROVED,
+                race.getPlayoffMatchup() != null ? "/admin/pick-windows/playoffs/" + race.getPlayoffMatchup().getId()
+                        : race.getMatch() != null ? "/admin/pick-windows/matches/" + race.getMatch().getId() : null);
     }
 
     private Race race(UUID id) {

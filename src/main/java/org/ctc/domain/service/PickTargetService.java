@@ -40,6 +40,16 @@ public class PickTargetService {
 
     @Transactional(readOnly = true)
     public List<HomeRaceTarget> listHomeRaces(ChannelPickActor actor) {
+        return homeRaces(actor, false);
+    }
+
+    @Transactional(readOnly = true)
+    public HomeRaceTarget homeRace(ChannelPickActor actor, UUID raceId) {
+        return homeRaces(actor, true).stream().filter(row -> raceId.equals(row.raceId())).findFirst()
+                .orElseThrow(PickTargetService::unavailable);
+    }
+
+    private List<HomeRaceTarget> homeRaces(ChannelPickActor actor, boolean includeClosed) {
         if (actor == null || !snowflake(actor.guildId()) || !snowflake(actor.channelId())
                 || !snowflake(actor.userId()) || actor.bindings().isEmpty()) {
             throw new BusinessRuleException("An authorized channel actor is required");
@@ -52,6 +62,7 @@ public class PickTargetService {
             if (season == null) continue;
             var rows = races.findByMatchdaySeasonId(season.getId());
             for (var race : rows) {
+                if (!includeClosed && !race.getMatchday().isPicksOpen()) continue;
                 if (!race.isPicksManaged() || race.getHomeTeam() == null || !binding.teamId().equals(race.getHomeTeam().getId())) continue;
                 var pick = picks.findSnapshotByRaceId(race.getId()).orElse(null);
                 if (pick != null && !pick.matchesTarget(race)) throw unavailable();
@@ -59,7 +70,7 @@ public class PickTargetService {
                 if (!eligible && (pick == null || pick.getLatestRevisionNumber() == null)) continue;
                 var state = pick == null ? PickState.MISSING : pick.getState();
                 var decision = deadlines.assess(new PickDeadlinePolicy.Context(state, season.isPicksCollectionEnabled(), collection.isAvailable(),
-                        eligible, pick != null && pick.isManualOpen(), pick != null && pick.isManualClosed(), race.getMatchday().getPickDeadline()));
+                        eligible, race.getMatchday().isPicksOpen(), pick != null && pick.isManualClosed(), org.ctc.domain.model.MatchdayPickWindowRules.deadline(race)));
                 result.putIfAbsent(race.getId(), new HomeRaceTarget(race.getId(), label(season, race, rows), state,
                         pick == null ? 0 : pick.getVersion(), decision.editable(), decision.reason()));
             }

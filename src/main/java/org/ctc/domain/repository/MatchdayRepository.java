@@ -37,6 +37,10 @@ public interface MatchdayRepository extends JpaRepository<Matchday, UUID> {
 
 	boolean existsByPhaseSeasonId(UUID seasonId);
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select m from Matchday m where m.phase.season.id = :seasonId and m.picksOpen = true order by m.id")
+    List<Matchday> findOpenForUpdate(UUID seasonId);
+
 	List<Matchday> findByGroupId(UUID groupId);
 
 	/**

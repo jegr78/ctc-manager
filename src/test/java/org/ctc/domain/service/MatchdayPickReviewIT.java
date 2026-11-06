@@ -2,6 +2,7 @@ package org.ctc.domain.service;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.List;
 import org.ctc.admin.dto.PickCorrectionForm;
 import org.ctc.admin.dto.PickReviewForm;
 import org.ctc.admin.service.MatchdayPickAdminService;
@@ -60,23 +61,21 @@ class MatchdayPickReviewIT extends PickPersistenceIT {
     }
 
     @Test
-    void givenMissingPickAfterDeadline_whenOpeningAndClosingWithNativeForms_thenRetainDeadlineAndServerActor() throws Exception {
-        // given
+    void givenLegacyIndividualOpenOrCloseAction_whenPostingNativeForms_thenRejectWithoutAppendingHistory() throws Exception {
         var cutoff = LocalDateTime.of(2020, 1, 1, 12, 0);
         tx.executeWithoutResult(status -> entityManager.find(Race.class, fixture.race().getId()).getMatchday().setPickDeadline(cutoff));
-        mvc.perform(get(path())).andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.containsString("MISSING")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Deadline passed")));
-        // when
-        mvc.perform(decision(PickReviewForm.Action.OPEN_MISSING, "Late first submission allowed").param("actorId", "forged-actor"))
-                .andExpect(status().is3xxRedirection());
-        // then
-        var opened = admin.detail(fixture.race().getId());
-        assertThat(opened.row().state()).isEqualTo(PickState.MISSING); assertThat(opened.row().manualOpen()).isTrue();
-        assertThat(opened.row().revisionNumber()).isNull(); assertThat(opened.decisions().getFirst().actor()).isEqualTo("test-manager");
-        mvc.perform(decision(PickReviewForm.Action.CLOSE, "Team entry closed")).andExpect(status().is3xxRedirection());
-        assertThatThrownBy(() -> submissions.submit(fixture.race().getId(), 2, UUID.randomUUID(), actor, payload))
-                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("closed");
-        tx.executeWithoutResult(status -> assertThat(entityManager.find(Race.class, fixture.race().getId()).getMatchday().getPickDeadline()).isEqualTo(cutoff));
+        mvc.perform(get(path())).andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.containsString("Deadline passed")));
+        for (var action : List.of(PickReviewForm.Action.OPEN_MISSING, PickReviewForm.Action.CLOSE)) {
+            mvc.perform(decision(action, "Test stale individual action").param("actorId", "forged-actor"))
+                    .andExpect(status().isOk()).andExpect(model().attributeHasErrors("form"))
+                    .andExpect(content().string(org.hamcrest.Matchers.containsString("centrally")));
+        }
+        var current = admin.detail(fixture.race().getId());
+        assertThat(current.row().revisionNumber()).isNull();
+        assertThat(current.decisions()).isEmpty();
+        assertThat(current.row().version()).isZero();
+        assertThat(current.row().actions()).isEmpty();
+        assertThat(current.row().deadline()).contains("2020-01-01T12:00");
     }
 
     @Test
@@ -87,8 +86,12 @@ class MatchdayPickReviewIT extends PickPersistenceIT {
         // when
         mvc.perform(decision(PickReviewForm.Action.RETURN, "Test <weather> correction")).andExpect(status().is3xxRedirection());
         var returned = admin.detail(fixture.race().getId());
-        assertThat(returned.row().state()).isEqualTo(PickState.RETURNED); assertThat(returned.row().manualOpen()).isTrue();
+        assertThat(returned.row().state()).isEqualTo(PickState.RETURNED); assertThat(returned.row().matchdayOpen()).isTrue();
         assertThat(returned.returnReason()).isEqualTo("Test <weather> correction");
+        assertThatThrownBy(() -> submissions.submit(fixture.race().getId(), 2, UUID.randomUUID(), actor, payload))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("deadline");
+        tx.executeWithoutResult(status -> entityManager.find(Race.class, fixture.race().getId()).getMatch()
+                .setPickDeadlineOverride(LocalDateTime.of(2035, 1, 1, 12, 0)));
         submissions.submit(fixture.race().getId(), 2, UUID.randomUUID(), actor, payload);
         // then
         mvc.perform(stale).andExpect(status().isOk()).andExpect(model().attributeHasErrors("form"))

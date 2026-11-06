@@ -132,7 +132,7 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
     }
 
     @Test
-    void givenReturnedPickAfterDeadline_whenCompletingCorrection_thenShowReasonAndKeepOpeningWithoutNewDeadline() {
+    void givenReturnedPickAfterDeadline_whenAllowingAMatchException_thenShowReasonAndUseItsExtendedCutoff() {
         // given
         var original = new Driver("12345"); original.complete(); original.click("Confirm submission");
         tx.executeWithoutResult(status -> {
@@ -141,13 +141,15 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
         });
         reviews.returnForCorrection(fixture.race().getId(), 1, new ManagementPickActor("test-admin"), "Check weather slot order");
         var corrected = new Driver("12346"); corrected.command(); corrected.select(fixture.race().getId());
-        assertThat(corrected.response.allText()).contains("RETURNED", "Check weather slot order", "no new deadline", "2020-01-01T12:00");
+        assertThat(corrected.response.allText()).contains("RETURNED", "Check weather slot order", "deadline has passed", "2020-01-01T12:00");
+        assertThat(corrected.response.last().buttons()).extracting(PickGatewayMessage.Button::label).doesNotContain("Replace picks");
+        tx.executeWithoutResult(status -> entityManager.find(Race.class, fixture.race().getId()).getMatch().setPickDeadlineOverride(LocalDateTime.of(2035, 1, 1, 12, 0)));
         // when
         corrected.complete(); corrected.click("Confirm submission");
         // then
         assertThat(current().receipt().revisionNumber()).isEqualTo(2);
         assertThat(current().receipt().aggregateVersion()).isEqualTo(3);
-        assertThat(current().manualOpen()).isTrue();
+        assertThat(current().matchdayOpen()).isTrue();
         assertThat(current().target().state()).isEqualTo(PickState.SUBMITTED);
     }
 
@@ -169,15 +171,16 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
     }
 
     @Test
-    void givenClosedOrMissingDeadline_whenViewing_thenShowMissingStateWithoutOfferingTeamWrites() {
+    void givenClosedMatchday_whenOpeningSelector_thenOfferNoHomeRacesEvenWithoutACutoff() {
         // given
-        tx.executeWithoutResult(status -> entityManager.find(Race.class, fixture.race().getId()).getMatchday().setPickDeadline(null));
+        tx.executeWithoutResult(status -> {
+            var day = entityManager.find(Race.class, fixture.race().getId()).getMatchday(); day.setPickDeadline(null); day.setPicksOpen(false);
+        });
         var member = new Driver("12345");
-        // when
-        member.command(); member.select(fixture.race().getId());
-        // then
-        assertThat(member.response.allText()).contains("MISSING", "deadline or explicit management opening", "No confirmed submission");
-        assertThat(member.response.last().buttons()).extracting(PickGatewayMessage.Button::label).containsExactly("Refresh current submission");
+        member.command();
+        assertThat(current().target().editable()).isFalse();
+        assertThat(member.response.allText()).contains("No eligible home races");
+        assertThat(member.response.messages).isEmpty();
     }
 
     @Test
@@ -304,18 +307,19 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
         assertThat(home.response.allText()).contains("unavailable").doesNotContain("Saved revision");
         var away = new Driver("12346", awayChannel, returnLeg); away.command(); away.select(returnLeg);
         assertThat(away.response.allText()).contains("MISSING", "Leg 2", "deadline has passed");
-        reviews.openMissing(returnLeg, 0, new ManagementPickActor("test-admin"), "Test late missing submission");
+        tx.executeWithoutResult(status -> entityManager.find(Race.class, returnLeg).getMatch().setPickDeadlineOverride(LocalDateTime.of(2035, 1, 1, 12, 0)));
         away.complete(); away.click("Confirm submission");
         var saved = reader.load(access.authorizeChannel(GUILD, awayChannel, "12346"), returnLeg);
         assertThat(saved.receipt().revisionNumber()).isEqualTo(1);
-        assertThat(saved.manualOpen()).isTrue();
+        assertThat(saved.matchdayOpen()).isTrue();
         assertThat(saved.target().label()).contains("Leg 2");
         tx.executeWithoutResult(status -> assertThat(races.findById(returnLeg).orElseThrow().getMatchday().getPickDeadline()).isEqualTo(LocalDateTime.of(2020, 1, 1, 12, 0)));
-        reviews.close(returnLeg, 2, new ManagementPickActor("test-admin"), "Test explicit close");
         away.command(); away.select(returnLeg);
-        assertThat(away.response.allText()).contains("manually closed");
+        tx.executeWithoutResult(status -> entityManager.find(Race.class, returnLeg).getMatchday().setPicksOpen(false));
+        away.click("Refresh current submission");
+        assertThat(away.response.allText()).contains("Matchday picks are closed");
         assertThat(away.response.last().buttons()).extracting(PickGatewayMessage.Button::label).doesNotContain("Enter picks", "Replace picks");
-        reviews.approve(returnLeg, 3, 1, new ManagementPickActor("test-admin"), "Test return leg approval");
+        reviews.approve(returnLeg, 1, 1, new ManagementPickActor("test-admin"), "Test return leg approval");
         assertThat(reader.load(access.authorizeChannel(GUILD, awayChannel, "12346"), returnLeg).target().state()).isEqualTo(PickState.APPROVED);
         assertThat(wm.getAllServeEvents()).isEmpty();
     }

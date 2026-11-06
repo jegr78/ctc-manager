@@ -1,16 +1,25 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Pick deadline &amp; event window', ~{::section})}">
+      th:replace="~{admin/layout :: layout('Matchday picks &amp; event window', ~{::section})}">
 <body>
 <section class="entity-editor planning-editor">
     <a th:href="@{/admin/matchdays/{id}(id=${matchday.id})}" class="back-link">&larr; Back to Matchday</a>
-    <h1 th:text="'Pick deadline &amp; event window: ' + ${matchday.label}"></h1>
+    <h1 th:text="'Matchday picks &amp; event window: ' + ${matchday.label}"></h1>
     <div class="card">
         <form class="entity-editor-form" th:action="@{/admin/matchdays/{id}/save-pairings(id=${form.id})}"
               th:object="${form}" method="post" data-testid="matchday-pairings-form">
             <input type="hidden" th:field="*{id}">
+            <input type="hidden" th:field="*{expectedVersion}">
+            <input type="hidden" th:field="*{expectedScope}">
+            <input type="hidden" th:field="*{expectedGeneration}">
+            <div class="alert alert-error" th:if="${#fields.hasErrors('*')}"><p th:each="err : ${#fields.allErrors()}" th:text="${err}"></p></div>
             <fieldset>
-                <legend>Pick deadline &amp; event window</legend>
+                <legend>Pick collection</legend>
+                <label for="picksOpen"><input type="checkbox" id="picksOpen" th:field="*{picksOpen}" role="switch" aria-describedby="picksOpen-hint"> Open picks for this matchday</label>
+                <p id="picksOpen-hint" class="text-dim form-hint--sm">Applies to every match. Prepared matchdays stay closed until you open them here. Picks close automatically after all matches are completed. A configured deadline still applies; individual match exceptions change only that match's cutoff.</p>
+            </fieldset>
+            <fieldset>
+                <legend>Matchday picks &amp; event window</legend>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="pickDeadline">Pick deadline</label>
@@ -33,7 +42,7 @@
             <div class="entity-editor-actions">
                 <span class="text-dim" th:text="${matchday.label}"></span>
                 <div class="actions">
-                    <button type="submit" class="btn btn-primary" data-testid="save-pairings">Save deadline and event window</button>
+                    <button type="submit" class="btn btn-primary" data-testid="save-pairings">Save picks settings and event window</button>
                     <a th:href="@{/admin/matchdays/{id}(id=${form.id})}" class="btn btn-secondary">Back to Matchday</a>
                 </div>
             </div>

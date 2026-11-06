@@ -13,13 +13,14 @@
             <dt class="label">Current revision</dt><dd th:text="${review.row.revisionNumber ?: 'None'}"></dd>
             <dt class="label">Approved revision</dt><dd th:text="${review.row.approvedRevisionNumber ?: 'None'}"></dd>
             <dt class="label">Deadline</dt><dd><span th:text="${review.row.deadline}"></span><br><span th:text="${review.row.deadlineState}"></span></dd>
-            <dt class="label">Management opening</dt><dd th:text="${review.row.manualOpen ? 'Open without a new deadline' : 'Not opened'}"></dd>
-            <dt class="label">Manual closure</dt><dd th:text="${review.row.manualClosed ? 'Closed' : 'Not manually closed'}"></dd>
+            <dt class="label">Matchday picks</dt><dd th:text="${review.row.matchdayOpen ? 'Open' : 'Closed'}"></dd>
+            <dt class="label">Legacy individual closure</dt><dd th:text="${review.row.manualClosed ? 'Closed' : 'Not manually closed'}"></dd>
             <dt class="label">Team editing policy</dt><dd th:text="${review.row.teamEditing}"></dd>
             <th:block th:if="${review.returnReason != null}"><dt class="label">Return reason</dt><dd th:text="${review.returnReason}"></dd></th:block>
         </dl>
         <div class="actions mt-md">
-            <a class="btn btn-secondary" th:href="@{/admin/matchdays/{id}/edit-pairings(id=${review.row.matchdayId})}">Edit pick deadline</a>
+            <a class="btn btn-secondary" th:href="@{/admin/matchdays/{id}/edit-pairings(id=${review.row.matchdayId})}">Manage matchday picks and deadline</a>
+            <a class="btn btn-secondary" th:if="${review.row.deadlineOverridePath != null}" th:href="${review.row.deadlineOverridePath}">Match deadline exception</a>
         </div>
         <div class="actions mt-md"><a class="btn btn-secondary" th:href="@{/admin/races/{id}(id=${review.row.raceId})}">Race workspace</a><a class="btn btn-secondary" th:href="@{/admin/matchdays/{id}(id=${review.row.matchdayId})}">Matchday workspace</a></div>
     </div>
