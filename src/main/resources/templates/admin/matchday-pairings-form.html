@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Edit Matchday Pairings', ~{::section})}">
+      th:replace="~{admin/layout :: layout('Pick deadline &amp; event window', ~{::section})}">
 <body>
 <section class="entity-editor planning-editor">
     <a th:href="@{/admin/matchdays/{id}(id=${matchday.id})}" class="back-link">&larr; Back to Matchday</a>
-    <h1 th:text="'Edit Pairings — ' + ${matchday.label}"></h1>
+    <h1 th:text="'Pick deadline &amp; event window: ' + ${matchday.label}"></h1>
     <div class="card">
         <form class="entity-editor-form" th:action="@{/admin/matchdays/{id}/save-pairings(id=${form.id})}"
               th:object="${form}" method="post" data-testid="matchday-pairings-form">
@@ -16,7 +16,7 @@
                         <label for="pickDeadline">Pick deadline</label>
                         <input type="datetime-local" id="pickDeadline" th:field="*{pickDeadline}" data-testid="pickDeadline"
                                th:attr="aria-invalid=${#fields.hasErrors('pickDeadline')},aria-describedby=${#fields.hasErrors('pickDeadline') ? 'pickDeadline-hint pickDeadline-error' : 'pickDeadline-hint'}">
-                        <p id="pickDeadline-hint" class="text-dim form-hint--sm">Optional date and time by which teams should submit their picks.</p>
+                        <p id="pickDeadline-hint" class="text-dim form-hint--sm">Optional cutoff for all home-race picks on this matchday, in Europe/Berlin.</p>
                         <p id="pickDeadline-error" class="field-error" th:if="${#fields.hasErrors('pickDeadline')}" th:errors="*{pickDeadline}"></p>
                     </div>
                     <div class="form-group">
@@ -33,7 +33,7 @@
             <div class="entity-editor-actions">
                 <span class="text-dim" th:text="${matchday.label}"></span>
                 <div class="actions">
-                    <button type="submit" class="btn btn-primary" data-testid="save-pairings">Save Pairings</button>
+                    <button type="submit" class="btn btn-primary" data-testid="save-pairings">Save deadline and event window</button>
                     <a th:href="@{/admin/matchdays/{id}(id=${form.id})}" class="btn btn-secondary">Back to Matchday</a>
                 </div>
             </div>

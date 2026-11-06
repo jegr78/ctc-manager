@@ -1031,9 +1031,14 @@ confirmation. The receipt confirms committed Manager storage and separately says
 receipt delivery is pending.
 
 **My reports** lists only the invoking person's accessible cases. View the full paged text,
-choose **Edit report** for complete replacement values, or explicitly confirm **Withdraw report**.
-Prior revisions remain stored. The edit form starts empty; saved text is retrieved only through
-authorized private views. Stale edits ask for a reload instead of replacing newer revisions.
+choose **Edit report** to change the prefilled saved values, or explicitly confirm **Withdraw report**.
+Nothing is written until confirmation; prior revisions remain stored. Saved description or footage
+longer than Discord's 4,000-character input limit remains intact when its clearly labeled blank field
+is left empty. Enter shorter replacement text, or use **Clear footage in draft** to remove longer
+footage explicitly before confirming. New reports still start empty. Stale edits ask for a reload
+instead of replacing newer revisions. **WITHDRAWN** appears first in the case selector. Such cases
+remain accessible as history and are excluded from post-deadline disclosure; the original neutral
+receipt may remain in the match channel.
 Drafts expire after 30 minutes and reset after restore. Losing access leaves permanent history
 intact, and a shared team role never grants access to another creator's undeclared case.
 
@@ -1193,3 +1198,7 @@ The following live actions belong to a separately authorized operator rollout:
 - [ ] Retire the manual Google Forms process only through an explicit operator decision after
   successful acceptance. Preserve historical Forms and responses; do not migrate or delete them
   automatically.
+
+### Finding the pick deadline
+
+The matchday workspace always shows **Pick deadline & event window**, including when Discord announcements are disabled. Use **Edit pick deadline** there or directly from team-pick review status. The deadline applies to every home race on that matchday in Europe/Berlin. Saving does not publish an announcement. The filtered picks overview links back to its selected matchday.

@@ -47,6 +47,27 @@ class LobbySettingsGraphicServiceTest {
         verify(service, never()).renderScreenshot(anyString(), any(Path.class));
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"GR_1,Gr.1", "GR_2,Gr.2", "GR_3,Gr.3", "GR_4,Gr.4", "GR_B,Gr.B", "GR_N,—", "GR_X,—", ",—"})
+    void givenSelectedCarMetadata_whenRenderingLobby_thenUseOnlySupportedGt7CategoryRegardlessOfPoolName(
+            CarCategory category, String expected) throws Exception {
+        // given
+        var service = spy(new LobbySettingsGraphicService(mock(TemplateEngine.class), directory.toString()));
+        var race = oneMakeRace(); race.getCar().setCategory(category); race.getCar().setName("Test misleading Gr.1 name");
+        race.getCarPoolEntry().setLabel("Test misleading Gr.B pool");
+        doAnswer(call -> { java.nio.file.Files.writeString(call.getArgument(1), call.getArgument(0)); return null; })
+                .when(service).renderScreenshot(anyString(), any(Path.class));
+        // when
+        var graphic = service.renderPublication(race);
+        var document = org.jsoup.Jsoup.parse(new String(graphic.png(), java.nio.charset.StandardCharsets.UTF_8));
+        // then
+        var row = document.select(".row").stream().filter(value -> value.select(".set-label").text().equals("Filter by Category"))
+                .findFirst().orElseThrow();
+        assertThat(row.select(".set-value").text()).isEqualTo(expected);
+        assertThat(document.text()).doesNotContain("Test misleading Gr.1 name", "Test misleading Gr.B pool");
+        assertThat(graphic.fields()).doesNotContain(PickDisclosureField.CAR);
+    }
+
     private Race oneMakeRace() {
         var race = readyRace(); var season = race.getMatchday().getSeason();
         season.setId(UUID.randomUUID()); season.setLobbyRulesProfile(LobbyRulesProfile.CTC_2027);

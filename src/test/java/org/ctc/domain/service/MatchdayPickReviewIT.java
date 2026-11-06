@@ -6,6 +6,8 @@ import org.ctc.admin.dto.PickCorrectionForm;
 import org.ctc.admin.dto.PickReviewForm;
 import org.ctc.admin.service.MatchdayPickAdminService;
 import org.ctc.discord.service.DiscordPostService;
+import org.ctc.discord.service.DiscordGlobalConfigService;
+import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.DriverRepository;
@@ -39,6 +41,7 @@ class MatchdayPickReviewIT extends PickPersistenceIT {
     @Autowired DriverRepository drivers;
     @Autowired RaceLineupRepository lineups;
     @Autowired PickSessionEpoch epoch;
+    @Autowired DiscordGlobalConfigService globals;
     @MockitoSpyBean DiscordPostService discord;
     @MockitoSpyBean PickTargetService reviewTargets;
     UUID extraDriver;
@@ -225,6 +228,59 @@ class MatchdayPickReviewIT extends PickPersistenceIT {
         assertThat(current.row().state()).isEqualTo(PickState.SUBMITTED); assertThat(current.row().version()).isEqualTo(1);
         assertThat(current.decisions()).isEmpty();
         tx.executeWithoutResult(status -> assertThat(entityManager.find(Race.class, fixture.race().getId()).getSettings()).isNull());
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(CarCategory.class)
+    void givenSelectedCarClassification_whenReviewingAndApproving_thenShowTheSameGt7FilterInInternalSettings(CarCategory category) throws Exception {
+        assertCategoryReview(category);
+    }
+
+    @Test
+    void givenExistingResultWebhook_whenRenderingCategoryReview_thenAllowOnlyItsReadLookup() throws Exception {
+        // given
+        var config = globals.getOrInitialize();
+        String previous = config.getRaceResultsForumWebhookUrl();
+        try {
+            tx.executeWithoutResult(status -> entityManager.find(DiscordGlobalConfig.class, config.getId())
+                    .setRaceResultsForumWebhookUrl("https://discord.com/api/webhooks/123456789012345678/test-only-token"));
+            // when / then
+            assertCategoryReview(CarCategory.GR_3);
+        } finally {
+            tx.executeWithoutResult(status -> entityManager.find(DiscordGlobalConfig.class, config.getId()).setRaceResultsForumWebhookUrl(previous));
+        }
+    }
+
+    private void assertCategoryReview(CarCategory category) throws Exception {
+        // given
+        tx.executeWithoutResult(status -> entityManager.find(Car.class, payload.carId()).setCategory(category));
+        submit();
+        String expected = switch (category) {
+            case GR_1 -> "Gr.1"; case GR_2 -> "Gr.2"; case GR_3 -> "Gr.3"; case GR_4 -> "Gr.4"; case GR_B -> "Gr.B";
+            case GR_N, GR_X -> "—";
+        };
+        // when
+        var comparison = admin.detail(fixture.race().getId()).comparison();
+        // then
+        assertThat(comparison).anySatisfy(value -> {
+            assertThat(value.label()).isEqualTo("Filter by Category");
+            assertThat(value.existing()).isEqualTo("—"); assertThat(value.submitted()).isEqualTo(expected);
+        });
+        mvc.perform(decision(PickReviewForm.Action.APPROVE, "Test GT7 category review")).andExpect(status().is3xxRedirection());
+        assertThat(admin.detail(fixture.race().getId()).comparison()).anySatisfy(value -> {
+            assertThat(value.label()).isEqualTo("Filter by Category");
+            assertThat(value.existing()).isEqualTo(expected); assertThat(value.submitted()).isEqualTo(expected);
+            assertThat(value.changed()).isFalse();
+        });
+        verifyNoInteractions(discord);
+        String webhook = globals.getOrInitialize().getRaceResultsForumWebhookUrl();
+        var response = mvc.perform(get("/admin/races/" + fixture.race().getId())).andExpect(status().isOk()).andReturn();
+        var document = org.jsoup.Jsoup.parse(response.getResponse().getContentAsString());
+        assertThat(document.select(".detail-fields .label").stream().filter(label -> label.text().equals("Filter by Category"))
+                .findFirst().orElseThrow().nextElementSibling().text()).isEqualTo(expected);
+        verify(discord).canPostRaceResultToForum(argThat(race -> race.getId().equals(fixture.race().getId())), any());
+        if (webhook != null && !webhook.isBlank()) verify(discord).resolveAnnouncementChannelId(webhook);
+        verifyNoMoreInteractions(discord); clearInvocations(discord);
     }
 
     @Test

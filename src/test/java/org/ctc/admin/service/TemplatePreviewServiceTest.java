@@ -38,6 +38,11 @@ class TemplatePreviewServiceTest {
         if (type.equals("lineup") || type.equals("race-results")) {
             assertThat(html).contains("Guest driver");
         }
+        if (type.equals("lobby-settings")) {
+            var row = org.jsoup.Jsoup.parse(html).select(".row").stream()
+                    .filter(value -> value.select(".set-label").text().equals("Filter by Category")).findFirst().orElseThrow();
+            assertThat(row.select(".set-value").text()).isEqualTo("Gr.3");
+        }
     }
 
     @Test

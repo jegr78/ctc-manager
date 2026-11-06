@@ -118,6 +118,35 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
         org.assertj.core.api.Assertions.assertThat(image.getHeight()).isGreaterThan(1000);
     }
 
+    @ParameterizedTest
+    @CsvSource({"1440,1000,desktop", "390,844,mobile"})
+    void givenMatchdayReviewEntryWithoutJavascript_whenFilteringAndReturning_thenKeepTheSelectedMatchday(
+            int width, int height, String viewport) throws Exception {
+        // given
+        page.setViewportSize(width, height);
+        String matchdayPath = "/admin/matchdays/" + fixture.matchday().getId();
+        page.navigate(url(matchdayPath)); capture("pick-deadline-matchday-" + viewport);
+        assertThat(page.locator("#matchday-picks")).containsText("Europe/Berlin");
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Edit pick deadline").setExact(true)).click();
+        assertThat(page.locator("#pickDeadline")).hasValue("2035-01-01T12:00");
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save deadline and event window")).click();
+        assertThat(page).hasURL(url(matchdayPath));
+        // when
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Review team picks").setExact(true)).click();
+        page.getByLabel("Submission state", new Page.GetByLabelOptions().setExact(true)).selectOption("MISSING");
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Filter picks").setExact(true)).click();
+        // then
+        var back = page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Back to matchday").setExact(true));
+        assertThat(back).hasAttribute("href", matchdayPath);
+        back.focus(); assertThat(back).isFocused(); capture("pick-review-return-" + viewport);
+        back.press("Enter"); assertThat(page).hasURL(url(matchdayPath));
+        page.navigate(url(path())); capture("pick-deadline-review-" + viewport);
+        assertThat(page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Edit pick deadline").setExact(true)))
+                .hasAttribute("href", matchdayPath + "/edit-pairings");
+        page.navigate(url("/admin/matchday-picks?seasonId=" + fixture.season().getId()));
+        assertThat(page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Back to matchday").setExact(true))).hasCount(0);
+    }
+
     @BeforeEach
     void createSyntheticFixtureAndNativeBrowser() {
         // given

@@ -8,26 +8,42 @@ import org.ctc.domain.model.IncidentPayload;
 
 final class IncidentInteractionViews {
     private IncidentInteractionViews() { }
-    static PickGatewayModal form(String id) {
+    static PickGatewayModal form(String id) { return form(id, null); }
+    static PickGatewayModal form(String id, IncidentPayload saved) {
+        boolean longDescription = saved != null && tooLong(saved.getDescription(), 4000);
+        boolean longLinks = hasLongFootage(saved);
         return new PickGatewayModal(id, "Incident report", List.of(
-                new PickGatewayModal.Text("drivers", "Involved drivers", true, null, 1, 2000, true),
-                new PickGatewayModal.Text("replay", "Replay timestamp", false, null, 1, 200, true),
-                new PickGatewayModal.Text("description", "Description", true, null, 1, 4000, true),
-                new PickGatewayModal.Text("links", "Additional footage / links", true, null, 0, 4000, false)));
+                new PickGatewayModal.Text("drivers", "Involved drivers", true, saved == null ? null : saved.getInvolvedDrivers(), 1, 2000, true),
+                new PickGatewayModal.Text("replay", "Replay timestamp", false, saved == null ? null : saved.getReplayTimestamp(), 1, 200, true),
+                new PickGatewayModal.Text("description", longDescription ? "Description (blank keeps saved)" : "Description", true,
+                        saved == null || longDescription ? null : saved.getDescription(), longDescription ? 0 : 1, 4000, !longDescription),
+                new PickGatewayModal.Text("links", longLinks ? "Footage/links (blank keeps saved)" : "Additional footage / links", true,
+                        saved == null || longLinks ? null : saved.getEvidenceLinks(), 0, 4000, false)));
     }
-    static IncidentPayload payload(java.util.Map<String, List<String>> fields) {
+    static IncidentPayload payload(java.util.Map<String, List<String>> fields) { return payload(fields, null); }
+    static IncidentPayload payload(java.util.Map<String, List<String>> fields, IncidentPayload saved) {
         var allowed = java.util.Set.of("drivers", "replay", "description", "links");
-        if (!fields.keySet().containsAll(java.util.Set.of("drivers", "replay", "description")) || !allowed.containsAll(fields.keySet())) throw invalid();
-        return new IncidentPayload(field(fields, "drivers", 2000, true), field(fields, "replay", 200, true),
-                field(fields, "description", 4000, true), field(fields, "links", 4000, false));
+        boolean longDescription = saved != null && tooLong(saved.getDescription(), 4000);
+        var required = longDescription ? java.util.Set.of("drivers", "replay") : java.util.Set.of("drivers", "replay", "description");
+        if (!fields.keySet().containsAll(required) || !allowed.containsAll(fields.keySet())) throw invalid();
+        return new IncidentPayload(field(fields, "drivers", 2000, true, null), field(fields, "replay", 200, true, null),
+                field(fields, "description", 4000, true, saved == null ? null : saved.getDescription()),
+                field(fields, "links", 4000, false, saved == null ? null : saved.getEvidenceLinks()));
     }
-    private static String field(java.util.Map<String, List<String>> fields, String key, int maximum, boolean required) {
+    private static String field(java.util.Map<String, List<String>> fields, String key, int maximum, boolean required, String saved) {
         var values = fields.getOrDefault(key, List.of(""));
         if (values == null || values.size() != 1) throw invalid();
         String value = values.getFirst();
-        if (value == null || value.length() > maximum || required && value.isBlank()) throw invalid();
+        if (value == null || value.length() > maximum) throw invalid();
+        if (value.isEmpty() && tooLong(saved, maximum)) return saved;
+        if (required && value.isBlank()) throw invalid();
         return value;
     }
+    static boolean hasLongText(IncidentPayload saved) {
+        return saved != null && (tooLong(saved.getDescription(), 4000) || hasLongFootage(saved));
+    }
+    static boolean hasLongFootage(IncidentPayload saved) { return saved != null && tooLong(saved.getEvidenceLinks(), 4000); }
+    private static boolean tooLong(String value, int maximum) { return value != null && value.length() > maximum; }
     static String body(IncidentPayload payload) {
         return "Involved drivers: " + payload.getInvolvedDrivers() + "\nReplay timestamp: " + payload.getReplayTimestamp()
                 + "\nDescription:\n" + payload.getDescription() + "\nAdditional footage / links:\n" + payload.getEvidenceLinks();

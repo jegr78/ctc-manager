@@ -18,6 +18,9 @@
             <dt class="label">Team editing policy</dt><dd th:text="${review.row.teamEditing}"></dd>
             <th:block th:if="${review.returnReason != null}"><dt class="label">Return reason</dt><dd th:text="${review.returnReason}"></dd></th:block>
         </dl>
+        <div class="actions mt-md">
+            <a class="btn btn-secondary" th:href="@{/admin/matchdays/{id}/edit-pairings(id=${review.row.matchdayId})}">Edit pick deadline</a>
+        </div>
         <div class="actions mt-md"><a class="btn btn-secondary" th:href="@{/admin/races/{id}(id=${review.row.raceId})}">Race workspace</a><a class="btn btn-secondary" th:href="@{/admin/matchdays/{id}(id=${review.row.matchdayId})}">Matchday workspace</a></div>
     </div>
     <div class="card" id="pick-publication">

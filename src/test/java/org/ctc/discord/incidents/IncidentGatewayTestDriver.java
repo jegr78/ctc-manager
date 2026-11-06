@@ -25,15 +25,18 @@ final class IncidentGatewayTestDriver {
     }
     IncidentGatewayTestDriver fields(String drivers, String replay, String description, String links) {
         assertThat(current).isInstanceOf(PickGatewayModal.class); var modal = (PickGatewayModal) current;
-        assertThat(modal.fields()).allMatch(field -> field instanceof PickGatewayModal.Text text && text.value() == null);
+        assertThat(modal.fields()).hasSize(4).allMatch(PickGatewayModal.Text.class::isInstance);
         return send(PickGatewayInteraction.Kind.MODAL, modal.id(), Map.of("drivers", List.of(drivers), "replay", List.of(replay), "description", List.of(description), "links", List.of(links)));
     }
     IncidentGatewayTestDriver draft(UUID race, String description) {
         command().click("New report"); if (message().selection() != null) select(race);
-        return click("Enter report").fields("Test involved guest", "00:00", description, "https://example.invalid/video");
+        click("Enter report");
+        assertThat(((PickGatewayModal) current).fields()).allMatch(field -> field instanceof PickGatewayModal.Text text && text.value() == null);
+        return fields("Test involved guest", "00:00", description, "https://example.invalid/video");
     }
     IncidentGatewayTestDriver edit(UUID report, String description) {
         command().click("My reports").select(report).click("Edit report").click("Enter report");
+        assertThat(((PickGatewayModal) current).fields()).allMatch(field -> field instanceof PickGatewayModal.Text text && text.value() != null);
         return fields("Test involved guest", "00:00", description, "");
     }
     String button(String label) {

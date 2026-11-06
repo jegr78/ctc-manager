@@ -18,6 +18,40 @@ import static org.mockito.Mockito.*;
 class IncidentInteractionIT extends IncidentIntakeIntegrationFixture {
     @org.springframework.beans.factory.annotation.Autowired org.ctc.domain.service.IncidentPrivateReadService privateReads;
     @Test
+    void givenConfirmedOwnReport_whenEditingThePrefilledValues_thenKeepHistoryUntilConfirmationAndAppendOnlyOneRevision() {
+        // given
+        UUID id = submit();
+        var original = tx.execute(status -> revisionRows.findByReportIdOrderByRevisionNumberAsc(id).getFirst().getPayload());
+        var client = flow().command().click("My reports").select(id).click("Edit report").click("Enter report");
+        var modal = (org.ctc.discord.picks.PickGatewayModal) client.current;
+        var defaults = modal.fields().stream().map(org.ctc.discord.picks.PickGatewayModal.Text.class::cast)
+                .collect(java.util.stream.Collectors.toMap(org.ctc.discord.picks.PickGatewayModal.Text::id,
+                        value -> List.of(value.value() == null ? "" : value.value())));
+        assertThat(defaults).containsEntry("drivers", List.of(original.getInvolvedDrivers()))
+                .containsEntry("replay", List.of(original.getReplayTimestamp()))
+                .containsEntry("description", List.of(original.getDescription()))
+                .containsEntry("links", List.of(original.getEvidenceLinks()));
+        assertThat(rows().getFirst().getVersion()).isEqualTo(1);
+        // when
+        defaults.put("replay", List.of("10:13.200 / lap 5"));
+        client.send(PickGatewayInteraction.Kind.MODAL, modal.id(), defaults);
+        assertThat(rows().getFirst().getVersion()).isEqualTo(1);
+        String confirm = client.button("Confirm changes");
+        client.send(PickGatewayInteraction.Kind.BUTTON, confirm, Map.of());
+        client.send(PickGatewayInteraction.Kind.BUTTON, confirm, Map.of());
+        // then
+        tx.executeWithoutResult(status -> {
+            var history = revisionRows.findByReportIdOrderByRevisionNumberAsc(id);
+            assertThat(history).hasSize(2);
+            assertThat(history.getFirst().getPayload()).isEqualTo(original);
+            assertThat(history.getLast().getPayload()).isEqualTo(new IncidentPayload(original.getInvolvedDrivers(),
+                    "10:13.200 / lap 5", original.getDescription(), original.getEvidenceLinks()));
+        });
+        assertThat(rows().getFirst().getVersion()).isEqualTo(2);
+        assertThat(firstRequests()).isEqualTo(1);
+    }
+
+    @Test
     void givenConfirmedPrivateReport_whenReplayingEditingAndWithdrawing_thenKeepOneCaseAndOneFirstReceiptRequest() {
         var client = flow().draft(fixture.race().getId(), PRIVATE); assertThat(rows()).isEmpty();
         String confirmation = client.button("Confirm report"); client.send(PickGatewayInteraction.Kind.BUTTON, confirmation, Map.of());
@@ -32,7 +66,9 @@ class IncidentInteractionIT extends IncidentIntakeIntegrationFixture {
         var withdrawn = rows().getFirst(); assertThat(withdrawn.getState()).isEqualTo(IncidentReportState.WITHDRAWN);
         assertThat(withdrawn.getVersion()).isEqualTo(3); assertThat(withdrawn.getLatestRevisionNumber()).isEqualTo(2);
         assertThat(firstRequests()).isEqualTo(1);
-        client.command().click("My reports").select(id); assertThat(client.message().content()).contains("WITHDRAWN", "Test corrected case");
+        client.command().click("My reports");
+        assertThat(client.message().selection().options().getFirst().label()).startsWith("WITHDRAWN");
+        client.select(id); assertThat(client.message().content()).contains("WITHDRAWN", "Test corrected case", "will not be disclosed");
         assertThat(client.message().buttons()).extracting(org.ctc.discord.picks.PickGatewayMessage.Button::label).doesNotContain("Edit report", "Withdraw report");
     }
 
