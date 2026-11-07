@@ -131,10 +131,11 @@ class SiteGeneratorFixtureIsolationIT {
         season.setRulebookUrl("https://example.org/current/rules");
         season.setRacingEtiquetteUrl("https://example.org/current/etiquette");
         seasonRepository.saveAndFlush(season);
-        var archived = new Season("Test Archived Documents " + uniqueSuffix, 2025, 2);
+        var archived = new Season("Gen Archived Documents " + uniqueSuffix, 2025, 2);
         archived.setRulebookUrl("https://example.org/archive/rules");
         archived.setRacingEtiquetteUrl("https://example.org/archive/etiquette");
         ownSeason(archived);
+        setupRegularPhase(archived);
         siteGeneratorService.generate();
         for (var owner : List.of(season, archived)) {
             var directory = tempDir.resolve("season").resolve(siteSlugger.slugify(owner.getDisplayLabel()));
