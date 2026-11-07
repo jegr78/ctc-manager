@@ -129,6 +129,95 @@ class SeasonCarPoolBackupRoundTripIT {
     }
 
     @Test
+    void seasonDocumentLinksSurviveRoundTripForTwoSeasons() throws Exception {
+        tx.executeWithoutResult(status -> {
+            var first = seasons.findById(category.season().getId()).orElseThrow();
+            first.setRulebookUrl("https://example.org/current/rules");
+            first.setRacingEtiquetteUrl("https://example.org/current/etiquette");
+            var second = seasons.findById(fixed.season().getId()).orElseThrow();
+            second.setRulebookUrl("https://example.org/archive/rules");
+            second.setRacingEtiquetteUrl("https://example.org/archive/etiquette");
+        });
+        var archive = export();
+        tx.executeWithoutResult(status -> {
+            var first = seasons.findById(category.season().getId()).orElseThrow();
+            first.setRulebookUrl(null); first.setRacingEtiquetteUrl(null);
+        });
+        var preview = imports.stage(upload(archive)); imports.execute(preview.stagingId());
+        var first = seasons.findById(category.season().getId()).orElseThrow();
+        var second = seasons.findById(fixed.season().getId()).orElseThrow();
+        assertThat(first.getRulebookUrl()).isEqualTo("https://example.org/current/rules");
+        assertThat(first.getRacingEtiquetteUrl()).isEqualTo("https://example.org/current/etiquette");
+        assertThat(second.getRulebookUrl()).isEqualTo("https://example.org/archive/rules");
+        assertThat(second.getRacingEtiquetteUrl()).isEqualTo("https://example.org/archive/etiquette");
+    }
+
+    @Test
+    void schemaSeventeenWithoutDocumentsRestoresNullsInsteadOfAdoptingCurrentValues() throws Exception {
+        tx.executeWithoutResult(status -> {
+            var first = seasons.findById(category.season().getId()).orElseThrow();
+            first.setRulebookUrl("https://example.org/current/rules");
+            first.setRacingEtiquetteUrl("https://example.org/current/etiquette");
+        });
+        var archive = rewriteDocumentArchive(export(), true);
+        var preview = imports.stage(upload(archive)); imports.execute(preview.stagingId());
+        var first = seasons.findById(category.season().getId()).orElseThrow();
+        var second = seasons.findById(fixed.season().getId()).orElseThrow();
+        assertThat(first.getRulebookUrl()).isNull();
+        assertThat(first.getRacingEtiquetteUrl()).isNull();
+        assertThat(second.getRulebookUrl()).isNull();
+        assertThat(second.getRacingEtiquetteUrl()).isNull();
+    }
+
+    @Test
+    void unsafeDocumentArchiveIsRejectedBeforeWipeInPreflightAndExecution() throws Exception {
+        var valid = export(); var broken = rewriteDocumentArchive(valid, false);
+        clearInvocations(imports);
+        assertThatThrownBy(() -> imports.stage(upload(broken)))
+                .isInstanceOfSatisfying(BackupArchiveException.class, error -> {
+                    assertThat(error.reason()).isEqualTo(BackupArchiveException.Reason.DATA_MISMATCH);
+                    assertThat(error.getMessage()).contains("HTTPS URL");
+                });
+        verify(imports, never()).wipeAllTables(anyMap());
+        var preview = imports.stage(upload(valid));
+        Files.write(ROOT.resolve("staging/upload-" + preview.stagingId() + ".zip"), broken);
+        clearInvocations(imports);
+        assertThatThrownBy(() -> imports.execute(preview.stagingId())).isInstanceOf(BackupImportException.class)
+                .cause().isInstanceOfSatisfying(BackupArchiveException.class, error -> {
+                    assertThat(error.reason()).isEqualTo(BackupArchiveException.Reason.DATA_MISMATCH);
+                    assertThat(error.getMessage()).contains("HTTPS URL");
+                });
+        verify(imports, never()).wipeAllTables(anyMap());
+        assertThat(seasons.existsById(category.season().getId())).isTrue();
+        assertThat(seasons.existsById(fixed.season().getId())).isTrue();
+        imports.deleteStagingFile(preview.stagingId());
+    }
+
+    private byte[] rewriteDocumentArchive(byte[] valid, boolean legacy) throws IOException {
+        var output = new ByteArrayOutputStream();
+        try (var input = new ZipInputStream(new ByteArrayInputStream(valid)); var zip = new ZipOutputStream(output)) {
+            ZipEntry file;
+            while ((file = input.getNextEntry()) != null) {
+                byte[] bytes = input.readAllBytes();
+                if (file.getName().equals("manifest.json") && legacy) {
+                    var manifest = (ObjectNode) JSON.readTree(bytes); manifest.put("schema_version", 17);
+                    bytes = JSON.writeValueAsBytes(manifest);
+                } else if (file.getName().equals("data/seasons.json")) {
+                    var rows = (ArrayNode) JSON.readTree(bytes);
+                    for (var node : rows) {
+                        var row = (ObjectNode) node;
+                        if (legacy) { row.remove("rulebookUrl"); row.remove("racingEtiquetteUrl"); }
+                        else row.put("rulebookUrl", "javascript:alert(1)");
+                    }
+                    bytes = JSON.writeValueAsBytes(rows);
+                }
+                zip.putNextEntry(new ZipEntry(file.getName())); zip.write(bytes); zip.closeEntry();
+            }
+        }
+        return output.toByteArray();
+    }
+
+    @Test
     void givenCombinedFrozenPoolAndReviewedMetadata_whenRestoringAfterCatalogChanges_thenKeepExactSnapshotAndConsumption() throws Exception {
         // given
         byte[] archive = export();

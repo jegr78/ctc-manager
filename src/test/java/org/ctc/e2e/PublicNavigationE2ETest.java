@@ -44,6 +44,34 @@ class PublicNavigationE2ETest extends PlaywrightConfig {
     }
 
     @Test
+    void seasonDocumentsAreAccessibleOnDesktopMobileAndWithoutJavascript() throws Exception {
+        var evidence = java.nio.file.Path.of("target/failsafe-reports/season-documents");
+        java.nio.file.Files.createDirectories(evidence);
+        for (int width : List.of(1440, 390)) {
+            page.setViewportSize(width, 900);
+            for (String slug : List.of("current", "archived")) {
+                page.navigate(url("/public-navigation/season/" + slug + "/standings.html"));
+                var documents = page.locator(".subnav a[target='_blank']");
+                assertThat(documents).hasCount(2);
+                assertThat(documents.first()).hasAttribute("href", "https://example.org/" + slug + "/rules");
+                assertThat(documents.last()).hasAttribute("href", "https://example.org/" + slug + "/etiquette");
+                assertThat(documents.first()).hasAttribute("rel", "noopener noreferrer");
+                documents.last().focus(); assertThat(documents.last()).isFocused();
+                assertFalse((Boolean) page.evaluate("document.documentElement.scrollWidth > innerWidth"));
+                page.screenshot(new Page.ScreenshotOptions().setPath(evidence.resolve(slug + "-" + width + ".png")).setFullPage(true));
+            }
+        }
+        try (var nativeContext = browser.newContext(new Browser.NewContextOptions().setJavaScriptEnabled(false).setViewportSize(390, 768))) {
+            var nativePage = nativeContext.newPage();
+            nativePage.navigate(url("/public-navigation/season/archived/standings.html"));
+            assertThat(nativePage.locator(".subnav a[target='_blank']")).hasCount(2);
+            assertThat(nativePage.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Racing Etiquette (opens in a new tab)").setExact(true))).isVisible();
+        }
+        page.navigate(url("/public-navigation/index.html"));
+        assertThat(page.locator(".subnav a[target='_blank']")).hasCount(0);
+    }
+
+    @Test
     void givenSmallScreen_whenDismissMenu_thenFocusAndPageRemainUsable() {
         page.setViewportSize(320, 480);
         page.navigate(url("/public-navigation/index.html"));
@@ -146,6 +174,12 @@ class PublicNavigationE2ETest extends PlaywrightConfig {
             context.setVariable("seasonSlug", uri.contains("/season/") ? "fixture" : null);
             context.setVariable("seasonName", "Test season");
             context.setVariable("hasPlayoff", true);
+            if (uri.contains("/season/")) {
+                String owner = uri.contains("/archived/") ? "archived" : "current";
+                context.setVariable("seasonDocumentLinks", List.of(
+                        new org.ctc.sitegen.TemplateWriter.DocumentLink("Rulebook", "https://example.org/" + owner + "/rules"),
+                        new org.ctc.sitegen.TemplateWriter.DocumentLink("Racing Etiquette", "https://example.org/" + owner + "/etiquette")));
+            }
             context.setVariable("seasonEntries", List.of());
             return engine.process("site/archive", context);
         }
