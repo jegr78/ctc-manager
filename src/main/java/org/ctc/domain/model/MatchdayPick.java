@@ -100,6 +100,15 @@ public class MatchdayPick extends BaseEntity {
         version++;
     }
 
+    /** Reopens a legacy closed aggregate without changing its submission state or history. */
+    public void resumeWithinMatchday() {
+        requireUnapproved();
+        if (!manualClosed) throw new BusinessRuleException("The pick has no legacy closure to reopen");
+        manualClosed = false;
+        manualOpen = false;
+        version++;
+    }
+
     public void close() {
         requireUnapproved();
         manualOpen = false;

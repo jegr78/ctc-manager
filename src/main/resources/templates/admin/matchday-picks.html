@@ -34,11 +34,11 @@
         <h2 th:text="${'Home-race picks (' + overview.rows.size() + ')'}"></h2>
         <p th:if="${overview.rows.isEmpty()}" class="text-dim">No managed home-race picks match these filters.</p>
         <div th:unless="${overview.rows.isEmpty()}" class="table-scroll" role="region" aria-label="Team picks review list" tabindex="0">
-            <table><thead><tr><th scope="col">Home race</th><th scope="col">State</th><th scope="col">Current revision</th><th scope="col">Deadline</th><th scope="col">Management exception</th><th scope="col">Review</th></tr></thead>
+            <table><thead><tr><th scope="col">Home race</th><th scope="col">State</th><th scope="col">Current revision</th><th scope="col">Deadline</th><th scope="col">Matchday collection</th><th scope="col">Review</th></tr></thead>
                 <tbody><tr th:each="row : ${overview.rows}">
                     <td th:text="${row.label}"></td><td th:text="${row.state}"></td><td th:text="${row.revisionNumber ?: 'None'}"></td>
                     <td><span th:text="${row.deadlineState}"></span><br><span class="text-dim" th:text="${row.deadline}"></span></td>
-                    <td><span th:if="${row.manualOpen}">Opened, no new deadline</span><span th:if="${row.manualClosed}">Manually closed</span><span th:if="${!row.manualOpen and !row.manualClosed}">None</span></td>
+                    <td th:text="${row.matchdayOpen ? 'Open' : 'Closed'}"></td>
                     <td><a class="btn btn-secondary btn-sm" th:href="@{/admin/matchday-picks/{id}(id=${row.raceId})}" th:attr="aria-label=${'Review ' + row.label}">Review</a></td>
                 </tr></tbody>
             </table>

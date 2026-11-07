@@ -50,6 +50,7 @@ class PickSubmissionServiceTest {
         phase.setSeason(season);
         var day = new Matchday(phase, "Test pick round", 1);
         day.setPickDeadline(LocalDateTime.of(2026, 11, 2, 20, 0));
+        day.setPicksOpen(true);
         race.setMatchday(day);
         season.setPicksCollectionEnabled(true);
         race.setPicksManaged(true);
@@ -116,13 +117,13 @@ class PickSubmissionServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"at-deadline", "after-deadline", "no-deadline", "closed", "approved", "disabled", "bot-unavailable", "invalid-target"})
+    @ValueSource(strings = {"at-deadline", "after-deadline", "closed-matchday", "closed", "approved", "disabled", "bot-unavailable", "invalid-target"})
     void givenClosedCollection_whenConfirming_thenLeaveHistoryAndAggregateUntouched(String cause) {
         // given / when / then
         switch (cause) {
             case "at-deadline" -> race.getMatchday().setPickDeadline(LocalDateTime.of(2026, 11, 2, 19, 0));
             case "after-deadline" -> race.getMatchday().setPickDeadline(LocalDateTime.of(2026, 11, 2, 18, 59));
-            case "no-deadline" -> race.getMatchday().setPickDeadline(null);
+            case "closed-matchday" -> race.getMatchday().setPicksOpen(false);
             case "closed" -> pick.close();
             case "approved" -> { pick.submit(); pick.approve(1); }
             case "disabled" -> season.setPicksCollectionEnabled(false);
@@ -138,7 +139,7 @@ class PickSubmissionServiceTest {
     }
 
     @Test
-    void givenReturnedPickAfterDeadline_whenReplacing_thenKeepOpeningAndImmutableOldRevision() {
+    void givenReturnedPickInOpenMatchdayWithoutCutoff_whenReplacing_thenKeepImmutableOldRevision() {
         // given / when / then
         pick.submit();
         var old = new MatchdayPickRevision(pick, 1, payload(), NOW.minusSeconds(120), actor.userId(), UUID.randomUUID(), 1);

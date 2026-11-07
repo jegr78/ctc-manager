@@ -19,6 +19,12 @@ import lombok.ToString;
 @ToString(exclude = {"round", "team1", "team2", "winner", "walkoverTeam", "nextMatchup", "races"})
 public class PlayoffMatchup extends BaseEntity {
 
+    @Column(name = "pick_deadline_override")
+    private java.time.LocalDateTime pickDeadlineOverride;
+
+    @Column(name = "pick_window_version", nullable = false)
+    private long pickWindowVersion;
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
 	private UUID id;

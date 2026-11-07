@@ -91,7 +91,7 @@ class MatchdayPickControllerTest {
     Detail detail() {
         var row = new Row(race, season, day, "Test season | Test matchday | vs T-AWAY | Leg 1", "Test season", "Test matchday",
                 PickState.SUBMITTED, 5, 2, null, "Test deadline", "Deadline passed", false, false, "Closed", true,
-                List.of(PickReviewForm.Action.RETURN), false);
+                List.of(PickReviewForm.Action.RETURN), false, null);
         return new Detail(row, "1".repeat(64), false, null, List.of(), List.of(), List.of(), "00000000-0000-0000-0000-000000000000:0",
                 new Publication("Unpublished", null, List.of(), null, false));
     }

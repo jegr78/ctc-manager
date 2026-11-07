@@ -22,7 +22,7 @@ class PickDeadlinePolicyTest {
         // given
         var policy = policy(CUTOFF.minusNanos(1));
         // when
-        var decision = policy.assess(context(state, false, false, DEADLINE));
+        var decision = policy.assess(context(state, true, false, DEADLINE));
         // then
         assertThat(decision.editable()).isTrue();
     }
@@ -33,24 +33,24 @@ class PickDeadlinePolicyTest {
         // given
         var policy = policy(CUTOFF.plusSeconds(secondsAfter));
         // when
-        var decision = policy.assess(context(PickState.SUBMITTED, false, false, DEADLINE));
+        var decision = policy.assess(context(PickState.SUBMITTED, true, false, DEADLINE));
         // then
         assertThat(decision.editable()).isFalse();
         assertThat(decision.reason()).contains("deadline");
     }
 
     @Test
-    void givenNoDeadline_whenAssessingOrdinaryMissingPick_thenRequireDeadlineOrManagementOpening() {
+    void givenUnopenedMatchdayWithoutDeadline_whenAssessing_thenExplainThatCollectionIsClosed() {
         // given / when
         var decision = policy(CUTOFF).assess(context(PickState.MISSING, false, false, null));
         // then
         assertThat(decision.editable()).isFalse();
-        assertThat(decision.reason()).contains("deadline", "management");
+        assertThat(decision.reason()).contains("Matchday", "closed");
     }
 
     @ParameterizedTest
     @EnumSource(value = PickState.class, names = {"MISSING", "SUBMITTED", "RETURNED"})
-    void givenManualOpeningWithoutDeadline_whenAssessingUnapprovedPick_thenRemainEditable(PickState state) {
+    void givenOpenedMatchdayWithoutDeadline_whenAssessingUnapprovedPick_thenRemainEditable(PickState state) {
         // given / when
         var decision = policy(CUTOFF.plusSeconds(86400)).assess(context(state, true, false, null));
         // then
@@ -58,7 +58,7 @@ class PickDeadlinePolicyTest {
     }
 
     @Test
-    void givenManualCloseAndOpeningBeforeDeadline_whenAssessing_thenCloseTakesPrecedence() {
+    void givenLegacyTargetClosureInOpenedMatchdayBeforeDeadline_whenAssessing_thenCloseTakesPrecedence() {
         // given / when
         var decision = policy(CUTOFF.minusSeconds(3600)).assess(context(PickState.RETURNED, true, true, DEADLINE));
         // then
@@ -67,7 +67,7 @@ class PickDeadlinePolicyTest {
     }
 
     @Test
-    void givenApprovedPickAndManualOpeningBeforeDeadline_whenAssessing_thenApprovalLocksTeamEditing() {
+    void givenApprovedPickInOpenedMatchdayBeforeDeadline_whenAssessing_thenApprovalLocksTeamEditing() {
         // given / when
         var decision = policy(CUTOFF.minusSeconds(3600)).assess(context(PickState.APPROVED, true, false, DEADLINE));
         // then
@@ -77,7 +77,7 @@ class PickDeadlinePolicyTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"season-disabled", "bot-disabled", "invalid-target"})
-    void givenUnavailableCollectionOrTargetWithManualOpening_whenAssessing_thenDenyTeamWrites(String unavailable) {
+    void givenUnavailableCollectionOrTargetInOpenedMatchday_whenAssessing_thenDenyTeamWrites(String unavailable) {
         // given
         var context = new PickDeadlinePolicy.Context(PickState.SUBMITTED, !unavailable.equals("season-disabled"),
                 !unavailable.equals("bot-disabled"), !unavailable.equals("invalid-target"), true, false, null);
@@ -96,7 +96,7 @@ class PickDeadlinePolicyTest {
         // when / then
         assertThatThrownBy(() -> policy.resolveDeadline(LocalDateTime.parse(deadline)))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Europe/Berlin");
-        var decision = policy.assess(context(PickState.MISSING, false, false, LocalDateTime.parse(deadline)));
+        var decision = policy.assess(context(PickState.MISSING, true, false, LocalDateTime.parse(deadline)));
         assertThat(decision.editable()).isFalse();
         assertThat(decision.reason()).contains("review");
     }
@@ -109,6 +109,28 @@ class PickDeadlinePolicyTest {
         assertThat(policy.resolveDeadline(DEADLINE)).isEqualTo(CUTOFF);
         assertThat(policy.resolveDeadline(LocalDateTime.parse("2026-07-01T20:00:00")))
                 .isEqualTo(Instant.parse("2026-07-01T18:00:00Z"));
+    }
+
+    @Test
+    void givenPreparedClosedMatchdayWithFutureDeadline_whenAssessing_thenRequireCentralOpening() {
+        // given
+        var policy = policy(CUTOFF.minusSeconds(3600));
+        // when
+        var decision = policy.assess(context(PickState.MISSING, false, false, DEADLINE));
+        // then
+        assertThat(decision.editable()).isFalse();
+        assertThat(decision.reason()).contains("Matchday", "closed");
+    }
+
+    @Test
+    void givenOpenedMatchdayAfterItsEffectiveDeadline_whenAssessing_thenDoNotBypassTheCutoff() {
+        // given
+        var policy = policy(CUTOFF.plusNanos(1));
+        // when
+        var decision = policy.assess(context(PickState.RETURNED, true, false, DEADLINE));
+        // then
+        assertThat(decision.editable()).isFalse();
+        assertThat(decision.reason()).contains("deadline");
     }
 
     private PickDeadlinePolicy policy(Instant instant) {

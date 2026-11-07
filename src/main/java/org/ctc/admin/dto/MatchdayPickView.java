@@ -11,8 +11,8 @@ public final class MatchdayPickView {
     public record Choice(UUID id, String label) { }
     public record Row(UUID raceId, UUID seasonId, UUID matchdayId, String label, String season, String matchday,
                       PickState state, long version, Integer revisionNumber, Integer approvedRevisionNumber, String deadline, String deadlineState,
-                      boolean manualOpen, boolean manualClosed, String teamEditing, boolean targetValid,
-                      List<PickReviewForm.Action> actions, boolean correctable) {
+                      boolean matchdayOpen, boolean manualClosed, String teamEditing, boolean targetValid,
+                      List<PickReviewForm.Action> actions, boolean correctable, String deadlineOverridePath) {
         public Row { actions = List.copyOf(actions); }
     }
     public record Overview(UUID seasonId, UUID matchdayId, PickState state, List<Choice> seasons, List<Choice> matchdays, List<Row> rows) {

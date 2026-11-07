@@ -50,6 +50,7 @@ class DiscordPicksBackupRoundTripIT {
     }
     @Autowired TestHelper helper;
     @Autowired TransactionTemplate tx;
+    @Autowired jakarta.persistence.EntityManager entityManager;
     @Autowired SeasonRepository seasons;
     @Autowired TeamRepository teams;
     @Autowired CarRepository cars;
@@ -69,6 +70,7 @@ class DiscordPicksBackupRoundTripIT {
     @Autowired org.ctc.admin.service.PickIntegrityAuditService integrity;
     @Autowired BackupArchiveService archives;
     @MockitoSpyBean BackupImportService imports;
+    @Autowired PickWindowService windows;
     @MockitoBean PickCollectionStatus collection;
     final ManagementPickActor manager = new ManagementPickActor("test-admin");
     TestHelper.SeasonFixture fixture;
@@ -88,6 +90,7 @@ class DiscordPicksBackupRoundTripIT {
             fixture = helper.createFullSeasonFixture("TPB" + UUID.randomUUID().toString().substring(0, 7));
             fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0));
             fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0));
+            fixture.matchday().setPicksOpen(true);
             var car1 = cars.save(new Car("Test pick backup", UUID.randomUUID().toString()));
             var car2 = cars.save(new Car("Test pick backup", UUID.randomUUID().toString()));
             var track1 = tracks.save(new Track("Test pick backup " + UUID.randomUUID()));
@@ -118,6 +121,7 @@ class DiscordPicksBackupRoundTripIT {
             var season = seasons.findById(fixture.season().getId()).orElseThrow();
             var day = helper.createMatchday(season, "Test pending target", 2);
             day.setPickDeadline(LocalDateTime.of(2035, 1, 2, 12, 0));
+            day.setPicksOpen(true);
             var match = helper.createMatch(day, teams.findById(fixture.homeTeam().getId()).orElseThrow(), teams.findById(fixture.awayTeam().getId()).orElseThrow());
             var race = helper.createRace(day, match);
             race.setPicksManaged(true);
@@ -229,7 +233,7 @@ class DiscordPicksBackupRoundTripIT {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"missing-revisions", "missing-decisions", "unmanaged", "cross-team", "orphan-track", "duplicate-request", "forged-version", "changed-settings", "dropped-correction", "disguised-v4"})
+    @ValueSource(strings = {"missing-revisions", "missing-decisions", "unmanaged", "cross-team", "orphan-track", "duplicate-request", "forged-version", "changed-settings", "dropped-correction", "disguised-v4", "window-flag", "window-version", "window-deadline", "window-legacy"})
     void givenMalformedPrivateHistory_whenStagingOrExecuting_thenRejectBeforeWipeAndKeepLiveHistory(String kind) throws Exception {
         // given
         byte[] valid = export();
@@ -263,6 +267,7 @@ class DiscordPicksBackupRoundTripIT {
         var files = unzip(legacy);
         var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
         manifest.put("schema_version", version);
+        removeWindowFields(files);
         var absent = new ArrayList<>(List.of("pick_publication_attempts", "pick_publication_snapshots"));
         if (version < 6) absent.add("team_pick_channel_bindings");
         if (version < 5) absent.addAll(List.of("matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"));
@@ -297,6 +302,7 @@ class DiscordPicksBackupRoundTripIT {
         var files = unzip(export());
         var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
         manifest.put("schema_version", 5);
+        removeWindowFields(files);
         for (String table : List.of("pick_publication_attempts", "pick_publication_snapshots")) {
             ((ObjectNode) manifest.get("table_counts")).remove(table);
             files.remove("data/" + table.replace('_', '-') + ".json");
@@ -373,6 +379,7 @@ class DiscordPicksBackupRoundTripIT {
         var files = unzip(export());
         var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
         manifest.put("schema_version", 13);
+        removeWindowFields(files);
         files.put("manifest.json", JSON.writeValueAsBytes(manifest));
         for (String table : List.of("seasons", "race-settings", "matchday-pick-revisions", "matchday-pick-decisions", "pick-publication-attempts")) {
             String file = "data/" + table + ".json";
@@ -415,6 +422,72 @@ class DiscordPicksBackupRoundTripIT {
     private AuthorizedPickActor actor(UUID race) {
         return new AuthorizedPickActor(race, fixture.season().getId(), fixture.homeTeam().getId(), "12345");
     }
+    @Test
+    void givenCentralWindowAndPairingExceptionWithLegacyHistory_whenRestoring_thenPreserveNewStateAndEveryOriginalReceipt() throws Exception {
+        var pairing = tx.execute(status -> races.findById(pendingRace).orElseThrow().getMatch().getId());
+        var pair = windows.readPairing(pairing, false);
+        var actor = new ManagementPickActor("test-window-manager", epoch.managementGeneration());
+        var cutoff = LocalDateTime.of(2036, 1, 2, 18, 0);
+        windows.savePairing(pairing, false, cutoff, pair.version(), pair.scope(), actor);
+        var day = windows.readMatchday(pair.matchdayId());
+        windows.saveMatchday(day.id(), true, day.deadline(), day.weekend(), day.version(), day.scope(), actor);
+        var expected = windows.readMatchday(day.id());
+        var archive = export();
+        var preview = imports.stage(upload(archive)); imports.execute(preview.stagingId());
+        var restored = windows.readMatchday(day.id());
+        assertThat(restored.open()).isTrue(); assertThat(restored.version()).isEqualTo(expected.version());
+        assertThat(windows.readPairing(pairing, false).override()).isEqualTo(cutoff);
+        tx.executeWithoutResult(status -> {
+            var pick = picks.findByRaceId(pendingRace).orElseThrow();
+            assertThat(pick.getState()).isEqualTo(PickState.RETURNED); assertThat(pick.isManualClosed()).isFalse();
+            assertThat(decisions.findAll().stream().filter(row -> row.getPick().getId().equals(pick.getId())))
+                    .extracting(MatchdayPickDecision::getKind).contains(PickDecisionKind.CLOSE, PickDecisionKind.WINDOW_OPEN);
+            assertThat(revisions.findByRequestId(original.requestId()).orElseThrow().receipt()).isEqualTo(original);
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void givenANewWindowInheritingAForeignPlayoff_whenStagingOrTamperingExecute_thenRejectBeforeWipe(boolean bridge) throws Exception {
+        var foreign = tx.execute(status -> {
+            var season = helper.createSeason("Test foreign pick window " + UUID.randomUUID());
+            var phase = new SeasonPhase(season, PhaseType.PLAYOFF, PhaseLayout.BRACKET, 10); phase.setLabel("Test foreign phase"); entityManager.persist(phase);
+            var playoff = new Playoff(phase, "Test foreign playoff"); entityManager.persist(playoff);
+            var round = new PlayoffRound(playoff, "Test final", 0); entityManager.persist(round);
+            var pair = new PlayoffMatchup(round, 0); pair.setTeam1(teams.findById(fixture.homeTeam().getId()).orElseThrow());
+            pair.setTeam2(teams.findById(fixture.awayTeam().getId()).orElseThrow()); pair.setPickDeadlineOverride(LocalDateTime.of(2036, 1, 1, 20, 0));
+            entityManager.persist(pair); entityManager.flush(); return new UUID[]{season.getId(), pair.getId()};
+        });
+        try {
+            byte[] valid = export(); var files = unzip(valid); var rows = (ArrayNode) JSON.readTree(files.get("data/races.json"));
+            for (var row : rows) if (row.path("id").asText().equals(fixture.race().getId().toString())) {
+                ((ObjectNode) row).put("playoffMatchup", foreign[1].toString());
+                if (!bridge) ((ObjectNode) row).putNull("match");
+            }
+            files.put("data/races.json", JSON.writeValueAsBytes(rows)); byte[] broken = zip(files);
+            assertThatThrownBy(() -> imports.stage(upload(broken))).isInstanceOfSatisfying(BackupArchiveException.class,
+                    failure -> assertThat(failure.getMessage()).contains("ownership"));
+            verify(imports, never()).wipeAllTables(anyMap());
+            var preview = imports.stage(upload(valid));
+            try {
+                Files.write(ROOT.resolve("staging/upload-" + preview.stagingId() + ".zip"), broken); clearInvocations(imports);
+                assertThatThrownBy(() -> imports.execute(preview.stagingId())).isInstanceOf(BackupImportException.class)
+                        .cause().isInstanceOfSatisfying(BackupArchiveException.class, failure -> assertThat(failure.getMessage()).contains("ownership"));
+                verify(imports, never()).wipeAllTables(anyMap());
+                tx.executeWithoutResult(status -> assertThat(revisions.findByRequestId(original.requestId()).orElseThrow().receipt()).isEqualTo(original));
+            } finally { imports.deleteStagingFile(preview.stagingId()); }
+        } finally { tx.executeWithoutResult(status -> helper.deleteSeasonCascade(seasons.findById(foreign[0]).orElseThrow())); }
+    }
+
+    private void removeWindowFields(Map<String, byte[]> files) throws IOException {
+        for (String table : List.of("matchdays", "matches", "playoff-matchups")) {
+            String name = "data/" + table + ".json";
+            var rows = (ArrayNode) JSON.readTree(files.get(name));
+            for (var row : rows) ((ObjectNode) row).remove(List.of("picksOpen", "pickWindowVersion", "pickDeadlineOverride"));
+            files.put(name, JSON.writeValueAsBytes(rows));
+        }
+    }
+
     private byte[] export() throws IOException {
         var output = new ByteArrayOutputStream();
         archives.writeZip(output, Instant.now());
@@ -443,7 +516,20 @@ class DiscordPicksBackupRoundTripIT {
     private byte[] malformed(byte[] valid, String kind) throws IOException {
         var files = unzip(valid);
         var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
-        if (kind.startsWith("missing-")) {
+        if (kind.equals("window-legacy")) {
+            manifest.put("schema_version", 16);
+        } else if (kind.startsWith("window-")) {
+            String file = kind.equals("window-deadline") ? "data/matches.json" : "data/matchdays.json";
+            var rows = (ArrayNode) JSON.readTree(files.get(file));
+            var row = (ObjectNode) rows.get(0);
+            switch (kind) {
+                case "window-flag" -> row.put("picksOpen", "true");
+                case "window-version" -> row.put("pickWindowVersion", -1);
+                case "window-deadline" -> row.put("pickDeadlineOverride", "2027-03-28T02:30");
+                default -> throw new AssertionError(kind);
+            }
+            files.put(file, JSON.writeValueAsBytes(rows));
+        } else if (kind.startsWith("missing-")) {
             files.remove("data/matchday-pick-" + (kind.equals("missing-revisions") ? "revisions" : "decisions") + ".json");
         } else if (kind.equals("disguised-v4")) {
             manifest.put("schema_version", 4);

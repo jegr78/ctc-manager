@@ -41,6 +41,12 @@ public class Matchday extends BaseEntity {
 	@Column(name = "pick_deadline")
 	private LocalDateTime pickDeadline;
 
+    @Column(name = "picks_open", nullable = false)
+    private boolean picksOpen;
+
+    @Column(name = "pick_window_version", nullable = false)
+    private long pickWindowVersion;
+
 	@Column(name = "scheduled_weekend", length = 64)
 	private String scheduledWeekend;
 

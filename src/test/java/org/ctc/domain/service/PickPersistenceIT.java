@@ -50,6 +50,7 @@ class PickPersistenceIT {
             fixture.race().setPicksManaged(true);
             fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0));
             fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0));
+            fixture.matchday().setPicksOpen(true);
             var car = cars.save(new Car("Test private", UUID.randomUUID().toString()));
             var track = new Track();
             track.setName("Test private " + UUID.randomUUID());

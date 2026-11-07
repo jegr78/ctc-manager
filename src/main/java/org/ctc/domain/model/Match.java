@@ -46,6 +46,12 @@ public class Match extends BaseEntity {
 
 	private Integer awayScore;
 
+    @Column(name = "pick_deadline_override")
+    private LocalDateTime pickDeadlineOverride;
+
+    @Column(name = "pick_window_version", nullable = false)
+    private long pickWindowVersion;
+
 	@Column(nullable = false)
 	private boolean bye;
 

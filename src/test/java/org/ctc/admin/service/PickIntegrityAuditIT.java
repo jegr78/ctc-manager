@@ -43,6 +43,7 @@ class PickIntegrityAuditIT {
         fixture.race().setPicksManaged(true);
         fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0));
         fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0));
+            fixture.matchday().setPicksOpen(true);
         var car = cars.save(new Car("Test pick audit", UUID.randomUUID().toString()));
         var track = tracks.save(new Track("Test pick audit " + UUID.randomUUID()));
         fixture.season().getCars().add(car);
@@ -168,14 +169,16 @@ class PickIntegrityAuditIT {
 
     @ParameterizedTest
     @ValueSource(strings = {"RETURN", "CLOSE"})
-    void givenReviewedAmbiguousDeadline_whenAuditing_thenRetainTheExplicitManagementException(String action) {
+    void givenReturnedOrClosedAmbiguousDeadline_whenAuditing_thenPreserveHistoryAndReportAnUnresolvedReturnCutoff(String action) {
         fixture.matchday().setPickDeadline(LocalDateTime.of(2026, 10, 25, 2, 30));
         var pick = picks.findByRaceId(fixture.race().getId()).orElseThrow();
         if (action.equals("RETURN")) pick.returnForCorrection(); else pick.close();
         em.persist(new MatchdayPickDecision(pick, PickDecisionKind.valueOf(action), 2, "test-admin", "Test reviewed deadline", Instant.parse("2026-11-02T19:01:00Z")));
         em.flush();
 
-        assertThat(findings()).isEmpty();
+        if (action.equals("RETURN")) {
+            assertThat(findings()).anySatisfy(finding -> assertThat(finding.evidence()).contains("Deadline", "management review"));
+        } else assertThat(findings()).isEmpty();
         assertThat(pick.getVersion()).isEqualTo(2);
         assertThat(pick.isManualOpen()).isEqualTo(action.equals("RETURN"));
         assertThat(pick.isManualClosed()).isEqualTo(action.equals("CLOSE"));

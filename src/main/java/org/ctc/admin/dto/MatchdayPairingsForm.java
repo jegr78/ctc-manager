@@ -15,6 +15,14 @@ public class MatchdayPairingsForm {
 	@NotNull
 	private UUID id;
 
+    private boolean picksOpen;
+    @NotNull @jakarta.validation.constraints.PositiveOrZero
+    private Long expectedVersion;
+    @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Pattern(regexp = "[0-9a-f]{64}")
+    private String expectedScope;
+    @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Pattern(regexp = "[0-9a-f-]{36}:[0-9]+")
+    private String expectedGeneration;
+
 	@DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
 	private LocalDateTime pickDeadline;
 

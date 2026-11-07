@@ -135,7 +135,7 @@ public class BackupImportService {
      * {@code SUPPORTED_SCHEMA_VERSIONS.toString()}, where {@code Set.of(1, 2)} produces
      * a hash-randomised order that breaks message-matching assertions.
      */
-    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16));
+    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17));
 
     /** Tables an older schema version never exported; they may be absent when the manifest announces no rows. */
     static final Set<String> INCIDENT_TABLES = Set.of("incident_match_contexts", "incident_report_windows", "incident_reports", "incident_report_revisions", "incident_report_events", "incident_deliveries", "incident_thread_publications", "incident_rulings", "incident_ruling_revisions", "incident_ruling_publications");
@@ -776,8 +776,9 @@ public class BackupImportService {
         List<JsonNode> batch = new ArrayList<>(RESTORE_BATCH_SIZE);
         long[] rowIndex = {0L};
         long totalRows = readRows(zf, entry, inflatedBytes, row -> {
-            batch.add(org.ctc.backup.schema.DisqualificationArchive.normalize(schemaVersion, ref.tableName(),
-                    org.ctc.backup.schema.LobbyRulesArchive.normalize(schemaVersion, ref.tableName(), row)));
+            batch.add(org.ctc.backup.schema.PickWindowArchive.normalize(schemaVersion, ref.tableName(),
+                    org.ctc.backup.schema.DisqualificationArchive.normalize(schemaVersion, ref.tableName(),
+                    org.ctc.backup.schema.LobbyRulesArchive.normalize(schemaVersion, ref.tableName(), row))));
             rowIndex[0]++;
             if (rowIndex[0] % FAIL_INJECT_INTERVAL == 0) {
                 failureInjector.maybeFailAt(ref.tableName(), (int) rowIndex[0]);
@@ -799,6 +800,7 @@ public class BackupImportService {
      */
     private void validateRestorableRows(Path staged, BackupManifest manifest) throws BackupArchiveException {
         var activeSeasonValidator = new org.ctc.backup.schema.ActiveSeasonBackupValidator();
+        var pickWindows = new org.ctc.backup.schema.PickWindowBackupValidator();
         var lobbyRulesValidator = new org.ctc.backup.schema.LobbyRulesBackupValidator();
         var walkoverValidator = new org.ctc.backup.schema.MatchWalkoverBackupValidator();
         var penaltyValidator = new org.ctc.backup.schema.RacePenaltyBackupValidator(manifest.schemaVersion());
@@ -816,8 +818,10 @@ public class BackupImportService {
                     counts.put(ref.tableName(), readRows(zf, entry, inflatedBytes, row -> {
                         row = org.ctc.backup.schema.LobbyRulesArchive.normalize(manifest.schemaVersion(), ref.tableName(), row);
                         row = org.ctc.backup.schema.DisqualificationArchive.normalize(manifest.schemaVersion(), ref.tableName(), row);
+                        row = org.ctc.backup.schema.PickWindowArchive.normalize(manifest.schemaVersion(), ref.tableName(), row);
                         lobbyRulesValidator.accept(ref.tableName(), row);
                         activeSeasonValidator.accept(ref.tableName(), row);
+                        pickWindows.accept(ref.tableName(), row);
                         walkoverValidator.accept(ref.tableName(), row);
                         penaltyValidator.accept(ref.tableName(), row);
                         disqualificationValidator.accept(ref.tableName(), row);
@@ -827,6 +831,7 @@ public class BackupImportService {
                     }));
                 }
             }
+            pickWindows.validate();
             walkoverValidator.validate();
             penaltyValidator.validate();
             disqualificationValidator.validate();

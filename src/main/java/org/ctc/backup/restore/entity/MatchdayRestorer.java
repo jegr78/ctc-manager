@@ -35,8 +35,8 @@ public class MatchdayRestorer implements EntityRestorer {
 
     private static final String INSERT_SQL =
             "INSERT INTO matchdays (id, phase_id, group_id, label, sort_index, "
-          + "created_at, updated_at, pick_deadline, scheduled_weekend) "
-          + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+          + "created_at, updated_at, pick_deadline, scheduled_weekend, picks_open, pick_window_version) "
+          + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     @Override
     public String tableName() {
@@ -55,6 +55,8 @@ public class MatchdayRestorer implements EntityRestorer {
             ps.setTimestamp(7, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
             setNullableTimestamp(ps, 8, row, "pickDeadline");
             ps.setString(9, nullableString(row, "scheduledWeekend"));
+            ps.setBoolean(10, row.path("picksOpen").asBoolean(false));
+            ps.setLong(11, row.path("pickWindowVersion").asLong(0));
         });
         log.debug("MatchdayRestorer: restored {} rows", rows.size());
     }

@@ -35,8 +35,7 @@ public class PickTeamReadService {
     @Transactional(readOnly = true)
     public PickTeamView load(ChannelPickActor channel, UUID raceId) {
         var actor = access.authorizeTarget(channel, raceId);
-        var target = targets.listHomeRaces(channel).stream().filter(row -> raceId.equals(row.raceId())).findFirst()
-                .orElseThrow(() -> new BusinessRuleException("Pick target is unavailable"));
+        var target = targets.homeRace(channel, raceId);
         var race = races.findById(raceId).orElseThrow(() -> new BusinessRuleException("Pick target is unavailable"));
         var season = race.getMatchday().getSeason();
         var pick = picks.findSnapshotByRaceId(raceId).orElse(null);
@@ -64,14 +63,14 @@ public class PickTeamReadService {
                 : decisions.findFirstByPickIdAndKindOrderByAggregateVersionDesc(pick.getId(), PickDecisionKind.RETURN)
                         .map(org.ctc.domain.model.MatchdayPickDecision::getReason).orElse(null);
         var payload = revision == null ? null : revision.getPayload();
-        var deadline = race.getMatchday().getPickDeadline();
+        var deadline = org.ctc.domain.model.MatchdayPickWindowRules.deadline(race);
         var offsets = deadline == null ? List.<java.time.ZoneOffset>of() : ZoneId.of("Europe/Berlin").getRules().getValidOffsets(deadline);
         String deadlineLabel = deadline == null ? "Not configured" : deadline + " Europe/Berlin "
                 + (offsets.size() == 1 ? offsets.getFirst() : "requires management review");
         return new PickTeamView(target, payload, revision == null ? null : revision.receipt(),
                 payload == null ? null : cars.findById(payload.carId()).orElseThrow().getDisplayName(),
                 payload == null ? null : tracks.findById(payload.trackId()).orElseThrow().getName(), deadlineLabel,
-                pick != null && pick.isManualOpen(), pick != null && pick.isManualClosed(), reason,
+                race.getMatchday().isPicksOpen(), pick != null && pick.isManualClosed(), reason,
                 sorted(carChoices), sorted(trackChoices), season.getLobbyRulesProfile());
     }
 

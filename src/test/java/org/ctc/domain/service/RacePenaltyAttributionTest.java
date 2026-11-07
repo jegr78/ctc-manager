@@ -25,7 +25,7 @@ class RacePenaltyAttributionTest {
         var result = new RaceResult(race, driver, 1, 1, false); result.setPointsTotal(80); race.getResults().add(result);
         var races = mock(RaceRepository.class); when(races.findById(race.getId())).thenReturn(Optional.of(race));
         var lineups = mock(RaceLineupRepository.class); when(lineups.findByRaceId(race.getId())).thenReturn(List.of());
-        var scoring = new ScoringService(null, null, lineups, races);
+        var scoring = new ScoringService(null, null, null, lineups, races);
         // when
         var totals = scoring.calculateRaceTotals(race, home.getId());
         // then

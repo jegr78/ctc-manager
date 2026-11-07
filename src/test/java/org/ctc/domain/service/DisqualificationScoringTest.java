@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 class DisqualificationScoringTest {
-    private final ScoringService scoring = new ScoringService(mock(MatchRepository.class),
+    private final ScoringService scoring = new ScoringService(mock(MatchRepository.class), mock(PickWindowService.class),
             mock(PlayoffMatchupRepository.class), mock(RaceLineupRepository.class), mock(RaceRepository.class));
     private final RaceScoring scale = new RaceScoring("Test DSQ", "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2);
 

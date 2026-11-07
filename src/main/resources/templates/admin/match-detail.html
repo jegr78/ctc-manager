@@ -14,6 +14,7 @@
             </h1>
         </div>
         <div class="actions">
+            <a th:href="@{/admin/pick-windows/matches/{id}(id=${match.id})}" class="btn btn-secondary">Match picks deadline</a>
             <a th:href="@{/admin/matches/{id}/incidents(id=${match.id})}" class="btn btn-secondary">Incident reports</a>
             <a th:href="@{/admin/matches/{id}/edit(id=${match.id})}"
                class="btn btn-primary" data-testid="match-detail-edit">Edit</a>

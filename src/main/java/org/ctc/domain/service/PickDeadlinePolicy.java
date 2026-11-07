@@ -26,14 +26,14 @@ public class PickDeadlinePolicy {
         if (context.state() == PickState.APPROVED) {
             return new Decision(false, "Approved picks are locked");
         }
+        if (!context.matchdayOpen()) {
+            return new Decision(false, "Matchday picks are closed");
+        }
         if (context.manualClosed()) {
             return new Decision(false, "Collection was manually closed");
         }
-        if (context.manualOpen()) {
-            return new Decision(true, "Collection was opened by management");
-        }
         if (context.deadline() == null) {
-            return new Decision(false, "A deadline or explicit management opening is required");
+            return new Decision(true, "Matchday was opened without a pick deadline");
         }
         Instant cutoff;
         try {
@@ -55,6 +55,6 @@ public class PickDeadlinePolicy {
     }
 
     public record Context(PickState state, boolean collectionEnabled, boolean botEnabled,
-                          boolean targetValid, boolean manualOpen, boolean manualClosed, LocalDateTime deadline) {}
+                          boolean targetValid, boolean matchdayOpen, boolean manualClosed, LocalDateTime deadline) {}
     public record Decision(boolean editable, String reason) {}
 }

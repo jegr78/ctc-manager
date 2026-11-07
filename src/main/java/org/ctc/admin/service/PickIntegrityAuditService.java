@@ -38,26 +38,29 @@ public class PickIntegrityAuditService {
     public List<DataAuditFinding> inspect() {
         var validator = new PickBackupValidator(BackupSchema.SCHEMA_VERSION);
         var lobbyRules = new LobbyRulesBackupValidator();
+        var pickWindows = new org.ctc.backup.schema.PickWindowBackupValidator();
         var managedRaces = new ArrayList<Race>();
         var picks = new HashMap<java.util.UUID, MatchdayPick>();
         try {
             for (var entity : schema.getExportOrder()) {
-                if (!PickBackupValidator.supports(entity.tableName())) continue;
+                if (!PickBackupValidator.supports(entity.tableName()) && !org.ctc.backup.schema.PickWindowBackupValidator.supports(entity.tableName())) continue;
                 for (var row : exports.fetchAllForBackup(entity.entityClass())) {
                     if (row instanceof Race race && race.isPicksManaged()) managedRaces.add(race);
                     if (row instanceof MatchdayPick pick) picks.put(pick.getRace().getId(), pick);
-                    var json = mapper.valueToTree(row);
+                    var json = org.ctc.backup.schema.PickWindowArchive.normalize(BackupSchema.SCHEMA_VERSION, entity.tableName(), mapper.valueToTree(row));
                     lobbyRules.accept(entity.tableName(), json);
+                    pickWindows.accept(entity.tableName(), json);
                     validator.accept(entity.tableName(), json);
                 }
             }
+            pickWindows.validate();
             lobbyRules.validate();
             validator.validate();
             for (var race : managedRaces) {
                 var pick = picks.get(race.getId());
                 if (!PickTargetRules.isUnfinishedTarget(race)
-                        || pick != null && (pick.isManualOpen() || pick.isManualClosed() || pick.getState() == PickState.APPROVED)) continue;
-                var deadline = race.getMatchday().getPickDeadline();
+                        || pick != null && (pick.isManualClosed() || pick.getState() == PickState.APPROVED)) continue;
+                var deadline = org.ctc.domain.model.MatchdayPickWindowRules.deadline(race);
                 if (deadline == null) continue;
                 try {
                     deadlines.resolveDeadline(deadline);
@@ -65,7 +68,7 @@ public class PickIntegrityAuditService {
                     return List.of(new DataAuditFinding(DataAuditFinding.Category.PRIVATE_PICKS,
                             DataAuditFinding.Resolution.AMBIGUOUS, "Race " + race.getId(),
                             "Deadline " + deadline + " Europe/Berlin requires management review",
-                            "Review the matchday deadline or record an explicit management opening or closure; do not infer a cutoff."));
+                            "Review the matchday default and the match deadline exception; keep the matchday closed until the cutoff is unambiguous."));
                 }
             }
             return List.of();
@@ -73,7 +76,7 @@ public class PickIntegrityAuditService {
             return List.of(new DataAuditFinding(DataAuditFinding.Category.LOBBY_RULES,
                     DataAuditFinding.Resolution.AMBIGUOUS, "Season lobby rules", failure.getMessage(),
                     "Compare the saved season profile and race choices with authoritative records; do not rewrite historical settings or publication evidence."));
-        } catch (PickBackupValidator.ValidationException failure) {
+        } catch (IllegalArgumentException | BusinessRuleException failure) {
             return List.of(new DataAuditFinding(DataAuditFinding.Category.PRIVATE_PICKS,
                     DataAuditFinding.Resolution.AMBIGUOUS, "Private picks and channel bindings", failure.getMessage(),
                     "Review channel bindings, the original target and immutable history against authoritative records; preserve revisions and receipts."));

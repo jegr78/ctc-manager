@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ScoringService {
 
 	private final MatchRepository matchRepository;
+    private final PickWindowService pickWindows;
 	private final PlayoffMatchupRepository playoffMatchupRepository;
 	private final RaceLineupRepository raceLineupRepository;
 	private final RaceRepository raceRepository;
@@ -168,10 +169,8 @@ public class ScoringService {
 	 */
 	@Transactional
 	public void aggregateMatchScores(Race race) {
-		if (race.getResults().isEmpty()) {
-			return;
-		}
-		recomputeMatchScoresFromAllLegs(race);
+        if (!race.getResults().isEmpty()) recomputeMatchScoresFromAllLegs(race);
+        pickWindows.closeCompletedForSeason(race.getMatchday().getSeason().getId());
 	}
 
 	/**

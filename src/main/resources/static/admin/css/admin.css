@@ -2501,6 +2501,7 @@ input:not([type='checkbox']):not([type='radio']):not([type='color']), select { b
 }
 
 /* Pairing announcements and matchday generation */
+.pick-window-editor .entity-editor-actions { position: static; }
 .planning-editor .planning-context { margin: 8px 0 24px; line-height: 1.5; }
 .planning-editor .form-group select { min-height: 44px; }
 .planning-editor .generator-preview { border: 1px solid var(--border); padding: 16px; margin-bottom: 24px; }

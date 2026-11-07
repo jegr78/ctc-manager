@@ -35,6 +35,7 @@ public class PlayoffService {
 			8, List.of("Quarterfinal", "Semifinal", "Final")
 	);
 	private final PlayoffRepository playoffRepository;
+    private final PickWindowService pickWindows;
 	private final PlayoffRoundRepository playoffRoundRepository;
 	private final PlayoffMatchupRepository playoffMatchupRepository;
 	private final RaceRepository raceRepository;
@@ -393,6 +394,7 @@ public class PlayoffService {
 		matchup.setDecisionReason(reason);
 		appendHistory(matchup, action, winner, reason);
 		playoffMatchupRepository.save(matchup);
+        pickWindows.closeCompletedForSeason(matchup.getRound().getPlayoff().getSeason().getId());
 
 		PlayoffMatchup next = matchup.getNextMatchup();
 		if (next != null) {

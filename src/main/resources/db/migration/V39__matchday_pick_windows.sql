@@ -1,0 +1,11 @@
+ALTER TABLE matchdays ADD COLUMN picks_open BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE matchdays ADD COLUMN pick_window_version BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE matches ADD COLUMN pick_deadline_override TIMESTAMP NULL;
+ALTER TABLE matches ADD COLUMN pick_window_version BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE playoff_matchups ADD COLUMN pick_deadline_override TIMESTAMP NULL;
+ALTER TABLE playoff_matchups ADD COLUMN pick_window_version BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE matchday_pick_decisions DROP CONSTRAINT chk_pick_decision_kind;
+ALTER TABLE matchday_pick_decisions ADD CONSTRAINT chk_pick_decision_kind CHECK (CASE kind WHEN 'OPEN' THEN 1 WHEN 'RETURN' THEN 1 WHEN 'CLOSE' THEN 1 WHEN 'APPROVE' THEN 1 WHEN 'CORRECTION' THEN 1 WHEN 'WINDOW_OPEN' THEN 1 ELSE 0 END = 1);
+ALTER TABLE matchdays ADD CONSTRAINT ck_matchday_pick_window_version CHECK (pick_window_version >= 0);
+ALTER TABLE matches ADD CONSTRAINT ck_match_pick_window_version CHECK (pick_window_version >= 0);
+ALTER TABLE playoff_matchups ADD CONSTRAINT ck_playoff_pick_window_version CHECK (pick_window_version >= 0);

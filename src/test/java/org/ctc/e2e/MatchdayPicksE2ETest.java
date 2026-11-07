@@ -127,9 +127,9 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
         String matchdayPath = "/admin/matchdays/" + fixture.matchday().getId();
         page.navigate(url(matchdayPath)); capture("pick-deadline-matchday-" + viewport);
         assertThat(page.locator("#matchday-picks")).containsText("Europe/Berlin");
-        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Edit pick deadline").setExact(true)).click();
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Manage picks and deadline").setExact(true)).click();
         assertThat(page.locator("#pickDeadline")).hasValue("2035-01-01T12:00");
-        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save deadline and event window")).click();
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save picks settings and event window")).click();
         assertThat(page).hasURL(url(matchdayPath));
         // when
         page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Review team picks").setExact(true)).click();
@@ -141,10 +141,43 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
         back.focus(); assertThat(back).isFocused(); capture("pick-review-return-" + viewport);
         back.press("Enter"); assertThat(page).hasURL(url(matchdayPath));
         page.navigate(url(path())); capture("pick-deadline-review-" + viewport);
-        assertThat(page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Edit pick deadline").setExact(true)))
+        assertThat(page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Manage matchday picks and deadline").setExact(true)))
                 .hasAttribute("href", matchdayPath + "/edit-pairings");
         page.navigate(url("/admin/matchday-picks?seasonId=" + fixture.season().getId()));
         assertThat(page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Back to matchday").setExact(true))).hasCount(0);
+    }
+
+
+    @ParameterizedTest
+    @CsvSource({"1440,1000,desktop", "390,844,mobile"})
+    void givenPreparedRoundWithoutJavascript_whenOpeningSettingAMatchExceptionAndClosing_thenUseTheCentralControls(
+            int width, int height, String viewport) throws Exception {
+        tx.executeWithoutResult(status -> races.findById(fixture.race().getId()).orElseThrow().getMatchday().setPicksOpen(false));
+        page.setViewportSize(width, height);
+        String dayPath = "/admin/matchdays/" + fixture.matchday().getId();
+        page.navigate(url(dayPath)); assertThat(page.getByTestId("matchday-picks-state")).hasText("Closed");
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Manage picks and deadline").setExact(true)).click();
+        var opening = page.getByRole(AriaRole.SWITCH, new Page.GetByRoleOptions().setName("Open picks for this matchday").setExact(true));
+        assertThat(opening).not().isChecked(); opening.focus(); assertThat(opening).isFocused(); opening.press("Space");
+        assertThat(opening).isChecked(); capture("matchday-opening-" + viewport);
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save picks settings and event window")).click();
+        assertThat(page.getByTestId("matchday-picks-state")).hasText("Open");
+        page.navigate(url("/admin/matches/" + fixture.match().getId()));
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Match picks deadline").setExact(true)).click();
+        page.getByLabel("Deadline exception, Europe/Berlin").fill("2036-01-01T20:00"); capture("match-deadline-exception-" + viewport);
+        org.assertj.core.api.Assertions.assertThat((Boolean) page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")).isTrue();
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save match deadline")).click();
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Match picks deadline").setExact(true)).click();
+        assertThat(page.getByLabel("Deadline exception, Europe/Berlin")).hasValue("2036-01-01T20:00");
+        page.getByLabel("Deadline exception, Europe/Berlin").fill("");
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save match deadline")).click();
+        page.navigate(url(dayPath + "/edit-pairings"));
+        assertThat(page.locator("#pickDeadline")).hasValue("2035-01-01T12:00");
+        page.getByRole(AriaRole.SWITCH).uncheck();
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save picks settings and event window")).click();
+        assertThat(page.getByTestId("matchday-picks-state")).hasText("Closed");
+        org.assertj.core.api.Assertions.assertThat(admin.detail(fixture.race().getId()).row().version()).isZero();
+        org.assertj.core.api.Assertions.assertThat(admin.detail(fixture.race().getId()).row().matchdayOpen()).isFalse();
     }
 
     @BeforeEach
@@ -155,7 +188,7 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
         tx.executeWithoutResult(status -> {
             fixture = helper.createFullSeasonFixture("TPM" + UUID.randomUUID().toString().substring(0, 7));
             fixture.season().setPicksCollectionEnabled(true); fixture.race().setPicksManaged(true);
-            fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0)); fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0));
+            fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0)); fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0)); fixture.matchday().setPicksOpen(true);
             var car = cars.save(new Car("Test review", "Choice " + UUID.randomUUID())); carIds.add(car.getId());
             var track = tracks.save(new Track("Test review track " + UUID.randomUUID()));
             fixture.season().getCars().add(car); fixture.season().getTracks().add(track);

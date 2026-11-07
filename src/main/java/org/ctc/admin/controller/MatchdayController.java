@@ -38,6 +38,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class MatchdayController {
 
     private final MatchdayService matchdayService;
+    private final org.ctc.admin.service.PickWindowAdminService pickWindows;
     private final MatchdayOverviewGraphicService overviewGraphicService;
     private final MatchdayScheduleGraphicService scheduleGraphicService;
     private final MatchdayResultsGraphicService resultsGraphicService;
@@ -103,11 +104,8 @@ public class MatchdayController {
 
     @GetMapping("/{id}/edit-pairings")
     public String editPairings(@PathVariable UUID id, Model model) {
+        var form = pickWindows.matchdayForm(id);
         var matchday = matchdayService.getMatchdayDetail(id).matchday();
-        var form = new MatchdayPairingsForm();
-        form.setId(matchday.getId());
-        form.setPickDeadline(matchday.getPickDeadline());
-        form.setScheduledWeekend(matchday.getScheduledWeekend());
         model.addAttribute("form", form);
         model.addAttribute("matchday", matchday);
         return "admin/matchday-pairings-form";
@@ -117,14 +115,21 @@ public class MatchdayController {
     public String savePairings(@PathVariable UUID id,
                                 @Valid @ModelAttribute("form") MatchdayPairingsForm form,
                                 BindingResult result,
+                                java.security.Principal principal,
                                 RedirectAttributes redirectAttributes,
                                 Model model) {
         if (result.hasErrors()) {
             model.addAttribute("matchday", matchdayService.getMatchdayDetail(id).matchday());
             return "admin/matchday-pairings-form";
         }
-        matchdayService.savePairings(id, form.getPickDeadline(), form.getScheduledWeekend());
-        redirectAttributes.addFlashAttribute("successMessage", "Pairings saved.");
+        try {
+            pickWindows.saveMatchday(id, form, principal);
+        } catch (BusinessRuleException rejected) {
+            result.reject("pickWindow", rejected.getMessage());
+            model.addAttribute("matchday", matchdayService.getMatchdayDetail(id).matchday());
+            return "admin/matchday-pairings-form";
+        }
+        redirectAttributes.addFlashAttribute("successMessage", "Matchday picks settings saved.");
         return "redirect:/admin/matchdays/" + id;
     }
 

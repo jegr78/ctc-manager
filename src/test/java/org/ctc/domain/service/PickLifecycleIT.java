@@ -58,6 +58,7 @@ class PickLifecycleIT {
             fixture = helper.createFullSeasonFixture("TPL" + UUID.randomUUID().toString().substring(0, 7));
             fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0));
             fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0));
+            fixture.matchday().setPicksOpen(true);
             var car1 = cars.save(new Car("Test lifecycle", UUID.randomUUID().toString()));
             var car2 = cars.save(new Car("Test lifecycle", UUID.randomUUID().toString()));
             var track1 = tracks.save(new Track("Test lifecycle " + UUID.randomUUID()));

@@ -21,6 +21,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ScoringServiceTest {
+    @Mock private PickWindowService pickWindows;
 
 	@Mock
 	private RaceLineupRepository raceLineupRepository;
