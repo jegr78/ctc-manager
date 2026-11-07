@@ -57,7 +57,7 @@ class PickInteractionHandlerTest {
         click("Keep selected category or One-Make");
         assertThat(response.last().content()).contains("Page 2/3", "Test model 47");
         click("Keep selected car");
-        for (String stage : List.of("rules", "fuel", "mandatory", "time")) {
+        for (String stage : List.of("rules", "race strategy", "mandatory", "time")) {
             open("Open " + stage + " form");
             var defaults = new HashMap<String, List<String>>();
             for (var field : response.modal.fields()) {
@@ -149,7 +149,7 @@ class PickInteractionHandlerTest {
         open("Open rules form");
         var changedRules = new HashMap<>(rules); changedRules.put("family", List.of("RACING"));
         // when
-        submitModal(changedRules); open("Open fuel form");
+        submitModal(changedRules); open("Open race strategy form");
         // then
         var available = (PickGatewayModal.Selection) response.modal.fields().stream().filter(field -> field.id().equals("available")).findFirst().orElseThrow();
         assertThat(available.options()).extracting(PickGatewayModal.Option::value).containsExactly("RS", "RM", "RH");
@@ -191,8 +191,13 @@ class PickInteractionHandlerTest {
         var values = response.modal.fields().stream().filter(PickGatewayModal.Text.class::isInstance)
                 .map(PickGatewayModal.Text.class::cast)
                 .collect(java.util.stream.Collectors.toMap(PickGatewayModal.Text::id, field -> String.valueOf(field.value())));
-        assertThat(values).containsEntry("laps", "12").containsEntry("wear", "2")
-                .containsEntry("consumption", "3").containsEntry("refuel", "4");
+        assertThat(values).containsExactlyEntriesOf(Map.of("laps", "12"));
+        for (var expected : Map.of("wear", "2", "consumption", "3", "refuel", "4").entrySet()) {
+            var selection = (PickGatewayModal.Selection) response.modal.fields().stream()
+                    .filter(field -> field.id().equals(expected.getKey())).findFirst().orElseThrow();
+            assertThat(selection.options().stream().filter(PickGatewayModal.Option::defaultSelected))
+                    .extracting(PickGatewayModal.Option::value).containsExactly(expected.getValue());
+        }
         verifyNoInteractions(submissions);
     }
 
@@ -205,7 +210,7 @@ class PickInteractionHandlerTest {
                 List.of(new PickTeamView.Choice(car, entry, "Test One-Make", true)), view.tracks(), LobbyRulesProfile.CTC_2027);
         enterCatalogs(); open("Open rules form");
         var chosenRules = new HashMap<>(rules); chosenRules.put("family", List.of(available.startsWith("S") ? "SPORTS" : "RACING"));
-        submitModal(chosenRules); open("Open fuel form");
+        submitModal(chosenRules); open("Open race strategy form");
         var choices = (PickGatewayModal.Selection) response.modal.fields().stream().filter(f -> f.id().equals("available")).findFirst().orElseThrow();
         assertThat(choices.options()).extracting(PickGatewayModal.Option::value)
                 .containsExactly(available.startsWith("S") ? new String[]{"SS", "SM", "SH"} : new String[]{"RS", "RM", "RH"});
@@ -232,13 +237,13 @@ class PickInteractionHandlerTest {
                 List.of(new PickTeamView.Choice(car, UUID.randomUUID(), "Test saved definition", oneMake)), view.tracks(), LobbyRulesProfile.CTC_2027);
         enterCatalogs(); open("Open rules form");
         var chosenRules = new HashMap<>(rules); if (oneMake) chosenRules.put("family", List.of("RACING"));
-        submitModal(chosenRules); open("Open fuel form");
+        submitModal(chosenRules); open("Open race strategy form");
         var selected = new HashMap<>(fuel); selected.put("available", List.of(available.split(",")));
         // when
         submitModal(selected);
         // then
         assertThat(response.last().content()).contains("Check all required values");
-        assertThat(response.last().buttons()).extracting(PickGatewayMessage.Button::label).containsExactly("Open fuel form");
+        assertThat(response.last().buttons()).extracting(PickGatewayMessage.Button::label).containsExactly("Open race strategy form");
         verifyNoInteractions(submissions);
     }
 
@@ -247,7 +252,7 @@ class PickInteractionHandlerTest {
         // given
         view = new PickTeamView(view.target(), view.payload(), view.receipt(), view.carLabel(), view.trackLabel(), view.deadline(),
                 view.matchdayOpen(), view.manualClosed(), view.returnReason(), view.cars(), view.tracks(), LobbyRulesProfile.CTC_2027);
-        enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open fuel form"); submitModal(fuel); open("Open mandatory form"); submitModal(fields("mandatory", "None")); open("Open time form");
+        enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open race strategy form"); submitModal(fuel); open("Open mandatory form"); submitModal(fields("mandatory", "None")); open("Open time form");
         assertThat(response.modal.fields()).hasSize(5);
         view = new PickTeamView(view.target(), view.payload(), view.receipt(), view.carLabel(), view.trackLabel(), view.deadline(),
                 view.matchdayOpen(), view.manualClosed(), view.returnReason(), view.cars(), view.tracks(), LobbyRulesProfile.LEGACY);
@@ -428,7 +433,7 @@ class PickInteractionHandlerTest {
     @ValueSource(strings = {"mixed-none", "subset", "duplicates", "unknown"})
     void givenInvalidTyres_whenSubmittingMandatory_thenRejectWithoutAdvancing(String error) {
         // given
-        enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open fuel form");
+        enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open race strategy form");
         submitModal(fuel); open("Open mandatory form");
         var invalid = new HashMap<String, List<String>>();
         invalid.put("mandatory", switch (error) {
@@ -527,7 +532,7 @@ class PickInteractionHandlerTest {
     @Test
     void givenForgedExtraModalFields_whenSubmittingFuel_thenRejectCrossStageChanges() {
         // given
-        enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open fuel form");
+        enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open race strategy form");
         var forged = new HashMap<>(fuel); forged.put("laps", List.of("99"));
         // when
         submitModal(forged);
@@ -543,7 +548,7 @@ class PickInteractionHandlerTest {
         // when
         submitModal(rules);
         // then
-        assertThat(response.modal).isNull(); assertThat(response.last().buttons()).extracting(PickGatewayMessage.Button::label).contains("Open fuel form");
+        assertThat(response.modal).isNull(); assertThat(response.last().buttons()).extracting(PickGatewayMessage.Button::label).contains("Open race strategy form");
     }
 
     @Test
@@ -569,7 +574,7 @@ class PickInteractionHandlerTest {
     }
 
     void complete(String progression) {
-        enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open fuel form"); submitModal(fuel);
+        enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open race strategy form"); submitModal(fuel);
         open("Open mandatory form"); submitModal(fields("mandatory", "None"));
         open("Open time form"); submitModal(fields("progression", progression, "weather", "S01; R03", "daytime", "Sunset"));
     }

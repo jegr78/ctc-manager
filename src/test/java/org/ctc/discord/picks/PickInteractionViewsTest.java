@@ -13,6 +13,23 @@ import static org.assertj.core.api.Assertions.*;
 
 class PickInteractionViewsTest {
     @ParameterizedTest
+    @CsvSource({"wear,7,x", "consumption,6,x", "refuel,10,' L/s'"})
+    void givenNewRules_whenOpening_thenRequireOneChoiceFromEachCompleteNumericRange(String id, int max, String unit) {
+        // given / when
+        var modal = PickInteractionViews.modal("test", "rules");
+        var selection = (PickGatewayModal.Selection) modal.fields().stream()
+                .filter(field -> field.id().equals(id)).findFirst().orElseThrow();
+        // then
+        assertThat(selection.minValues()).isEqualTo(1);
+        assertThat(selection.maxValues()).isEqualTo(1);
+        assertThat(selection.options()).extracting(PickGatewayModal.Option::value)
+                .containsExactlyElementsOf(IntStream.rangeClosed(1, max).mapToObj(Integer::toString).toList());
+        assertThat(selection.options()).extracting(PickGatewayModal.Option::label)
+                .containsExactlyElementsOf(IntStream.rangeClosed(1, max).mapToObj(value -> value + unit).toList());
+        assertThat(selection.options()).noneMatch(PickGatewayModal.Option::defaultSelected);
+    }
+
+    @ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings = {"@everyone", "<@300>", "000", "300\n@everyone"})
     void givenInvalidAuthorIdentifier_whenRenderingReceipt_thenUseNeutralTextWithoutInsertingMarkup(String author) {
         // given
@@ -36,6 +53,7 @@ class PickInteractionViewsTest {
     void givenRacingFuelDialog_whenOpening_thenOfferOnlyDryCompoundsBeforeChoosingMandatoryTyres() {
         // given / when
         var modal = PickInteractionViews.modal("test", "fuel");
+        assertThat(modal.title()).isEqualTo("Private picks: race strategy");
         var available = (PickGatewayModal.Selection) modal.fields().stream()
                 .filter(field -> field.id().equals("available")).findFirst().orElseThrow();
         // then

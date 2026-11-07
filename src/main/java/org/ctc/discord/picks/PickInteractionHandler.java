@@ -265,7 +265,7 @@ public class PickInteractionHandler implements PickGatewayInteractionHandler {
 
     private void next(Session session, String stage, String message, PickGatewayResponse.Continuation reply) {
         session.clearActions();
-        send(reply, escape(session.label) + "\n" + message, List.of(button(session, "open-" + stage, "Open " + stage + " form")), null);
+        send(reply, escape(session.label) + "\n" + message, List.of(button(session, "open-" + stage, "Open " + stageLabel(stage) + " form")), null);
     }
     private static PickGatewayMessage.Button button(Session session, String action, String label) {
         return new PickGatewayMessage.Button(session.action(action, BUTTON), label);
