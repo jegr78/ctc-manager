@@ -235,8 +235,8 @@ class ReleaseScriptsTest {
 			// then
 			assertThat(run.exit()).as("version exit code").isZero();
 			assertThat(run.outputs()).as("version outputs").containsEntry("resume", "false")
-					.containsEntry("new_version", "1.2.4").containsEntry("next_snapshot", "1.3.0-SNAPSHOT")
-					.containsEntry("bump", "patch").doesNotContainKey("should_skip");
+					.containsEntry("new_version", "1.2.4").containsEntry("bump", "patch")
+					.doesNotContainKey("should_skip").doesNotContainKey("next_snapshot");
 		}
 
 		@Test
@@ -254,22 +254,40 @@ class ReleaseScriptsTest {
 		}
 
 		@Test
-		void givenOnlyCiCommitsSinceTheLastTag_whenVersionDetermined_thenSkip() throws Exception {
+		void givenFeat_whenVersionDetermined_thenMinorBump() throws Exception {
 			// given
-			String sha = commitAndPush("ci: tune the workflow");
+			String sha = commitAndPush("feat(lobby): a feature");
 
 			// when
 			var run = version(sha);
 
 			// then
-			assertThat(run.exit()).as("version exit code").isZero();
-			assertThat(run.outputs()).as("version outputs").containsEntry("should_skip", "true")
-					.doesNotContainKey("new_version");
+			assertThat(run.outputs()).as("version outputs").containsEntry("new_version", "1.3.0")
+					.containsEntry("bump", "minor");
 		}
 
 		@Test
-		void givenOnlyTheSnapshotBumpAndCiCommitsSinceTheLastTag_whenVersionDetermined_thenSkip() throws Exception {
+		void givenPerfAndDependencyChore_whenVersionDetermined_thenPatchBump() throws Exception {
+			for (String subject : new String[] {"perf: faster standings", "chore(deps): update jsoup"}) {
+				// given
+				String sha = commitAndPush(subject);
+
+				// when
+				var run = version(sha);
+
+				// then
+				assertThat(run.outputs()).as("version outputs for %s", subject).containsEntry("bump", "patch");
+			}
+		}
+
+		@Test
+		void givenOnlyNonReleasingCommitsSinceTheLastTag_whenVersionDetermined_thenSkip() throws Exception {
 			// given
+			commit("docs: notes");
+			commit("test: more cases");
+			commit("chore: tidy");
+			commit("refactor: rename");
+			commit("style: format");
 			commit("chore: bump version to 1.3.0-SNAPSHOT [skip ci]");
 			String sha = commitAndPush("ci: tune the workflow");
 
@@ -278,90 +296,23 @@ class ReleaseScriptsTest {
 
 			// then
 			assertThat(run.exit()).as("version exit code: %s", run.output()).isZero();
-			assertThat(run.outputs()).as("version outputs after a snapshot bump").containsEntry("should_skip", "true")
-					.doesNotContainKey("new_version");
+			assertThat(run.outputs()).as("a change that does not reach the box needs no release")
+					.containsEntry("should_skip", "true").doesNotContainKey("new_version");
 		}
 
 		@Test
-		void givenChoreCommitAfterTheSnapshotBump_whenVersionDetermined_thenPatchBump() throws Exception {
-			// given
-			commit("chore: bump version to 1.3.0-SNAPSHOT [skip ci]");
-			String sha = commitAndPush("chore: update a dependency");
-
-			// when
-			var run = version(sha);
-
-			// then
-			assertThat(run.outputs()).as("version outputs").containsEntry("new_version", "1.2.4");
-		}
-
-		@Test
-		void givenEarlierAttemptPushedReleaseCommitAndTag_whenVersionDetermined_thenItResumesThatVersion() throws Exception {
+		void givenTheRevisionIsAlreadyTagged_whenVersionDetermined_thenItResumesThatVersion() throws Exception {
 			// given
 			String sha = commitAndPush("feat: a feature");
-			releaseCommit("1.3.0");
 			git("tag", "-a", "v1.3.0", "-m", "Release v1.3.0");
-			commitAndPush("chore: bump version to 1.4.0-SNAPSHOT [skip ci]");
 
 			// when
 			var run = version(sha);
 
 			// then
 			assertThat(run.exit()).as("version exit code: %s", run.output()).isZero();
-			assertThat(run.outputs()).as("version outputs").containsEntry("resume", "true")
-					.containsEntry("new_version", "1.3.0").containsEntry("next_snapshot", "1.4.0-SNAPSHOT");
-		}
-
-		@Test
-		void givenTaggedReleaseCommitThatChangesMoreThanTheVersion_whenVersionDetermined_thenItFails() throws Exception {
-			// given
-			String sha = commitAndPush("feat: a feature");
-			Files.writeString(work.resolve("Other.java"), "class Other {}");
-			git("add", "Other.java");
-			releaseCommit("1.3.0");
-			git("tag", "-a", "v1.3.0", "-m", "Release v1.3.0");
-			push();
-
-			// when
-			var run = version(sha);
-
-			// then
-			assertThat(run.exit()).as("version exit code for a forged release commit").isNotZero();
-			assertThat(run.outputs()).as("version outputs").doesNotContainKey("resume");
-			assertThat(run.output()).as("error").contains("is not only the pom.xml version change");
-		}
-
-		@Test
-		void givenTaggedReleaseCommitWithAnotherPomVersion_whenVersionDetermined_thenItFails() throws Exception {
-			// given
-			String sha = commitAndPush("feat: a feature");
-			Files.writeString(work.resolve("pom.xml"), pom("9.9.9"));
-			git("add", "pom.xml");
-			commit("release: v1.3.0");
-			git("tag", "-a", "v1.3.0", "-m", "Release v1.3.0");
-			push();
-
-			// when
-			var run = version(sha);
-
-			// then
-			assertThat(run.exit()).as("version exit code for a mismatching pom version").isNotZero();
-			assertThat(run.outputs()).as("version outputs").doesNotContainKey("resume");
-		}
-
-		@Test
-		void givenReleaseCommitWithoutItsTag_whenVersionDetermined_thenItDoesNotResume() throws Exception {
-			// given
-			String sha = commitAndPush("fix: a bug");
-			releaseCommit("1.2.4");
-			push();
-
-			// when
-			var run = version(sha);
-
-			// then
-			assertThat(run.outputs()).as("version outputs").containsEntry("resume", "false")
-					.containsEntry("new_version", "1.2.4");
+			assertThat(run.outputs()).as("a rerun completes the existing release").containsEntry("resume", "true")
+					.containsEntry("new_version", "1.3.0");
 		}
 
 		@Test
@@ -381,6 +332,21 @@ class ReleaseScriptsTest {
 
 		private Run version(String sha) throws Exception {
 			return script("release-version.sh", Map.of("SHA", sha));
+		}
+	}
+
+	@Nested
+	class Workflow {
+
+		@Test
+		void givenReleaseWorkflow_whenRead_thenItNeitherRetestsNorCommitsToMaster() throws Exception {
+			// given
+			String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+
+			// then
+			assertThat(workflow).as("release workflow")
+					.doesNotContain("./mvnw verify").doesNotContain("git push").doesNotContain("git commit")
+					.doesNotContain("RELEASE_TOKEN }}@github.com").contains("package -DskipTests");
 		}
 	}
 

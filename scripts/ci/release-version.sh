@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Determines the release version of SHA and writes should_skip, resume, new_version,
-# next_snapshot, last_tag and bump to GITHUB_OUTPUT. When an earlier attempt already pushed the
-# release commit and tag on top of SHA, it resumes that version instead of computing a new one.
+# Determines the release version of SHA from the conventional commits since the last tag and writes
+# should_skip, resume, new_version, last_tag and bump to GITHUB_OUTPUT. A SHA that already carries
+# a release tag resumes that version.
 set -euo pipefail
 shopt -s inherit_errexit
 
@@ -9,32 +9,12 @@ shopt -s inherit_errexit
 OUTPUT="${GITHUB_OUTPUT:-/dev/stdout}"
 out() { echo "$1" >> "${OUTPUT}"; }
 
-pom_version() {
-  git show "$1:pom.xml" | perl -0777 -ne 's{<parent>.*?</parent>}{}s; print $1 if m{<version>([^<]+)</version>}'
-}
-
-snapshot_after() {
-  local major minor patch
-  IFS='.' read -r major minor patch <<< "$1"
-  echo "${major}.$((minor + 1)).0-SNAPSHOT"
-}
-
-resumed=$(git log --format='%H %P %s' "${SHA}..origin/master" \
-  | awk -v sha="${SHA}" 'NF == 4 && $2 == sha && $3 == "release:" && $4 ~ /^v[0-9]+\.[0-9]+\.[0-9]+$/ { print $1 " " substr($4, 2) }')
-if [ -n "${resumed}" ]; then
-  read -r release_commit version <<< "${resumed}"
-  if [ "$(git rev-parse "v${version}^{commit}" 2>/dev/null || true)" = "${release_commit}" ]; then
-    if [ "$(git diff --name-only "${SHA}" "${release_commit}")" != "pom.xml" ] \
-       || [ "$(pom_version "${release_commit}")" != "${version}" ]; then
-      echo "::error::Release commit ${release_commit} of v${version} is not only the pom.xml version change on top of ${SHA}"
-      exit 1
-    fi
-    out "resume=true"
-    out "new_version=${version}"
-    out "next_snapshot=$(snapshot_after "${version}")"
-    echo "Resuming release ${version} from an earlier attempt"
-    exit 0
-  fi
+tagged=$(git tag --points-at "${SHA}" --list 'v[0-9]*.[0-9]*.[0-9]*' | awk '/^v[0-9]+\.[0-9]+\.[0-9]+$/' | sort -V | tail -1)
+if [ -n "${tagged}" ]; then
+  out "resume=true"
+  out "new_version=${tagged#v}"
+  echo "Resuming release ${tagged#v}"
+  exit 0
 fi
 out "resume=false"
 
@@ -46,24 +26,23 @@ if [ -z "${last_tag}" ]; then
   echo "Initial release: ${version} (from pom.xml ${pom_version})"
 else
   out "last_tag=${last_tag}"
-  # The snapshot bump that follows every release is not a change to release.
-  changes=(--invert-grep -E --grep='^chore: bump version to [0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT \[skip ci\]$')
-  subjects=$(git log "${changes[@]}" "${last_tag}..${SHA}" --pretty=format:'%s')
-  bodies=$(git log "${changes[@]}" "${last_tag}..${SHA}" --pretty=format:'%B')
-  if ! printf '%s\n' "${subjects}" | grep -qE '^(feat|fix|docs|refactor|perf|test|style|chore)(\(.+\))?[!]?:'; then
-    out "should_skip=true"
-    echo "No releasable commits since ${last_tag}, skipping release"
-    exit 0
-  fi
-  bump=patch
-  if printf '%s\n' "${subjects}" | grep -qE '^(feat|fix)(\(.+\))?!:' \
+  subjects=$(git log "${last_tag}..${SHA}" --pretty=format:'%s')
+  bodies=$(git log "${last_tag}..${SHA}" --pretty=format:'%B')
+  bump=
+  if printf '%s\n' "${subjects}" | grep -qE '^[a-z]+(\(.+\))?!:' \
      || printf '%s\n' "${bodies}" | grep -qE '^BREAKING[ -]CHANGE:'; then
     bump=major
   elif printf '%s\n' "${subjects}" | grep -qE '^feat(\(.+\))?:'; then
     bump=minor
+  elif printf '%s\n' "${subjects}" | grep -qE '^(fix|perf)(\(.+\))?:|^chore\(deps\):'; then
+    bump=patch
+  fi
+  if [ -z "${bump}" ]; then
+    out "should_skip=true"
+    echo "No releasable commits since ${last_tag}, skipping release"
+    exit 0
   fi
   IFS='.' read -r major minor patch <<< "${last_tag#v}"
-  patch="${patch:-0}"
   if ! [[ "${major}" =~ ^[0-9]+$ && "${minor}" =~ ^[0-9]+$ && "${patch}" =~ ^[0-9]+$ ]]; then
     echo "::error::Invalid SemVer in last tag '${last_tag}'"
     exit 1
@@ -82,4 +61,3 @@ if git rev-parse "v${version}^{}" > /dev/null 2>&1; then
   exit 1
 fi
 out "new_version=${version}"
-out "next_snapshot=$(snapshot_after "${version}")"

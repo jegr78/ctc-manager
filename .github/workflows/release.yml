@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       sha:
-        description: 'Master revision to evaluate (default: the latest master commit that is not a release or snapshot commit).'
+        description: 'Master revision to evaluate (default: the latest master commit).'
         required: false
         type: string
       dry-run:
@@ -116,66 +116,24 @@ jobs:
             echo "image=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Configure git
+      - name: Set the release version for the build
         if: steps.plan.outputs.publish == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+        run: ./mvnw -B versions:set -DnewVersion=${{ steps.version.outputs.new_version }} -DgenerateBackupPoms=false
 
-      - name: Set release version in pom.xml
-        if: steps.plan.outputs.publish == 'true' && steps.version.outputs.resume != 'true'
-        run: ./mvnw versions:set -DnewVersion=${{ steps.version.outputs.new_version }} -DgenerateBackupPoms=false
-
-      - name: Check out the release tag of the earlier attempt
-        if: steps.plan.outputs.publish == 'true' && steps.version.outputs.resume == 'true'
-        run: git checkout --quiet "v${{ steps.version.outputs.new_version }}"
-
-      - name: Resolve browser dependency identity
-        id: browser
-        if: steps.plan.outputs.publish == 'true' && (steps.version.outputs.resume != 'true' || steps.plan.outputs.github_release == 'true')
-        run: |
-          ./mvnw dependency:build-classpath -DincludeScope=test -Dmdep.outputFile="$RUNNER_TEMP/ctc-release-classpath.txt" -q
-          python3 scripts/ci/browser-cache.py --classpath-file "$RUNNER_TEMP/ctc-release-classpath.txt" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright Chromium
-        if: steps.plan.outputs.publish == 'true' && (steps.version.outputs.resume != 'true' || steps.plan.outputs.github_release == 'true')
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ steps.browser.outputs.key }}-chromium
-
-      - name: Install Playwright Chromium
-        if: steps.plan.outputs.publish == 'true' && (steps.version.outputs.resume != 'true' || steps.plan.outputs.github_release == 'true')
-        run: |
-          java -cp "$(cat "$RUNNER_TEMP/ctc-release-classpath.txt")" com.microsoft.playwright.CLI install --with-deps chromium
-
-      - name: Build and verify
-        if: steps.plan.outputs.publish == 'true' && (steps.version.outputs.resume != 'true' || steps.plan.outputs.github_release == 'true')
-        run: ./mvnw verify -Dspring.profiles.active=dev
-
-      # The release commit, its tag and master move together, so a failed push leaves nothing behind.
-      - name: Push release commit and tag
-        if: steps.plan.outputs.publish == 'true' && steps.version.outputs.resume != 'true'
-        env:
-          # PAT with repo scope, required to push past branch protection.
-          PUSH_URL: https://x-access-token:${{ secrets.RELEASE_TOKEN }}@github.com/${{ github.repository }}.git
-        run: |
-          VERSION=${{ steps.version.outputs.new_version }}
-          git add pom.xml
-          git commit -m "release: v${VERSION}" -m "[skip ci]"
-          git tag -a "v${VERSION}" -m "Release v${VERSION}"
-          git push --atomic "${PUSH_URL}" HEAD:master "v${VERSION}"
+      # ci.yml already tested this revision; the release only builds it with the release version.
+      - name: Build
+        if: steps.plan.outputs.publish == 'true'
+        run: ./mvnw -B package -DskipTests
 
       - name: Create GitHub Release
         if: steps.plan.outputs.github_release == 'true'
         env:
-          # The PAT authors the Release page as the operator, not github-actions[bot].
+          # The PAT authors the Release page and its tag as the operator, not github-actions[bot].
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          VERSION: ${{ steps.version.outputs.new_version }}
         run: |
-          gh release create "v${{ steps.version.outputs.new_version }}" \
-            --title "v${{ steps.version.outputs.new_version }}" \
-            --generate-notes \
-            target/ctc-manager-${{ steps.version.outputs.new_version }}.jar
+          gh release create "v${VERSION}" --target "$(git rev-parse HEAD)" \
+            --title "v${VERSION}" --generate-notes "target/ctc-manager-${VERSION}.jar"
 
       - name: Build and push Docker image
         if: steps.plan.outputs.image == 'true'
@@ -200,26 +158,3 @@ jobs:
           python3 scripts/ci/deployment-bundle.py create --version "${VERSION}" \
             --app-digest "${app_digest}" --database-digest "${database_digest}" --output target/deployment
           bash scripts/ci/publish-deployment.sh "${VERSION}" target/deployment
-
-      - name: Bump to next SNAPSHOT
-        id: bump
-        if: steps.plan.outputs.publish == 'true'
-        run: |
-          git fetch --quiet origin master
-          git checkout --quiet --force origin/master
-          current=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
-          if [ "${current}" != "${{ steps.version.outputs.new_version }}" ]; then
-            echo "master is already at ${current}, nothing to bump"
-            exit 0
-          fi
-          ./mvnw versions:set -DnewVersion=${{ steps.version.outputs.next_snapshot }} -DgenerateBackupPoms=false
-          git add pom.xml
-          git commit -m "chore: bump version to ${{ steps.version.outputs.next_snapshot }} [skip ci]"
-          echo "push=true" >> "$GITHUB_OUTPUT"
-
-      - name: Push the SNAPSHOT bump
-        if: steps.bump.outputs.push == 'true'
-        env:
-          # PAT with repo scope, required to push past branch protection.
-          PUSH_URL: https://x-access-token:${{ secrets.RELEASE_TOKEN }}@github.com/${{ github.repository }}.git
-        run: git push "${PUSH_URL}" HEAD:master
