@@ -12,7 +12,20 @@ The green CI reference `881802b869d8b0a1d7e887df603e4c334079cb5c`, run 423473573
 
 The log contains 206 Spring `Started` messages, with 516.08 summed startup seconds. These times overlap across forks and exclude subsequent `CommandLineRunner` work. The same run logs 202 automatic seeded-site renders, totaling 56,957 pages. Some start from shared database state changed by earlier scenarios; these counts are observed work, not a clean-fixture count or an estimated wallclock saving. #366 separately fixes the largest accumulating fixture suite.
 
-Record after timings and actual counts on the delivered PR. A focused class duration is not a whole-build benchmark. Concurrent local builds and other host workload must be reported; a CI run uses a separate runner and cannot serve as a same-host before/after timing.
+A controlled flag comparison on source `32ffdd76f5e424b7473e25965fd9476817da1756` used the normal `integration-test` lifecycle with `TyrePersistenceIT,TyrePersistenceMariaDbIT` and six associated unit cases. Both runs passed 6 unit and 22 integration cases with zero failures/errors/skips. The host was Linux, 8 logical CPUs and 15 GiB RAM, with warm Maven dependencies and local container images. Each fork requested a 1 GiB heap; Maven requested 512 MiB. Other host workload was not controlled.
+
+| Observation | Startup render enabled | Startup render disabled |
+| --- | ---: | ---: |
+| H2 class, 11 cases | 48.954 s | 43.548 s |
+| MariaDB class, 11 cases | 98.517 s | 88.758 s |
+| Automatic seeded-site renders | 2, totaling 638 pages | 0 |
+| Successful Spring application starts | 2 | 2 |
+| Spring cache counters per integration fork | 1 miss, 144 hits | 1 miss, 144 hits |
+| Actual MariaDB container starts | 1, 19.600 s | 1, 15.009 s |
+
+Both modes seeded the same 21 teams, 6 seasons, 108 drivers, 1,536 lineups and 1,462 results per application and retained two guest lineups. The class durations include startup and real persistence assertions. Measured Maven wall time was 168.912 s before and 109.168 s after, but the first run compiled cold output and container startup varied. These whole-command durations do not isolate rendering savings. The demonstrated change removes incidental renders; it does not reduce the number of required application contexts.
+
+A focused class duration is not a whole-build benchmark. Record the complete delivered CI comparison on the PR. A CI run uses a separate runner and cannot serve as a same-host before/after timing.
 
 ## Per-fork evidence
 
@@ -24,6 +37,8 @@ Spring keys include dynamic property methods and bean overrides, so classes with
 
 ## MariaDB lifecycle decision
 
-Real locking, snapshot-conflict, restore admission and migration coverage remain required. Runtime container starts are measured separately from the number of source declarations. Persistent cross-build container reuse is not enabled by this change. A future worker-scoped server would need separate class databases/users, proof that classes cannot read each other's schema, and a lifetime extending beyond all cached contexts. Stopping a singleton through JUnit's per-class `@Container` lifecycle would break later contexts. See [Testcontainers manual lifecycle](https://java.testcontainers.org/test_framework_integration/manual_lifecycle_control/).
+Real locking, snapshot-conflict, restore admission and migration coverage remain required. Runtime container starts are measured separately from the number of source declarations. The representative MariaDB run starts one database container in either mode, while both seeded applications previously generated 638 unrelated pages. The first change therefore removes automatic rendering and keeps the database lifecycle intact. The two measured integration forks each reuse one cached context for all 11 cases. H2 and MariaDB intentionally keep distinct datasource configurations; mock/property differences used to test other configurations also remain distinct. No new configuration consolidation or smaller context is necessary for the seeder/cache-marker unit tests, which already use a small `ApplicationContextRunner` and a plain cache respectively.
+
+Persistent cross-build container reuse is not enabled by this change. A future worker-scoped server would need separate class databases/users, proof that classes cannot read each other's schema, and a lifetime extending beyond all cached contexts. Stopping a singleton through JUnit's per-class `@Container` lifecycle would break later contexts. See [Testcontainers manual lifecycle](https://java.testcontainers.org/test_framework_integration/manual_lifecycle_control/).
 
 No owner database, Mac test data or Box installation is changed by these test optimizations.
