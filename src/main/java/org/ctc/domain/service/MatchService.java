@@ -302,7 +302,9 @@ public class MatchService {
 	 * Caller is responsible for duplicate checks and logging.
 	 */
 	@Transactional
-	public Match createMatchWithLegs(Matchday matchday, Team homeTeam, Team awayTeam, boolean bye) {
+	public Match createMatchWithLegs(Matchday requestedMatchday, Team homeTeam, Team awayTeam, boolean bye) {
+		var matchday = matchdayRepository.findById(requestedMatchday.getId())
+				.orElseThrow(() -> new EntityNotFoundException("Matchday", requestedMatchday.getId()));
 		seasonRepository.findByIdForUpdate(matchday.getSeason().getId())
 				.orElseThrow(() -> new EntityNotFoundException("Season", matchday.getSeason().getId()));
 		var match = new Match(matchday, homeTeam, awayTeam);
