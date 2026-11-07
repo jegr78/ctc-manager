@@ -11,6 +11,7 @@ MAVEN = r'''#!/usr/bin/env python3
 import json,os,sys,time,re
 from pathlib import Path
 args=sys.argv[1:];mode=os.environ.get("CTC_FEEDBACK_FIXTURE","pass")
+print("Picked up JAVA_TOOL_OPTIONS: "+os.environ.get("JAVA_TOOL_OPTIONS",""),flush=True)
 Path("target").mkdir(exist_ok=True)
 Path("target/command.json").write_text(json.dumps(args))
 def heap(name):
@@ -19,6 +20,13 @@ def heap(name):
 Path("target/budgets.json").write_text(json.dumps({"testHeapMiB":heap("JAVA_TOOL_OPTIONS"),"mavenHeapMiB":heap("MAVEN_OPTS")}))
 if mode=="changed":Path("fixture.txt").write_text("changed during Maven")
 if mode=="untracked-change":Path("new-fixture.py").write_text("changed untracked source")
+if mode=="stubborn":
+ import subprocess,signal
+ child=subprocess.Popen([sys.executable,"-c","import signal,time;from pathlib import Path;signal.signal(signal.SIGTERM,signal.SIG_IGN);Path('target/stubborn-ready').write_text('ready');time.sleep(120)"])
+ Path("target/stubborn-pid").write_text(str(child.pid))
+ while not Path("target/stubborn-ready").exists():time.sleep(0.01)
+ Path("target/ready").write_text("ready")
+ while True:time.sleep(1)
 if mode=="wait":
  Path("target/ready").write_text("ready")
  while True:time.sleep(1)
@@ -48,6 +56,8 @@ if full and mode!="missing-gates":
 sys.exit(3 if mode=="exit" else 0)
 '''
 
+HARNESS = "import sys,runpy;from pathlib import Path;from unittest.mock import patch;home=Path(sys.argv.pop(1));script=sys.argv[1];sys.argv=sys.argv[1:];\nwith patch('pathlib.Path.home',return_value=home):runpy.run_path(script,run_name='__main__')"
+
 class FeedbackWorkflowTest(unittest.TestCase):
     def setUp(self):
         self.directory=tempfile.TemporaryDirectory()
@@ -56,16 +66,26 @@ class FeedbackWorkflowTest(unittest.TestCase):
         (self.root/"scripts").mkdir()
         shutil.copy2(SCRIPT,self.root/"scripts/test-feedback.py")
         (self.root/"mvnw").write_text(MAVEN);(self.root/"mvnw").chmod(0o755)
-        (self.root/".gitignore").write_text("target/\n.test-feedback/\n")
+        (self.root/".gitignore").write_text("target/\n.test-feedback/\nuser-home/\n")
         (self.root/"fixture.txt").write_text("original")
         subprocess.run(["git","init","-q"],cwd=self.root,check=True)
         subprocess.run(["git","add","."],cwd=self.root,check=True)
         subprocess.run(["git","-c","user.name=Fixture","-c","user.email=fixture@example.invalid","-c","commit.gpgsign=false","-c","core.hooksPath=/dev/null","commit","-qm","fixture"],cwd=self.root,check=True)
 
-    def run_cli(self,*arguments,fixture="pass"):
+    def fixture_env(self,fixture):
         environment=dict(os.environ,CTC_FEEDBACK_FIXTURE=fixture,
                          CTC_FEEDBACK_LOCK_PATH=str(self.root/".test-feedback/host.lock"))
-        return subprocess.run([os.sys.executable,"scripts/test-feedback.py",*arguments],cwd=self.root,
+        for name in ["MAVEN_ARGS","MAVEN_OPTS","JAVA_TOOL_OPTIONS","JDK_JAVA_OPTIONS","_JAVA_OPTIONS","MAVEN_EXT_CLASS_PATH"]:
+            environment.pop(name,None)
+        return environment
+
+    def invocation(self,*arguments):
+        return [os.sys.executable,"-c",HARNESS,str(self.root/"user-home"),"scripts/test-feedback.py",*arguments]
+
+    def run_cli(self,*arguments,fixture="pass",extra_env=None):
+        environment=self.fixture_env(fixture)
+        environment.update(extra_env or {})
+        return subprocess.run(self.invocation(*arguments),cwd=self.root,
                               env=environment,text=True,capture_output=True)
 
     def record(self):
@@ -185,9 +205,8 @@ class FeedbackWorkflowTest(unittest.TestCase):
     def test_interrupt_stops_its_maven_child_and_cannot_leave_a_green_record(self):
         import signal
         import time
-        environment=dict(os.environ,CTC_FEEDBACK_FIXTURE="wait",
-                         CTC_FEEDBACK_LOCK_PATH=str(self.root/".test-feedback/host.lock"))
-        process=subprocess.Popen([os.sys.executable,"scripts/test-feedback.py","unit","ExampleTest"],
+        environment=self.fixture_env("wait")
+        process=subprocess.Popen(self.invocation("unit","ExampleTest"),
                                  cwd=self.root,env=environment,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
         try:
             for _ in range(100):
@@ -211,5 +230,69 @@ class FeedbackWorkflowTest(unittest.TestCase):
         self.assertEqual(result.returncode,0,result.stdout+result.stderr)
         self.assertEqual(json.loads((self.root/"target/budgets.json").read_text()),
                          {"testHeapMiB":768,"mavenHeapMiB":384})
+
+    def test_ambient_filters_cannot_produce_canonical_success(self):
+        for name,value in [("MAVEN_ARGS","-Dtest=*,!SomeRegressionTest"),
+                           ("MAVEN_OPTS","-Dmaven.test.skip=true"),
+                           ("JAVA_TOOL_OPTIONS","-Dgroups=unit"),
+                           ("JDK_JAVA_OPTIONS","-Dspotbugs.skip=true"),
+                           ("_JAVA_OPTIONS","-Dit.test=OnlyOneIT")]:
+            with self.subTest(variable=name):
+                result=self.run_cli("full",extra_env={name:value})
+                self.assertNotEqual(result.returncode,0,result.stdout+result.stderr)
+                self.assertFalse((self.root/"target/command.json").exists())
+
+    def test_interruption_kills_a_stubborn_descendant_after_its_leader_exits(self):
+        import signal
+        import time
+        environment=self.fixture_env("stubborn")
+        process=subprocess.Popen(self.invocation("unit","ExampleTest"),
+                                 cwd=self.root,env=environment,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+        child=None
+        try:
+            for _ in range(200):
+                if (self.root/"target/ready").exists():break
+                time.sleep(0.02)
+            else:self.fail("Stubborn fixture did not start")
+            child=int((self.root/"target/stubborn-pid").read_text())
+            process.send_signal(signal.SIGTERM)
+            stdout,stderr=process.communicate(timeout=10)
+            self.assertEqual(process.returncode,130,stdout+stderr)
+            try:
+                os.kill(child,0)
+            except ProcessLookupError:
+                pass
+            else:
+                state=subprocess.check_output(["ps","-p",str(child),"-o","stat="],text=True).strip()
+                self.assertTrue(state.startswith("Z"),"Owned descendant is still running: "+state)
+            self.assertFalse(self.record()["passed"])
+        finally:
+            if process.poll() is None:process.kill();process.wait()
+            if child:
+                try:os.kill(child,signal.SIGKILL)
+                except ProcessLookupError:pass
+
+    def test_project_and_user_configuration_cannot_hide_test_filters(self):
+        config=self.root/".mvn/maven.config";config.parent.mkdir()
+        config.write_text("-Dtest=*,!SomeRegressionTest")
+        result=self.run_cli("full")
+        self.assertNotEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertIn("ambient Maven",result.stderr)
+        self.assertFalse((self.root/"target/command.json").exists())
+        config.unlink()
+        settings=self.root/"user-home/.m2/settings.xml";settings.parent.mkdir(parents=True)
+        settings.write_text('<settings><profiles><profile><properties><skipTests>true</skipTests></properties></profile></profiles></settings>')
+        result=self.run_cli("full")
+        self.assertNotEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertIn("ambient Maven",result.stderr)
+        self.assertFalse((self.root/"target/command.json").exists())
+
+    def test_allowed_configuration_never_records_sensitive_values(self):
+        secret="synthetic-sensitive-value"
+        result=self.run_cli("full",extra_env={"JAVA_TOOL_OPTIONS":"-Djavax.net.ssl.trustStorePassword="+secret})
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        record=self.record()
+        self.assertIn("property:javax.net.ssl.trustStorePassword",record["ambientConfiguration"]["JAVA_TOOL_OPTIONS"])
+        self.assertNotIn(secret,json.dumps(record)+result.stdout+result.stderr)
 
 if __name__=="__main__":unittest.main()

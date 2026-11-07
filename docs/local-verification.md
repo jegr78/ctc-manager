@@ -19,7 +19,7 @@ Warm the normal dependency/browser cache first. An optional `--offline` requires
 
 The helper archives prior test reports and performance markers before starting a focused run, retaining compilation caches. It reads every fresh JUnit XML and Failsafe summary. A nonzero Maven exit, reported failure/error, unexpected skip, missing requested stage or malformed report yields failure. A successful later browser phase cannot hide an earlier integration failure.
 
-Evidence is saved under ignored `.test-feedback/<timestamp>-<PID>/`: the complete Maven log, actual suite/count summary, selected command, source identities and verdict. Old reports are retained under `previous-reports/`. Focused output is always labeled focused. It is not release or merge evidence.
+Evidence is saved under ignored `.test-feedback/<timestamp>-<PID>/`: the Maven log with JVM option-value echoes omitted, actual suite/count summary, selected command, source identities and verdict. Old reports are retained under `previous-reports/`. Focused output is always labeled focused. It is not release or merge evidence.
 
 ## Source and resource boundaries
 
@@ -29,7 +29,7 @@ One per-user host lock serializes cooperating helper invocations across worktree
 
 The helper requests a 1,024 MiB test/compiler heap through `JAVA_TOOL_OPTIONS` and a 512 MiB Maven heap through `MAVEN_OPTS`. These are per-JVM heap requests, not a total process-memory limit; native memory, metaspace, database containers and browsers need additional headroom. The current POM has no overriding heap argument. Explicit `--test-heap-mib` and `--maven-heap-mib` budgets are recorded. Choose a larger budget only from measured need and available host memory; a heap failure remains a failed run and never removes tests. No Spring cache size or fork count is changed.
 
-Stopping the helper terminates its own Maven process group and records failure. Interrupted work never becomes a successful receipt. It does not reset data or operate any running deployment.
+Stopping the helper terminates its own Maven process group and records failure. It checks the group independently of the Maven leader and escalates stubborn descendants after a grace period. Interrupted work never becomes a successful receipt. It does not reset data or operate any running deployment.
 
 ## Finalization loop
 
@@ -39,7 +39,7 @@ Finish the code review, independent security pass and fixes before the expensive
 ./scripts/test-feedback.py full
 ```
 
-Full mode invokes `./mvnw clean verify -Pe2e --no-transfer-progress -Ddocker.available=true`. It refuses focused selectors and requires a clean committed tree. Real Docker/MariaDB and preinstalled browser dependencies remain necessary. Existing reports, coverage and static-analysis artifacts are archived; all three test categories must produce fresh passing reports, without skips. The existing 82% line minimum, complete SpotBugs/FindSecBugs evidence and Maven lifecycle must pass. A full local result still requires the normal reviewed exact-head CI before merge.
+Full mode invokes `./mvnw clean verify -Pe2e --no-transfer-progress -Ddocker.available=true`. Ambient test filters, skip/gate overrides and alternate goals are rejected before Maven starts. Full mode accepts only bounded platform/network options from Maven/JVM environment variables and project configuration; user-settings profile properties cannot disable or filter tests. The record lists accepted option kinds and property names, never their sensitive values. It refuses focused selectors and requires a clean committed tree. Real Docker/MariaDB and preinstalled browser dependencies remain necessary. Existing reports, coverage and static-analysis artifacts are archived; all three test categories must produce fresh passing reports, without skips. The existing 82% line minimum, complete SpotBugs/FindSecBugs evidence and Maven lifecycle must pass. A full local result still requires the normal reviewed exact-head CI before merge.
 
 Run the complete lifecycle once after review for the final phase source, not after every small edit. A relevant source change requires new affected evidence and the repository's final checks. A Git-only rebase can reuse a completed local run only when the entire Git tree is identical, the equivalence is recorded and review/CI cover the new exact head. Never carry evidence across a changed tree by assuming the changed files are harmless.
 

@@ -7,14 +7,103 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import shutil
 import signal
 import subprocess
 import sys
+import time
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def ambient_configuration(strict):
+    """Never certify hidden selectors, skipped gates or alternate Maven goals."""
+    safe_flags = {"-B", "--batch-mode", "-ntp", "--no-transfer-progress", "-o", "--offline",
+                  "-nsu", "--no-snapshot-updates", "-C", "--strict-checksums", "-e", "--errors"}
+    safe_properties = {"java.io.tmpdir", "file.encoding", "user.timezone", "style.color",
+                       "javax.net.ssl.trustStore", "javax.net.ssl.trustStoreType",
+                       "javax.net.ssl.trustStorePassword", "javax.net.ssl.keyStore",
+                       "javax.net.ssl.keyStoreType", "javax.net.ssl.keyStorePassword"}
+    def critical(name):
+        value = name.lower()
+        return (value in {"test", "it.test", "groups", "excludedgroups", "argline"}
+                or any(part in value for part in ["skip", "includes", "excludes", "failure.ignore",
+                                                   "failifno", "surefire", "failsafe", "jacoco", "spotbugs"])
+                or value.endswith(".groups") or value.endswith(".excludedgroups")
+                or value == "maven.ext.class.path")
+
+    recorded = {}
+    sources = {name: os.environ.get(name, "") for name in
+               ["MAVEN_ARGS", "MAVEN_OPTS", "JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"]}
+    for relative in [".mvn/maven.config", ".mvn/jvm.config"]:
+        path = ROOT / relative
+        if path.exists():
+            sources[relative] = path.read_text()
+    for name, raw in sources.items():
+        if name in {"JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"} and any(c in raw for c in "\r\n"):
+            raise ValueError("Multiline ambient JVM options are unsupported in " + name)
+        try:
+            options = shlex.split(raw, comments=True)
+        except ValueError:
+            raise ValueError("Malformed ambient Maven configuration in " + name) from None
+        accepted = []
+        for option in options:
+            if option.startswith("-D"):
+                key = option[2:].split("=", 1)[0]
+                if critical(key) or strict and key not in safe_properties:
+                    raise ValueError("Unsafe ambient Maven configuration in " + name)
+                accepted.append("property:" + key)
+            elif (option in safe_flags or re.fullmatch(r"-Xm[sx]\d+[mMgG]", option)
+                  or re.fullmatch(r"-XX:(MaxRAMPercentage=\d+(\.\d+)?|MaxMetaspaceSize=\d+[mMgG]|[+]UseG1GC|[+]UseSerialGC|[+]ExitOnOutOfMemoryError)", option)
+                  or option in {"--sun-misc-unsafe-memory-access=allow", "--enable-native-access=ALL-UNNAMED"}):
+                accepted.append(option.split("=", 1)[0] if "=" in option else option)
+            elif strict:
+                raise ValueError("Unsafe ambient Maven configuration in " + name)
+            else:
+                accepted.append("additional focused configuration")
+        recorded[name] = accepted
+    settings = Path.home() / ".m2/settings.xml"
+    if settings.exists():
+        keys = []
+        for element in ET.parse(settings).getroot().iter():
+            if element.tag.rsplit("}", 1)[-1] == "properties":
+                keys += [child.tag.rsplit("}", 1)[-1] for child in element]
+        if any(critical(key) for key in keys):
+            raise ValueError("Unsafe ambient Maven configuration in user settings")
+        recorded["userSettingsPropertyNames"] = keys
+    if os.environ.get("MAVEN_EXT_CLASS_PATH"):
+        raise ValueError("Unreviewed ambient Maven extension configuration")
+    return recorded
+
+
+def stop_owned_group(proc):
+    """Wait on the whole group, even after its Maven leader has exited."""
+    previous = {kind: signal.signal(kind, signal.SIG_IGN) for kind in [signal.SIGINT, signal.SIGTERM]}
+    try:
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            return
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline:
+            proc.poll()
+            try:
+                os.killpg(proc.pid, 0)
+            except ProcessLookupError:
+                break
+            time.sleep(0.05)
+        else:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        proc.wait(timeout=5)
+    finally:
+        for kind, handler in previous.items():
+            signal.signal(kind, handler)
 
 
 def git(*args):
@@ -129,11 +218,13 @@ def full_gates():
 
 
 def run(args, output):
+    ambient = ambient_configuration(args.mode == "full")
     before = source_state()
     if args.mode == "full" and before["status"]:
         raise ValueError("Commit a clean reviewed source before full verification")
     command = command_for(args)
     record = dict(mode=args.mode, evidenceKind="canonical" if args.mode == "full" else "focused",
+                  ambientConfiguration=ambient,
                   sourceBefore=before, command=command,
                   requestedJvmBudget=dict(testHeapMiB=args.test_heap_mib, mavenHeapMiB=args.maven_heap_mib),
                   startedUtc=datetime.datetime.now(datetime.timezone.utc).isoformat())
@@ -165,6 +256,9 @@ def run(args, output):
             record["mavenPid"] = proc.pid
             metadata.write_text(json.dumps(record, indent=2) + "\n")
             for line in proc.stdout:
+                echoed = re.search(r"(?:NOTE: )?Picked up (JAVA_TOOL_OPTIONS|JDK_JAVA_OPTIONS|_JAVA_OPTIONS):", line)
+                if echoed:
+                    line = line[:echoed.start()] + echoed.group(1) + " configured (values omitted)\n"
                 log.write(line)
                 print(line, end="", flush=True)
             record["mavenExitCode"] = proc.wait()
@@ -190,13 +284,8 @@ def run(args, output):
             print("Canonical local evidence complete. Exact-head reviewed CI is still required before merge.")
         return 0
     except BaseException as error:
-        if proc is not None and proc.poll() is None:
-            os.killpg(proc.pid, signal.SIGTERM)
-            try:
-                proc.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                os.killpg(proc.pid, signal.SIGKILL)
-                proc.wait()
+        if proc is not None:
+            stop_owned_group(proc)
         message = "Interrupted" if isinstance(error, KeyboardInterrupt) else str(error)
         record.update(passed=False, error=message)
         print("FAILED: " + message, file=sys.stderr)
