@@ -61,4 +61,18 @@ class CiPartitionWorkflowTest {
                 .containsExactly("changes", "dockerfile-noble-pin-guard");
     }
 
+    @Test
+    void givenBrowserPartition_whenMergingItsIncludes_thenOnlyTheGeneratedFileDefinesBrowserSelection() throws Exception {
+        // given
+        var factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        var document = factory.newDocumentBuilder().parse(Path.of("pom.xml").toFile());
+        var xpath = javax.xml.xpath.XPathFactory.newInstance().newXPath();
+        String selection = "/project/profiles/profile[id='ci-browser']/build/plugins/plugin[artifactId='maven-failsafe-plugin']"
+                + "/executions/execution[id='e2e-it']/configuration/includes";
+        // when / then
+        assertThat(xpath.evaluate(selection + "/@combine.self", document)).isEqualTo("override");
+        assertThat(xpath.evaluate("count(" + selection + "/include)", document)).isEqualTo("0");
+    }
+
 }

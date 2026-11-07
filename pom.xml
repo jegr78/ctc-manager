@@ -647,6 +647,7 @@
                     <executions>
                         <execution><id>default-it</id><phase>none</phase></execution>
                         <execution><id>e2e-it</id><configuration>
+                            <includes combine.self="override"/>
                             <includesFile>${ctc.ci.includes}</includesFile>
                         </configuration></execution>
                     </executions>
