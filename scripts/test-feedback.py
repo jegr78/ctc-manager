@@ -43,7 +43,11 @@ def arguments():
     parser.add_argument("--docker", action="store_true", help="Enable real MariaDB cases")
     parser.add_argument("--offline", action="store_true", help="Require a warm dependency cache")
     parser.add_argument("--maven-repo", type=Path)
+    parser.add_argument("--test-heap-mib", type=int, default=1024, help="Requested test/compiler heap, default 1024 MiB")
+    parser.add_argument("--maven-heap-mib", type=int, default=512, help="Maven heap, default 512 MiB")
     args = parser.parse_args()
+    if not 256 <= args.test_heap_mib <= 4096 or not 256 <= args.maven_heap_mib <= 2048:
+        parser.error("test heap must be 256..4096 MiB and Maven heap 256..2048 MiB")
     if args.mode == "full" and (args.selector or args.unit or args.integration):
         parser.error("full mode does not accept focused selectors")
     if args.mode != "full" and not args.selector:
@@ -131,6 +135,7 @@ def run(args, output):
     command = command_for(args)
     record = dict(mode=args.mode, evidenceKind="canonical" if args.mode == "full" else "focused",
                   sourceBefore=before, command=command,
+                  requestedJvmBudget=dict(testHeapMiB=args.test_heap_mib, mavenHeapMiB=args.maven_heap_mib),
                   startedUtc=datetime.datetime.now(datetime.timezone.utc).isoformat())
     output.mkdir(parents=True)
     metadata = output / "run.json"
@@ -150,7 +155,12 @@ def run(args, output):
         print("Scope: " + args.mode + "; source " + before["head"], flush=True)
         print(shlex.join(command), flush=True)
         with (output / "maven.log").open("w") as log:
-            proc = subprocess.Popen(command, cwd=ROOT, stdout=subprocess.PIPE,
+            environment = dict(os.environ)
+            environment["JAVA_TOOL_OPTIONS"] = (environment.get("JAVA_TOOL_OPTIONS", "")
+                                                + " -Xmx" + str(args.test_heap_mib) + "m").strip()
+            environment["MAVEN_OPTS"] = (environment.get("MAVEN_OPTS", "")
+                                         + " -Xmx" + str(args.maven_heap_mib) + "m").strip()
+            proc = subprocess.Popen(command, cwd=ROOT, env=environment, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT, text=True, start_new_session=True)
             record["mavenPid"] = proc.pid
             metadata.write_text(json.dumps(record, indent=2) + "\n")

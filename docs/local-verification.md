@@ -27,6 +27,8 @@ A focused edit can start from a dirty tree; its tracked diff and untracked sourc
 
 One per-user host lock serializes cooperating helper invocations across worktrees. It does not coordinate arbitrary manual Maven commands. Avoid starting other heavy JVM/container/browser runs concurrently. Do not terminate unrelated projects. The November 2026 reference host has eight CPUs and 15 GiB RAM; concurrent CTC and unrelated builds reached load 15 and 13–14 GiB swap. Such runs are useful verification but unsuitable as clean timing comparisons.
 
+The helper requests a 1,024 MiB test/compiler heap through `JAVA_TOOL_OPTIONS` and a 512 MiB Maven heap through `MAVEN_OPTS`. These are per-JVM heap requests, not a total process-memory limit; native memory, metaspace, database containers and browsers need additional headroom. The current POM has no overriding heap argument. Explicit `--test-heap-mib` and `--maven-heap-mib` budgets are recorded. Choose a larger budget only from measured need and available host memory; a heap failure remains a failed run and never removes tests. No Spring cache size or fork count is changed.
+
 Stopping the helper terminates its own Maven process group and records failure. Interrupted work never becomes a successful receipt. It does not reset data or operate any running deployment.
 
 ## Finalization loop

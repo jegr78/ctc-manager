@@ -8,11 +8,15 @@ import unittest
 
 SCRIPT = Path(__file__).resolve().parents[1] / "test-feedback.py"
 MAVEN = r'''#!/usr/bin/env python3
-import json,os,sys,time
+import json,os,sys,time,re
 from pathlib import Path
 args=sys.argv[1:];mode=os.environ.get("CTC_FEEDBACK_FIXTURE","pass")
 Path("target").mkdir(exist_ok=True)
 Path("target/command.json").write_text(json.dumps(args))
+def heap(name):
+ values=re.findall(r"-Xmx(\d+)m",os.environ.get(name,""))
+ return int(values[-1]) if values else None
+Path("target/budgets.json").write_text(json.dumps({"testHeapMiB":heap("JAVA_TOOL_OPTIONS"),"mavenHeapMiB":heap("MAVEN_OPTS")}))
 if mode=="changed":Path("fixture.txt").write_text("changed during Maven")
 if mode=="untracked-change":Path("new-fixture.py").write_text("changed untracked source")
 if mode=="wait":
@@ -197,5 +201,15 @@ class FeedbackWorkflowTest(unittest.TestCase):
             with self.assertRaises(ProcessLookupError):os.kill(record["mavenPid"],0)
         finally:
             if process.poll() is None:process.kill();process.wait()
+
+    def test_child_heaps_are_bounded_and_explicit_overrides_are_recorded(self):
+        result=self.run_cli("unit","ExampleTest")
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertEqual(json.loads((self.root/"target/budgets.json").read_text()),
+                         {"testHeapMiB":1024,"mavenHeapMiB":512})
+        result=self.run_cli("unit","ExampleTest","--test-heap-mib","768","--maven-heap-mib","384")
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertEqual(json.loads((self.root/"target/budgets.json").read_text()),
+                         {"testHeapMiB":768,"mavenHeapMiB":384})
 
 if __name__=="__main__":unittest.main()
