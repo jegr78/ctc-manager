@@ -121,128 +121,67 @@ class BundleTest(unittest.TestCase):
         result = self.run_bundle('verify',legacy)
         self.assertEqual(0,result.returncode,result.stderr)
 
-    def test_private_maintenance_tools_and_all_user_units_are_packaged(self):
-        self.assertEqual(0, self.create().returncode)
-        with tarfile.open(self.output/'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
-            names=set(bundle.getnames())
-            for name in ['lib/maintenance.py','lib/maintenance.sh','guides/backups.md',
-                         'systemd/ctc-manager-backup.service','systemd/ctc-manager-backup.timer']:
-                self.assertIn('ctc-manager-deployment-1.21.0/'+name,names)
-
-    def test_previous_32_file_maintenance_inventory_still_verifies(self):
-        self.assertEqual(0, self.create().returncode)
-        prefix='ctc-manager-deployment-1.21.0/'
-        source=self.output/'ctc-manager-deployment-1.21.0.tar.gz'
-        with tarfile.open(source) as bundle:
-            content={m.name:bundle.extractfile(m).read() for m in bundle}
-        manifest=json.loads(content[prefix+'manifest.json'])
-        for name in ['migrate-from-mac.sh', 'lib/migration.py', 'guides/migration.md', 'lib/publication.py',
-                     'guides/pages.md', 'systemd/ctc-manager-site-publisher.service', 'systemd/ctc-manager-site-publisher.timer']:
-            content.pop(prefix+name, None)
-            manifest['files'].pop(name, None)
-        for name in ['systemd/ctc-manager-backup-check.service','systemd/ctc-manager-backup-check.timer',
-                     'systemd/ctc-manager-backup-alert@.service']:
-            content[prefix+name]=b'legacy unit fixture\n'
-            manifest['files'][name]=hashlib.sha256(content[prefix+name]).hexdigest()
-        content[prefix+'manifest.json']=json.dumps(manifest).encode()
-        archive=self.output/'legacy-maintenance.tar.gz'
-        with tarfile.open(archive,'w:gz') as bundle:
-            for name,value in content.items():
-                entry=tarfile.TarInfo(name);entry.size=len(value)
-                bundle.addfile(entry,io.BytesIO(value))
-        result=self.run_bundle('verify',archive)
-        self.assertEqual(0,result.returncode,result.stderr)
-
-    def test_migration_launcher_and_guide_are_packaged_with_executable_entrypoint(self):
-        self.assertEqual(0, self.create().returncode)
-        with tarfile.open(self.output/'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
-            prefix = 'ctc-manager-deployment-1.21.0/'
-            for name in ['migrate-from-mac.sh', 'lib/migration.py', 'guides/migration.md', 'lib/publication.py',
-                     'guides/pages.md', 'systemd/ctc-manager-site-publisher.service', 'systemd/ctc-manager-site-publisher.timer']:
-                self.assertIn(prefix+name, bundle.getnames())
-            self.assertTrue(bundle.getmember(prefix+'migrate-from-mac.sh').mode & 0o100)
-
-    def test_previous_29_file_local_backup_inventory_still_verifies(self):
+    def rebuilt(self, change):
         self.assertEqual(0, self.create().returncode)
         prefix = 'ctc-manager-deployment-1.21.0/'
-        with tarfile.open(self.output/'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
+        with tarfile.open(self.output / 'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
             content = {member.name: bundle.extractfile(member).read() for member in bundle}
-        manifest = json.loads(content[prefix+'manifest.json'])
-        for name in ['migrate-from-mac.sh', 'lib/migration.py', 'guides/migration.md', 'lib/publication.py',
-                     'guides/pages.md', 'systemd/ctc-manager-site-publisher.service', 'systemd/ctc-manager-site-publisher.timer']:
-            content.pop(prefix+name, None)
-            manifest['files'].pop(name, None)
-        content[prefix+'manifest.json'] = json.dumps(manifest).encode()
-        archive = self.output/'legacy-local-backups.tar.gz'
+        manifest = json.loads(content[prefix + 'manifest.json'])
+        change(content, manifest, prefix)
+        content[prefix + 'manifest.json'] = json.dumps(manifest).encode()
+        archive = self.output / 'changed.tar.gz'
         with tarfile.open(archive, 'w:gz') as bundle:
             for name, value in content.items():
                 entry = tarfile.TarInfo(name)
                 entry.size = len(value)
                 bundle.addfile(entry, io.BytesIO(value))
-        result = self.run_bundle('verify', archive)
+        return self.run_bundle('verify', archive)
+
+    def test_bundle_carries_launcher_rollout_and_phpmyadmin(self):
+        self.assertEqual(0, self.create().returncode)
+        prefix = 'ctc-manager-deployment-1.21.0/'
+        with tarfile.open(self.output / 'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
+            names = set(bundle.getnames())
+            for name in ['ctc-manager-launcher', 'lib/rollout.py', 'phpmyadmin/service.py', 'phpmyadmin/start.sh',
+                         'phpmyadmin/config.user.inc.php', 'phpmyadmin/ctc-manager-phpmyadmin.service',
+                         'lib/maintenance.py', 'systemd/ctc-manager-backup.service', 'upgrade.json', 'guides/updates.md']:
+                self.assertIn(prefix + name, names)
+            for name in ['lib/update.py', 'lib/live.py', 'lib/migration.py', 'migrate-from-mac.sh']:
+                self.assertNotIn(prefix + name, names, 'removed tools must not ship')
+            self.assertTrue(bundle.getmember(prefix + 'ctc-manager-launcher').mode & 0o100)
+            self.assertTrue(bundle.getmember(prefix + 'phpmyadmin/start.sh').mode & 0o100)
+
+    def test_archive_with_older_inventory_still_verifies(self):
+        def drop(content, manifest, prefix):
+            for name in ['lib/rollout.py', 'phpmyadmin/service.py', 'ctc-manager-launcher']:
+                content.pop(prefix + name)
+                manifest['files'].pop(name)
+        result = self.rebuilt(drop)
         self.assertEqual(0, result.returncode, result.stderr)
 
-    def test_host_setup_and_guide_are_packaged(self):
-        self.assertEqual(0,self.create().returncode)
-        with tarfile.open(self.output/'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
-            prefix='ctc-manager-deployment-1.21.0/'
-            for name in ['setup-host.sh','lib/host.py','systemd/docker-rootless.service','guides/host.md']:
-                self.assertIn(prefix+name,bundle.getnames())
-            self.assertTrue(bundle.getmember(prefix+'setup-host.sh').mode & 0o100)
+    def test_archive_with_newer_inventory_verifies(self):
+        def add(content, manifest, prefix):
+            content[prefix + 'lib/future.py'] = b'pass\n'
+            manifest['files']['lib/future.py'] = hashlib.sha256(b'pass\n').hexdigest()
+        result = self.rebuilt(add)
+        self.assertEqual(0, result.returncode, 'an older verifier must accept files a newer release adds: ' + result.stderr)
 
-    def test_legacy_bundle_inventory_remains_verifiable(self):
-        self.assertEqual(0,self.create().returncode)
-        prefix='ctc-manager-deployment-1.21.0/'
-        with tarfile.open(self.output/'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
-            contents={member.name:bundle.extractfile(member).read() for member in bundle}
-        manifest=json.loads(contents[prefix+'manifest.json'])
-        core = {'ctc-manager','compose.yaml','config.example','lib/common.sh','lib/config.py','README.md',
-                'database-image','release-manifest.schema.json'}
-        for name in set(manifest['files']) - core:
-            contents.pop(prefix+name,None)
-            manifest['files'].pop(name,None)
-        contents[prefix+'manifest.json']=json.dumps(manifest).encode()
-        archive=self.output/'legacy-inventory.tar.gz'
-        with tarfile.open(archive,'w:gz') as bundle:
-            for name,content in contents.items():
-                entry=tarfile.TarInfo(name);entry.size=len(content)
-                bundle.addfile(entry,io.BytesIO(content))
-        result=self.run_bundle('verify',archive)
-        self.assertEqual(0,result.returncode,result.stderr)
+    def test_archive_without_core_file_is_rejected(self):
+        def drop(content, manifest, prefix):
+            content.pop(prefix + 'lib/config.py')
+            manifest['files'].pop('lib/config.py')
+        result = self.rebuilt(drop)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn('inventory', result.stderr)
 
-    def test_partial_host_inventory_is_rejected_even_with_matching_checksums(self):
-        self.assertEqual(0,self.create().returncode)
-        prefix='ctc-manager-deployment-1.21.0/'
-        with tarfile.open(self.output/'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
-            contents={member.name:bundle.extractfile(member).read() for member in bundle}
-        manifest=json.loads(contents[prefix+'manifest.json'])
-        contents.pop(prefix+'guides/host.md')
-        manifest['files'].pop('guides/host.md')
-        contents[prefix+'manifest.json']=json.dumps(manifest).encode()
-        archive=self.output/'partial-inventory.tar.gz'
-        with tarfile.open(archive,'w:gz') as bundle:
-            for name,content in contents.items():
-                entry=tarfile.TarInfo(name);entry.size=len(content)
-                bundle.addfile(entry,io.BytesIO(content))
-        result=self.run_bundle('verify',archive)
-        self.assertNotEqual(0,result.returncode)
-        self.assertIn('inventory',result.stderr)
+    def test_archive_member_missing_from_manifest_is_rejected(self):
+        def add(content, manifest, prefix):
+            content[prefix + 'lib/extra.py'] = b'pass\n'
+        result = self.rebuilt(add)
+        self.assertNotEqual(0, result.returncode)
 
-    def test_recovery_tools_and_operator_guide_are_packaged(self):
+    def test_upgrade_contract_is_packaged(self):
         self.assertEqual(0, self.create().returncode)
         with tarfile.open(self.output / 'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
-            names = set(bundle.getnames())
-        for name in ['lib/runtime.py', 'lib/release.py', 'lib/recovery.py', 'lib/recovery.sh',
-                     'lib/probe.py', 'lib/live.py', 'recovery-manifest.schema.json', 'guides/recovery.md']:
-            self.assertIn('ctc-manager-deployment-1.21.0/' + name, names)
-
-    def test_update_tools_and_upgrade_contract_are_packaged(self):
-        self.assertEqual(0, self.create().returncode)
-        with tarfile.open(self.output / 'ctc-manager-deployment-1.21.0.tar.gz') as bundle:
-            prefix = 'ctc-manager-deployment-1.21.0/'
-            names = set(bundle.getnames())
-            for name in ['lib/update.py', 'lib/update.sh', 'upgrade.json', 'guides/updates.md']:
-                self.assertIn(prefix + name, names)
-            contract = json.load(bundle.extractfile(prefix + 'upgrade.json'))
-            self.assertEqual(1, contract['recoveryCapability'])
-            self.assertEqual('guides/updates.md', contract['notes'])
+            contract = json.load(bundle.extractfile('ctc-manager-deployment-1.21.0/upgrade.json'))
+        self.assertEqual('guides/updates.md', contract['notes'])

@@ -191,7 +191,7 @@ def validate_unit(path):
 
 
 def installed_release(path):
-    from release import SUPPORTED_INVENTORIES, canonical_database_image, digest, version
+    from release import CORE_FILES, canonical_database_image, digest, version
     root = Path(path).resolve()
     manifest = read_json(root / 'manifest.json')
     if set(manifest) != {'format', 'version', 'appImage', 'databaseImage', 'files'} or manifest['format'] != 1:
@@ -209,7 +209,7 @@ def installed_release(path):
                 raise ValueError('installed release symlink')
         if not artifact.is_file() or sha256(artifact) != checksum:
             raise ValueError('installed release checksum mismatch: ' + name)
-    if set(manifest['files']) not in SUPPORTED_INVENTORIES:
+    if not set(CORE_FILES) <= set(manifest['files']):
         raise ValueError('unsupported installed release inventory')
     for field, repository in [('appImage', 'ghcr.io/jegr78/ctc-manager'), ('databaseImage', 'mariadb')]:
         value = manifest[field]

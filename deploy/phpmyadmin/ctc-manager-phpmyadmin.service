@@ -1,0 +1,21 @@
+[Unit]
+Description=CTC Manager phpMyAdmin (private Tailscale access)
+Requires=docker.service
+After=docker.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Environment=XDG_RUNTIME_DIR=%t
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/srv/ctc-manager/current/phpmyadmin/start.sh
+ExecStop=/usr/bin/python3 /srv/ctc-manager/current/phpmyadmin/service.py stop
+ExecStopPost=/usr/bin/python3 /srv/ctc-manager/current/phpmyadmin/service.py stop
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=1200
+TimeoutStopSec=60
+UMask=0077
+
+[Install]
+WantedBy=default.target
