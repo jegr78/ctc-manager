@@ -20,6 +20,7 @@ installation=$(cd "$installation" && pwd -P)
 cd "$installation"
 docker_host=$(config_value dockerHost)
 verify_daemon
+# phpMyAdmin holds the lock for up to a minute while it starts.
 case "$operation" in
   doctor)
     printf '%s\n' 'CTC configuration valid; rootless daemon and memory limits available'
@@ -27,12 +28,12 @@ case "$operation" in
     ;;
   status) compose ps --format json ;;
   publish-site)
-    acquire_lock
+    acquire_lock "${CTC_SHORT_LOCK_WAIT_SECONDS:-90}"
     trap release_lock EXIT
     python3 "$DEPLOY_ROOT/lib/publication.py" --directory "$installation" --deploy-root "$DEPLOY_ROOT"
     ;;
   up|stop)
-    acquire_lock 0
+    acquire_lock "${CTC_SHORT_LOCK_WAIT_SECONDS:-90}"
     trap release_lock EXIT
     if [ "$operation" = up ]; then
       check_port
@@ -42,7 +43,7 @@ case "$operation" in
     fi
     ;;
   resume-integrations)
-    acquire_lock 0
+    acquire_lock "${CTC_SHORT_LOCK_WAIT_SECONDS:-90}"
     trap release_lock EXIT
     python3 "$DEPLOY_ROOT/lib/recovery.py" --directory "$installation" --deploy-root "$DEPLOY_ROOT" "$operation" "$@"
     ;;

@@ -132,7 +132,7 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           VERSION: ${{ steps.version.outputs.new_version }}
         run: |
-          gh release create "v${VERSION}" --target "$(git rev-parse HEAD)" \
+          gh release create "v${VERSION}" --draft --target "$(git rev-parse HEAD)" \
             --title "v${VERSION}" --generate-notes "target/ctc-manager-${VERSION}.jar"
 
       - name: Build and push Docker image
@@ -158,3 +158,11 @@ jobs:
           python3 scripts/ci/deployment-bundle.py create --version "${VERSION}" \
             --app-digest "${app_digest}" --database-digest "${database_digest}" --output target/deployment
           bash scripts/ci/publish-deployment.sh "${VERSION}" target/deployment
+
+      # Deploy resolves only published releases, so publish once the bundle is complete.
+      - name: Publish GitHub Release
+        if: steps.plan.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          VERSION: ${{ steps.version.outputs.new_version }}
+        run: gh release edit "v${VERSION}" --draft=false

@@ -1,5 +1,7 @@
+import contextlib
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -392,6 +394,25 @@ class DeployTest(RolloutCase):
             self.deploy('1.51.0', drill=True)
         self.assertEqual('1.51.0', self.current())
 
+    def test_drill_restores_the_update_unit(self):
+        with self.assertRaisesRegex(rollout.DeployFailed, 'rolled back'):
+            self.deploy('1.51.0', drill=True)
+        self.assertIn(('docker', '1.51.0', 'exec', '-i'), self.log, 'the drill proves the restore path too')
+
+    def test_interrupt_before_the_unit_changes_nothing(self):
+        def fetch(url):
+            raise KeyboardInterrupt
+        with self.assertRaisesRegex(rollout.DeployFailed, 'nothing was changed'):
+            self.deploy('latest', fetch=fetch)
+        self.assertNotIn('stop_app', self.names())
+
+    def test_interrupt_during_legacy_cleanup_still_reports_success(self):
+        self.release('1.52.0', app='b')
+        with patch.object(rollout, 'remove_legacy', side_effect=KeyboardInterrupt):
+            result = self.deploy('1.52.0')
+        self.assertEqual('1.52.0', result['deployed'])
+        self.assertIn('legacy cleanup incomplete', result['warning'])
+
     def test_latest_picks_the_highest_published_version(self):
         self.release('1.52.0', app='b')
         listing = [{'tag_name': 'v1.9.0', 'draft': False, 'prerelease': False},
@@ -516,6 +537,13 @@ class HostFilesTest(RolloutCase):
                          sorted(path.name for path in (self.root / 'secrets').iterdir()))
         self.assertFalse((self.root / 'phpmyadmin').exists())
 
+    def test_missing_secrets_directory_still_removes_legacy_state(self):
+        self.legacy_tree()
+        shutil.rmtree(self.root / 'secrets')
+        rollout.remove_legacy(DockerListing(self.config, []), self.root)
+        self.assertFalse((self.root / 'state/update.json').exists())
+        self.assertFalse((self.root / 'phpmyadmin').exists())
+
     def test_docker_failure_keeps_the_legacy_files(self):
         self.legacy_tree()
         docker = DockerListing(self.config, ['ctc-manager_old-a_data'], failing=True)
@@ -593,3 +621,26 @@ class ObtainTest(RolloutCase):
         with self.assertRaisesRegex(ValueError, 'checksum'):
             rollout.obtain(self.root, '1.52.0', lambda url, limit=0: files[url.rsplit('/', 1)[1]])
         self.assertFalse((self.root / 'releases/1.52.0').exists())
+
+
+    def test_modes_follow_the_archive_not_the_running_code(self):
+        with patch.object(rollout, 'EXECUTABLES', set(), create=True):
+            self.test_obtain_verifies_and_extracts_with_runtime_modes()
+
+
+class MainTest(RolloutCase):
+    def run_main(self, operation, *arguments):
+        lock = self.root / '.ctc-manager.lock'
+        lock.mkdir(mode=0o700)
+        (lock / 'owner').write_text(str(os.getppid()) + '\n')
+        (lock / 'owner').chmod(0o600)
+        with patch.object(rollout, 'phpmyadmin_stopped', lambda *a, **k: contextlib.nullcontext()), \
+                patch('builtins.print'):
+            rollout.main(['--directory', str(self.root), '--deploy-root', str(self.old), operation, *arguments])
+
+    def test_restore_and_backup_write_docker_diagnostics(self):
+        for operation, function, arguments in [('restore', 'restore', ['--unit', 'u']), ('backup', 'backup', [])]:
+            with self.subTest(operation), patch.object(rollout, function, return_value={}) as called:
+                self.run_main(operation, *arguments)
+                shutil.rmtree(self.root / '.ctc-manager.lock')
+                self.assertIs(rollout.diagnosed, called.call_args.kwargs.get('runtime_for'))

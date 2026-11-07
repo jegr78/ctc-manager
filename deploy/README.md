@@ -34,7 +34,8 @@ installs it.
 
 `doctor` validates private files, digest pins, the configured daemon's rootless status and
 memory-limit support. `up` starts the stack with bounded readiness waits. `stop` stops only the
-app, retaining the database and volumes. Mutations share one installation lock. An abandoned
+app, retaining the database and volumes. Mutations share one installation lock; `up`, `stop`,
+`resume-integrations` and `publish-site` wait up to 90 seconds for it. An abandoned
 lock refuses further changes until the operator checks its owner and runtime. Never delete a lock based only on a PID that could have
 been reused. A failure after starting services is visible and does not reset data.
 

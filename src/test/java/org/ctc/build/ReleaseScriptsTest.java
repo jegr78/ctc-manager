@@ -348,6 +348,17 @@ class ReleaseScriptsTest {
 					.doesNotContain("./mvnw verify").doesNotContain("git push").doesNotContain("git commit")
 					.doesNotContain("RELEASE_TOKEN }}@github.com").contains("package -DskipTests");
 		}
+
+		@Test
+		void givenReleaseWorkflow_whenRead_thenTheReleaseStaysADraftUntilItsBundleIsUploaded() throws Exception {
+			// given
+			String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+
+			// then
+			assertThat(workflow).as("release creation").contains("gh release create \"v${VERSION}\" --draft");
+			assertThat(workflow.indexOf("--draft=false")).as("publication after the bundle upload")
+					.isGreaterThan(workflow.indexOf("publish-deployment.sh"));
+		}
 	}
 
 	private void runs(String... runs) throws IOException {

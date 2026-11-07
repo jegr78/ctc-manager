@@ -13,7 +13,7 @@ import uuid
 from config import atomic_json, private_path
 from recovery import (NativeRuntime, admit_recovery_image, capture, flush_directory, installed_release, read_json,
                       select_recovery_release, sha256, validate_unit)
-from release import EXECUTABLES, MAX_ARCHIVE, verify
+from release import MAX_ARCHIVE, verify
 
 REPOSITORY = 'jegr78/ctc-manager'
 UNIT_ROOT = Path('/mnt/backup/ctc-manager/units')
@@ -203,7 +203,7 @@ def obtain(root, version, fetch):
                 with path.open('xb') as output:
                     output.write(archive.extractfile(member).read())
                     os.fsync(output.fileno())
-                path.chmod(0o700 if str(relative) in EXECUTABLES else 0o644 if str(relative) in CONTAINER_READABLE else 0o600)
+                path.chmod(0o700 if member.mode & 0o100 else 0o644 if str(relative) in CONTAINER_READABLE else 0o600)
         if installed_release(extracted) != manifest:
             raise ValueError('extracted release identity differs')
         for directory in sorted([p for p in extracted.rglob('*') if p.is_dir()], key=lambda p: len(p.parts), reverse=True):
@@ -269,7 +269,7 @@ def deploy(root, version, allow_database_upgrade=False, drill=False, runtime_for
             manifest = installed_release(release)
             step = 'pull'
             database_changed = compatibility(old, release, manifest, allow_database_upgrade)
-        except Exception as error:
+        except BaseException as error:
             raise DeployFailed(step, error, 'unchanged') from error
         step = 'backup'
         try:
@@ -303,7 +303,7 @@ def deploy(root, version, allow_database_upgrade=False, drill=False, runtime_for
                 runtime_for(root, release).compose(['up', '-d', '--wait', '--wait-timeout', '180', 'app'])
         except BaseException as error:
             try:
-                restore_data = database_changed or (started and migrated(current, before))
+                restore_data = drill or database_changed or (started and migrated(current, before))
                 rollback(root, previous, unit, restore_data, installed, runtime_for, run, home)
             except HostFilesFailed as failure:
                 raise DeployFailed(step, error, 'rolled back', unit, failure.__cause__) from error
@@ -315,7 +315,7 @@ def deploy(root, version, allow_database_upgrade=False, drill=False, runtime_for
         result = {'deployed': version, 'unit': str(unit)}
         try:
             remove_legacy(current, root)
-        except Exception as error:
+        except BaseException as error:
             result['warning'] = 'legacy cleanup incomplete: ' + str(error)
     return result
 
@@ -418,7 +418,7 @@ def remove_legacy(current, root):
     referenced = {Path(current.config[key]).resolve().parent for key in
                   ['appEnvFile', 'databasePasswordFile', 'databaseRootPasswordFile', 'googleCredentialsFile']}
     secrets = root / 'secrets'
-    for path in secrets.iterdir():
+    for path in secrets.iterdir() if secrets.is_dir() else []:
         if path.is_dir() and not path.is_symlink() and path.resolve() not in referenced:
             shutil.rmtree(path)
     state = root / 'state'
@@ -429,10 +429,9 @@ def remove_legacy(current, root):
         shutil.rmtree(root / 'phpmyadmin')
 
 
-def backup(root):
+def backup(root, runtime_for=NativeRuntime):
     import maintenance
-    from recovery import NativeRuntime
-    runtime = NativeRuntime(root, (root / 'current').resolve())
+    runtime = runtime_for(root, (root / 'current').resolve())
     runtime.check_destination(maintenance.UNIT_ROOT.parent)
     maintenance.UNIT_ROOT.mkdir(mode=0o700, exist_ok=True)
     with phpmyadmin_stopped():
@@ -475,14 +474,14 @@ def main(argv=None):
             signal.signal(signal.SIGHUP, handlers[0])
             signal.signal(signal.SIGTERM, handlers[1])
     elif arguments.operation == 'backup':
-        print(json.dumps(backup(root)))
+        print(json.dumps(backup(root, runtime_for=diagnosed)))
     elif arguments.operation == 'restore':
         options = argparse.ArgumentParser(prog='ctc-manager restore', allow_abbrev=False)
         options.add_argument('--unit', required=True)
         options.add_argument('--legacy-release', action='store_true')
         chosen = options.parse_args(remaining)
         with phpmyadmin_stopped():
-            print(json.dumps(restore(root, chosen.unit, allow_legacy=chosen.legacy_release)))
+            print(json.dumps(restore(root, chosen.unit, runtime_for=diagnosed, allow_legacy=chosen.legacy_release)))
     else:
         raise ValueError(arguments.operation + ' is not available yet')
 

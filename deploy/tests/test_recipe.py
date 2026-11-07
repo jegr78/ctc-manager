@@ -236,10 +236,21 @@ else:
         lock = self.install / '.ctc-manager.lock'
         lock.mkdir(mode=0o700)
         (lock / 'owner').write_text(str(os.getpid()))
+        self.env['CTC_SHORT_LOCK_WAIT_SECONDS'] = '1'
         result = self.run_cli('up')
         self.assertNotEqual(0, result.returncode)
         self.assertIn('lock', result.stderr)
         self.assertNotIn('compose', self.calls.read_text() if self.calls.exists() else '')
+
+    def test_short_operations_wait_for_a_briefly_held_lock(self):
+        lock = self.install / '.ctc-manager.lock'
+        lock.mkdir(mode=0o700)
+        (lock / 'owner').write_text('phpmyadmin-start')
+        release = subprocess.Popen(['sh', '-c', 'sleep 1; rm -rf "$0"', str(lock)])
+        self.addCleanup(release.wait)
+        self.env['CTC_SHORT_LOCK_WAIT_SECONDS'] = '10'
+        result = self.run_cli('up')
+        self.assertEqual(0, result.returncode, result.stderr)
 
     def test_stop_targets_only_ctc_app_and_releases_lock(self):
         result = self.run_cli('stop')
