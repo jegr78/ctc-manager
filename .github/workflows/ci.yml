@@ -73,7 +73,7 @@ jobs:
           python3 scripts/ci/test-partitions.py plan
       - uses: actions/upload-artifact@v7
         with:
-          name: compiled-test-source
+          name: compiled-test-source-${{ github.run_attempt }}
           path: |
             target/classes/
             target/test-classes/
@@ -148,13 +148,28 @@ jobs:
       - uses: actions/download-artifact@v8
         if: needs.changes.outputs.code == 'true'
         with:
-          name: compiled-test-source
+          name: compiled-test-source-${{ github.run_attempt }}
           path: target
       - uses: actions/download-artifact@v8
         if: needs.changes.outputs.code == 'true'
         with:
-          pattern: test-partition-*
-          path: target/ci-results
+          name: test-partition-core-${{ github.run_attempt }}
+          path: target/ci-results/test-partition-core
+      - uses: actions/download-artifact@v8
+        if: needs.changes.outputs.code == 'true'
+        with:
+          name: test-partition-mariadb-1-${{ github.run_attempt }}
+          path: target/ci-results/test-partition-mariadb-1
+      - uses: actions/download-artifact@v8
+        if: needs.changes.outputs.code == 'true'
+        with:
+          name: test-partition-mariadb-2-${{ github.run_attempt }}
+          path: target/ci-results/test-partition-mariadb-2
+      - uses: actions/download-artifact@v8
+        if: needs.changes.outputs.code == 'true'
+        with:
+          name: test-partition-browser-${{ github.run_attempt }}
+          path: target/ci-results/test-partition-browser
       - name: Verify inventory and merge coverage through the normal verification lifecycle
         if: needs.changes.outputs.code == 'true'
         run: |
@@ -175,7 +190,7 @@ jobs:
         if: always() && needs.changes.outputs.code == 'true'
         uses: actions/upload-artifact@v7
         with:
-          name: coverage-report
+          name: coverage-report-${{ github.run_attempt }}
           path: |
             target/site/jacoco/
             target/ci-plan/

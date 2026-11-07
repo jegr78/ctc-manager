@@ -32,4 +32,4 @@ CodeQL, parallel Docker build, native recovery checks and workflow cancellation 
 
 Compare the CI critical path and the sum of job durations against the preceding complete run. Record runner allocation/queue time separately from test execution; four independently scheduled jobs may wait on account concurrency. Include cache state, actual context/container counts and all partition case totals. A target below 20 minutes remains a target until complete green CI demonstrates it. No Box or Mac database action is part of this workflow.
 
-Repeat the complete CI workflow when verification must be rerun. Receipts intentionally cannot mix Actions attempts; a failed partition alone cannot reuse evidence from a different attempt.
+Artifact names include the Actions attempt, preserving prior evidence without upload-name collisions. Each expected group downloads by its exact attempt-scoped name into a fixed group directory. Repeat the complete CI workflow when verification must be rerun. Receipts intentionally cannot mix Actions attempts; a failed partition alone cannot reuse evidence from a different attempt.
