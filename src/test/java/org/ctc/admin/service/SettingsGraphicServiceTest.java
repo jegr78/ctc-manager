@@ -119,7 +119,7 @@ class SettingsGraphicServiceTest {
 
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.CsvSource({"LEGACY,GRID_FALSE_START,REAL,Off", "CTC_2027,ROLLING,WEAK,On"})
-    void givenVersionedRules_whenRenderingSettings_thenActuallyRenderEveryNewDisclosedChoice(
+    void givenVersionedRules_whenRenderingSettings_thenRenderMatchChoicesWithoutFixedSeasonDefaults(
             LobbyRulesProfile profile, RaceStartType start, RaceSlipstream slipstream, String flags) throws Exception {
         // given
         service = spy(service); var race = createReadyRace(false);
@@ -133,7 +133,10 @@ class SettingsGraphicServiceTest {
         var document = org.jsoup.Jsoup.parse(new String(graphic.png(), java.nio.charset.StandardCharsets.UTF_8));
         // then
         org.assertj.core.api.Assertions.assertThat(document.select(".setting-value").eachText())
-                .contains(start.getLabel() + " / " + slipstream.getLabel(), flags + " / 10 min");
+                .contains(start.getLabel() + " / " + slipstream.getLabel())
+                .doesNotContain(flags + " / 10 min");
+        org.assertj.core.api.Assertions.assertThat(document.select(".setting-label").eachText())
+                .doesNotContain("Flag Rules / Qualifying");
         org.assertj.core.api.Assertions.assertThat(graphic.fields()).contains(PickDisclosureField.START_TYPE, PickDisclosureField.SLIPSTREAM);
     }
 
