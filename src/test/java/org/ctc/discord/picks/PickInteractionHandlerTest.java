@@ -443,6 +443,69 @@ class PickInteractionHandlerTest {
     }
 
     @Test
+    void givenUnmatchedTrackQuery_whenSearching_thenExplainScopeAndAllowClearingQuery() {
+        // given
+        command(); choose(); click("Enter picks");
+        open("Search track catalog");
+        // when
+        submitModal(fields("query", "Spa"));
+        // then
+        assertThat(response.last().content()).contains("No available tracks match your search", "season track pool", "Clear the search");
+        assertThat(response.last().selection()).isNull();
+        open("Search track catalog"); submitModal(fields("query", ""));
+        assertThat(response.last().selection().options()).extracting(PickGatewayModal.Option::value).containsExactly(track.toString());
+        verifyNoInteractions(submissions);
+    }
+
+    @Test
+    void givenNoEligibleTracks_whenOpeningCatalog_thenExplainPoolAndPriorUseInsteadOfUnmatchedQuery() {
+        // given
+        view = new PickTeamView(target, null, null, null, null, view.deadline(), false, false, null, view.cars(), List.of());
+        // when
+        command(); choose(); click("Enter picks");
+        // then
+        assertThat(response.last().content()).contains("No tracks are available", "season track pool", "used or reserved")
+                .doesNotContain("No available tracks match your search");
+        assertThat(response.last().selection()).isNull();
+        verifyNoInteractions(submissions);
+    }
+
+    @Test
+    void givenDeadlineInstant_whenViewing_thenRenderNativeFullAndRelativeTimestampsWithoutEscaping() {
+        // given
+        var instant = java.time.Instant.parse("2026-11-08T19:30:00Z");
+        view = new PickTeamView(target, null, null, null, null, view.deadline(), true, false, null,
+                view.cars(), view.tracks(), LobbyRulesProfile.CTC_2027, instant);
+        // when
+        command(); choose();
+        // then
+        assertThat(response.last().content()).contains("Deadline: <t:" + instant.getEpochSecond() + ":F> · <t:"
+                + instant.getEpochSecond() + ":R>").doesNotContain("Europe/Berlin", "\\<t:");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Not configured", "2027-10-31T02:30 Europe/Berlin requires management review", "<@123>"})
+    void givenNoDeadlineInstant_whenViewing_thenKeepEscapedExplanationWithoutInventingTimestamp(String label) {
+        // given
+        view = new PickTeamView(target, null, null, null, null, label, true, false, null, view.cars(), view.tracks());
+        // when
+        command(); choose();
+        // then
+        assertThat(response.last().content()).contains("Deadline: " + PickInteractionViews.escape(label)).doesNotContain("<t:", "<@123>");
+    }
+
+    @Test
+    void givenConfirmedReceipt_whenRendering_thenLocalizeSavedTimeAndKeepAuthorMention() {
+        // given
+        var receipt = new SubmissionReceipt(race, UUID.randomUUID(), 2, 3,
+                java.time.Instant.parse("2026-11-06T13:46:21.104055Z"), "300");
+        // when
+        var text = PickInteractionViews.receipt(receipt);
+        // then
+        assertThat(text).contains("saved <t:1793972781:F> by <@300>").doesNotContain("2026-11-06T13:46");
+    }
+
+    @Test
     void givenLargeCatalog_whenSearchingAndPaging_thenValidateReturnedPageAndEscapeUntrustedNames() {
         // given
         var choices = java.util.stream.IntStream.range(0, 56).mapToObj(i -> new PickTeamView.Choice(UUID.randomUUID(), null, "Test track %02d".formatted(i))).toList();

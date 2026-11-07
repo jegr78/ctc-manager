@@ -112,6 +112,18 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
     }
 
     @Test
+    void givenMatchDeadlineOverride_whenLoadingPrivateView_thenUseStoredEffectiveCutoff() {
+        // given
+        tx.executeWithoutResult(status -> matches.findById(fixture.match().getId()).orElseThrow()
+                .setPickDeadlineOverride(LocalDateTime.of(2035, 7, 1, 20, 30)));
+        // when
+        var view = current();
+        // then
+        assertThat(view.deadlineAt()).isEqualTo(java.time.Instant.parse("2035-07-01T18:30:00Z"));
+        assertThat(view.deadline()).contains("2035-07-01T20:30", "+02:00");
+    }
+
+    @Test
     void givenTwoTeamDrafts_whenConfirmingReplayingAndViewing_thenRetainOneDurableRevisionAndRejectStaleReplacement() {
         // given
         var first = new Driver("12345"); first.complete(); var confirm = first.button("Confirm submission");
@@ -141,7 +153,7 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
         });
         reviews.returnForCorrection(fixture.race().getId(), 1, new ManagementPickActor("test-admin"), "Check weather slot order");
         var corrected = new Driver("12346"); corrected.command(); corrected.select(fixture.race().getId());
-        assertThat(corrected.response.allText()).contains("RETURNED", "Check weather slot order", "deadline has passed", "2020-01-01T12:00");
+        assertThat(corrected.response.allText()).contains("RETURNED", "Check weather slot order", "deadline has passed", "Deadline: <t:1577876400:F> · <t:1577876400:R>");
         assertThat(corrected.response.last().buttons()).extracting(PickGatewayMessage.Button::label).doesNotContain("Replace picks");
         tx.executeWithoutResult(status -> entityManager.find(Race.class, fixture.race().getId()).getMatch().setPickDeadlineOverride(LocalDateTime.of(2035, 1, 1, 12, 0)));
         // when

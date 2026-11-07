@@ -257,6 +257,9 @@ public class PickInteractionHandler implements PickGatewayInteractionHandler {
                         choice.equals(selected))).toList());
         send(reply, escape(session.label) + "\nChoose " + caption + ". Page " + (page.page() + 1) + "/" + page.pages()
                 + ", " + page.count() + " matching choices.\nSearch: " + escape(query)
+                + (type.equals("track") ? "\nSearch covers available tracks in this season track pool."
+                        + (choices.isEmpty() ? "\nNo tracks are available. Ask management to check the season track pool and tracks already used or reserved by your team."
+                        : page.count() == 0 ? "\nNo available tracks match your search. Clear the search to show all available tracks." : "") : "")
                 + (selected != null && choices.contains(selected) ? "\nSelected: " + escape(selected.label()) : ""), buttons, selection);
     }
 

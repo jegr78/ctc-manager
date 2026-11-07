@@ -424,3 +424,5 @@ then explicitly publish through the existing publication workflow. Saving sends 
 A URL does not freeze a document's contents: keep completed-season documents unchanged, or use a
 stable published copy/PDF. V40 adds nullable document fields; backup schema 18 includes them and
 schemas 1–17 restore missing links as empty.
+
+Private Discord picks show deadlines and save times in the viewer's local timezone. Track search covers the available season pool and explains empty results. See the [Discord operations guide](docs/operations/discord-integration.md).

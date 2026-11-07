@@ -781,11 +781,11 @@ Settings-bearing publication uses the confirmed-content rules below; existing UR
 
 Run `/picks` in the bound team channel. Choose the exact home race using its season, matchday,
 opponent and leg. The private view shows the latest confirmed revision, author, server timestamp,
-effective deadline with Europe/Berlin offset, return reason and central matchday opening status. Only open matchdays appear in the selector; an existing private receipt can still refresh read-only after closure.
+effective deadline, return reason and central matchday opening status. Valid deadlines and save times use Discord timestamps in each viewer's local timezone and locale; deadlines also show relative time. Berlin remains the management input timezone. Missing or DST-ambiguous deadlines remain explanatory text. Only open matchdays appear in the selector; an existing private receipt can still refresh read-only after closure.
 An approved or closed target offers viewing without team editing.
 
 Start a new entry or replacement and choose a track and car from the target season. Search or
-page through large catalogs. Category seasons use the existing frozen entry/member policy.
+page through large catalogs. Track search covers only this season's track pool, excluding tracks already used or reserved by the home team elsewhere. Clear the query to show all available tracks. An empty pool or no matching names gets an explanation; search never imports tracks from GT7. Discord owns the password-warning banner on modal forms; the application cannot hide it. Category seasons use the existing frozen entry/member policy.
 Choose the season category or One-Make before its cars. Explicit One-Makes resolve their fixed car.
 Catalogs have search and pages of at most 25 options. Replacement prefills the latest saved values
 and opens the page containing the saved choice. Complete race values and tyre family, fuel and

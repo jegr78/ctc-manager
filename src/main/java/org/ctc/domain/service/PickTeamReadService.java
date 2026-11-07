@@ -31,6 +31,7 @@ public class PickTeamReadService {
     private final PickReservationService reservations;
     private final CarRepository cars;
     private final TrackRepository tracks;
+    private final PickDeadlinePolicy deadlines;
 
     @Transactional(readOnly = true)
     public PickTeamView load(ChannelPickActor channel, UUID raceId) {
@@ -67,11 +68,13 @@ public class PickTeamReadService {
         var offsets = deadline == null ? List.<java.time.ZoneOffset>of() : ZoneId.of("Europe/Berlin").getRules().getValidOffsets(deadline);
         String deadlineLabel = deadline == null ? "Not configured" : deadline + " Europe/Berlin "
                 + (offsets.size() == 1 ? offsets.getFirst() : "requires management review");
+        java.time.Instant deadlineAt = null;
+        if (deadline != null && offsets.size() == 1) deadlineAt = deadlines.resolveDeadline(deadline);
         return new PickTeamView(target, payload, revision == null ? null : revision.receipt(),
                 payload == null ? null : cars.findById(payload.carId()).orElseThrow().getDisplayName(),
                 payload == null ? null : tracks.findById(payload.trackId()).orElseThrow().getName(), deadlineLabel,
                 race.getMatchday().isPicksOpen(), pick != null && pick.isManualClosed(), reason,
-                sorted(carChoices), sorted(trackChoices), season.getLobbyRulesProfile());
+                sorted(carChoices), sorted(trackChoices), season.getLobbyRulesProfile(), deadlineAt);
     }
 
     private static List<Choice> sorted(List<Choice> choices) {
