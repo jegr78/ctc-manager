@@ -1,0 +1,50 @@
+name: Run a prepared test partition
+description: Execute exactly the assigned JUnit roots and publish complete evidence.
+inputs:
+  group:
+    required: true
+    description: Validated partition name.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@v6
+      with:
+        java-version: '25'
+        distribution: temurin
+        cache: maven
+    - uses: actions/download-artifact@v8
+      with:
+        name: compiled-test-source-${{ github.run_attempt }}
+        path: target
+    - name: Cache Playwright Browsers
+      uses: actions/cache@v6
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-1.59.0
+        restore-keys: |
+          ${{ runner.os }}-playwright-
+
+    - name: Install Playwright Browsers
+      shell: bash
+      run: |
+        mvn dependency:build-classpath -DincludeScope=test -Dmdep.outputFile=/tmp/cp.txt -q
+        java -cp "$(cat /tmp/cp.txt)" com.microsoft.playwright.CLI install --with-deps
+
+    - name: Run the assigned tests
+      shell: bash
+      env:
+        CI_PARTITION: ${{ inputs.group }}
+      run: python3 scripts/ci/run-partition.py "$CI_PARTITION"
+    - name: Upload partition evidence
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: test-partition-${{ inputs.group }}-${{ github.run_attempt }}
+        path: |
+          target/receipt.json
+          target/jacoco.exec
+          target/surefire-reports/
+          target/failsafe-reports/
+          target/test-perf/
+        retention-days: 7
+        if-no-files-found: error
