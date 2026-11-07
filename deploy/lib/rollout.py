@@ -11,7 +11,14 @@ import sys
 import uuid
 
 from config import atomic_json, private_path
-from recovery import NativeRuntime, read_json, select_recovery_release, validate_unit
+from recovery import (NativeRuntime, admit_recovery_image, capture, flush_directory, installed_release, read_json,
+                      select_recovery_release, sha256, validate_unit)
+from release import EXECUTABLES, MAX_ARCHIVE, verify
+
+REPOSITORY = 'jegr78/ctc-manager'
+UNIT_ROOT = Path('/mnt/backup/ctc-manager/units')
+HISTORY = ("SELECT JSON_OBJECT('rank',installed_rank,'version',version,'checksum',checksum,'success',success) "
+           "FROM flyway_schema_history ORDER BY installed_rank;")
 
 SEMVER = r'(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)'
 SECRETS = {'app.env': 'appEnvFile', 'db-password': 'databasePasswordFile',
@@ -73,14 +80,14 @@ def volumes(runtime):
     return environment['CTC_DATABASE_VOLUME'], environment['CTC_DATA_VOLUME']
 
 
-def restore(root, unit, runtime_for=NativeRuntime):
+def restore(root, unit, runtime_for=NativeRuntime, allow_legacy=False):
     """Replace database, data volume and secrets with a unit, running the release that wrote it."""
     root, unit = Path(root), Path(unit).resolve()
     validate_unit(unit)
     expected = read_json(unit / 'release.json')
     parse(expected.get('version'))
     release = select_recovery_release(root, expected)
-    if not (release / 'lib/rollout.py').is_file():
+    if not allow_legacy and not (release / 'lib/rollout.py').is_file():
         raise ValueError('release ' + expected['version'] + ' still uses storage generations; restore it with its own tools')
     current = runtime_for(root, (root / 'current').resolve())
     current.stop_app()
@@ -117,6 +124,230 @@ def restore(root, unit, runtime_for=NativeRuntime):
     return {'status': 'restored', 'release': expected['version'], 'outboundPaused': True}
 
 
+class DeployFailed(RuntimeError):
+    def __init__(self, step, cause, state, unit=None, rollback_error=None):
+        self.step, self.cause, self.rolled_back = step, cause, state != 'stopped'
+        if state == 'unchanged':
+            outcome = 'nothing was changed'
+        elif state == 'rolled back' and rollback_error is not None:
+            outcome = 'rolled back to the previous release, but its host files were not reinstalled: ' + str(rollback_error)
+        elif state == 'rolled back':
+            outcome = 'rolled back to the previous release; integrations stay paused until resume-integrations'
+        elif unit is None:
+            outcome = 'restarting the app failed: ' + str(rollback_error) + '; the database is unchanged, start it with ctc-manager up'
+        else:
+            outcome = ('rollback failed: ' + str(rollback_error) + '; the app is stopped, recover with '
+                       'ctc-manager restore --unit ' + str(unit))
+        super().__init__('deploy failed at ' + step + ': ' + str(cause or type(cause).__name__) + '; ' + outcome)
+
+
+class HostFilesFailed(Exception):
+    """The previous release runs again, only its host files are missing."""
+
+
+def fetch(url, limit=2 * 1024 ** 2):
+    import urllib.request
+    request = urllib.request.Request(url, headers={'User-Agent': 'ctc-manager-deployment',
+                                                   'Accept': 'application/vnd.github+json'})
+    with urllib.request.urlopen(request, timeout=60) as response:
+        value = response.read(limit + 1)
+    if len(value) > limit:
+        raise ValueError('release download exceeds limit')
+    return value
+
+
+def resolve(version, fetch):
+    if version != 'latest':
+        parse(version)
+        return version
+    try:
+        releases = json.loads(fetch('https://api.github.com/repos/' + REPOSITORY + '/releases?per_page=30'))
+        candidates = [item['tag_name'][1:] for item in releases if item.get('draft') is False
+                      and item.get('prerelease') is False and re.fullmatch('v' + SEMVER, item.get('tag_name', ''))]
+        return max(candidates, key=parse)
+    except Exception as error:
+        raise ValueError('cannot resolve latest (' + str(error) + '); run ctc-manager deploy VERSION') from error
+
+
+def obtain(root, version, fetch):
+    import tarfile
+    import tempfile
+    from pathlib import PurePosixPath
+    releases = private_path(root / 'releases', directory=True)
+    target = releases / version
+    if target.exists() or target.is_symlink():
+        private_path(target, directory=True)
+        installed_release(target)
+        return target
+    name = 'ctc-manager-deployment-' + version + '.tar.gz'
+    base = 'https://github.com/' + REPOSITORY + '/releases/download/v' + version + '/'
+    staging = Path(tempfile.mkdtemp(prefix='.candidate-', dir=private_path(root / 'state', directory=True)))
+    try:
+        (staging / name).write_bytes(fetch(base + name, MAX_ARCHIVE))
+        checksum = fetch(base + name + '.sha256', 1024).decode()
+        match = re.fullmatch(r'([a-f0-9]{64})  ' + re.escape(name) + r'\n?', checksum)
+        if not match or sha256(staging / name) != match.group(1):
+            raise ValueError('release archive checksum mismatch')
+        manifest = verify(staging / name)
+        if manifest['version'] != version:
+            raise ValueError('release manifest version differs from requested version')
+        extracted = staging / 'release'
+        extracted.mkdir(mode=0o700)
+        with tarfile.open(staging / name, 'r:gz') as archive:
+            for member in archive:
+                relative = PurePosixPath(*PurePosixPath(member.name).parts[1:])
+                path = extracted / relative
+                if not path.resolve().is_relative_to(extracted):
+                    raise ValueError('unsafe release extraction path')
+                path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                with path.open('xb') as output:
+                    output.write(archive.extractfile(member).read())
+                    os.fsync(output.fileno())
+                path.chmod(0o700 if str(relative) in EXECUTABLES else 0o600)
+        if installed_release(extracted) != manifest:
+            raise ValueError('extracted release identity differs')
+        for directory in sorted([p for p in extracted.rglob('*') if p.is_dir()], key=lambda p: len(p.parts), reverse=True):
+            flush_directory(directory)
+        os.rename(extracted, target)
+        flush_directory(releases)
+        return target
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+
+
+def compatibility(runtime, release, manifest, allow_database_upgrade):
+    contract = read_json(release / 'upgrade.json')
+    if contract.get('format') != 1 or contract.get('notes') != 'guides/updates.md':
+        raise ValueError('unsupported upgrade contract')
+    if parse(runtime.release['version']) < parse(contract['minimumSourceVersion']):
+        raise ValueError('source release is older than the supported upgrade minimum')
+    for key in ['appImage', 'databaseImage']:
+        runtime.docker(['pull', manifest[key]], timeout=900)
+    admit_recovery_image(json.loads(runtime.docker(['image', 'inspect', manifest['appImage']]))[0])
+    database = json.loads(runtime.docker(['image', 'inspect', manifest['databaseImage']]))[0]
+    target = (database.get('Config', {}).get('Labels') or {}).get('org.opencontainers.image.version', '')
+    source = runtime.database_metadata()['databaseVersion']
+    if not re.match(r'^[0-9]+\.', target) or not re.match(r'^[0-9]+\.', source):
+        raise ValueError('database versions cannot be determined')
+    if target.split('.')[0] != source.split('.')[0] and not allow_database_upgrade:
+        raise ValueError('the database major version changes; MariaDB cannot downgrade, rerun with --allow-database-upgrade')
+    owners = []
+    for image in [runtime.config['appImage'], manifest['appImage']]:
+        owner = runtime.docker(['run', '--rm', '--network', 'none', '--read-only', '--cap-drop', 'ALL',
+                                '--security-opt', 'no-new-privileges', '--entrypoint', 'id', image, '-u']).decode().strip()
+        if not re.fullmatch(r'[1-9][0-9]*', owner):
+            raise ValueError('application image must have a non-root numeric UID')
+        owners.append(owner)
+    if owners[0] != owners[1]:
+        raise ValueError('application UID changes need an explicit storage ownership migration')
+    return manifest['databaseImage'] != runtime.config['databaseImage']
+
+
+def history(runtime):
+    return runtime.query(HISTORY)
+
+
+def deploy(root, version, allow_database_upgrade=False, drill=False, runtime_for=NativeRuntime,
+           fetch=fetch, run=systemctl, home=None):
+    """Update the installation in place; any failure after the update unit rolls back by itself."""
+    root = Path(root)
+    previous = (root / 'current').resolve()
+    old = runtime_for(root, previous)
+    outbound = old.config.get('outboundPaused', False)
+    step = 'download'
+    try:
+        running = old.release['version']
+        old.check_destination(UNIT_ROOT)
+        old.preflight()
+        version = resolve(version, fetch)
+        if drill and version != running:
+            raise ValueError('the rollback drill redeploys the running ' + running + ' only')
+        if not drill and parse(version) <= parse(running):
+            raise ValueError(version + ' is not newer than the running ' + running)
+        release = previous if drill else obtain(root, version, fetch)
+        manifest = installed_release(release)
+        step = 'pull'
+        database_changed = compatibility(old, release, manifest, allow_database_upgrade)
+    except Exception as error:
+        raise DeployFailed(step, error, 'unchanged') from error
+    with phpmyadmin_stopped(run):
+        step = 'backup'
+        try:
+            before = history(old)
+            unit = Path(capture(old, UNIT_ROOT, hold_stopped=True))
+            unit = unit.rename(unit.with_name('recovery-update-' + unit.name.removeprefix('recovery-')))
+        except BaseException as error:
+            try:
+                old.start_app()
+            except Exception as failure:
+                raise DeployFailed(step, error, 'stopped', None, failure) from error
+            raise DeployFailed(step, error, 'rolled back') from error
+        started = installed = False
+        current = None
+        try:
+            step = 'start'
+            switch_release(root, release, outbound_paused=True)
+            current = runtime_for(root, release)
+            started = True
+            current.compose(['up', '-d', '--wait', '--wait-timeout', '180'])
+            current.preflight()
+            if drill:
+                raise RuntimeError('rollback drill')
+            step = 'host files'
+            installed = True
+            install_host_files(release, home)
+            run(['systemctl', '--user', 'daemon-reload'], check=True)
+            if not outbound:
+                step = 'resume integrations'
+                switch_release(root, release, outbound_paused=False)
+                runtime_for(root, release).compose(['up', '-d', '--wait', '--wait-timeout', '180', 'app'])
+        except BaseException as error:
+            try:
+                restore_data = database_changed or (started and migrated(current, before))
+                rollback(root, previous, unit, restore_data, installed, runtime_for, run, home)
+            except HostFilesFailed as failure:
+                raise DeployFailed(step, error, 'rolled back', unit, failure.__cause__) from error
+            except BaseException as failure:
+                raise DeployFailed(step, error, 'stopped', unit, failure) from error
+            raise DeployFailed(step, error, 'rolled back') from error
+        result = {'deployed': version, 'unit': str(unit)}
+        try:
+            remove_legacy(current, root)
+        except Exception as error:
+            result['warning'] = 'legacy cleanup incomplete: ' + str(error)
+    return result
+
+
+def migrated(current, before):
+    try:
+        return history(current) != before
+    except Exception:
+        return True
+
+
+def rollback(root, release, unit, restore_data, installed, runtime_for, run, home):
+    if restore_data:
+        restore(root, unit, runtime_for, allow_legacy=True)
+    else:
+        runtime_for(root, (root / 'current').resolve()).compose(['stop', 'app'])
+        switch_release(root, release, outbound_paused=True)
+        runtime_for(root, release).compose(['up', '-d', '--wait', '--wait-timeout', '180'])
+    if installed:
+        try:
+            install_host_files(release, home)
+            run(['systemctl', '--user', 'daemon-reload'], check=True)
+        except Exception as error:
+            raise HostFilesFailed() from error
+
+
+def install_host_files(release, home=None):
+    """Install units and launcher of a release; filled in by the host-file task."""
+
+
+def remove_legacy(current, root):
+    """Delete state of the generation era; filled in by the host-file task."""
+
+
 def backup(root):
     import maintenance
     from recovery import NativeRuntime
@@ -126,6 +357,14 @@ def backup(root):
     with phpmyadmin_stopped():
         result = maintenance.run_backup(runtime, maintenance.UNIT_ROOT)
     return {'status': result['lastAttempt']['stage'], 'unit': result['local']['unit']}
+
+
+def diagnosed(root, deploy_root):
+    runtime = NativeRuntime(root, deploy_root)
+    log = private_path(Path(root) / 'state', directory=True) / 'deploy.log'
+    log.touch(mode=0o600)
+    runtime.diagnostic = log
+    return runtime
 
 
 def main(argv=None):
@@ -140,7 +379,21 @@ def main(argv=None):
     lock = private_path(root / '.ctc-manager.lock', directory=True)
     if private_path(lock / 'owner').read_text().strip() != str(os.getppid()):
         raise ValueError(arguments.operation + ' requires its launcher-owned installation lock')
-    if arguments.operation == 'backup':
+    if arguments.operation == 'deploy':
+        import signal
+        options = argparse.ArgumentParser(prog='ctc-manager deploy', allow_abbrev=False)
+        options.add_argument('version', nargs='?', default='latest')
+        options.add_argument('--allow-database-upgrade', action='store_true')
+        options.add_argument('--drill-rollback', action='store_true')
+        chosen = options.parse_args(remaining)
+        handlers = signal.signal(signal.SIGHUP, signal.SIG_IGN), signal.signal(signal.SIGTERM, signal.default_int_handler)
+        try:
+            print(json.dumps(deploy(root, chosen.version, chosen.allow_database_upgrade, chosen.drill_rollback,
+                                    runtime_for=diagnosed)))
+        finally:
+            signal.signal(signal.SIGHUP, handlers[0])
+            signal.signal(signal.SIGTERM, handlers[1])
+    elif arguments.operation == 'backup':
         print(json.dumps(backup(root)))
     elif arguments.operation == 'restore':
         options = argparse.ArgumentParser(prog='ctc-manager restore', allow_abbrev=False)
@@ -156,5 +409,5 @@ if __name__ == '__main__':
     import rollout
     try:
         rollout.main()
-    except (ValueError, OSError, KeyError, TypeError, json.JSONDecodeError, subprocess.CalledProcessError) as error:
+    except (ValueError, RuntimeError, OSError, KeyError, TypeError, json.JSONDecodeError, subprocess.CalledProcessError) as error:
         sys.exit('CTC: ' + str(error))
