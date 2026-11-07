@@ -45,6 +45,11 @@
 	</dependencyManagement>
 	<dependencies>
 		<dependency>
+			<groupId>org.junit.platform</groupId>
+			<artifactId>junit-platform-launcher</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
 			<groupId>net.dv8tion</groupId>
 			<artifactId>JDA</artifactId>
 			<version>${jda.version}</version>
@@ -610,6 +615,64 @@
 				</plugins>
 			</build>
 		</profile>
+        <profile>
+            <id>ci-core</id>
+            <build><plugins><plugin>
+                <groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId>
+                <executions><execution><id>default-it</id><configuration>
+                    <includesFile>${ctc.ci.includes}</includesFile>
+                </configuration></execution></executions>
+            </plugin></plugins></build>
+        </profile>
+        <profile>
+            <id>ci-database</id>
+            <build><plugins>
+                <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId>
+                    <executions><execution><id>default-test</id><phase>none</phase></execution></executions>
+                </plugin>
+                <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId>
+                    <executions><execution><id>default-it</id><configuration>
+                        <includesFile>${ctc.ci.includes}</includesFile>
+                    </configuration></execution></executions>
+                </plugin>
+            </plugins></build>
+        </profile>
+        <profile>
+            <id>ci-browser</id>
+            <build><plugins>
+                <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId>
+                    <executions><execution><id>default-test</id><phase>none</phase></execution></executions>
+                </plugin>
+                <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId>
+                    <executions>
+                        <execution><id>default-it</id><phase>none</phase></execution>
+                        <execution><id>e2e-it</id><configuration>
+                            <includesFile>${ctc.ci.includes}</includesFile>
+                        </configuration></execution>
+                    </executions>
+                </plugin>
+            </plugins></build>
+        </profile>
+        <profile>
+            <id>ci-aggregate</id>
+            <build><plugins>
+                <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId>
+                    <executions><execution><id>default-test</id><phase>none</phase></execution></executions>
+                </plugin>
+                <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId>
+                    <executions><execution><id>default-it</id><phase>none</phase></execution></executions>
+                </plugin>
+                <plugin><groupId>org.jacoco</groupId><artifactId>jacoco-maven-plugin</artifactId>
+                    <executions><execution><id>merge-ci-coverage</id><phase>prepare-package</phase>
+                        <goals><goal>merge</goal></goals>
+                        <configuration><fileSets><fileSet>
+                            <directory>${project.build.directory}/ci-coverage</directory>
+                            <includes><include>*.exec</include></includes>
+                        </fileSet></fileSets></configuration>
+                    </execution></executions>
+                </plugin>
+            </plugins></build>
+        </profile>
 		<profile>
 			<id>rewrite</id>
 			<build>

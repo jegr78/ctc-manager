@@ -26,7 +26,7 @@ class CiChangedPathsFilterTest {
 	private static final Pattern DOCKER_COPY = Pattern.compile("(?m)^(?:COPY|ADD) (?!--)(.+)$");
 
 	@ParameterizedTest
-	@ValueSource(strings = {"scripts/guards/no-rerun-guard.sh", "scripts/app.sh", "Dockerfile", "pom.xml", ".gitattributes"})
+	@ValueSource(strings = {"scripts/guards/no-rerun-guard.sh", "scripts/app.sh", "Dockerfile", "pom.xml", ".gitattributes", ".github/actions/test-partition/action.yml"})
 	void givenChangeToABuildInput_whenClassified_thenTheBuildRuns(String path) throws IOException {
 		// when / then
 		assertThat(isCode(path)).as("%s runs the build", path).isTrue();

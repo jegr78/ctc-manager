@@ -407,3 +407,5 @@ with record IDs; it never repairs history or discloses internal reasons in publi
 
 V39 and backup schema 17 add the central matchday opening flag and match-level deadline exceptions.
 Existing and restored pre-17 matchdays start closed. Prior submission payloads, receipts, decisions and publication evidence remain unchanged. Management explicitly opens the intended matchdays after updating.
+
+CI distributes the complete test inventory across core, two MariaDB partitions and browser work, then enforces merged coverage and security checks through the required aggregate. See [CI test partitions](docs/ci-partitions.md).
