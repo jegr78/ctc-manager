@@ -130,7 +130,11 @@ class SiteGeneratorFixtureIsolationIT {
     void everyGeneratedSeasonPageKeepsItsOwningRuleDocuments() throws Exception {
         season.setRulebookUrl("https://example.org/current/rules");
         season.setRacingEtiquetteUrl("https://example.org/current/etiquette");
-        seasonRepository.saveAndFlush(season);
+        transactions.executeWithoutResult(status -> {
+            var current = seasonRepository.findByIdForUpdate(season.getId()).orElseThrow();
+            current.setRulebookUrl(season.getRulebookUrl());
+            current.setRacingEtiquetteUrl(season.getRacingEtiquetteUrl());
+        });
         var archived = new Season("Gen Archived Documents " + uniqueSuffix, 2025, 2);
         archived.setRulebookUrl("https://example.org/archive/rules");
         archived.setRacingEtiquetteUrl("https://example.org/archive/etiquette");

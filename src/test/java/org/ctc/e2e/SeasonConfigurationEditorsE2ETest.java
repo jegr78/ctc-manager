@@ -44,9 +44,14 @@ class SeasonConfigurationEditorsE2ETest extends PlaywrightConfig {
         assertThat(page.locator("#rulebookUrl")).hasAttribute("aria-invalid", "true");
         org.junit.jupiter.api.Assertions.assertNull(seasons.findById(fixture.season().getId()).orElseThrow().getRulebookUrl());
         for (int width : java.util.List.of(1440, 390)) {
-            page.setViewportSize(width, 900); page.locator("#season-documents").scrollIntoViewIfNeeded();
+            page.setViewportSize(width, 900);
+            if (width < 768) page.waitForFunction("document.querySelector('.sidebar').getBoundingClientRect().right <= 0");
+            page.locator("#racingEtiquetteUrl").click();
+            assertThat(page.locator("#racingEtiquetteUrl")).isFocused();
             org.junit.jupiter.api.Assertions.assertFalse((Boolean) page.evaluate("document.documentElement.scrollWidth > innerWidth"));
-            page.screenshot(new com.microsoft.playwright.Page.ScreenshotOptions().setPath(evidence.resolve("admin-" + width + ".png")).setFullPage(true));
+            page.locator("#season-documents").screenshot(new com.microsoft.playwright.Locator.ScreenshotOptions()
+                    .setAnimations(com.microsoft.playwright.options.ScreenshotAnimations.DISABLED)
+                    .setPath(evidence.resolve("admin-" + width + ".png")));
         }
         try (var nativeContext = browser.newContext(new com.microsoft.playwright.Browser.NewContextOptions().setJavaScriptEnabled(false))) {
             var nativePage = nativeContext.newPage();
