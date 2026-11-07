@@ -5,6 +5,14 @@ Individual reporters retain their own incident cases under a separate reporting 
 
 ## Language
 
+**Season rulebook**:
+The racing regulations belonging to one CTC season, including that season after it is archived.
+_Avoid_: Current global rules
+
+**Season racing etiquette**:
+The driving conduct guidance applicable to one CTC season, maintained separately from its rulebook.
+_Avoid_: Shared global rules
+
 **Driver disqualification (DSQ)**:
 A race-specific exclusion from race-position points. The driver's qualifying and fastest-lap bonuses remain; the separate team penalty is entered by management.
 _Avoid_: Zero total points, deletion of the result

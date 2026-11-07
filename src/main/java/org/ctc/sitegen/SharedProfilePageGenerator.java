@@ -38,6 +38,7 @@ public class SharedProfilePageGenerator {
             }
             var context = new Context(Locale.ENGLISH);
             context.setVariable("profiles", profiles);
+            context.setVariable("season", ctx.season());
             context.setVariable("pageTitle", kind == SiteSlugKind.TEAM ? "Teams" : "Drivers");
             context.setVariable("currentPage", kind == SiteSlugKind.TEAM ? "team" : "driver");
             context.setVariable("seasonSlug", siteSlugger.slugify(ctx.season().getDisplayLabel()));

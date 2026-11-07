@@ -163,6 +163,25 @@ public class SeasonManagementService {
      */
     @Transactional
     public Season save(UUID id, String name, int year, int number, String description, boolean active) {
+        return saveMetadata(id, name, year, number, description, active, null, null, false);
+    }
+
+    @Transactional
+    public Season save(UUID id, String name, int year, int number, String description, boolean active,
+                       String rulebookUrl, String racingEtiquetteUrl) {
+        String rulebook;
+        String etiquette;
+        try {
+            rulebook = SeasonDocumentLinks.normalize(rulebookUrl);
+            etiquette = SeasonDocumentLinks.normalize(racingEtiquetteUrl);
+        } catch (IllegalArgumentException invalid) {
+            throw new BusinessRuleException(SeasonDocumentLinks.MESSAGE);
+        }
+        return saveMetadata(id, name, year, number, description, active, rulebook, etiquette, true);
+    }
+
+    private Season saveMetadata(UUID id, String name, int year, int number, String description, boolean active,
+                                String rulebookUrl, String racingEtiquetteUrl, boolean updateDocuments) {
         if (active && seasonRepository.findByActiveTrue().filter(current -> !current.getId().equals(id)).isPresent()) {
             throw new BusinessRuleException("Another season is active. Deactivate it before activating this season.");
         }
@@ -178,6 +197,10 @@ public class SeasonManagementService {
         season.setYear(year);
         season.setNumber(number);
         season.setDescription(description);
+        if (updateDocuments) {
+            season.setRulebookUrl(rulebookUrl);
+            season.setRacingEtiquetteUrl(racingEtiquetteUrl);
+        }
         season.setActive(active);
         Season saved;
         try {

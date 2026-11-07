@@ -41,6 +41,12 @@ public class Season extends BaseEntity {
 
 	private String description;
 
+    @Column(name = "rulebook_url", length = SeasonDocumentLinks.MAX_LENGTH)
+    private String rulebookUrl;
+
+    @Column(name = "racing_etiquette_url", length = SeasonDocumentLinks.MAX_LENGTH)
+    private String racingEtiquetteUrl;
+
 	@Column(nullable = false)
 	private boolean active;
 

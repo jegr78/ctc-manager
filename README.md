@@ -411,3 +411,16 @@ Existing and restored pre-17 matchdays start closed. Prior submission payloads, 
 CI distributes the complete test inventory across core, two MariaDB partitions and browser work, then enforces merged coverage and security checks through the required aggregate. See [CI test partitions](docs/ci-partitions.md).
 
 Browser caches use the resolved Playwright/driver versions and platform identity. Docker installs and tests Chromium before copying the application JAR. See [Browser dependency caching](docs/browser-build-cache.md).
+
+### Season rule documents
+
+Open **All seasons → Edit → Rule documents** to enter optional Rulebook and Racing Etiquette URLs.
+Both links belong to that season, including its archived public pages. Use absolute HTTPS URLs,
+for example a published Google document or PDF. Leave a field blank to remove that link.
+Community links remain configured separately through `ctc.site.links`.
+
+Saving updates season configuration only. Use **Generate Site**, inspect the generated snapshot,
+then explicitly publish through the existing publication workflow. Saving sends no Discord messages.
+A URL does not freeze a document's contents: keep completed-season documents unchanged, or use a
+stable published copy/PDF. V40 adds nullable document fields; backup schema 18 includes them and
+schemas 1–17 restore missing links as empty.
