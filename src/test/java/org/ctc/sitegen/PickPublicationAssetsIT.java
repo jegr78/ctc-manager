@@ -89,6 +89,7 @@ class PickPublicationAssetsIT {
             var car = cars.save(new Car("Test_Private_Car_" + UUID.randomUUID(), "Unpublished")); privateCar = car.getId();
             var track = tracks.save(new Track("Test_Private_Track_" + UUID.randomUUID())); privateTrack = track.getId();
             season.getCars().add(car); season.getTracks().add(track); season.setPicksCollectionEnabled(true);
+            race.getMatchday().setPicksOpen(true);
             race.setDateTime(java.time.LocalDateTime.of(2035, 1, 1, 20, 0)); race.getMatchday().setPickDeadline(java.time.LocalDateTime.of(2035, 1, 1, 12, 0));
             return new PickPayload(track.getId(), car.getId(), null, 12, 2, 3, 4, PickInitialFuel.DEFAULT, 1,
                     TimeProgressionMode.MULTIPLIER, 0, "Test_Private_Weather", "Sunset", java.util.Set.of(PickTyre.RS), java.util.Set.of());
