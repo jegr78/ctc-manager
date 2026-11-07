@@ -26,6 +26,7 @@ class CiTestInventoryTest {
         assertThat(rows).anyMatch(row -> row.startsWith("org.ctc.build.CiPartitionWorkflowTest\tunit\t"));
         assertThat(rows).anyMatch(row -> row.startsWith("org.ctc.sitegen.SiteGeneratorFixtureIsolationIT\tintegration\tfalse\t"));
         assertThat(rows).anyMatch(row -> row.startsWith("org.ctc.domain.service.TyrePersistenceMariaDbIT\tintegration\ttrue\t"));
+        assertThat(rows).anyMatch(row -> row.startsWith("org.ctc.backup.service.BackupRoundTripIT\tintegration\ttrue\t"));
         assertThat(rows).anyMatch(row -> row.startsWith("org.ctc.e2e.TimeProgressionE2ETest\tbrowser\t"));
         assertThat(rows).noneMatch(row -> row.startsWith("org.ctc.tools.StandingsGraphicPreview\t"));
         List<String> ids = rows.stream().map(row -> row.split("\t")[4])

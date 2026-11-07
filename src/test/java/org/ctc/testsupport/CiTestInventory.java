@@ -102,15 +102,20 @@ public final class CiTestInventory {
     }
 
     private static boolean mariaDb(String root) throws Exception {
-        for (Class<?> type = Class.forName(root, false, CiTestInventory.class.getClassLoader());
-                type != null && type != Object.class; type = type.getSuperclass()) {
-            if (type.getName().contains("MariaDb")) return true;
-            String resource = "/" + type.getName().replace('.', '/') + ".class";
-            try (var stream = type.getResourceAsStream(resource)) {
-                if (stream != null && new String(stream.readAllBytes(), StandardCharsets.ISO_8859_1)
-                        .contains("MariaDBContainer")) return true;
-            }
+        return mariaDb(Class.forName(root, false, CiTestInventory.class.getClassLoader()), new HashSet<>());
+    }
+
+    private static boolean mariaDb(Class<?> type, Set<Class<?>> visited) throws Exception {
+        if (type == null || type == Object.class || !visited.add(type)) return false;
+        if (type.getName().contains("MariaDb")) return true;
+        String resource = "/" + type.getName().replace('.', '/') + ".class";
+        try (var stream = type.getResourceAsStream(resource)) {
+            if (stream != null && new String(stream.readAllBytes(), StandardCharsets.ISO_8859_1)
+                    .contains("MariaDBContainer")) return true;
         }
-        return false;
+        for (Class<?> nested : type.getDeclaredClasses()) {
+            if (mariaDb(nested, visited)) return true;
+        }
+        return mariaDb(type.getSuperclass(), visited);
     }
 }
