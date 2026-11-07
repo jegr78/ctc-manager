@@ -398,6 +398,7 @@ class DeployTest(RolloutCase):
         with self.assertRaisesRegex(rollout.DeployFailed, 'rolled back'):
             self.deploy('1.51.0', drill=True)
         self.assertIn(('docker', '1.51.0', 'exec', '-i'), self.log, 'the drill proves the restore path too')
+        self.assertFalse(self.config_now()['outboundPaused'], 'a drill leaves no unknown state, so integrations resume')
 
     def test_interrupt_before_the_unit_changes_nothing(self):
         def fetch(url):

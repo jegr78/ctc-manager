@@ -132,6 +132,8 @@ class DeployFailed(RuntimeError):
             outcome = 'nothing was changed'
         elif state == 'rolled back' and rollback_error is not None:
             outcome = 'rolled back to the previous release, but its host files were not reinstalled: ' + str(rollback_error)
+        elif state == 'drilled':
+            outcome = 'rolled back to the previous release and restored its update unit; integrations resumed'
         elif state == 'rolled back':
             outcome = 'rolled back to the previous release; integrations stay paused until resume-integrations'
         elif unit is None:
@@ -311,6 +313,10 @@ def deploy(root, version, allow_database_upgrade=False, drill=False, runtime_for
                 command = (str(release / 'ctc-manager') + ' --directory ' + str(root) + ' restore --unit ' + str(unit)
                            + ('' if (previous / 'lib/rollout.py').is_file() else ' --legacy-release'))
                 raise DeployFailed(step, error, 'stopped', command, failure) from error
+            if drill and not outbound:
+                switch_release(root, previous, outbound_paused=False)
+                runtime_for(root, previous).compose(['up', '-d', '--wait', '--wait-timeout', '180', 'app'])
+                raise DeployFailed(step, error, 'drilled') from error
             raise DeployFailed(step, error, 'rolled back') from error
         result = {'deployed': version, 'unit': str(unit)}
         try:

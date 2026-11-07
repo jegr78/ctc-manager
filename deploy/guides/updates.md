@@ -35,7 +35,7 @@ Ctrl-C and `SIGTERM` reach the rollback. `SIGHUP` is ignored, so a dropped SSH s
 ~/.local/bin/ctc-manager deploy VERSION --drill-rollback
 ```
 
-The drill runs every step with the running version, then treats health as failed and restores the update unit it just wrote. It proves rollback and in-place restore on the box. Integrations stay paused afterwards until `resume-integrations`.
+The drill runs every step with the running version, then treats health as failed and restores the update unit it just wrote. It proves rollback and in-place restore on the box. Because nothing unknown happened, it then restores the previous `outboundPaused` value.
 
 ## first switch from 1.51.0
 
