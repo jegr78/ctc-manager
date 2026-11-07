@@ -17,6 +17,8 @@ from release import EXECUTABLES, MAX_ARCHIVE, verify
 
 REPOSITORY = 'jegr78/ctc-manager'
 UNIT_ROOT = Path('/mnt/backup/ctc-manager/units')
+# Bind-mounted into the phpMyAdmin container, whose web user is not the file owner.
+CONTAINER_READABLE = {'phpmyadmin/config.user.inc.php'}
 HISTORY = ("SELECT JSON_OBJECT('rank',installed_rank,'version',version,'checksum',checksum,'success',success) "
            "FROM flyway_schema_history ORDER BY installed_rank;")
 
@@ -201,7 +203,7 @@ def obtain(root, version, fetch):
                 with path.open('xb') as output:
                     output.write(archive.extractfile(member).read())
                     os.fsync(output.fileno())
-                path.chmod(0o700 if str(relative) in EXECUTABLES else 0o600)
+                path.chmod(0o700 if str(relative) in EXECUTABLES else 0o644 if str(relative) in CONTAINER_READABLE else 0o600)
         if installed_release(extracted) != manifest:
             raise ValueError('extracted release identity differs')
         for directory in sorted([p for p in extracted.rglob('*') if p.is_dir()], key=lambda p: len(p.parts), reverse=True):

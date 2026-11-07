@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 import shutil
@@ -566,3 +567,29 @@ class DeployHostFilesTest(RolloutCase):
             self.deploy('1.52.0')
         self.assertEqual('old unit', (units / 'ctc-manager-backup.service').read_text())
         self.assertEqual('1.51.0', self.current())
+
+
+class ObtainTest(RolloutCase):
+    def test_obtain_verifies_and_extracts_with_runtime_modes(self):
+        output = self.base / 'dist-obtain'
+        subprocess.run(['python3', str(ROOT / 'scripts/ci/deployment-bundle.py'), 'create', '--version', '1.52.0',
+                        '--app-digest', 'sha256:' + 'b' * 64, '--database-digest', DATABASE.split('@')[1],
+                        '--output', str(output)], check=True, capture_output=True)
+        name = 'ctc-manager-deployment-1.52.0.tar.gz'
+        archive = (output / name).read_bytes()
+        checksum = hashlib.sha256(archive).hexdigest() + '  ' + name + '\n'
+        files = {name: archive, name + '.sha256': checksum.encode()}
+        release = rollout.obtain(self.root, '1.52.0', lambda url, limit=0: files[url.rsplit('/', 1)[1]])
+        self.assertEqual(self.root / 'releases/1.52.0', release)
+        mode = lambda relative: (release / relative).stat().st_mode & 0o777
+        self.assertEqual(0o700, mode('ctc-manager'))
+        self.assertEqual(0o700, mode('phpmyadmin/start.sh'))
+        self.assertEqual(0o600, mode('lib/rollout.py'))
+        self.assertEqual(0o644, mode('phpmyadmin/config.user.inc.php'), 'the phpMyAdmin container reads it through a bind mount')
+
+    def test_obtain_rejects_a_wrong_checksum(self):
+        files = {'ctc-manager-deployment-1.52.0.tar.gz': b'x',
+                 'ctc-manager-deployment-1.52.0.tar.gz.sha256': ('0' * 64 + '  ctc-manager-deployment-1.52.0.tar.gz\n').encode()}
+        with self.assertRaisesRegex(ValueError, 'checksum'):
+            rollout.obtain(self.root, '1.52.0', lambda url, limit=0: files[url.rsplit('/', 1)[1]])
+        self.assertFalse((self.root / 'releases/1.52.0').exists())

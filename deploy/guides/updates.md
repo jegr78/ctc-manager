@@ -39,7 +39,7 @@ The drill runs every step with the running version and then treats health as fai
 
 ## first switch from 1.51.0
 
-Release 1.51.0 has no `deploy`. Run the new launcher once by hand as `ctc-manager`:
+Release 1.51.0 has no `deploy`. Its backup drop-ins restart phpMyAdmin after the nightly run, so do not run the first switch between 03:30 and 04:30. Run the new launcher once by hand as `ctc-manager`:
 
 ```sh
 V=1.53.0
