@@ -3,6 +3,7 @@ import contextlib
 import hashlib
 import importlib.util
 import os
+import subprocess
 import json
 from pathlib import Path
 import tempfile
@@ -143,6 +144,29 @@ class PartitionTests(unittest.TestCase):
         for key in children:
             if key != 'changes': children[key]['result'] = 'skipped'
         self.assertFalse(self.module.require_jobs(children))
+
+    def test_identity_requires_clean_tracked_and_untracked_source_but_allows_build_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            previous = Path.cwd(); os.chdir(directory)
+            try:
+                subprocess.run(['git', 'init', '-q'], check=True)
+                Path('.gitignore').write_text('target/\n')
+                Path('template.html').write_text('reviewed source')
+                subprocess.run(['git', 'add', '.gitignore', 'template.html'], check=True)
+                subprocess.run(['git', '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                                '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null',
+                                'commit', '-qm', 'synthetic source'], check=True)
+                Path('target/classes').mkdir(parents=True); Path('target/classes/Example.class').write_bytes(b'compiled')
+                baseline = self.module.identity()
+                Path('target/diagnostic.log').write_text('ignored build output')
+                self.assertEqual(self.module.identity(), baseline)
+                Path('template.html').write_text('different unreviewed template')
+                with self.assertRaises(ValueError): self.module.identity()
+                Path('template.html').write_text('reviewed source')
+                Path('untracked-template.html').write_text('unreviewed source')
+                with self.assertRaises(ValueError): self.module.identity()
+            finally:
+                os.chdir(previous)
 
     def test_class_identity_changes_when_a_shared_bytecode_file_changes(self):
         with tempfile.TemporaryDirectory() as directory:

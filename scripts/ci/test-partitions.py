@@ -123,6 +123,8 @@ def classes_hash(root):
 
 
 def identity():
+    if subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=all'], text=True).strip():
+        raise ValueError('CI evidence requires clean committed source')
     return dict(source=subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
                 tree=subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip(),
                 classes=classes_hash(Path('target')), run=os.environ.get('GITHUB_RUN_ID', 'local'),
