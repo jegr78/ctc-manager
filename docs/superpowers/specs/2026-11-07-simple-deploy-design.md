@@ -8,7 +8,7 @@ Delivery is one pull request.
 
 ## Release
 
-`release.yml` keeps its trigger after `CI` and `CodeQL SAST` and keeps `release-gate.sh` unchanged. The release job reuses the image and JAR that `ci.yml` built and tested for the same commit instead of running `./mvnw verify` again, so each `master` commit is tested once.
+`release.yml` keeps its trigger after `CI` and `CodeQL SAST` and keeps `release-gate.sh` unchanged. The release job builds JAR and image with the release version but skips the tests (`./mvnw package -DskipTests`), because `ci.yml` already tested the same commit. CI artifacts are not reused: they carry the snapshot version, and a docs-only tip commit has no CI build.
 
 The version follows the conventional commits since the last `vX.Y.Z` tag, the same rule as CLR:
 
@@ -58,7 +58,7 @@ On failure before step 4 nothing changes. From step 4 on the deploy rolls back b
 
 ## Backups and restore
 
-Nightly units keep their full isolated restore proof, including credentials and a graphic render. Update units use the same format and location without the proof. `restore --unit UNIT` works in place: stop the app, drop the database and data volumes, restore dump, data and secrets from the unit, start the release that wrote the unit, wait for health. The `--confirm` string goes away. Outbound integrations stay paused after a restore until `resume-integrations`. The uploads directory keeps sharing a volume with the recovery archives.
+Nightly units keep their full isolated restore proof, including credentials and a graphic render. Update units use the same format and location without the proof; their directory name starts with `recovery-update-`, because the unit manifest has an exact field set that older tools validate. `restore --unit UNIT` works in place: stop the app, drop the database and data volumes, restore dump, data and secrets from the unit, start the release that wrote the unit, wait for health. The `--confirm` string goes away. Outbound integrations stay paused after a restore until `resume-integrations`. The uploads directory keeps sharing a volume with the recovery archives.
 
 ## What goes
 
@@ -68,7 +68,7 @@ Nightly units keep their full isolated restore proof, including credentials and 
 - Mac migration: `migrate-from-mac.sh`, `deploy/lib/migration.py`, `state/production-authority.json` and the cutover commands
 - the coupling of `publication.py` to the generation
 
-Remaining commands: `deploy`, `backup`, `restore --unit UNIT`, `resume-integrations`, `status`, `doctor`, `up`, `stop`, `publish-site`. The nightly timer runs `backup`, which writes, proves and prunes.
+Remaining commands: `deploy`, `backup`, `restore --unit UNIT`, `resume-integrations`, `status`, `doctor`, `up`, `stop`, `publish-site`. The nightly timer runs `backup`, which writes, proves and prunes; the old raw `backup` capture and the `maintenance` name go. `resume-integrations` keeps its `--confirm` check.
 
 ## Conversion of the running box
 
