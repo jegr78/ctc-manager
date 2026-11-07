@@ -48,3 +48,9 @@ Record source SHA, host/runner, dependency-cache state, suite counts, context/co
 ## Workflow regression tests
 
 `python3 -m unittest discover -s scripts/tests -p test_feedback_workflow.py` uses temporary Git repositories and a fake Maven executable that emits controlled real XML. It covers deferred failures, later-phase masking, stale artifacts, process failure/interruption, empty/skipped/malformed reports, canonical modes/gates, literal selectors, changed source and concurrent helper admission. `FocusedVerificationWorkflowTest` runs this fixture suite in the normal Maven unit lifecycle. These fixtures use no live application, network service or owner database.
+
+## Measured focused examples
+
+The workflow itself was exercised on Linux with 8 logical CPUs, 15 GiB RAM, warm Maven dependencies and preinstalled Chromium. The final unit harness on `4faa50d2` passed all 19 Python workflow fixtures through one ordinary Maven unit test in 28.064 s. A browser example on `3ab2665e` ran `TimeProgressionE2ETest`, associated `TyrePersistenceIT` and six seeder/cache-marker unit cases. All 6 unit, 11 H2 integration and 1 real Chromium case passed without failures/errors/skips in 1:31 Maven time. That command used `browser TimeProgressionE2ETest --unit DevDataSeederTest,ContextLoadCountListenerTest --integration TyrePersistenceIT --offline` plus the local Maven repository path.
+
+The same helper also verified the two-mode startup comparison recorded in [Test startup overhead](test-startup-overhead.md), retaining all 6 unit and 22 H2/MariaDB cases. These are focused examples, not complete verification timings. The recorded commands, fresh XML and source identities distinguish their scope; final CI remains required.
