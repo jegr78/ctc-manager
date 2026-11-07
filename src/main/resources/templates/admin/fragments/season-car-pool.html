@@ -22,7 +22,7 @@
     <div th:if="${season.carPoolMode.name() == 'CATEGORY_POOL'}">
         <h3 th:text="${poolPreview.frozen ? 'Frozen category pool' : 'Draft category pool'}">Category pool</h3>
         <p th:if="${!poolPreview.frozen}">Conditions within a clause must all match. A car may match any clause in an entry. Review the local preview, then freeze the complete pool.</p>
-        <p th:if="${poolPreview.frozen}">Membership, labels and clauses are frozen. Later catalog changes do not change this snapshot. Reopening is allowed only before any race uses an entry.</p>
+        <p th:if="${poolPreview.frozen}">Existing membership, labels and clauses are frozen. Add new entries below to expand the pool. Reopening is allowed only before any race or pick history uses the pool.</p>
         <ul class="field-error" th:if="${!poolPreview.problems.isEmpty()}" id="pool-problems">
             <li th:each="problem : ${poolPreview.problems}" th:text="${problem}"></li>
         </ul>
