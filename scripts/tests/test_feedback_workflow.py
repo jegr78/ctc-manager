@@ -161,6 +161,25 @@ class FeedbackWorkflowTest(unittest.TestCase):
         self.assertTrue(all(count["tests"]>0 for count in record["totals"].values()))
         self.assertEqual(record["gates"],{"lineCoveragePercent":90.0,"spotbugsBugs":0})
 
+    def test_focused_modes_bound_test_workers_without_changing_full_verification(self):
+        for arguments in [("unit", "ExampleTest"),
+                          ("integration", "ExampleIT", "--unit", "ExampleTest"),
+                          ("browser", "ExampleE2ETest", "--unit", "ExampleTest")]:
+            with self.subTest(mode=arguments[0]):
+                result = self.run_cli(*arguments)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                command = json.loads((self.root / "target/command.json").read_text())
+                self.assertIn("-Dctc.test.forks=1", command)
+                self.assertIn("-Dtest=ExampleTest", command)
+
+    def test_focused_integration_and_browser_require_explicit_associated_units(self):
+        for mode, selector in [("integration", "ExampleIT"), ("browser", "ExampleE2ETest")]:
+            with self.subTest(mode=mode):
+                result = self.run_cli(mode, selector)
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn("--unit", result.stderr)
+                self.assertFalse((self.root / "target/command.json").exists())
+
     def test_full_mode_rejects_focused_filters_dirty_source_and_missing_gates(self):
         for arguments in [("full","ExampleTest"),("full","--unit","ExampleTest"),("full","-DskipTests")]:
             result=self.run_cli(*arguments)

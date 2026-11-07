@@ -205,8 +205,8 @@ history and skips unsafe aggregate comparisons.
 # Development with GT7 demo data (cars, tracks, images)
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,demo
 
-# Run tests
-./mvnw verify
+# Local feedback for the changed behavior; complete verification runs in CI
+./scripts/test-feedback.py unit PickDeadlinePolicyTest
 
 # Docker (App + MariaDB, port 8080)
 docker compose up --build -d
@@ -365,7 +365,7 @@ MariaDB integration tests require Docker and `-Ddocker.available=true`; CI enabl
 
 Automated Maven tests retain seeded fixture data but disable the incidental website render at every application startup with `app.seed.generate-site=false`. Normal dev startup keeps its existing default. Explicit generation tests still render the real website. Per-fork initialization/cache counters are included in CI test artifacts. See [test startup measurements](docs/test-startup-overhead.md) for evidence and lifecycle boundaries.
 
-For edit loops, use `scripts/test-feedback.py` with explicit unit, integration or browser selectors. It rejects deferred Failsafe failures and stale reports, records source identities and labels focused evidence. Full mode retains the complete canonical lifecycle and gates. See [local verification](docs/local-verification.md).
+The shared Box uses CI-first verification: run only bounded focused checks locally. `scripts/test-feedback.py` uses one test fork and explicit unit, integration or browser selectors; integration/browser modes require associated `--unit` tests. It rejects deferred Failsafe failures and stale reports, records source identities and labels focused evidence. Complete exact-head CI retains every test and coverage/security gate. Do not start routine local full builds or alter the separate CPU/RAM-limit setup. Full mode remains available for an explicit request or an agreed resource-qualified environment. See [local verification](docs/local-verification.md).
 
 ## Dependency and security checks
 

@@ -1,5 +1,7 @@
 # Test performance
 
+Current shared-Box policy is CI-first: use bounded focused checks locally and complete exact-head CI for finalization. Full-run profiling recipes below are historical or explicitly scheduled measurements, not a requirement for every change. Respect the separately installed CPU/RAM limits. See [local verification](local-verification.md).
+
 ## Current fixture-isolation work
 
 The 2026-11 build-performance initiative is tracked in #369, with fixture isolation in #366. Complete measured verification took approximately 72 minutes locally and 25–39 minutes in two successful CI jobs. The 86-case `SiteGeneratorServiceTest` accounted for 1,057.691 seconds locally and 538.58 seconds in the inspected CI report. These are observations from specific revisions and environments, not comparable-run medians or guarantees.
@@ -8,7 +10,7 @@ That suite is now `SiteGeneratorFixtureIsolationIT`, routed through Failsafe wit
 
 Each scenario tracks the records it creates, removes its phase-team references and season graphs, handles shared scorings and parent/subteam references, cleans newly allocated slugs, and restores original active-season flags, timestamps, output/upload paths and configured links. An independent JUnit after-each callback checks the actual database and singleton state, so forgetting the cleanup annotation cannot silently reintroduce accumulated fixtures. JUnit owns temporary upload directories. Fixtures stay committed so production slug allocation in its separate transaction sees them.
 
-Run final verification with `./mvnw clean verify -Pe2e -Ddocker.available=true`. Keep its complete test inventory, coverage and security gates. Focused measurements and the final before/after comparison belong to the implementation PR; do not compare a focused class runtime with an entire build or infer aggregate savings from summed parallel XML durations.
+CI provides complete final verification with the unchanged inventory, coverage and security gates. The equivalent full local command `./mvnw clean verify -Pe2e -Ddocker.available=true` is only for an explicit request or resource-qualified environment, not routine Box work. Focused measurements and the final before/after comparison belong to the implementation PR; do not compare a focused class runtime with an entire build or infer aggregate savings from summed parallel XML durations.
 
 ## Historical baselines
 

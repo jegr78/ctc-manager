@@ -1,10 +1,12 @@
 # Test startup overhead
 
+These controlled measurements are not routine Box work. The owner's CI-first policy uses focused local checks and complete exact-head CI; preserve the separate CPU/RAM-limit setup. Full/CI fork counts remain unchanged, while focused feedback requests one fork.
+
 ## Automatic rendering
 
 Normal development startup seeds the fixture and renders its website. `app.seed.generate-site` defaults to `true`, preserving this behavior. Surefire, ordinary Failsafe and browser-test JVMs explicitly set it to `false`. Test fixtures and guest validation still run; only the automatic startup render is omitted. Explicit site-generation, publication and browser scenarios continue to call the real generator. The existing `app.seed.generate-team-cards=false` setting is unchanged.
 
-For an intentional startup-render check, pass `-Dapp.seed.generate-site=true` to the normal Maven lifecycle. Read back the property and actual `Site generated` log before comparing timing. Full final verification remains `./mvnw clean verify -Pe2e -Ddocker.available=true`; no tests, database cases, coverage or security gates are skipped.
+For an intentional startup-render check, pass `-Dapp.seed.generate-site=true` to the normal Maven lifecycle. Read back the property and actual `Site generated` log before comparing timing. CI performs complete final verification; the equivalent explicitly requested local command remains `./mvnw clean verify -Pe2e -Ddocker.available=true`. No tests, database cases, coverage or security gates are skipped.
 
 ## Measurements
 

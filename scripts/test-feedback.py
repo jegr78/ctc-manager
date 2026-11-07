@@ -129,7 +129,7 @@ def arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=["unit", "integration", "browser", "full"])
     parser.add_argument("selector", nargs="?")
-    parser.add_argument("--unit", help="Associated unit selector; otherwise all units run")
+    parser.add_argument("--unit", help="Required associated unit selector for integration/browser feedback")
     parser.add_argument("--integration", help="Associated integration selector in browser mode")
     parser.add_argument("--docker", action="store_true", help="Enable real MariaDB cases")
     parser.add_argument("--offline", action="store_true", help="Require a warm dependency cache")
@@ -143,6 +143,8 @@ def arguments():
         parser.error("full mode does not accept focused selectors")
     if args.mode != "full" and not args.selector:
         parser.error("a focused selector is required")
+    if args.mode in {"integration", "browser"} and not args.unit:
+        parser.error("focused integration/browser checks require --unit with associated unit tests")
     if args.mode != "browser" and args.integration:
         parser.error("--integration belongs to browser mode")
     if args.mode == "unit" and args.unit:
@@ -168,6 +170,8 @@ def command_for(args):
             command += ["-Dtest=" + args.unit]
     if args.docker and args.mode != "full":
         command += ["-Ddocker.available=true"]
+    if args.mode != "full":
+        command += ["-Dctc.test.forks=1"]
     command += ["--no-transfer-progress"]
     if args.offline:
         command += ["--offline"]
@@ -290,7 +294,7 @@ def run(args, output):
         record["passed"] = True
         print(json.dumps(dict(scope=args.mode, totals=totals, passed=True)), flush=True)
         if args.mode != "full":
-            print("Focused evidence only. Finalization requires reviewed clean verify -Pe2e and green CI.")
+            print("Focused evidence only. Finalization requires complete reviewed exact-head CI.")
         else:
             print("Canonical local evidence complete. Exact-head reviewed CI is still required before merge.")
         return 0

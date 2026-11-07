@@ -1,6 +1,6 @@
 # CI test partitions
 
-The local canonical command remains `./mvnw clean verify -Pe2e -Ddocker.available=true`. CI distributes the same test inventory. A passing selected partition is not a complete verification result.
+Complete CI is the merge verification authority. The shared Box runs bounded focused checks, not routine full builds. The opt-in full command remains `./mvnw clean verify -Pe2e -Ddocker.available=true`; CI distributes the same test inventory. A passing selected partition is not a complete verification result.
 
 ## Inventory and ownership
 
