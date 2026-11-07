@@ -78,9 +78,12 @@ def require_reports(root):
         for path in paths:
             suite = ET.parse(path).getroot()
             counts = {key: int(suite.get(key, '0')) for key in ['tests', 'failures', 'errors', 'skipped']}
-            if suite.tag != 'testsuite' or counts['tests'] <= 0 or any(counts[key] for key in ['failures', 'errors', 'skipped']):
-                raise ValueError('Failed, skipped or empty test report: ' + path.name)
-            total += counts['tests']
+            cases = suite.findall('testcase')
+            if (suite.tag != 'testsuite' or not cases or any(value < 0 for value in counts.values())
+                    or counts['tests'] > len(cases) or any(counts[key] for key in ['failures', 'errors', 'skipped'])
+                    or any(case.find(key) is not None for case in cases for key in ['failure', 'error', 'skipped'])):
+                raise ValueError('Failed, skipped, incomplete or empty test report: ' + path.name)
+            total += len(cases)
         for path in root.glob('failsafe-reports/failsafe-summary*.xml'):
             summary = ET.parse(path).getroot()
             if summary.tag != 'failsafe-summary' or summary.get('result') not in [None, '0', 'null'] or summary.get('timeout') not in [None, 'false']:
@@ -169,6 +172,8 @@ def receipt(group):
     require_events(data['groups'][group], events)
     total = require_reports(Path('target'))
     executed = sum(test for _, _, test, _ in events)
+    if total != executed:
+        raise ValueError('Execution events and XML cases differ')
     coverage = Path('target/jacoco.exec')
     if not coverage.is_file() or not coverage.stat().st_size:
         raise ValueError('Missing coverage execution data')
@@ -191,7 +196,7 @@ def aggregate(directory):
         events = read_events(path)
         require_events(data['groups'][group], events)
         count = require_reports(path)
-        if count != receipts[group]['xmlTests'] or receipts[group]['tests'] != sum(test for _, _, test, _ in events):
+        if count != receipts[group]['xmlTests'] or count != receipts[group]['tests'] or count != sum(test for _, _, test, _ in events):
             raise ValueError('Worker report totals differ')
         tests = {uid for _, _, test, uid in events if test}
         if seen & tests:

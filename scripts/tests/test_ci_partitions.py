@@ -84,10 +84,10 @@ class PartitionTests(unittest.TestCase):
             path = reports / 'TEST-CoreTest.xml'
             for attrs in ['tests="0"', 'tests="1" failures="1"', 'tests="1" errors="1"',
                           'tests="1" skipped="1"', 'not xml']:
-                path.write_text('<testsuite '+attrs+'/>' if attrs != 'not xml' else attrs)
+                path.write_text(('<testsuite '+attrs+'>'+('' if attrs == 'tests="0"' else '<testcase name="case"/>')+'</testsuite>') if attrs != 'not xml' else attrs)
                 with self.subTest(attrs=attrs), self.assertRaises(ValueError):
                     self.module.require_reports(root)
-            path.write_text('<testsuite tests="1" failures="0" errors="0" skipped="0"/>')
+            path.write_text('<testsuite tests="1" failures="0" errors="0" skipped="0"><testcase name="case"/></testsuite>')
             self.assertEqual(self.module.require_reports(root), 1)
             failsafe = root / 'failsafe-reports'
             failsafe.mkdir()
@@ -95,10 +95,21 @@ class PartitionTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.module.require_reports(root)
 
+    def test_actual_nested_cases_and_case_level_failures_override_header_undercounts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); reports = root / 'surefire-reports'; reports.mkdir()
+            path = reports / 'TEST-Nested.xml'
+            raw = '<testsuite tests="1" failures="0" errors="0" skipped="0"><testcase name="same" classname="H2"/><testcase name="same" classname="MariaDb"/></testsuite>'
+            path.write_text(raw)
+            self.assertEqual(self.module.require_reports(root), 2)
+            for status in ['failure', 'error', 'skipped']:
+                path.write_text(raw.replace('<testcase name="same" classname="H2"/>', '<testcase name="same" classname="H2"><'+status+'/></testcase>'))
+                with self.subTest(status=status), self.assertRaises(ValueError): self.module.require_reports(root)
+
     def test_real_failsafe_success_and_independent_failure_signals(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory); reports = root / 'failsafe-reports'; reports.mkdir()
-            (reports / 'TEST-Example.xml').write_text('<testsuite tests="22" failures="0" errors="0" skipped="0"/>')
+            (reports / 'TEST-Example.xml').write_text('<testsuite tests="22" failures="0" errors="0" skipped="0">'+''.join('<testcase name="case'+str(i)+'"/>' for i in range(22))+'</testsuite>')
             path = reports / 'failsafe-summary.xml'
             success = ('<failsafe-summary xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" result="null" timeout="false">'
                        '<completed>22</completed><errors>0</errors><failures>0</failures><skipped>0</skipped>'
@@ -160,7 +171,7 @@ class PartitionTests(unittest.TestCase):
                     events = ''.join(member['name']+'\tSUCCESSFUL\ttrue\t'+base64.b64encode(node['id'].encode()).decode()+'\n'
                         for member in members for node in member['nodes'])
                     (artifact / 'test-perf/ci-events-1.tsv').write_text(events)
-                    (artifact / 'surefire-reports/TEST-Example.xml').write_text('<testsuite tests="'+str(len(members))+'"/>')
+                    (artifact / 'surefire-reports/TEST-Example.xml').write_text('<testsuite tests="'+str(len(members))+'">'+''.join('<testcase name="case'+str(i)+'"/>' for i in range(len(members)))+'</testsuite>')
                     coverage = ('synthetic coverage '+group).encode()
                     (artifact / 'jacoco.exec').write_bytes(coverage)
                     (artifact / 'receipt.json').write_text(json.dumps(dict(identity=identity, group=group,
@@ -170,7 +181,8 @@ class PartitionTests(unittest.TestCase):
                 self.assertEqual(len(list((root / 'ci-coverage').glob('*.exec'))), 4)
                 artifact = artifacts / 'test-partition-browser'
                 for name, replacement in [('jacoco.exec', b'corrupt'), ('test-perf/ci-events-1.tsv', b''),
-                                          ('surefire-reports/TEST-Example.xml', b'<testsuite tests="5"/>')]:
+                                          ('surefire-reports/TEST-Example.xml', b'<testsuite tests="5"><testcase name="case0"/></testsuite>'),
+                                          ('surefire-reports/TEST-Example.xml', b'<testsuite tests="2"><testcase name="case0"/><testcase name="case1"/></testsuite>')]:
                     path = artifact / name; original = path.read_bytes(); path.write_bytes(replacement)
                     with self.subTest(name=name), self.assertRaises(ValueError):
                         self.module.aggregate(artifacts)
