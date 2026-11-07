@@ -269,18 +269,12 @@ CTC app and MariaDB under a dedicated rootless Docker user. It pins images by di
 only loopback port 9092 and validates private configuration before operating the stack.
 Release assets include a deployment archive and checksum inventory. This recipe is separate
 from the existing local and external-database Compose files. Host provisioning, backups and
-updates use verified release bundles. The real Mac data has migrated to the Box, which is now
-authoritative. Keep the native Mac app stopped.
-Complete recovery units and isolated restore checks are documented in
-[the recovery guide](deploy/guides/recovery.md). Restore probes retain production authentication,
-force integrations off and use independent storage without a host port. Historical images need
-explicit supported recovery capability before automatic full checks.
-Use [the update guide](deploy/guides/updates.md) for exact release selection, pre-update recovery
-proof and failure handling after possible schema migrations.
-
-The [native Mac migration guide](deploy/guides/migration.md) preserves the original export,
-rehearses target schema changes in isolated storage and records the single-writer cutover.
-The private Manager remains a single-admin application.
+updates use verified release bundles. The Box is authoritative; the retired Mac app stays stopped.
+Recovery units and in-place restore are documented in [the recovery guide](deploy/guides/recovery.md).
+Nightly restore proofs retain production authentication, force integrations off and publish no
+host port. [The deploy guide](deploy/guides/updates.md) describes `ctc-manager deploy`, which
+writes an update unit, starts the release and rolls back by itself on failure. A release never
+deploys on its own. The private Manager remains a single-admin application.
 
 ### Docker
 

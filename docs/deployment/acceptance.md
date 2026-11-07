@@ -1,5 +1,7 @@
 # Private deployment acceptance
 
+This record documents the acceptance of the generation-based tooling. Since [ADR 0001](../adr/0001-in-place-deploy.md), `deploy`, `backup` and `restore --unit` replace `update`, `maintenance` and the Mac migration; the measurements below stay as evidence.
+
 Parent #294. Final operational issue #301. This records measured acceptance, not a recovery SLA.
 
 ## Installation and authority

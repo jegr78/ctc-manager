@@ -1,70 +1,55 @@
-# exact release updates
+# Deploying a release
 
-Choose an explicit released version after reading its release notes and this guide. Ordinary
-updates preserve the selected persistent volumes and secret paths. They reject downgrades,
-application UID changes and MariaDB major changes. Those require a separate migration plan.
-
-The update coordinator downloads the deployment bundle and checksum from the exact GitHub release
-in `jegr78/ctc-manager`, validates its complete inventory, checks the upgrade contract and pulls
-immutable images before stopping the application. Staging never selects a new running version.
-
-The coordinator holds the installation lock, stops the app, captures a complete recovery unit and
-proves that unit in isolation. The app stays stopped throughout capture, proof and activation.
-An error before activation resumes only the unchanged source instance and its prior running state.
-Once the candidate may have run migrations, an error requires complete recovery into separate
-storage. The coordinator never starts the previous application on the possibly changed database.
-
-## operator commands
-
-Run as `ctc-manager` with its private rootless Docker socket and `XDG_RUNTIME_DIR`.
-Choose a newer explicit version supported by its `upgrade.json` minimum source version.
-Create an initial complete backup first. It assigns the installation's canonical UUID if one is
-missing. Update checks reject a missing or malformed identity before staging or downtime.
+A merge to `master` creates a release when the commits since the last tag contain a `feat`, `fix`, `perf`, `chore(deps)` or breaking change. A release never reaches the box by itself. The operator deploys it:
 
 ```sh
-/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager update-check --release <version>
-/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager update --release <version>
+~/.local/bin/ctc-manager deploy [VERSION|latest]
 ```
 
-`update-check` stages and verifies the release, notes, recovery capability, database major and
-application UID. It pulls exact images and reports `ready`, the selected digests and private notes
-path. It does not switch `current`, edit the installation configuration or stop the source app.
-Read the candidate notes and its GitHub release page before starting the planned outage.
+Run it as `ctc-manager` on the box, for example `ssh cachyos-ctc ~/.local/bin/ctc-manager deploy 1.53.0`. Read the release notes on GitHub first.
 
-The first installation predating these commands needs the verified released management bundle
-installed under `releases/<version>` first. Run that trusted bundle's launcher with the same
-`--directory` and `update` command. It reads the current source release independently. Do not execute
-management tools from a recovery unit. A future unsupported inventory likewise requires reviewed
-matching management tools instead of bypassing checksum or compatibility checks.
+## steps
 
-`update` rechecks the candidate and source under the shared installation lock. It requires the
-expected host backup device and a private `/mnt/backup/ctc-manager/units` destination. The command
-records the old/new app and database digests, pre-update unit and operation phases. It starts the
-candidate with integrations paused, waits for health and checks the selected runtime before
-restoring the prior integration setting. An originally paused instance stays paused. An originally
-stopped instance returns to stopped after its health proof. Volumes and secret paths remain selected.
+The command holds the installation lock and waits up to 16 minutes for a running backup.
 
-## failures and interruption
+1. It checks the backup device, downloads bundle and checksum from the GitHub release in `jegr78/ctc-manager`, verifies both and extracts the bundle to `/srv/ctc-manager/releases/VERSION`.
+2. It refuses a version that is not newer than the running one, a source older than `minimumSourceVersion` in the new `upgrade.json`, an app image with a different UID and, without `--allow-database-upgrade`, a different MariaDB major version. It pulls the pinned images.
+3. It records `flyway_schema_history`, stops phpMyAdmin if it runs, stops the app and writes an update unit `recovery-update-*` to `/mnt/backup/ctc-manager/units`.
+4. It pauses outbound integrations, points `installation.json` and `current` at the new release and starts it. Flyway migrates during startup.
+5. Once Compose reports the stack healthy within 180 seconds, it installs the release's systemd units, the phpMyAdmin unit and `~/.local/bin/ctc-manager`, reloads the user manager and restores the previous `outboundPaused` value.
+6. It starts phpMyAdmin again if it ran before and deletes the state of the generation era.
 
-`state/update.json` describes `prepared`, `freezing`, `capturing-held`, `proving-held`, `activating`,
-`healthy-integrations-paused` and `completed`. A normal error before activation produces
-`failed-before-activation` only after the unchanged source resumes its prior state. A failed resume
-or changed source produces `failed-review-required`. Diagnose it before another update.
+A failure in steps 1 or 2 changes nothing. From step 3 on the command rolls back by itself. If the Flyway history or the database image changed, it restores the update unit in place, otherwise it starts the previous release on the unchanged database. Host files installed in step 5 return to their previous content. Integrations stay paused after a rollback until `resume-integrations`.
 
-`failed-recovery-required` means the candidate may have changed the schema. The coordinator pauses
-and stops its app, preserves the candidate selection and names the exact complete recovery unit.
-Inspect private diagnostics, then use the current trusted management launcher's `restore` command from
-[recovery.md](recovery.md) with a fresh independent storage generation. Keep the old volumes.
-The launcher verifies and selects the installed source release named by the unit. Recovery switches
-`current` to that matching release too. It never executes the release evidence inside the unit.
-Reconcile the update receipt only after the restored authoritative instance has passed its checks.
+If the rollback fails too, the app stays stopped and the error names the recovery command:
 
-A terminated command retains its installation lock and interrupted operation journal. Inspect the
-recorded owner, child processes, selected configuration, `current`, app/database state and the
-update phase. Do not delete a lock or repeat an ambiguous activation based only on a dead PID.
-The coordinator refuses unresolved updates rather than guessing whether migrations ran.
+```sh
+~/.local/bin/ctc-manager restore --unit /mnt/backup/ctc-manager/units/recovery-update-...
+```
 
-`state/protected-recovery.json` binds the latest pre-update unit to its manifest checksum.
-`previousUnits` retains earlier protected units until the new proof passes. Maintenance must keep
-these paths and every unresolved update's recovery path. A failed backup or proof never licenses
-pruning. These receipts stay outside the sealed units. No timer upgrades the app automatically.
+Ctrl-C and `SIGTERM` reach the rollback. `SIGHUP` is ignored, so a dropped SSH session does not interrupt it. Docker output goes to `/srv/ctc-manager/state/deploy.log`.
+
+## rollback drill
+
+```sh
+~/.local/bin/ctc-manager deploy VERSION --drill-rollback
+```
+
+The drill runs every step with the running version and then treats health as failed. It proves that rollback works on the box.
+
+## first switch from 1.51.0
+
+Release 1.51.0 has no `deploy`. Run the new launcher once by hand as `ctc-manager`:
+
+```sh
+V=1.53.0
+work=$(mktemp -d) && cd "$work"
+base=https://github.com/jegr78/ctc-manager/releases/download/v$V
+curl -fsSLO "$base/ctc-manager-deployment-$V.tar.gz"
+curl -fsSLO "$base/ctc-manager-deployment-$V.tar.gz.sha256"
+sha256sum -c "ctc-manager-deployment-$V.tar.gz.sha256"
+tar -xzf "ctc-manager-deployment-$V.tar.gz"
+"./ctc-manager-deployment-$V/ctc-manager" --directory /srv/ctc-manager deploy "$V"
+```
+
+The deploy downloads and verifies the release again into `releases/$V`, so the scratch copy only supplies the code. Remove `$work` afterwards. A rollback during this first deploy returns to 1.51.0 with its units and keeps the legacy state. After success, every later update is the single command.

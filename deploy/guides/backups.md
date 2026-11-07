@@ -1,51 +1,31 @@
 # Local backups
 
-The dedicated `ctc-manager` user stores complete database, files, configuration and credential
-recovery units under `/mnt/backup/ctc-manager/units` on the recorded backup device. No restic
-repository, remote credentials, webhook or backup configuration file is needed.
+The dedicated `ctc-manager` user stores complete recovery units with database, files, configuration and credentials under `/mnt/backup/ctc-manager/units` on the recorded backup device. No restic repository, remote credentials, webhook or backup configuration file is needed.
 
-One daily user service runs at 03:45 Europe/Berlin with up to 15 minutes of random delay.
-`Persistent=true` catches up a missed run. The shared installation lock prevents overlap with
-updates and recovery. Capture briefly stops only CTC, then restores its prior running state.
-The existing isolated restore check verifies the result without external writes or host ports.
+One daily user service runs at 03:45 Europe/Berlin with up to 15 minutes of random delay. `Persistent=true` catches up a missed run. The unit orders itself after the site publisher. The shared installation lock prevents overlap with deploy and restore; `backup` waits up to 16 minutes for it.
 
-## Commands
-
-Run as `ctc-manager` with its rootless Docker environment:
+## commands
 
 ```sh
-/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager maintenance
-/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager doctor
-/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager prune --dry-run
+~/.local/bin/ctc-manager backup
+~/.local/bin/ctc-manager doctor
 ```
 
-Keep the latest backup on each of two distinct days and the first successful backup of the
-newest Berlin calendar month. A monthly stand can also be one of the daily stands. There are
-no weekly stands. A newer manual backup cannot remove the last proven stand before the next
-successful maintenance run. Pending update recovery stays protected until a verified backup of the active
-image exists. Unresolved update units remain protected. Never delete release material here.
+`backup` stops phpMyAdmin if it runs, briefly stops the app, writes a unit, restores the prior app state, proves the unit in an isolated restore and then prunes. It starts phpMyAdmin again afterwards, also after a failure. The proof checks table counts, Flyway history, files, credentials, authentication and a graphic render without host ports or external network.
 
-Failed capture/proof, unknown/corrupt/foreign units or changed recovery references stop pruning.
-Interrupted operations require checking the private journal and lock owner before retrying.
-Do not remove an ambiguous lock or delete unknown backup directories to make a run pass.
+## retention
 
-`state/backups.json` records local completion, its exact isolated proof and the last attempt.
-`doctor` reports missing or stale evidence after 30 hours and checks the expected backup device.
-Failures return nonzero and stay in the local systemd journal. There is no separate alarm service
-or notification delivery.
+Pruning keeps the newest unit, the newest unit on each of two distinct Berlin days, the first unit of the newest Berlin month and the three newest update units `recovery-update-*`. A monthly stand can also be one of the daily stands. Failed capture or proof, unknown or corrupt units stop pruning. Never delete release material here.
 
-## Enable during cutover
+`state/backups.json` records the last completion, its proof and the last attempt. `doctor` reports missing or stale evidence after 30 hours and checks the expected backup device. Failures return nonzero and stay in the local systemd journal. There is no alarm service.
 
-Install only `ctc-manager-backup.service` and `ctc-manager-backup.timer` from the selected
-verified release into `~/.config/systemd/user` for `ctc-manager`:
+## timer
+
+`deploy` installs `ctc-manager-backup.service` and `ctc-manager-backup.timer` from the running release. Check them with:
 
 ```sh
-systemctl --user daemon-reload
-systemctl --user enable --now ctc-manager-backup.timer
 systemctl --user list-timers ctc-manager-backup.timer
 journalctl --user -u ctc-manager-backup.service
 ```
 
-Verify one scheduled invocation, its complete unit and isolated proof. Measure capture time and
-capacity using the real migrated data. Do not alter courtside's services or timers. For recovery,
-use `restore-check` and the independent-storage `restore` procedure in [recovery.md](recovery.md).
+For a restore, see [recovery.md](recovery.md).

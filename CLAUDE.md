@@ -274,18 +274,19 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
   behavior. Keep production-shaped credential/startup tests and the transport guard independent.
 * Recovery tooling lives under `deploy/lib/`. `runtime.py` assembles the shared Compose context;
   sealed units contain no executable recovery tools. Read `deploy/guides/recovery.md` before changing
-  capture, probe ownership, storage-generation or integration-resumption semantics. Run
-  `bash deploy/tests/recovery.sh` plus native MariaDB qualification for affected runtime paths.
+  capture, probe ownership, restore or integration-resumption semantics. `storageGeneration` is a
+  permanent volume prefix; never create a new generation. Run `bash deploy/tests/recovery.sh` plus
+  native MariaDB qualification for affected runtime paths.
   `deploy/tests/native_files.py` exercises private mode-0700 directory restoration and actual
   filesystem-flush failures against the built Docker image. Keep the final data flush under the
   application owner; the extraction helper retains only `CHOWN` capability.
 * Graphics use preinstalled Playwright browsers. `SandboxedHtmlRenderer` disables automatic browser
   downloads before creating the driver, in addition to its existing page-level network restrictions.
-* `deploy/lib/update.py` validates exact released candidates and their upgrade contract. Keep the
-  source app continuously stopped from capture through restore-check and activation. Preserve the
-  selected volume generation and private secret paths. Once activation might migrate the schema,
-  fail paused/stopped with a complete recovery path. Never auto-start the old image. Run
-  `bash deploy/tests/update.sh` and qualify migration/failure paths with real isolated MariaDB.
+* `deploy/lib/rollout.py` holds `deploy`, `restore`, `backup` and the host-file install. A deploy
+  stops the app, writes an update unit and rolls back by itself on any later failure: a changed `flyway_schema_history` or database image restores the unit in place, otherwise it
+  switches back. Integrations stay paused while the release starts and after any rollback or
+  restore. Run `bash deploy/tests/rollout.sh`. See `docs/adr/0001-in-place-deploy.md`.
+* A merge or release never deploys. `ctc-manager deploy` runs only when the operator asks.
 
 ## References
 
@@ -317,7 +318,7 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 
 * **Push/PR to `master`:** Build, Tests, Playwright E2E, JaCoCo Coverage PR comment.
 * **Push `docs/site/**`:** GitHub Pages Deployment.
-* **Release:** `release.yml` runs after each completed `CI` or `CodeQL SAST` run of a master push. `scripts/ci/release-gate.sh` releases the revision only when its latest `ci.yml` and `codeql.yml` push runs succeeded, including the jobs `build-and-test`, `dockerfile-noble-pin-guard`, `docker-build` and `Analyze (java-kotlin)`, and master has not moved past it. It reads workflow runs, not check runs, because any workflow token with `checks: write` can forge a check run. CodeQL therefore analyzes every master push. A rerun of a failed check triggers the release again. A run that stopped after the tag push resumes and creates only the missing parts. `ReleaseScriptsTest` covers the gate and `scripts/ci/release-version.sh`.
+* **Release:** `release.yml` runs after each completed `CI` or `CodeQL SAST` run of a master push. `scripts/ci/release-version.sh` derives the version from the conventional commits since the last tag (breaking major, `feat` minor, `fix`/`perf`/`chore(deps)` patch, anything else no release). The job builds with `-DskipTests`, because CI tested the same commit, and commits nothing to `master`. `scripts/ci/release-gate.sh` releases the revision only when its latest `ci.yml` and `codeql.yml` push runs succeeded, including the jobs `build-and-test`, `dockerfile-noble-pin-guard`, `docker-build` and `Analyze (java-kotlin)`, and master has not moved past it. It reads workflow runs, not check runs, because any workflow token with `checks: write` can forge a check run. CodeQL therefore analyzes every master push. A rerun of a failed check triggers the release again. A run that stopped after the tag push resumes and creates only the missing parts. `ReleaseScriptsTest` covers the gate and `scripts/ci/release-version.sh`.
 * **Docker:** Multi-stage Dockerfile (JDK build, JRE runtime), non-root user `ctc`, healthcheck `/actuator/health`.
 
 ---
@@ -425,14 +426,14 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 ### Permanent production deployment
 
 * Recipe fixtures must remain independent of live host port 9092. Mock the port probe only inside the fixture interpreter and retain its exact loopback-address and refusal-before-Compose assertions. Never disable the production port guard for tests.
-* `deploy/tests/acceptance.sh` runs all existing deployment fixture suites, including native migration, through `DeploymentScriptsTest`. Keep the aggregate fixture-only. Runtime acceptance and operator procedures live in `docs/deployment/acceptance.md` and `deploy/guides/operations.md`.
+* `deploy/tests/acceptance.sh` runs all existing deployment fixture suites through `DeploymentScriptsTest`. Keep the aggregate fixture-only. Runtime acceptance and operator procedures live in `docs/deployment/acceptance.md` and `deploy/guides/operations.md`.
 * The dedicated rootless Docker unit uses notify readiness, child notifications, mixed termination and no inherited stop timeout. Do not signal Docker and its helpers together or force an early database shutdown.
 * The shared Box supplies home LAN DNS through Pi-hole. Routine CTC deployment and testing must not reboot it. Record CTC-only restarts separately from actual host boot evidence.
 
-* `deploy/ctc-manager --directory PATH doctor|status|up|stop` operates the dedicated rootless stack.
+* `deploy/ctc-manager --directory PATH deploy|backup|restore|resume-integrations|doctor|status|up|stop|publish-site` operates the dedicated rootless stack. `deploy` installs `~/.local/bin/ctc-manager`, which fixes `--directory /srv/ctc-manager`, plus the systemd and phpMyAdmin units from `deploy/systemd` and `deploy/phpmyadmin`.
 * Keep installation configuration as private JSON, never source it as shell code. The configured socket must belong to the current user inside its private runtime directory, normally `/run/user/<uid>/`; reject links, non-sockets, rootful Docker and missing memory enforcement.
 * `deploy/compose.yaml` uses authenticated prod, pinned image digests, loopback 9092, no SQL host port and persistent data/log/database volumes. A networkless helper copies private Google credentials into an app-readable read-only volume.
-* Deployment mutations share `.ctc-manager.lock` and journal state. Never remove an ambiguous stale lock or target unrelated projects/ports/volumes.
+* Deployment mutations share `.ctc-manager.lock`; there is no operation journal. Never remove an ambiguous stale lock or target unrelated projects/ports/volumes.
 * `scripts/ci/deployment-bundle.py` creates and validates release material. Extend its exact inventory when adding deployment runtime files. `DeploymentScriptsTest` runs the behavioral recipe/archive tests through Maven. Include deploy changes in CI path detection.
 
 ### Dependency update policy
@@ -449,16 +450,10 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 * Reject subordinate mappings that overlap other allocated ranges or actual host UIDs/GIDs, including numeric CTC owner entries. Keep host memory and expected backup UUID checks fail-closed.
 * Release inventories may grow, but verification must still accept complete supported earlier inventories and reject partial additions. Package host setup, its unit/helper and guide together.
 
-* Scheduled maintenance stays local and uses the existing lock and complete recovery proof.
-  Keep two daily stands and the first successful stand of the newest Berlin calendar month.
-  Pending update recovery remains protected until a verified backup of the active image exists.
-  Use one daily backup service/timer and local journal errors. No off-host requirement, alert hook,
+* The nightly `backup` stays local and uses the existing lock and complete recovery proof.
+  Keep two daily stands, the first successful stand of the newest Berlin calendar month and the
+  three newest `recovery-update-*` units. Use one daily backup service/timer and local journal errors. No off-host requirement, alert hook,
   Discord delivery or separate monitoring service belongs to this single-admin deployment.
-
-### Native Mac migration
-
-* Keep native source provenance separate from the normalized supported recovery unit. An unrecorded source app version is null. Verify an existing observer's global PROCESS visibility and matching database before accepting a source freeze; do not add privileges to make it pass.
-* Initial cutover accepts only the empty paused qualification target and an exact rehearsed source/unit proof. Persist the authority boundary before target HTTP activation. After possible target writes, stop a failed candidate and require complete state-preserving reverse migration, never stale Mac restart.
 
 ### Private Pages publication
 

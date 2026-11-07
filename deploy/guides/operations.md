@@ -1,22 +1,21 @@
 # Operating the private CTC installation
 
-The Box is authoritative. The native Mac application stays stopped. Do not restart it against its old database after the Box can accept writes. A return to the Mac requires a complete reverse migration of the latest Box database, files and private configuration.
+The Box is authoritative. The retired Mac installation stays stopped and has no supported way back.
 
 Run operational commands as the dedicated ctc-manager user with its XDG_RUNTIME_DIR. Do not use the system Docker daemon or the courtside account. The selected release lives at /srv/ctc-manager/current. Configuration, secrets and state stay private under /srv/ctc-manager. Recovery units live on the expected local backup device under /mnt/backup/ctc-manager.
 
 ## Routine operation
 
-For example, from the owner account on the Box:
+Log in as `ctc-manager`, for example `ssh cachyos-ctc`, and use the home launcher:
 
 ```sh
-CTC_RUNTIME_UID=$(id -u ctc-manager)
-sudo -u ctc-manager env XDG_RUNTIME_DIR="/run/user/$CTC_RUNTIME_UID" \
-  /srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager doctor
+~/.local/bin/ctc-manager doctor
+~/.local/bin/ctc-manager status
 ```
 
-Use the same user and runtime directory for `systemctl --user` and the other launcher operations.
+It runs `/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager`. Use the same login for `systemctl --user`.
 
-Use the selected launcher's `status` and `doctor` operations. Check private HTTPS health and authenticated management access. The app binds only 127.0.0.1:9092 and Tailscale Serve exposes its authenticated HTTPS endpoint on 9443. Do not enable Funnel for CTC, reset Serve, or alter courtside 443 and Mailpit 8443.
+Use `status` and `doctor`. Check private HTTPS health and authenticated management access. The app binds only 127.0.0.1:9092 and Tailscale Serve exposes its authenticated HTTPS endpoint on 9443. Do not enable Funnel for CTC, reset Serve, or alter courtside 443 and Mailpit 8443.
 
 The Box also supplies Pi-hole DNS for the home LAN. Application installation, updates and recovery do not require a host reboot. Do not reboot the shared host for a routine CTC test. Coordinate any necessary host restart separately with the owner.
 
@@ -24,27 +23,23 @@ The dedicated user's Docker service is enabled with lingering. Its unit waits fo
 
 ## Local backups
 
-One daily service/timer captures a complete recovery unit and verifies it in isolation. Retention keeps two daily stands and one monthly stand, plus any unit protected by an unresolved update. Failed capture or proof never permits pruning. Errors stay in the local journal. There is no notification service or off-host prerequisite.
+One daily service/timer captures a complete recovery unit and verifies it in isolation. Retention keeps two daily stands, one monthly stand and the three newest update units. Failed capture or proof never permits pruning. Errors stay in the local journal. There is no notification service or off-host prerequisite.
 
-Use `systemctl --user status ctc-manager-backup.timer` and the service journal. Run the selected launcher's `maintenance` operation for an extra complete verified stand. Check `doctor` afterward. Application ZIP export is separate and does not replace a complete deployment recovery unit.
+Use `systemctl --user status ctc-manager-backup.timer` and the service journal. Run `backup` for an extra complete verified stand. Check `doctor` afterward. See [backups.md](backups.md). Application ZIP export is separate and does not replace a complete deployment recovery unit.
 
-## Exact release updates
+## Deploying a release
 
-Read the explicit release notes, run `update-check --release VERSION`, then `update --release VERSION`. Both commands verify the release bundle and immutable image identities. If an old management bundle cannot recognize a newer inventory, install reviewed matching management tools first. Never bypass checksums, run a release downloaded by the app, or publish a locally built Mac JAR/image.
-
-The coordinator freezes the source, captures and proves its complete pre-update stand, and only then permits target migrations. It preserves the previous integration state. After migrations may have run, never roll back only the image. Use a complete recovery unit and fresh storage instead.
+Read the release notes, then run `deploy VERSION`. It verifies the bundle and the pinned images, writes an update unit, starts the release and rolls back by itself on failure. A merge or release never deploys on its own. See [updates.md](updates.md). Never bypass checksums or publish a locally built JAR or image.
 
 ## Recovery
 
-Run `restore-check --recovery UNIT` before live recovery. It starts isolated MariaDB/application containers with no published ports and outbound integrations disabled. The proof checks database history and counts, original files, credentials, authentication and an actual graphic render.
-
-For live recovery, use `restore --recovery UNIT --confirm ctc-manager:INSTALLATION-ID:recovery-UNUSED-NAME`. Keep old volumes. The command selects the unit's trusted installed source release, restores into a fresh generation and leaves outgoing integrations paused. Verify authenticated records and artwork, take a fresh verified backup, reconcile any remote publication, then explicitly resume integrations with the installation confirmation required by the launcher.
+Nightly units carry an isolated restore proof. `restore --unit UNIT` replaces the current database and files in place, starts the release that wrote the unit and leaves outgoing integrations paused. Verify authenticated records and artwork, take a fresh verified backup, reconcile any remote publication, then resume integrations with `resume-integrations --confirm INSTALLATION-ID`. See [recovery.md](recovery.md).
 
 A recovered pending Pages request needs fresh owner approval. Its private host PAT must be provisioned separately after host recovery. Do not copy the old checkout or assume that a previously approved request remains safe to send.
 
 ## Failed or interrupted operations
 
-Inspect the operation journal, lock owner, running children, selected release, storage generation and private phase receipt. Do not remove an ambiguous stale lock because its recorded PID no longer exists. Establish whether a candidate could have migrated the database before deciding between unchanged-source resumption and full recovery.
+Inspect the lock owner, running children, selected release and `state/deploy.log`. Do not remove an ambiguous stale lock because its recorded PID no longer exists. A deploy whose rollback failed names the `restore --unit` command to run.
 
 A missing or wrong backup device fails before capture. For disk-full errors, restore space without deleting verified/protected units, inspect any incomplete owned capture/probe, and rerun the complete verification. Never run Docker system prune or remove resources by a broad name prefix.
 
