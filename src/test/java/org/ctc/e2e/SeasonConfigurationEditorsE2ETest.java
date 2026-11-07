@@ -46,6 +46,8 @@ class SeasonConfigurationEditorsE2ETest extends PlaywrightConfig {
         for (int width : java.util.List.of(1440, 390)) {
             page.setViewportSize(width, 900);
             if (width < 768) page.waitForFunction("document.querySelector('.sidebar').getBoundingClientRect().right <= 0");
+            page.locator(".entity-section-nav a[href='#season-documents']").click();
+            page.waitForFunction("document.querySelector('#season-documents').getBoundingClientRect().top >= 60 && document.querySelector('#season-documents').getBoundingClientRect().top <= 80");
             page.locator("#racingEtiquetteUrl").click();
             assertThat(page.locator("#racingEtiquetteUrl")).isFocused();
             org.junit.jupiter.api.Assertions.assertFalse((Boolean) page.evaluate("document.documentElement.scrollWidth > innerWidth"));

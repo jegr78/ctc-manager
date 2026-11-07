@@ -17,7 +17,7 @@ Verification policy: one bounded local test fork for relevant TDD checks; comple
 
 Initial TDD: native form validation reported the intended eight assertion failures for unsafe/overlong URLs before adding the shared URL guard. The first cold validation attempt with a 256 MiB Maven heap exhausted Checkstyle's heap; it is not test evidence. The bounded follow-up used 512 MiB Maven and test requests with one test fork.
 
-Focused green: 116 cases across SeasonFormTest, SeasonDocumentLinksTest, SeasonDocumentArchiveTest, SeasonRuleDocumentsTest, SeasonManagementServiceTest, SeasonRestorerTest and TemplateWriterTest. No failures/errors/skips. Database, actual generation and browser evidence are pending complete CI. No full local verification claimed.
+Focused green: 116 cases across SeasonFormTest, SeasonDocumentLinksTest, SeasonDocumentArchiveTest, SeasonRuleDocumentsTest, SeasonManagementServiceTest, SeasonRestorerTest and TemplateWriterTest. No failures/errors/skips. Database, actual generation and browser evidence belongs to the complete CI aggregate; the exact run and final counts are recorded in PR #379. No full local verification claimed.
 
 
 Independent guard falsification covered HTTPS-only acceptance, old-schema document rejection and owning-season rendering. Each mutation failed at its intended assertions; the isolated worktree was restored cleanly. The first guard log collector expected the wrong Maven summary severity; the actual assertion failure was verified without rerunning it.
@@ -31,3 +31,6 @@ Visual review of the first green browser artifact caught a screenshot taken duri
 
 
 The first complete CI attempt after the URL correction passed both MariaDB groups, all 259 browser cases, migration, CodeQL and Docker. Its core integration run exposed a duplicate season-team insert in the new generation fixture: merging the stale detached setup object recreated transient association rows. The document update now loads the owned season freshly under its normal lock in a transaction. Existing fixture isolation assertions remain unchanged. No production constraint or archive validator was relaxed.
+
+
+The corrected capture exposed a mobile anchor offset: the fixed menu button covered the rule-document legend when the section reached the top of the viewport. The section now uses the same 72px scroll margin as the existing car-pool editor. The browser case follows the actual section-navigation link and waits for the heading below the fixed control before capturing both URL inputs. This protects usable navigation rather than changing screenshots alone.

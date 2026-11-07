@@ -2465,7 +2465,7 @@ input:not([type='checkbox']):not([type='radio']):not([type='color']), select { b
 .season-car-pool-editor details { margin: 8px 0; padding: 12px; border: 1px solid var(--border); }
 .season-car-pool-editor summary { cursor: pointer; line-height: 1.6; }
 .season-car-pool-editor ul { padding-left: 24px; line-height: 1.6; overflow-wrap: anywhere; }
-.season-configuration #carPool, .season-car-pool-editor #pool-entry-editor { scroll-margin-top: 72px; }
+.season-configuration #carPool, .season-configuration #season-documents, .season-car-pool-editor #pool-entry-editor { scroll-margin-top: 72px; }
 @media (max-width: 700px) {
     .season-car-pool-editor .pool-clause .form-row { grid-template-columns: minmax(0, 1fr); }
 }
