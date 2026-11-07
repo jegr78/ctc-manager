@@ -295,4 +295,11 @@ class FeedbackWorkflowTest(unittest.TestCase):
         self.assertIn("property:javax.net.ssl.trustStorePassword",record["ambientConfiguration"]["JAVA_TOOL_OPTIONS"])
         self.assertNotIn(secret,json.dumps(record)+result.stdout+result.stderr)
 
+    def test_focused_mode_cannot_silently_switch_pom_or_add_maven_goals(self):
+        for value in ["-f alternate/pom.xml","clean verify","-Pother-profile"]:
+            with self.subTest(option=value):
+                result=self.run_cli("unit","ExampleTest",extra_env={"MAVEN_ARGS":value})
+                self.assertNotEqual(result.returncode,0,result.stdout+result.stderr)
+                self.assertFalse((self.root/"target/command.json").exists())
+
 if __name__=="__main__":unittest.main()

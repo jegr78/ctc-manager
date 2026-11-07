@@ -60,10 +60,8 @@ def ambient_configuration(strict):
                   or re.fullmatch(r"-XX:(MaxRAMPercentage=\d+(\.\d+)?|MaxMetaspaceSize=\d+[mMgG]|[+]UseG1GC|[+]UseSerialGC|[+]ExitOnOutOfMemoryError)", option)
                   or option in {"--sun-misc-unsafe-memory-access=allow", "--enable-native-access=ALL-UNNAMED"}):
                 accepted.append(option.split("=", 1)[0] if "=" in option else option)
-            elif strict:
-                raise ValueError("Unsafe ambient Maven configuration in " + name)
             else:
-                accepted.append("additional focused configuration")
+                raise ValueError("Unsafe ambient Maven configuration in " + name)
         recorded[name] = accepted
     settings = Path.home() / ".m2/settings.xml"
     if settings.exists():
