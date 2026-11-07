@@ -46,7 +46,9 @@ class SeasonCarPoolControllerIT {
         assertThat(entry.getClauses()).isEmpty();
         pools.freeze(season.getId());
         mvc.perform(get(base(season) + "/entries/" + entry.getId() + "/edit"))
-                .andExpect(status().isOk()).andExpect(content().string(containsString("One-Makes")));
+                .andExpect(status().isOk()).andExpect(content().string(containsString("One-Makes")))
+                .andExpect(content().string(containsString("Add and freeze entry")))
+                .andExpect(content().string(containsString("Existing entries are frozen")));
         assertThat(pools.preview(season.getId()).entries().getFirst().carIds()).containsExactly(car.getId());
     }
 

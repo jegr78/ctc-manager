@@ -41,15 +41,21 @@ public class SeasonCarPoolService {
 
     private UUID saveDefinition(UUID seasonId, UUID entryId, String label, List<ClauseInput> clauses, UUID carId) {
         var season = locked(seasonId);
-        requireEditable(season);
+        boolean addition = season.getCarPoolState() == CarPoolState.FROZEN;
+        if (addition) {
+            requireCategoryMode(season);
+            if (entryId != null) throw new BusinessRuleException("The entry is frozen. Only new entries can be added.");
+        } else requireEditable(season);
         validateDefinition(label, clauses, carId);
         var oneMakeCar = carId == null ? null : cars.findById(carId)
                 .orElseThrow(() -> new BusinessRuleException("The selected one-make car no longer exists."));
+        var addedMembers = addition ? additionMembers(season, clauses, oneMakeCar) : List.<Car>of();
         var entry = entryId == null ? new SeasonCarPoolEntry() : ownedEntry(season, entryId);
         if (entryId == null) {
             entry.setSeason(season);
-            int nextIndex = 0;
-            for (var existing : season.getCarPoolEntries()) existing.setSortIndex(nextIndex++);
+            int nextIndex = addition ? season.getCarPoolEntries().stream().mapToInt(SeasonCarPoolEntry::getSortIndex)
+                    .max().orElse(-1) + 1 : 0;
+            if (!addition) for (var existing : season.getCarPoolEntries()) existing.setSortIndex(nextIndex++);
             entry.setSortIndex(nextIndex);
             season.getCarPoolEntries().add(entry);
         }
@@ -66,7 +72,23 @@ public class SeasonCarPoolService {
             clause.setSortIndex(i);
             entry.getClauses().add(clause);
         }
+        for (var car : addedMembers) {
+            var member = new SeasonCarPoolMember(); member.setEntry(entry); member.setCar(car);
+            entry.getMembers().add(member);
+        }
         return entries.save(entry).getId();
+    }
+
+    private List<Car> additionMembers(Season season, List<ClauseInput> clauses, Car oneMakeCar) {
+        var members = oneMakeCar != null ? List.of(oneMakeCar) : cars.findAllByOrderByManufacturerAscNameAsc().stream()
+                .filter(car -> clauses.stream().anyMatch(clause -> matches(car, clause))).toList();
+        if (members.isEmpty()) throw new BusinessRuleException("The new entry has no eligible cars.");
+        var existingIds = season.getCarPoolEntries().stream().flatMap(entry -> entry.getMembers().stream())
+                .map(member -> member.getCar().getId()).collect(java.util.stream.Collectors.toSet());
+        if (members.stream().anyMatch(car -> existingIds.contains(car.getId()))) {
+            throw new BusinessRuleException("The new entry would overlap an existing frozen entry.");
+        }
+        return members;
     }
 
     @Transactional

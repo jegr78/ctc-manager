@@ -30,7 +30,7 @@ class SeasonCarPoolE2ETest extends PlaywrightConfig {
 
     @ParameterizedTest
     @ValueSource(ints = {1440, 390})
-    void givenNativeBrowser_whenBuildingFreezingAndReopeningPool_thenSnapshotAndControlsWork(int width) {
+    void givenNativeBrowser_whenBuildingFreezingAndReopeningPool_thenSnapshotAndControlsWork(int width) throws Exception {
         // given
         String entryLabel = "Gr.3 MR + RR " + "W".repeat(107);
         context = browser.newContext(new Browser.NewContextOptions().setJavaScriptEnabled(false).setViewportSize(width, 1000));
@@ -45,7 +45,8 @@ class SeasonCarPoolE2ETest extends PlaywrightConfig {
             rr.setCategory(CarCategory.GR_3);
             rr.setDrivetrain(Drivetrain.RR);
             var oneMake = new Car("Test Pool Browser", "One-Make " + UUID.randomUUID());
-            return cars.saveAllAndFlush(List.of(mr, rr, oneMake)).stream().map(Car::getId).toList();
+            var additional = new Car("Test Pool Browser", "Additional " + UUID.randomUUID());
+            return cars.saveAllAndFlush(List.of(mr, rr, oneMake, additional)).stream().map(Car::getId).toList();
         });
         try {
             // when
@@ -72,7 +73,19 @@ class SeasonCarPoolE2ETest extends PlaywrightConfig {
             assertThat(page.locator("#carPool")).containsText("One-Makes");
             page.locator("#freeze-pool").click();
             assertThat(page.locator("#carPool")).containsText("Frozen category pool");
-            assertThat(page.locator("#pool-entry-editor")).hasCount(0);
+            assertThat(page.locator("#pool-entry-editor")).isVisible();
+            page.locator("#pool-entry-type").selectOption("ONE_MAKE");
+            page.locator("button[value='change-type']").click();
+            page.locator("#pool-label").fill("Additional One-Make");
+            page.locator("#pool-one-make-car").selectOption(ids.get(3).toString());
+            page.getByRole(com.microsoft.playwright.options.AriaRole.BUTTON,
+                    new com.microsoft.playwright.Page.GetByRoleOptions().setName("Add and freeze entry").setExact(true)).click();
+            assertThat(page.locator("#pool-preview summary").nth(2)).containsText("Additional One-Make · 1 eligible car(s)");
+            assertThat(page.locator("#pool-preview summary").first()).containsText("2 eligible car(s)");
+            assertThat(page.locator("#carPool")).containsText("Frozen category pool");
+            java.nio.file.Files.createDirectories(java.nio.file.Path.of("target/failsafe-reports/pool-addition"));
+            page.locator("#pool-entry-editor").screenshot(new com.microsoft.playwright.Locator.ScreenshotOptions()
+                    .setPath(java.nio.file.Path.of("target/failsafe-reports/pool-addition/add-" + width + ".png")));
             tx.executeWithoutResult(status -> {
                 var car = cars.findById(ids.getFirst()).orElseThrow();
                 car.setCategory(CarCategory.GR_4);

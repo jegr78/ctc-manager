@@ -320,6 +320,10 @@ public class SeasonController {
     @GetMapping("/{id}/car-pool/entries/{entryId}/edit")
     public String editPoolEntry(@PathVariable UUID id, @PathVariable UUID entryId, Model model) {
         var season = seasonManagementService.findById(id);
+        if (season.getCarPoolState() == org.ctc.domain.model.CarPoolState.FROZEN) {
+            model.addAttribute("errorMessage", "Existing entries are frozen. Add a new entry to expand the pool.");
+            return edit(id, model);
+        }
         var entry = season.getCarPoolEntries().stream().filter(item -> item.getId().equals(entryId)).findFirst()
                 .orElseThrow(() -> new BusinessRuleException("Pool entry does not belong to this season."));
         model.addAttribute("poolEntryForm", SeasonPoolEntryForm.from(entry));
@@ -359,7 +363,9 @@ public class SeasonController {
             catch (BusinessRuleException e) { result.reject("pool", e.getMessage()); }
         }
         if (result.hasErrors()) return edit(id, model);
-        redirect.addFlashAttribute("successMessage", "Pool entry saved. Review the preview before freezing.");
+        redirect.addFlashAttribute("successMessage", seasonManagementService.findById(id).getCarPoolState() == org.ctc.domain.model.CarPoolState.FROZEN
+                ? "New entry added and frozen. Existing entries and picks are unchanged."
+                : "Pool entry saved. Review the preview before freezing.");
         return poolRedirect(id);
     }
 

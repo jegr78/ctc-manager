@@ -47,7 +47,8 @@ _Avoid_: Per-driver car
 
 **Pool entry**:
 A named seasonal choice with one or more alternative car conditions. The whole entry is one
-consumable choice for an effective home team.
+consumable choice for an effective home team. Once frozen, its membership stays fixed. Additional
+entries may expand a frozen pool without changing existing entries or earlier picks.
 _Avoid_: Concrete car
 
 **Pick**:

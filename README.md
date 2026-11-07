@@ -426,3 +426,5 @@ stable published copy/PDF. V40 adds nullable document fields; backup schema 18 i
 schemas 1–17 restore missing links as empty.
 
 Private Discord picks show deadlines and save times in the viewer's local timezone. Track search covers the available season pool and explains empty results. See the [Discord operations guide](docs/operations/discord-integration.md).
+
+Season car pools can grow after picks have been submitted. Add categories or One-Makes to a frozen pool; existing entries and submissions stay unchanged. New entries must have eligible cars and cannot overlap existing frozen entries.

@@ -55,9 +55,10 @@
                 <ul><li th:each="notice : ${poolPreview.notices}" th:text="${notice}"></li></ul>
             </details>
         </div>
-        <form th:if="${!poolPreview.frozen}" th:action="@{/admin/seasons/{id}/car-pool/entries/save(id=${season.id})} + '#pool-entry-editor'" th:object="${poolEntryForm}" method="post" class="mt-md" id="pool-entry-editor">
+        <form th:action="@{/admin/seasons/{id}/car-pool/entries/save(id=${season.id})} + '#pool-entry-editor'" th:object="${poolEntryForm}" method="post" class="mt-md" id="pool-entry-editor">
             <fieldset>
                 <legend th:text="*{entryId != null ? 'Edit pool entry' : 'Add pool entry'}">Pool entry</legend>
+                <p th:if="${poolPreview.frozen}" class="form-help">Add a category or One-Make without reopening the pool. Its exact cars are frozen when saved. Existing entries and submitted picks remain unchanged. Empty or overlapping entries cannot be added.</p>
                 <input type="hidden" th:field="*{entryId}">
                 <div class="form-group">
                     <label for="pool-entry-type">Entry type</label>
@@ -109,7 +110,7 @@
                 </th:block>
                 <div class="inline-form mt-md">
                     <button th:if="*{entryType != null and entryType.name() == 'CATEGORY'}" type="submit" name="action" value="add-clause" class="btn btn-secondary btn-sm" formnovalidate>Add alternative clause</button>
-                    <button type="submit" name="action" value="save" class="btn btn-primary btn-sm">Save entry</button>
+                    <button type="submit" name="action" value="save" class="btn btn-primary btn-sm" th:text="${poolPreview.frozen ? 'Add and freeze entry' : 'Save entry'}">Save entry</button>
                     <a th:if="*{entryId != null}" class="btn btn-secondary btn-sm" th:href="@{/admin/seasons/{id}/edit(id=${season.id})} + '#pool-entry-editor'">New entry</a>
                 </div>
             </fieldset>
@@ -119,6 +120,7 @@
             <button type="submit" class="btn btn-primary" id="freeze-pool">Freeze complete pool</button>
         </form>
         <form th:if="${poolPreview.frozen}" th:action="@{/admin/seasons/{id}/car-pool/reopen(id=${season.id})} + '#carPool'" method="post" class="mt-md">
+            <p class="form-help">Reopening changes existing definitions and is available only before any race or pick history uses the pool. To expand a used pool, add new entries above.</p>
             <button type="submit" class="btn btn-secondary" id="reopen-pool">Reopen unused pool</button>
         </form>
     </div>
