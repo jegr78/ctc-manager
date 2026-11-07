@@ -15,6 +15,8 @@ from config import atomic_json, private_path
 from recovery import NativeRuntime, capture, read_json, restore_check, sha256, validate_unit
 
 UNIT_ROOT = Path('/mnt/backup/ctc-manager/units')
+UPDATE_PREFIX = 'recovery-update-'
+UPDATE_UNITS_KEPT = 3
 
 
 def evidence(root):
@@ -48,14 +50,16 @@ def retention_plan(runtime, destination, state, now):
     if (latest not in units or local.get('manifestSha256') != sha256(latest / 'manifest.json')
             or proof.get('unit') != str(latest) or proof.get('manifestSha256') != local.get('manifestSha256')):
         raise ValueError('last verified backup is missing or its proof changed')
-    ordered = sorted(units, key=lambda p: (units[p]['createdAt'], p.name), reverse=True)
+    everything = sorted(units, key=lambda p: (units[p]['createdAt'], p.name), reverse=True)
+    updates = [path for path in everything if path.name.startswith(UPDATE_PREFIX)]
+    ordered = [path for path in everything if path not in updates]
     dates = {}
-    for path in ordered:
+    for path in everything:
         stamp = dt.datetime.strptime(units[path]['createdAt'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=dt.timezone.utc)
         if stamp.timestamp() > now + 60:
             raise ValueError('future backup timestamp')
         dates[path] = stamp.astimezone(ZoneInfo('Europe/Berlin'))
-    keep, daily = {latest}, set()
+    keep, daily = {latest, *updates[:UPDATE_UNITS_KEPT]}, set()
     for path in ordered:
         day = dates[path].date()
         if day not in daily and len(daily) < 2:
@@ -64,23 +68,7 @@ def retention_plan(runtime, destination, state, now):
     if ordered:
         month = (dates[ordered[0]].year, dates[ordered[0]].month)
         keep.add(next(path for path in reversed(ordered) if (dates[path].year, dates[path].month) == month))
-    update = runtime.root / 'state/update.json'
-    pending_update = not update.exists() or read_json(private_path(update)).get('stage') != 'completed'
-    local, proof = state.get('local', {}), state.get('proof', {})
-    verified_active = local.get('appImage') == runtime.config.get('appImage')
-    protected_path = runtime.root / 'state/protected-recovery.json'
-    if protected_path.exists():
-        protected = read_json(private_path(protected_path))
-        selected = Path(protected['unit'])
-        if not selected.exists() or sha256(private_path(selected / 'manifest.json')) != protected['manifestSha256']:
-            raise ValueError('protected recovery reference changed')
-        if pending_update or not verified_active:
-            keep.update([selected, *map(Path, protected.get('previousUnits', []))])
-    if update.exists():
-        receipt = read_json(private_path(update))
-        if receipt.get('stage') != 'completed' and receipt.get('recoveryUnit'):
-            keep.add(Path(receipt['recoveryUnit']))
-    return [path for path in ordered if path not in keep]
+    return [path for path in everything if path not in keep]
 
 
 def prune(runtime, destination, *, dry_run=False, now=None):
@@ -92,9 +80,6 @@ def prune(runtime, destination, *, dry_run=False, now=None):
             raise ValueError('retention plan changed before deletion')
         for path in plan:
             shutil.rmtree(path)
-        protected = runtime.root / 'state/protected-recovery.json'
-        if protected.exists() and Path(read_json(private_path(protected))['unit']) in plan:
-            protected.unlink()
     return plan
 
 
@@ -164,41 +149,24 @@ def main():
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument('--directory', required=True)
     parser.add_argument('--deploy-root')
-    parser.add_argument('operation', choices=['maintenance', 'prune', 'backup-check', 'doctor'])
-    parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('operation', choices=['doctor'])
     args = parser.parse_args()
-    if args.dry_run and args.operation != 'prune':
-        parser.error('--dry-run is only valid for prune')
     os.umask(0o077)
     root = private_path(Path(args.directory), directory=True)
-    if args.operation in ['doctor', 'backup-check']:
-        issues = freshness(evidence(root), time.time())
+    issues = freshness(evidence(root), time.time())
+    try:
+        runtime = NativeRuntime(root, (root / 'current').resolve())
+        runtime.check_destination(UNIT_ROOT)
+    except (OSError, ValueError):
+        issues.append('backup-mount-unavailable')
+    if not issues:
         try:
-            runtime = NativeRuntime(root, (root / 'current').resolve())
-            runtime.check_destination(UNIT_ROOT)
+            retention_plan(runtime, UNIT_ROOT, evidence(root), time.time())
         except (OSError, ValueError):
-            issues.append('backup-mount-unavailable')
-        if not issues:
-            try:
-                retention_plan(runtime, UNIT_ROOT, evidence(root), time.time())
-            except (OSError, ValueError):
-                issues.append('backup-verification-failed')
-        print(json.dumps({'backupStatus': 'incomplete' if issues else 'ready', 'issues': issues}))
-        if issues:
-            raise ValueError('backup readiness incomplete')
-        return
-    runtime = NativeRuntime(root, (root / 'current').resolve())
-    lock = private_path(root / '.ctc-manager.lock', directory=True)
-    if private_path(lock / 'owner').read_text().strip() != str(os.getppid()):
-        raise ValueError('backup command requires its launcher-owned installation lock')
-    if args.operation == 'maintenance':
-        runtime.check_destination(UNIT_ROOT.parent)
-        UNIT_ROOT.mkdir(mode=0o700, exist_ok=True)
-        result = run_backup(runtime, UNIT_ROOT)
-        print(json.dumps({'status': result['lastAttempt']['stage'], 'unit': result['local']['unit']}))
-    else:
-        removed = prune(runtime, UNIT_ROOT, dry_run=args.dry_run)
-        print(json.dumps({'status': 'planned' if args.dry_run else 'pruned', 'units': len(removed)}))
+            issues.append('backup-verification-failed')
+    print(json.dumps({'backupStatus': 'incomplete' if issues else 'ready', 'issues': issues}))
+    if issues:
+        raise ValueError('backup readiness incomplete')
 
 
 if __name__ == '__main__':

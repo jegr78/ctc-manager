@@ -1,10 +1,11 @@
 [Unit]
 Description=CTC Manager backup
+After=ctc-manager-site-publisher.service
 
 [Service]
 Type=oneshot
 Environment=XDG_RUNTIME_DIR=%t
-ExecStart=/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager maintenance
+ExecStart=/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager backup
 UMask=0077
 NoNewPrivileges=true
 TimeoutStartSec=2h
