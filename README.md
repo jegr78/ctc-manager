@@ -365,6 +365,8 @@ MariaDB integration tests require Docker and `-Ddocker.available=true`; CI enabl
 
 Automated Maven tests retain seeded fixture data but disable the incidental website render at every application startup with `app.seed.generate-site=false`. Normal dev startup keeps its existing default. Explicit generation tests still render the real website. Per-fork initialization/cache counters are included in CI test artifacts. See [test startup measurements](docs/test-startup-overhead.md) for evidence and lifecycle boundaries.
 
+For edit loops, use `scripts/test-feedback.py` with explicit unit, integration or browser selectors. It rejects deferred Failsafe failures and stale reports, records source identities and labels focused evidence. Full mode retains the complete canonical lifecycle and gates. See [local verification](docs/local-verification.md).
+
 ## Dependency and security checks
 
 Renovate proposes current stable dependency updates, including majors, without a dashboard

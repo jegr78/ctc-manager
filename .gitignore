@@ -64,3 +64,7 @@ data/
 
 ### Python build helpers ###
 __pycache__/
+
+# Local verification evidence and Python fixture caches
+.test-feedback/
+__pycache__/

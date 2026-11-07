@@ -153,7 +153,7 @@ class BackupImportManifestContractIT {
     @Test
     void givenVersionThreeWithoutPoolFiles_whenStaged_thenFixedOnlyLegacyArchiveRemainsSupported() throws Exception {
         // given
-        byte[] zip = rewrite(export(), name -> !name.startsWith("data/season-car-pool-") && !isPickData(name), manifest -> {
+        byte[] zip = rewrite(legacyWindowSource(withCurrentWindowFields(export())), name -> !name.startsWith("data/season-car-pool-") && !isPickData(name), manifest -> {
             manifest.put("schema_version", 3);
             counts(manifest).remove("season_car_pool_entries");
             counts(manifest).remove("season_car_pool_clauses");
@@ -169,7 +169,7 @@ class BackupImportManifestContractIT {
     @Test
 	void givenVersionOneArchiveWithoutDiscordTables_whenStaged_thenAccepted() throws Exception {
 		// given
-		byte[] zip = rewrite(export(), name -> !name.equals("data/discord-global-config.json")
+		byte[] zip = rewrite(legacyWindowSource(withCurrentWindowFields(export())), name -> !name.equals("data/discord-global-config.json")
 				&& !name.equals("data/discord-post.json") && !isPickData(name), manifest -> {
 			manifest.put("schema_version", 1);
 			counts(manifest).remove("discord_global_config");
@@ -261,6 +261,43 @@ class BackupImportManifestContractIT {
 	private boolean isPickData(String name) {
 		return PICK_TABLES.stream().anyMatch(table -> name.equals("data/" + table.replace('_', '-') + ".json"));
 	}
+
+    private static byte[] legacyWindowSource(byte[] zip) throws IOException {
+        return rewriteWindowRows(zip, row -> row.remove(java.util.List.of(
+                "picksOpen", "pickWindowVersion", "pickDeadlineOverride")));
+    }
+
+    private static byte[] withCurrentWindowFields(byte[] zip) throws IOException {
+        int[] touched = {0};
+        byte[] result = rewriteWindowRows(zip, row -> {
+            row.put("pickWindowVersion", 7L);
+            if (row.has("picksOpen")) row.put("picksOpen", true);
+            else row.put("pickDeadlineOverride", "2035-01-01T20:00:00");
+            touched[0]++;
+        });
+        assertThat(touched[0]).as("current window rows exercise legacy conversion").isPositive();
+        return result;
+    }
+
+    private static byte[] rewriteWindowRows(byte[] zip, Consumer<ObjectNode> edit) throws IOException {
+        var out = new ByteArrayOutputStream();
+        try (var in = new ZipInputStream(new ByteArrayInputStream(zip));
+             var rewritten = new ZipOutputStream(out)) {
+            ZipEntry entry;
+            while ((entry = in.getNextEntry()) != null) {
+                byte[] content = in.readAllBytes();
+                if (java.util.Set.of("data/matchdays.json", "data/matches.json", "data/playoff-matchups.json").contains(entry.getName())) {
+                    var rows = JSON.readTree(content);
+                    for (var row : rows) edit.accept((ObjectNode) row);
+                    content = JSON.writeValueAsBytes(rows);
+                }
+                rewritten.putNextEntry(new ZipEntry(entry.getName()));
+                rewritten.write(content);
+                rewritten.closeEntry();
+            }
+        }
+        return out.toByteArray();
+    }
 
 	private byte[] export() throws IOException {
 		var out = new ByteArrayOutputStream();
