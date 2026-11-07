@@ -150,7 +150,7 @@ def arguments():
     if args.mode == "unit" and args.unit:
         parser.error("unit mode uses its positional selector")
     for value in [args.selector, args.unit, args.integration]:
-        if value and (value.startswith("-") or "!" in value or any(ord(c) < 32 for c in value)):
+        if value is not None and (not any(part.strip() for part in value.split(",")) or value.startswith("-") or "!" in value or any(ord(c) < 32 for c in value)):
             parser.error("selectors must be positive patterns without control characters")
     return args
 

@@ -180,6 +180,18 @@ class FeedbackWorkflowTest(unittest.TestCase):
                 self.assertIn("--unit", result.stderr)
                 self.assertFalse((self.root / "target/command.json").exists())
 
+    def test_blank_focused_selectors_cannot_fall_back_to_the_complete_suite(self):
+        for arguments in [("unit", " "), ("unit", ", ,"),
+                          ("integration", "ExampleIT", "--unit", " "),
+                          ("integration", "ExampleIT", "--unit", ",,"),
+                          ("browser", "ExampleE2ETest", "--unit", " "),
+                          ("browser", "ExampleE2ETest", "--unit", "ExampleTest", "--integration", " ")]:
+            with self.subTest(arguments=arguments):
+                (self.root / "target/command.json").unlink(missing_ok=True)
+                result = self.run_cli(*arguments)
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertFalse((self.root / "target/command.json").exists())
+
     def test_full_mode_rejects_focused_filters_dirty_source_and_missing_gates(self):
         for arguments in [("full","ExampleTest"),("full","--unit","ExampleTest"),("full","-DskipTests")]:
             result=self.run_cli(*arguments)
