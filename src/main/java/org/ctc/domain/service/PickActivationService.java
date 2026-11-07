@@ -20,7 +20,7 @@ import org.ctc.domain.repository.PickPublicationAttemptRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Management-only review of existing scheduled targets before explicit season opt-in. */
+/** Management-only review of unfinished targets before opt-in or later enrollment. */
 @Service
 @RequiredArgsConstructor
 public class PickActivationService {
@@ -51,7 +51,7 @@ public class PickActivationService {
                 if (!seasonId.equals(race.getMatchday().getSeason().getId())) throw unavailable();
             }
             var review = review(season, rows, epoch.managementGeneration());
-            if (season.isPicksCollectionEnabled() || !review.fingerprint().equals(fingerprint)) {
+            if (!review.fingerprint().equals(fingerprint) || season.isPicksCollectionEnabled() && review.newTargetCount() == 0) {
                 throw new BusinessRuleException("The collection review changed; reload before enabling");
             }
             if (review.pendingPublicationCount() != 0) throw new BusinessRuleException("Reconcile pending publication outputs before enabling collection for these races");

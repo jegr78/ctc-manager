@@ -142,7 +142,7 @@ public class PickTargetService {
     }
 
     public boolean isEligible(Race race) {
-        return race.isPicksManaged() && PickTargetRules.isScheduledTarget(race);
+        return race.isPicksManaged() && PickTargetRules.isUnfinishedTarget(race);
     }
 
     private static BusinessRuleException unavailable() {

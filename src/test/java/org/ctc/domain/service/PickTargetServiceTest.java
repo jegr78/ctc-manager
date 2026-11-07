@@ -107,11 +107,10 @@ class PickTargetServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"unscheduled", "unmanaged", "bye", "no-away", "results", "score", "walkover", "detached"})
+    @ValueSource(strings = {"unmanaged", "bye", "no-away", "results", "score", "walkover", "detached"})
     void givenIneligibleTarget_whenAssessing_thenDenyTeamEditing(String invalid) {
         // given / when / then
         switch (invalid) {
-            case "unscheduled" -> race.setDateTime(null);
             case "unmanaged" -> race.setPicksManaged(false);
             case "bye" -> race.getMatch().setBye(true);
             case "no-away" -> race.getMatch().setAwayTeam(null);
@@ -122,6 +121,13 @@ class PickTargetServiceTest {
             default -> throw new AssertionError(invalid);
         }
         assertThat(service.isEligible(race)).isFalse();
+    }
+
+    @Test
+    void givenManagedHomeRaceWithoutADate_whenAssessing_thenAllowPicksBeforeTeamsAgreeASchedule() {
+        race.setDateTime(null);
+        assertThat(service.isEligible(race)).isTrue();
+        assertThat(race.getDateTime()).isNull();
     }
 
     @ParameterizedTest
