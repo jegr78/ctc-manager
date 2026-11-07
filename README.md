@@ -357,9 +357,11 @@ See the [Wiki](../../wiki) for detailed documentation on architecture, features,
 
 ## Test Performance
 
-Test wallclock metrics, per-phase optimisation history, and the per-fork backup-staging-dir + cache-key fingerprint instrumentation are documented in [`docs/test-performance.md`](docs/test-performance.md). The current authoritative CI E2E-step baseline is the **v1.12 Phase 91 PERF-06 5-run median of 17:39** (Δ−23.3 % vs v1.11 23:00 baseline; harvested via `workflow_dispatch` on milestone PR #129 head SHA `b63a2be1`; methodology in [`docs/test-performance.md § PERF-06 Re-Harvest`](docs/test-performance.md#perf-06-re-harvest-phase-91)). The local Wave-4 median (Phase 89, per-fork `app.backup.staging-dir` + Failsafe `default-it` `forkCount=2 reuseForks=true` + PERF-02 cache-key fingerprint listener) is 09:19 (−10.4 % vs Phase-86 10:24 local baseline).
+Current measurements and historical optimisation results are documented in [`docs/test-performance.md`](docs/test-performance.md). Earlier baselines describe older suite sizes and are not current build-time guarantees. The build-performance initiative is tracked in [#369](https://github.com/jegr78/ctc-manager/issues/369).
 
-Developers can enable Testcontainers MariaDB container reuse by adding `testcontainers.reuse.enable=true` to `~/.testcontainers.properties` — see the [`## PERF-04 Testcontainers Reuse`](docs/test-performance.md#perf-04-testcontainers-reuse) section in `docs/test-performance.md` for the opt-in protocol, the `docker ps` verification command, and the cleanup hint. CI behavior is unchanged; both MariaDB-backed ITs are gated by `@EnabledIfSystemProperty(named = "docker.available", matches = "true")` and CI never sets the flag.
+The full-site generation integration suite is `SiteGeneratorFixtureIsolationIT`. It preserves the 86 original scenarios and adds a consecutive-scenario isolation regression. Every scenario cleans its owned database graph and allocated slugs and restores the previous active-season state and singleton settings. The original `SiteGeneratorServiceIT` remains a separate suite. This prevents later scenarios from regenerating earlier fixtures.
+
+MariaDB integration tests require Docker and `-Ddocker.available=true`; CI enables that flag. Existing optional local container-reuse guidance remains in [`docs/test-performance.md`](docs/test-performance.md#perf-04-testcontainers-reuse). Fixture isolation does not change the container lifecycle or enable reuse automatically.
 
 ## Dependency and security checks
 
