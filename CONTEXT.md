@@ -52,7 +52,7 @@ the season pool.
 _Avoid_: Concrete car
 
 **Pick**:
-The home team's private selection process for one scheduled race, including confirmation and
+The home team's private selection process for one race, including confirmation and
 management review.
 _Avoid_: Vote, ballot
 

@@ -47,6 +47,11 @@ class MatchServiceTest {
 	@InjectMocks
 	private MatchService service;
 
+    @org.junit.jupiter.api.BeforeEach
+    void allowSeasonLockForExistingMocks() {
+        lenient().when(seasonRepository.findByIdForUpdate(any())).thenReturn(Optional.of(new Season("Test locked season")));
+    }
+
 
 	@Test
 	void givenValidTeamsAndMatchday_whenCreateMatch_thenMatchAndFirstRaceCreated() {

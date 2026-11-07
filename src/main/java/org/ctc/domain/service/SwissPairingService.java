@@ -22,6 +22,7 @@ public class SwissPairingService {
 	private final SeasonPhaseService seasonPhaseService;
 	private final PhaseTeamRepository phaseTeamRepository;
 	private final SeasonPhaseGroupRepository seasonPhaseGroupRepository;
+	private final SeasonRepository seasonRepository;
 
 	/**
 	 * Generates the next Swiss round for the given phase and group.
@@ -32,6 +33,8 @@ public class SwissPairingService {
 	@Transactional
 	public Matchday generateNextRound(UUID phaseId, UUID groupId) {
 		var phase = seasonPhaseService.findById(phaseId);
+		seasonRepository.findByIdForUpdate(phase.getSeason().getId())
+				.orElseThrow(() -> new EntityNotFoundException("Season", phase.getSeason().getId()));
 		validateLayoutAndGroupId(phase, groupId);
 
 		if (phase.getFormat() != SeasonFormat.SWISS) {

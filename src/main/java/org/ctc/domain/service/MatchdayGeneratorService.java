@@ -41,6 +41,8 @@ public class MatchdayGeneratorService {
 	@Transactional
 	public void generate(UUID phaseId, UUID groupId, int numberOfRounds, boolean homeAndAway) {
 		var phase = seasonPhaseService.findById(phaseId);
+		seasonRepository.findByIdForUpdate(phase.getSeason().getId())
+				.orElseThrow(() -> new EntityNotFoundException("Season", phase.getSeason().getId()));
 
 		if (phase.getLayout() == PhaseLayout.LEAGUE && groupId != null) {
 			throw new IllegalArgumentException(
