@@ -92,11 +92,16 @@ class FakeRuntime:
 
     def database_metadata(self):
         return {'databaseVersion': '11.8.2-MariaDB'}
-    def preflight(self, allow_missing_app=False): self.record('preflight')
+    def preflight(self, allow_missing_app=False):
+        self.record('preflight')
+        if self.case.phpmyadmin_running:
+            raise ValueError('unexpected writer on private database network')
+        self.db = self.container('db')
     def assert_no_other_writers(self): self.record('writers')
     def check_destination(self, destination): self.record('check_destination')
 
     def query(self, sql):
+        self.db['Id']
         self.record('query')
         return self.case.history.get(self.version, [])
 
@@ -126,6 +131,7 @@ class RolloutCase(unittest.TestCase):
         self.log, self.failing, self.history = [], set(), {}
         self.database_versions, self.uids, self.captured = {}, {}, 0
         self.phpmyadmin_active = True
+        self.phpmyadmin_running = False
         home = patch.object(Path, 'home', return_value=self.base / 'home')
         home.start()
         self.addCleanup(home.stop)
@@ -188,7 +194,7 @@ class RestoreTest(RolloutCase):
 
     def test_restore_recreates_volumes_and_restores_dump_data_and_secrets(self):
         self.restore(self.unit(self.old))
-        self.assertEqual(['stop_app', 'compose rm', 'docker volume', 'compose up', 'docker exec', 'docker run',
+        self.assertEqual(['compose rm', 'docker volume', 'compose up', 'docker exec', 'docker run',
                           'docker run', 'compose up'], self.names())
         removed = next(entry for entry in self.log if entry[:3] == ('docker', '1.51.0', 'volume'))
         self.assertIsNotNone(removed)
@@ -208,6 +214,17 @@ class RestoreTest(RolloutCase):
             self.restore(unit)
         self.assertEqual([], self.log)
 
+    def test_restore_works_without_an_app_container(self):
+        self.failing.add('stop_app')
+        self.restore(self.unit(self.old))
+        self.assertEqual('1.51.0', (self.root / 'current').resolve().name)
+
+    def test_legacy_release_restores_only_on_request(self):
+        legacy = DeployTest.legacy_release(self)
+        with patch.object(rollout, 'validate_unit', return_value={'installationId': self.config['installationId']}):
+            rollout.restore(self.root, self.unit(legacy), runtime_for=self.runtime_for, allow_legacy=True)
+        self.assertEqual('1.50.0', (self.root / 'current').resolve().name)
+
     def test_restore_refuses_release_without_rollout(self):
         legacy = self.release('1.50.0')
         manifest = json.loads((legacy / 'manifest.json').read_text())
@@ -215,7 +232,7 @@ class RestoreTest(RolloutCase):
         (legacy / 'lib/rollout.py').unlink()
         (legacy / 'manifest.json').write_text(json.dumps(manifest))
         unit = self.unit(legacy)
-        with self.assertRaisesRegex(ValueError, 'generation'):
+        with self.assertRaisesRegex(ValueError, '--legacy-release'):
             self.restore(unit)
         self.assertEqual([], self.log)
 
@@ -234,6 +251,8 @@ class DeployTest(RolloutCase):
         self.log.append(('systemctl', command[2]))
         if ('systemctl', command[2]) in self.failing:
             raise subprocess.CalledProcessError(1, command)
+        if command[2] in ('stop', 'start'):
+            self.phpmyadmin_running = command[2] == 'start'
         return SimpleNamespace(returncode=0, stdout='active\n' if self.phpmyadmin_active else 'inactive\n')
 
     def deploy(self, version, **options):
@@ -321,7 +340,35 @@ class DeployTest(RolloutCase):
         with self.assertRaises(rollout.DeployFailed) as caught:
             self.deploy('1.52.0')
         self.assertFalse(caught.exception.rolled_back)
-        self.assertIn('restore --unit', str(caught.exception))
+        self.assertIn(str(self.root / 'releases/1.52.0/ctc-manager') + ' --directory ' + str(self.root)
+                      + ' restore --unit ' + str(self.base / 'units/recovery-update-2026-1'), str(caught.exception))
+        self.assertNotIn('--legacy-release', str(caught.exception))
+
+    def test_failed_rollback_to_a_legacy_release_names_the_legacy_restore(self):
+        legacy = self.legacy_release()
+        rollout.switch_release(self.root, legacy, outbound_paused=False)
+        self.release('1.52.0', app='b')
+        self.failing.update({('compose', '1.52.0'), ('compose', '1.50.0')})
+        with self.assertRaises(rollout.DeployFailed) as caught:
+            self.deploy('1.52.0')
+        self.assertIn('restore --unit ' + str(self.base / 'units/recovery-update-2026-1') + ' --legacy-release',
+                      str(caught.exception))
+
+    def test_running_phpmyadmin_does_not_block_the_deploy(self):
+        self.phpmyadmin_running = True
+        self.release('1.52.0', app='b')
+        self.deploy('1.52.0')
+        self.assertEqual('1.52.0', self.current())
+        self.assertTrue(self.phpmyadmin_running, 'phpMyAdmin runs again afterwards')
+
+    def legacy_release(self):
+        legacy = self.release('1.50.0')
+        manifest = json.loads((legacy / 'manifest.json').read_text())
+        for name in [n for n in manifest['files'] if n.startswith('phpmyadmin/') or n in ('lib/rollout.py', 'ctc-manager-launcher')]:
+            del manifest['files'][name]
+            (legacy / name).unlink()
+        (legacy / 'manifest.json').write_text(json.dumps(manifest))
+        return legacy
 
     def test_interrupt_rolls_back(self):
         self.release('1.52.0', app='b')

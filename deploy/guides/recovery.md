@@ -16,7 +16,7 @@ Capture refuses a missing or different backup device and needs 3 GiB free. It st
 
 The command validates the unit against `installationId` and needs the release that wrote the unit under `/srv/ctc-manager/releases`. It stops phpMyAdmin and the app, removes the database and data volumes, copies the unit's secrets to the configured paths, points `current` at that release with integrations paused, imports the dump, restores the files and starts the stack. It waits for health and starts phpMyAdmin again if it ran.
 
-Restore works in place. The current database is gone afterwards, so take a fresh `backup` first if the current state might still matter. A unit written by a release without `lib/rollout.py` cannot be restored with this command; only the deploy rollback may use such a unit.
+Restore works in place. The current database is gone afterwards, so take a fresh `backup` first if the current state might still matter. A unit written by a release without `lib/rollout.py`, such as 1.51.0, needs `--legacy-release` in addition.
 
 Runtime restoration accepts the supported Basic, Discord and Google environment keys and fixes database, profile, JVM and storage settings. It does not execute backed-up JVM agents or external configuration files.
 

@@ -52,4 +52,4 @@ tar -xzf "ctc-manager-deployment-$V.tar.gz"
 "./ctc-manager-deployment-$V/ctc-manager" --directory /srv/ctc-manager deploy "$V"
 ```
 
-The deploy downloads and verifies the release again into `releases/$V`, so the scratch copy only supplies the code. Remove `$work` afterwards. A rollback during this first deploy returns to 1.51.0 with its units and keeps the legacy state. After success, every later update is the single command.
+The deploy downloads and verifies the release again into `releases/$V`, so the scratch copy only supplies the code. Remove `$work` afterwards. A rollback during this first deploy returns to 1.51.0 with its units and keeps the legacy state. If that rollback fails too, the error names `releases/$V/ctc-manager --directory /srv/ctc-manager restore --unit UNIT --legacy-release`, because 1.51.0 has no in-place restore and the home launcher does not exist yet. After success, every later update is the single command.

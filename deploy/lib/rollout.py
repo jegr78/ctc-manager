@@ -88,9 +88,8 @@ def restore(root, unit, runtime_for=NativeRuntime, allow_legacy=False):
     parse(expected.get('version'))
     release = select_recovery_release(root, expected)
     if not allow_legacy and not (release / 'lib/rollout.py').is_file():
-        raise ValueError('release ' + expected['version'] + ' still uses storage generations; restore it with its own tools')
+        raise ValueError('release ' + expected['version'] + ' predates in-place restore; add --legacy-release to restore it anyway')
     current = runtime_for(root, (root / 'current').resolve())
-    current.stop_app()
     current.compose(['rm', '--force', '--stop', 'app', 'db', 'credentials-init'])
     current.docker(['volume', 'rm', '--force', *volumes(current)])
     for name, field in SECRETS.items():
@@ -136,8 +135,7 @@ class DeployFailed(RuntimeError):
         elif unit is None:
             outcome = 'restarting the app failed: ' + str(rollback_error) + '; the database is unchanged, start it with ctc-manager up'
         else:
-            outcome = ('rollback failed: ' + str(rollback_error) + '; the app is stopped, recover with '
-                       'ctc-manager restore --unit ' + str(unit))
+            outcome = 'rollback failed: ' + str(rollback_error) + '; the app is stopped, recover with ' + str(unit)
         super().__init__('deploy failed at ' + step + ': ' + str(cause or type(cause).__name__) + '; ' + outcome)
 
 
@@ -254,23 +252,23 @@ def deploy(root, version, allow_database_upgrade=False, drill=False, runtime_for
     previous = (root / 'current').resolve()
     old = runtime_for(root, previous)
     outbound = old.config.get('outboundPaused', False)
-    step = 'download'
-    try:
-        running = old.release['version']
-        old.check_destination(UNIT_ROOT)
-        old.preflight()
-        version = resolve(version, fetch)
-        if drill and version != running:
-            raise ValueError('the rollback drill redeploys the running ' + running + ' only')
-        if not drill and parse(version) <= parse(running):
-            raise ValueError(version + ' is not newer than the running ' + running)
-        release = previous if drill else obtain(root, version, fetch)
-        manifest = installed_release(release)
-        step = 'pull'
-        database_changed = compatibility(old, release, manifest, allow_database_upgrade)
-    except Exception as error:
-        raise DeployFailed(step, error, 'unchanged') from error
     with phpmyadmin_stopped(run):
+        step = 'download'
+        try:
+            running = old.release['version']
+            old.check_destination(UNIT_ROOT)
+            old.preflight()
+            version = resolve(version, fetch)
+            if drill and version != running:
+                raise ValueError('the rollback drill redeploys the running ' + running + ' only')
+            if not drill and parse(version) <= parse(running):
+                raise ValueError(version + ' is not newer than the running ' + running)
+            release = previous if drill else obtain(root, version, fetch)
+            manifest = installed_release(release)
+            step = 'pull'
+            database_changed = compatibility(old, release, manifest, allow_database_upgrade)
+        except Exception as error:
+            raise DeployFailed(step, error, 'unchanged') from error
         step = 'backup'
         try:
             before = history(old)
@@ -308,7 +306,9 @@ def deploy(root, version, allow_database_upgrade=False, drill=False, runtime_for
             except HostFilesFailed as failure:
                 raise DeployFailed(step, error, 'rolled back', unit, failure.__cause__) from error
             except BaseException as failure:
-                raise DeployFailed(step, error, 'stopped', unit, failure) from error
+                command = (str(release / 'ctc-manager') + ' --directory ' + str(root) + ' restore --unit ' + str(unit)
+                           + ('' if (previous / 'lib/rollout.py').is_file() else ' --legacy-release'))
+                raise DeployFailed(step, error, 'stopped', command, failure) from error
             raise DeployFailed(step, error, 'rolled back') from error
         result = {'deployed': version, 'unit': str(unit)}
         try:
@@ -320,6 +320,8 @@ def deploy(root, version, allow_database_upgrade=False, drill=False, runtime_for
 
 def migrated(current, before):
     try:
+        if getattr(current, 'db', None) is None:
+            current.db = current.container('db')
         return history(current) != before
     except Exception:
         return True
@@ -475,9 +477,10 @@ def main(argv=None):
     elif arguments.operation == 'restore':
         options = argparse.ArgumentParser(prog='ctc-manager restore', allow_abbrev=False)
         options.add_argument('--unit', required=True)
+        options.add_argument('--legacy-release', action='store_true')
         chosen = options.parse_args(remaining)
         with phpmyadmin_stopped():
-            print(json.dumps(restore(root, chosen.unit)))
+            print(json.dumps(restore(root, chosen.unit, allow_legacy=chosen.legacy_release)))
     else:
         raise ValueError(arguments.operation + ' is not available yet')
 
