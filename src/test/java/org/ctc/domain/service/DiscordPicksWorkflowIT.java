@@ -153,7 +153,7 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
         });
         reviews.returnForCorrection(fixture.race().getId(), 1, new ManagementPickActor("test-admin"), "Check weather slot order");
         var corrected = new Driver("12346"); corrected.command(); corrected.select(fixture.race().getId());
-        assertThat(corrected.response.allText()).contains("RETURNED", "Check weather slot order", "deadline has passed", "2020-01-01T12:00");
+        assertThat(corrected.response.allText()).contains("RETURNED", "Check weather slot order", "deadline has passed", "Deadline: <t:1577876400:F> · <t:1577876400:R>");
         assertThat(corrected.response.last().buttons()).extracting(PickGatewayMessage.Button::label).doesNotContain("Replace picks");
         tx.executeWithoutResult(status -> entityManager.find(Race.class, fixture.race().getId()).getMatch().setPickDeadlineOverride(LocalDateTime.of(2035, 1, 1, 12, 0)));
         // when
