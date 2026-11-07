@@ -386,7 +386,7 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
             if (chosen.entryId() != null) select(chosen.entryId());
             if (!chosen.oneMake()) select(payload.carId());
             click("Open rules form"); modal(fields("laps", "12", "wear", "2", "consumption", "3", "refuel", "4"));
-            click("Open fuel form"); var values = new HashMap<>(fields("initial", "DEFAULT", "stops", "1"));
+            click("Open race strategy form"); var values = new HashMap<>(fields("initial", "DEFAULT", "stops", "1"));
             values.put("available", List.of("RS", "RM")); modal(values);
             click("Open mandatory form"); modal(fields("mandatory", "RM"));
             click("Open time form"); modal(fields("progression", "equal", "weather", payload.weather(), "daytime", payload.timeOfDay()));

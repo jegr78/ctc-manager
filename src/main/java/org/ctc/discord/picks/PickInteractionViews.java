@@ -85,8 +85,9 @@ final class PickInteractionViews {
         List<PickGatewayModal.Field> fields = switch (stage) {
             case "rules" -> {
                 var result = new ArrayList<PickGatewayModal.Field>(List.of(text(defaults, "laps", "Laps, positive integer", 10),
-                        text(defaults, "wear", "Tyre wear, 1 to 7", 1), text(defaults, "consumption", "Fuel consumption, 1 to 6", 1),
-                        text(defaults, "refuel", "Refuelling litres/second, 1 to 10", 2)));
+                        select(defaults, "wear", "Tyre wear", numberOptions(7, "x"), 1),
+                        select(defaults, "consumption", "Fuel consumption", numberOptions(6, "x"), 1),
+                        select(defaults, "refuel", "Refuelling speed", numberOptions(10, " L/s"), 1)));
                 if (sportsAllowed(profile, oneMake)) {
                     result.add(select(defaults, "family", "Tyre family", List.of(new PickGatewayModal.Option("Racing", "RACING"),
                             new PickGatewayModal.Option("Sports", "SPORTS")), 1));
@@ -122,8 +123,10 @@ final class PickInteractionViews {
             default -> List.of(new PickGatewayModal.Text("query", stage.equals("search-track")
                     ? "Season tracks; leave blank to show all" : "Search local catalog", false, null, 0, 100, false));
         };
-        return new PickGatewayModal(id, stage.startsWith("search-") ? "Search private picks" : "Private picks: " + stage, fields);
+        return new PickGatewayModal(id, stage.startsWith("search-") ? "Search private picks" : "Private picks: " + stageLabel(stage), fields);
     }
+
+    static String stageLabel(String stage) { return stage.equals("fuel") ? "race strategy" : stage; }
 
     static PickGatewayModal modal(String id, String stage, LobbyRulesProfile profile) {
         return modal(id, stage, profile, false);
@@ -158,6 +161,10 @@ final class PickInteractionViews {
     }
     private static List<PickGatewayModal.Option> options(String... values) {
         return Arrays.stream(values).map(value -> new PickGatewayModal.Option(value, value)).toList();
+    }
+    private static List<PickGatewayModal.Option> numberOptions(int max, String unit) {
+        return java.util.stream.IntStream.rangeClosed(1, max)
+                .mapToObj(value -> new PickGatewayModal.Option(value + unit, Integer.toString(value))).toList();
     }
 
     static void validateStage(String stage, Map<String, List<String>> values) { validateStage(stage, values, LobbyRulesProfile.LEGACY); }

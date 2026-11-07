@@ -1,6 +1,7 @@
 package org.ctc.discord.picks;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -24,6 +25,44 @@ class JdaPickGatewayResponseTest {
     final ReplyCallbackAction initial = mock(ReplyCallbackAction.class, RETURNS_SELF);
     final InteractionHook hook = mock(InteractionHook.class);
     final JdaPickGatewayResponse response = new JdaPickGatewayResponse(event);
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"LEGACY,false", "LEGACY,true", "CTC_2027,false", "CTC_2027,true"})
+    void givenSavedRaceRules_whenSerializingProductionModal_thenUseRequiredSingleSelectsAndKeepNumericDefaults(
+            org.ctc.domain.model.LobbyRulesProfile profile, boolean oneMake) {
+        // given
+        var action = mock(ModalCallbackAction.class); when(event.replyModal(any())).thenReturn(action);
+        var defaults = Map.of("laps", List.of("22"), "wear", List.of("7"),
+                "consumption", List.of("6"), "refuel", List.of("10"));
+        // when
+        response.openModal(PickInteractionViews.modal("ctc-picks:opaque", "rules", profile, oneMake, defaults));
+        // then
+        var captured = ArgumentCaptor.forClass(Modal.class); verify(event).replyModal(captured.capture());
+        var fields = captured.getValue().toData().getArray("components");
+        assertThat(fields.length()).isEqualTo(profile == org.ctc.domain.model.LobbyRulesProfile.CTC_2027 && oneMake ? 5 : 4);
+        assertThat(fields.getObject(0).getObject("component").getInt("type")).isEqualTo(4);
+        assertThat(fields.getObject(0).getObject("component").getString("value")).isEqualTo("22");
+        for (int index = 1; index <= 3; index++) {
+            String id = List.of("wear", "consumption", "refuel").get(index - 1);
+            var input = fields.getObject(index).getObject("component");
+            assertThat(input.getString("custom_id")).isEqualTo(id);
+            assertThat(input.getInt("type")).isEqualTo(3);
+            assertThat(input.getInt("min_values")).isEqualTo(1);
+            assertThat(input.getInt("max_values")).isEqualTo(1);
+            var options = input.getArray("options");
+            assertThat(options.length()).isEqualTo(Integer.parseInt(defaults.get(id).getFirst()));
+            int selected = 0;
+            for (int option = 0; option < options.length(); option++) {
+                var value = options.getObject(option);
+                if (value.getBoolean("default", false)) {
+                    assertThat(value.getString("value")).isEqualTo(defaults.get(id).getFirst());
+                    selected++;
+                }
+            }
+            assertThat(selected).isEqualTo(1);
+        }
+        verify(action).queue(any(), any());
+    }
 
     @ParameterizedTest
     @ValueSource(strings = {"rules", "fuel", "mandatory", "time", "search-entry", "search-car", "search-track"})

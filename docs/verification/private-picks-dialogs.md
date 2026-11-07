@@ -2,6 +2,8 @@
 
 Issue #283 implements team entry on the domain and outgoing Gateway delivered in #281 and #282. Collection stays disabled until #285 supplies confidentiality readiness. No database shape, management review action or publication behavior changes here.
 
+The rules modal uses required single-choice lists for tyre wear (1x–7x), fuel consumption (1x–6x) and refuelling speed (1–10 L/s). Saved selections remain preselected when replacing picks; laps remains a positive-integer input. The following **race strategy** dialog groups initial fuel, required pit stops and available dry tyres. Internal stage identifiers and persisted numeric values are unchanged.
+
 ## Delivery checklist
 
 - [x] Record requirements and reproduce missing behavior before production changes.
