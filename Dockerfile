@@ -1,6 +1,6 @@
 # Stage 1: Build
 # Pinned to -noble: Playwright does not support Ubuntu 26.04 yet.
-FROM eclipse-temurin:25.0.5_8-jdk-noble AS dependencies
+FROM eclipse-temurin:25.0.5_8-jdk-noble AS build-dependencies
 
 WORKDIR /build
 
@@ -12,7 +12,7 @@ RUN chmod +x mvnw && ./mvnw dependency:go-offline -B \
     && ./mvnw dependency:copy-dependencies -DincludeGroupIds=com.microsoft.playwright \
        -DincludeScope=runtime -DoutputDirectory=/playwright -B
 
-FROM dependencies AS build
+FROM build-dependencies AS build
 
 # The validate phase needs config/ (Checkstyle) and scripts/ (build guards).
 COPY config config
@@ -37,14 +37,14 @@ WORKDIR /app
 RUN mkdir -p /app/data/uploads /app/data/site /app/logs && chown -R ctc:ctc /app
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright
-RUN --mount=type=bind,from=dependencies,source=/playwright,target=/opt/ctc-playwright \
+RUN --mount=type=bind,from=build-dependencies,source=/playwright,target=/opt/ctc-playwright \
     java -cp '/opt/ctc-playwright/*' com.microsoft.playwright.CLI install --with-deps chromium \
     && rm -rf /var/lib/apt/lists/* \
     && chown -R ctc:ctc /app/.playwright
 
 USER ctc
 
-RUN --mount=type=bind,from=dependencies,source=/playwright,target=/opt/ctc-playwright \
+RUN --mount=type=bind,from=build-dependencies,source=/playwright,target=/opt/ctc-playwright \
     java -cp '/opt/ctc-playwright/*' com.microsoft.playwright.CLI screenshot \
     --browser chromium --timeout 30000 about:blank /tmp/ctc-chromium-smoke.png \
     && test -s /tmp/ctc-chromium-smoke.png && rm /tmp/ctc-chromium-smoke.png

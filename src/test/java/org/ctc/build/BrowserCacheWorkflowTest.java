@@ -61,7 +61,7 @@ class BrowserCacheWorkflowTest {
         int appCopy = dockerfile.indexOf("COPY --from=build --chown=ctc:ctc /build/target/ctc-manager-");
         assertThat(dockerfile.indexOf("CLI install --with-deps chromium")).isPositive().isLessThan(appCopy);
         assertThat(dockerfile.indexOf("CLI screenshot")).isPositive().isLessThan(appCopy);
-        assertThat(dockerfile).contains("--mount=type=bind,from=dependencies,source=/playwright",
+        assertThat(dockerfile).contains("--mount=type=bind,from=build-dependencies,source=/playwright",
                 "-DincludeGroupIds=com.microsoft.playwright", "USER ctc", "ENTRYPOINT [\"java\", \"-jar\", \"ctc-manager.jar\"]");
     }
 }
