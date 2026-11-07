@@ -376,3 +376,146 @@ class DeployTest(RolloutCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class DockerListing:
+    def __init__(self, config, volumes, users=None, failing=False):
+        self.config, self.volumes, self.users, self.failing, self.calls = config, volumes, users or {}, failing, []
+
+    def docker(self, arguments, **kwargs):
+        self.calls.append(arguments)
+        if self.failing and arguments[:2] == ['volume', 'rm']:
+            raise ValueError('volume in use')
+        if arguments[:2] == ['volume', 'ls']:
+            return ('\n'.join(self.volumes) + '\n').encode()
+        if arguments[:1] == ['ps']:
+            return ('\n'.join(self.users.get(arguments[-1].removeprefix('volume='), [])) + '\n').encode()
+        return b''
+
+
+class HostFilesTest(RolloutCase):
+    def setUp(self):
+        super().setUp()
+        self.home = self.base / 'home'
+        self.units = self.home / '.config/systemd/user'
+        self.new = self.release('1.52.0', app='b')
+
+    def test_units_and_launcher_are_installed_privately(self):
+        rollout.install_host_files(self.new)
+        installed = sorted(path.name for path in self.units.iterdir())
+        self.assertEqual(['ctc-manager-backup.service', 'ctc-manager-backup.timer', 'ctc-manager-phpmyadmin.service',
+                          'ctc-manager-site-publisher.service', 'ctc-manager-site-publisher.timer'], installed)
+        self.assertEqual(0o600, (self.units / 'ctc-manager-phpmyadmin.service').stat().st_mode & 0o777)
+        launcher = self.home / '.local/bin/ctc-manager'
+        self.assertEqual((self.new / 'ctc-manager-launcher').read_bytes(), launcher.read_bytes())
+        self.assertEqual(0o700, launcher.stat().st_mode & 0o777)
+
+    def test_symlink_target_is_refused_before_anything_is_written(self):
+        self.units.mkdir(parents=True)
+        (self.units / 'ctc-manager-backup.timer').symlink_to(self.base / 'elsewhere')
+        with self.assertRaisesRegex(ValueError, 'symlink'):
+            rollout.install_host_files(self.new)
+        self.assertFalse((self.units / 'ctc-manager-backup.service').exists())
+
+    def test_backup_drop_ins_are_removed(self):
+        dropins = self.units / 'ctc-manager-backup.service.d'
+        dropins.mkdir(parents=True)
+        for name in ['phpmyadmin.conf', 'ordering.conf']:
+            (dropins / name).write_text('[Unit]\n')
+        rollout.install_host_files(self.new)
+        self.assertFalse(dropins.exists(), 'the unit itself orders after the publisher now')
+
+    def test_restore_host_files_brings_back_the_previous_files(self):
+        dropins = self.units / 'ctc-manager-backup.service.d'
+        dropins.mkdir(parents=True)
+        (dropins / 'phpmyadmin.conf').write_text('old drop-in')
+        (self.units / 'ctc-manager-backup.service').write_text('old unit')
+        snapshot = rollout.snapshot_host_files(self.new)
+        rollout.install_host_files(self.new)
+        rollout.restore_host_files(snapshot)
+        self.assertEqual('old unit', (self.units / 'ctc-manager-backup.service').read_text())
+        self.assertEqual('old drop-in', (dropins / 'phpmyadmin.conf').read_text())
+        self.assertFalse((self.home / '.local/bin/ctc-manager').exists(), 'a launcher that did not exist goes again')
+        self.assertFalse((self.units / 'ctc-manager-phpmyadmin.service').exists())
+
+    def legacy_tree(self):
+        for name in ['old-a', 'recovery-20261101']:
+            (self.root / 'secrets' / name).mkdir()
+            (self.root / 'secrets' / name / 'app.env').write_text('x')
+        self.config.update({key: str(self.root / 'secrets/recovery-20261101' / name) for key, name in
+                            [('appEnvFile', 'app.env'), ('databasePasswordFile', 'db-password'),
+                             ('databaseRootPasswordFile', 'db-root-password'), ('googleCredentialsFile', 'google.json')]})
+        for name in ['operation.json', 'update.json', 'update-before-1.json', 'protected-recovery.json',
+                     'before-old-a.json', 'live-recovery.json', 'production-authority.json',
+                     'phpmyadmin-backup-resume', 'backups.json']:
+            (self.root / 'state' / name).write_text('{}')
+        (self.root / 'phpmyadmin').mkdir()
+        (self.root / 'phpmyadmin/service.py').write_text('')
+
+    def test_remove_legacy_deletes_other_generations_and_legacy_state(self):
+        self.legacy_tree()
+        current = [f'ctc-manager_recovery-20261101_{kind}' for kind in ['database', 'data', 'logs', 'credentials']]
+        old = ['ctc-manager_old-a_data', 'ctc-manager_old-a_database', 'ctc-manager_data', 'ctc-manager_logs']
+        docker = DockerListing(self.config, current + old + ['ctc-recovery-check_data', 'other_data'],
+                               users={'ctc-manager_old-a_data': ['dead1']})
+        rollout.remove_legacy(docker, self.root)
+        self.assertIn(['rm', '--force', 'dead1'], docker.calls)
+        removed = next(call for call in docker.calls if call[:2] == ['volume', 'rm'])
+        self.assertEqual(sorted(old), sorted(removed[2:]))
+        self.assertLess(docker.calls.index(['rm', '--force', 'dead1']), docker.calls.index(removed))
+        self.assertEqual(['backups.json'], sorted(path.name for path in (self.root / 'state').iterdir()))
+        self.assertEqual(['app.env', 'db-password', 'db-root-password', 'google.json', 'recovery-20261101'],
+                         sorted(path.name for path in (self.root / 'secrets').iterdir()))
+        self.assertFalse((self.root / 'phpmyadmin').exists())
+
+    def test_docker_failure_keeps_the_legacy_files(self):
+        self.legacy_tree()
+        docker = DockerListing(self.config, ['ctc-manager_old-a_data'], failing=True)
+        with self.assertRaises(ValueError):
+            rollout.remove_legacy(docker, self.root)
+        self.assertTrue((self.root / 'state/update.json').exists(), 'files stay so the next deploy retries')
+        self.assertTrue((self.root / 'secrets/old-a').exists())
+
+
+class DeployHostFilesTest(RolloutCase):
+    systemctl, deploy, current = DeployTest.systemctl, DeployTest.deploy, DeployTest.current
+    capture = DeployTest.capture
+
+    def test_failed_reload_restores_the_previous_host_files(self):
+        units = self.base / 'home/.config/systemd/user'
+        units.mkdir(parents=True)
+        (units / 'ctc-manager-backup.service').write_text('old unit')
+        self.release('1.52.0', app='b')
+        def systemctl(command, **kwargs):
+            if 'daemon-reload' in command and not hasattr(self, 'reloaded'):
+                self.reloaded = True
+                raise subprocess.CalledProcessError(1, command)
+            return original(command, **kwargs)
+        original = self.systemctl
+        with patch.object(self, 'systemctl', systemctl), self.assertRaises(rollout.DeployFailed):
+            self.deploy('1.52.0')
+        self.assertEqual('old unit', (units / 'ctc-manager-backup.service').read_text())
+        self.assertEqual('1.51.0', self.current())
+
+    def test_legacy_cleanup_failure_only_warns(self):
+        self.release('1.52.0', app='b')
+        with patch.object(rollout, 'remove_legacy', side_effect=ValueError('volume in use')):
+            result = self.deploy('1.52.0')
+        self.assertEqual('1.52.0', result['deployed'])
+        self.assertIn('volume in use', result['warning'])
+
+    def test_partial_host_file_install_is_rolled_back(self):
+        units = self.base / 'home/.config/systemd/user'
+        units.mkdir(parents=True)
+        (units / 'ctc-manager-backup.service').write_text('old unit')
+        self.release('1.52.0', app='b')
+        original, written = rollout.write_private, []
+        def write_private(target, content, mode):
+            written.append(target)
+            if len(written) == 2:
+                raise OSError('disk full')
+            original(target, content, mode)
+        with patch.object(rollout, 'write_private', write_private), self.assertRaises(rollout.DeployFailed):
+            self.deploy('1.52.0')
+        self.assertEqual('old unit', (units / 'ctc-manager-backup.service').read_text())
+        self.assertEqual('1.51.0', self.current())

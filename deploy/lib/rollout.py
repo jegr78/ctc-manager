@@ -282,7 +282,7 @@ def deploy(root, version, allow_database_upgrade=False, drill=False, runtime_for
             except Exception as failure:
                 raise DeployFailed(step, error, 'stopped', None, failure) from error
             raise DeployFailed(step, error, 'rolled back') from error
-        started = installed = False
+        started, installed = False, None
         current = None
         try:
             step = 'start'
@@ -294,7 +294,7 @@ def deploy(root, version, allow_database_upgrade=False, drill=False, runtime_for
             if drill:
                 raise RuntimeError('rollback drill')
             step = 'host files'
-            installed = True
+            installed = snapshot_host_files(release, home)
             install_host_files(release, home)
             run(['systemctl', '--user', 'daemon-reload'], check=True)
             if not outbound:
@@ -332,20 +332,97 @@ def rollback(root, release, unit, restore_data, installed, runtime_for, run, hom
         runtime_for(root, (root / 'current').resolve()).compose(['stop', 'app'])
         switch_release(root, release, outbound_paused=True)
         runtime_for(root, release).compose(['up', '-d', '--wait', '--wait-timeout', '180'])
-    if installed:
+    if installed is not None:
         try:
-            install_host_files(release, home)
+            restore_host_files(installed)
             run(['systemctl', '--user', 'daemon-reload'], check=True)
         except Exception as error:
             raise HostFilesFailed() from error
 
 
+LEGACY_STATE = ['operation.json', 'update.json', 'protected-recovery.json', 'live-recovery.json',
+                'production-authority.json', 'phpmyadmin-backup-resume']
+LEGACY_STATE_PATTERNS = ['update-before-*.json', 'before-*.json']
+DROP_INS = ['ctc-manager-backup.service.d/phpmyadmin.conf', 'ctc-manager-backup.service.d/ordering.conf']
+VOLUME = re.compile(r'ctc-manager_(?:[a-z0-9][a-z0-9-]{0,47}_)?(?:database|data|logs|credentials)')
+
+
+def host_files(release, home=None):
+    """Map each host file target of a release to its source; drop-ins to remove map to None."""
+    release, home = Path(release), Path(home or Path.home())
+    units = home / '.config/systemd/user'
+    sources = {units / path.name: path for path in sorted((release / 'systemd').glob('ctc-manager-*'))}
+    sources.update({units / path.name: path for path in sorted((release / 'phpmyadmin').glob('*.service'))})
+    if (release / 'ctc-manager-launcher').is_file():
+        sources[home / '.local/bin/ctc-manager'] = release / 'ctc-manager-launcher'
+    sources.update({units / name: None for name in DROP_INS})
+    for target in sources:
+        if target.is_symlink():
+            raise ValueError('refusing to replace symlink ' + str(target))
+    return sources
+
+
+def snapshot_host_files(release, home=None):
+    return {target: (target.read_bytes(), target.stat().st_mode & 0o777) if target.is_file() else None
+            for target in host_files(release, home)}
+
+
 def install_host_files(release, home=None):
-    """Install units and launcher of a release; filled in by the host-file task."""
+    """Install the units and the launcher of a release and remove the old backup drop-ins."""
+    for target, source in host_files(release, home).items():
+        if source is None:
+            target.unlink(missing_ok=True)
+        else:
+            write_private(target, source.read_bytes(), 0o700 if target.parent.name == 'bin' else 0o600)
+    dropins = Path(home or Path.home()) / '.config/systemd/user/ctc-manager-backup.service.d'
+    if dropins.is_dir() and not any(dropins.iterdir()):
+        dropins.rmdir()
+
+
+def restore_host_files(snapshot):
+    for target, previous in snapshot.items():
+        if previous is None:
+            target.unlink(missing_ok=True)
+        else:
+            write_private(target, *previous)
+
+
+def write_private(target, content, mode):
+    if target.is_symlink():
+        raise ValueError('refusing to replace symlink ' + str(target))
+    target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    temporary = target.with_name('.' + target.name + '.' + str(os.getpid()) + '.tmp')
+    temporary.write_bytes(content)
+    temporary.chmod(mode)
+    temporary.replace(target)
 
 
 def remove_legacy(current, root):
-    """Delete state of the generation era; filled in by the host-file task."""
+    """Delete the volumes, secrets and state files of former storage generations."""
+    root = Path(root)
+    generation = current.config.get('storageGeneration')
+    prefix = 'ctc-manager_' + (generation + '_' if generation else '')
+    keep = {prefix + kind for kind in ['database', 'data', 'logs', 'credentials']}
+    volumes = [name for name in current.docker(['volume', 'ls', '--format', '{{.Name}}']).decode().split()
+               if VOLUME.fullmatch(name) and name not in keep]
+    for volume in volumes:
+        users = current.docker(['ps', '--all', '--quiet', '--filter', 'volume=' + volume]).decode().split()
+        if users:
+            current.docker(['rm', '--force', *users])
+    if volumes:
+        current.docker(['volume', 'rm', *volumes])
+    referenced = {Path(current.config[key]).resolve().parent for key in
+                  ['appEnvFile', 'databasePasswordFile', 'databaseRootPasswordFile', 'googleCredentialsFile']}
+    secrets = root / 'secrets'
+    for path in secrets.iterdir():
+        if path.is_dir() and not path.is_symlink() and path.resolve() not in referenced:
+            shutil.rmtree(path)
+    state = root / 'state'
+    for path in [*(state / name for name in LEGACY_STATE),
+                 *(match for pattern in LEGACY_STATE_PATTERNS for match in state.glob(pattern))]:
+        path.unlink(missing_ok=True)
+    if (root / 'phpmyadmin').is_dir() and not (root / 'phpmyadmin').is_symlink():
+        shutil.rmtree(root / 'phpmyadmin')
 
 
 def backup(root):
