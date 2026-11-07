@@ -99,7 +99,7 @@ class PickPersistenceIT {
         var receipt = submissions.submit(fixture.race().getId(), 0, request, actor, payload);
         addedPoolCar = tx.execute(status -> cars.saveAndFlush(new Car("Test extension", UUID.randomUUID().toString())).getId());
         // when
-        var addedEntry = poolService.saveOneMakeEntry(fixture.season().getId(), null, "Additional One-Make", addedPoolCar);
+        var addedEntry = poolService.addFrozenOneMakeEntry(fixture.season().getId(), "Additional One-Make", addedPoolCar);
         // then
         tx.executeWithoutResult(status -> {
             entityManager.clear();

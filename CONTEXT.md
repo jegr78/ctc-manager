@@ -46,9 +46,9 @@ The single concrete vehicle used by every participating driver in a race.
 _Avoid_: Per-driver car
 
 **Pool entry**:
-A named seasonal choice with one or more alternative car conditions. The whole entry is one
-consumable choice for an effective home team. Once frozen, its membership stays fixed. Additional
-entries may expand a frozen pool without changing existing entries or earlier picks.
+A named seasonal choice defined by alternative car conditions or an explicit One-Make, consumed
+once per effective home team. Its frozen membership stays fixed when additional entries expand
+the season pool.
 _Avoid_: Concrete car
 
 **Pick**:

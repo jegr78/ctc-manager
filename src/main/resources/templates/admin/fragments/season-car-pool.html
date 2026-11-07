@@ -110,7 +110,7 @@
                 </th:block>
                 <div class="inline-form mt-md">
                     <button th:if="*{entryType != null and entryType.name() == 'CATEGORY'}" type="submit" name="action" value="add-clause" class="btn btn-secondary btn-sm" formnovalidate>Add alternative clause</button>
-                    <button type="submit" name="action" value="save" class="btn btn-primary btn-sm" th:text="${poolPreview.frozen ? 'Add and freeze entry' : 'Save entry'}">Save entry</button>
+                    <button type="submit" name="action" th:value="${poolPreview.frozen ? 'add-frozen' : 'save'}" class="btn btn-primary btn-sm" th:text="${poolPreview.frozen ? 'Add and freeze entry' : 'Save entry'}">Save entry</button>
                     <a th:if="*{entryId != null}" class="btn btn-secondary btn-sm" th:href="@{/admin/seasons/{id}/edit(id=${season.id})} + '#pool-entry-editor'">New entry</a>
                 </div>
             </fieldset>

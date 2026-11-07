@@ -30,7 +30,7 @@ class SeasonCarPoolServiceTest {
         assertThatThrownBy(() -> service.reopen(season.getId())).isInstanceOf(BusinessRuleException.class);
         oldCar.setCategory(CarCategory.GR_B);
         // when
-        save("Additional", clause(CarCategory.GR_4, null, null));
+        service.addFrozenEntry(season.getId(), "Additional", List.of(clause(CarCategory.GR_4, null, null)));
         // then
         assertThat(season.getCarPoolState()).isEqualTo(CarPoolState.FROZEN);
         assertThat(season.getCarPoolEntries()).hasSize(2);
@@ -55,19 +55,30 @@ class SeasonCarPoolServiceTest {
         save("Original", clause(CarCategory.GR_3, null, null)); service.freeze(season.getId());
         when(cars.findById(addedCar.getId())).thenReturn(Optional.of(addedCar));
         // when
-        service.saveOneMakeEntry(season.getId(), null, "New One-Make", addedCar.getId());
+        service.addFrozenOneMakeEntry(season.getId(), "New One-Make", addedCar.getId());
         // then
         assertThat(season.getCarPoolEntries()).hasSize(2);
         var added = season.getCarPoolEntries().getLast();
         assertThat(added.getOneMakeCar()).isSameAs(addedCar);
         assertThat(added.getMembers()).extracting(member -> member.getCar().getId()).containsExactly(addedCar.getId());
-        assertThatThrownBy(() -> service.saveOneMakeEntry(season.getId(), null, "Duplicate", addedCar.getId()))
+        assertThatThrownBy(() -> service.addFrozenOneMakeEntry(season.getId(), "Duplicate", addedCar.getId()))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("overlap");
-        assertThatThrownBy(() -> save("Duplicate category", clause(CarCategory.GR_3, null, null)))
+        assertThatThrownBy(() -> service.addFrozenEntry(season.getId(), "Duplicate category", List.of(clause(CarCategory.GR_3, null, null))))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("overlap");
-        assertThatThrownBy(() -> save("Empty", clause(CarCategory.GR_2, null, null)))
+        assertThatThrownBy(() -> service.addFrozenEntry(season.getId(), "Empty", List.of(clause(CarCategory.GR_2, null, null))))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("eligible");
         assertThat(season.getCarPoolEntries()).hasSize(2);
+    }
+
+    @Test
+    void givenDraftPool_whenSubmittingFrozenAddition_thenRejectStaleIntentWithoutMutation() {
+        // when / then
+        assertThatThrownBy(() -> service.addFrozenEntry(season.getId(), "Stale addition", List.of(clause(CarCategory.GR_3, null, null))))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Reload");
+        assertThat(season.getCarPoolEntries()).isEmpty();
+        verifyNoInteractions(entries, cars);
+        assertThatThrownBy(() -> service.addFrozenOneMakeEntry(season.getId(), "Missing car", null))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Choose a car");
     }
 
     @Test
@@ -89,7 +100,7 @@ class SeasonCarPoolServiceTest {
         assertThat(service.preview(season.getId()).entries().get(1).carIds()).containsExactly(oneMake.getId());
         assertThat(season.getCarPoolEntries().get(1).getClauses()).isEmpty();
         assertThatThrownBy(() -> service.saveOneMakeEntry(season.getId(), null, "Another", oneMake.getId()))
-                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("overlap");
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("frozen");
     }
 
     @Test
