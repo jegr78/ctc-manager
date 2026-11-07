@@ -47,7 +47,7 @@
             <details th:each="entry : ${poolPreview.entries}">
                 <summary th:text="${entry.label + ' · ' + entry.cars.size() + ' eligible car(s)'}"></summary>
                 <ul>
-                    <li th:each="car : ${entry.cars}"><a th:href="@{/admin/cars/{id}/edit(id=${car.id})}" th:text="${car.label}"></a></li>
+                    <li th:each="car : ${entry.cars}"><a class="detail-link" th:href="@{/admin/cars/{id}/edit(id=${car.id})}" th:text="${car.label}"></a></li>
                 </ul>
             </details>
             <details th:if="${!poolPreview.notices.isEmpty()}" class="mt-md">

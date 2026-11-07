@@ -38,6 +38,20 @@ body {
     line-height: 1.6;
 }
 
+/* Ordinary links share the admin palette; component rules keep precedence. */
+:where(a:any-link) {
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+:where(a:any-link:hover) { color: var(--accent); }
+
+:where(a:any-link:focus-visible) {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+}
+
 h1, h2 { letter-spacing: -0.025em; }
 
 .sidebar-brand span { font-family: 'Conthrax', sans-serif; }

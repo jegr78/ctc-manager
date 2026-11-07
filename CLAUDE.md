@@ -350,6 +350,8 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 
 ### CSS Guidelines
 
+* Ordinary admin links use a zero-specificity shared palette for unvisited/visited, hover and keyboard focus. Keep component colors and button/navigation decorations explicit; use `detail-link` for linked entity names.
+
 * Use CSS classes from `admin.css` instead of inline styles: `btn-xs`, `btn-sm`, etc.
 * CTC uses black, white and readable grey surfaces. Admin actions and focus states use yellow (`#ffdd00`). The public website reserves yellow for branding and event headers; navigation, filters and statistics use neutral selection states so they do not compete with team colours.
 * Use Conthrax for branding and public page mastheads. Admin headings, controls and data use the system sans-serif font. Keep tabular figures in tables and scoring inputs.
