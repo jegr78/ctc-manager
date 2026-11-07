@@ -66,7 +66,7 @@ public class MatchService {
 	private final DiscordGlobalConfigService discordGlobalConfigService;
 	private final ApplicationEventPublisher eventPublisher;
 	private final Clock clock;
-    private final SeasonRepository seasonRepository;
+	private final SeasonRepository seasonRepository;
     private final EntityManager entityManager;
 
 	public Match getMatch(UUID matchId) {
@@ -204,7 +204,7 @@ public class MatchService {
 
 	@Transactional
 	public void updateWalkover(UUID matchId, UUID walkoverTeamId) {
-        scoreLocks.lockMatch(matchId);
+		scoreLocks.lockMatch(matchId);
 		Match match = findById(matchId);
 		if (walkoverTeamId == null) {
             if (match.getWalkoverTeam() == null) return;
@@ -248,7 +248,7 @@ public class MatchService {
     public void markChannelArchived(UUID id) {
         var match = findById(id);
         var seasonId = match.getMatchday().getSeason().getId();
-        seasonRepository.findByIdForUpdate(seasonId).orElseThrow();
+		seasonRepository.findByIdForUpdate(seasonId).orElseThrow();
         entityManager.refresh(match, LockModeType.PESSIMISTIC_WRITE);
         if (!seasonId.equals(match.getMatchday().getSeason().getId())) throw new BusinessRuleException("The pairing moved; reload before archiving");
         incidentGuard.requireChannelArchival(match);
@@ -302,7 +302,11 @@ public class MatchService {
 	 * Caller is responsible for duplicate checks and logging.
 	 */
 	@Transactional
-	public Match createMatchWithLegs(Matchday matchday, Team homeTeam, Team awayTeam, boolean bye) {
+	public Match createMatchWithLegs(Matchday requestedMatchday, Team homeTeam, Team awayTeam, boolean bye) {
+		var matchday = matchdayRepository.findById(requestedMatchday.getId())
+				.orElseThrow(() -> new EntityNotFoundException("Matchday", requestedMatchday.getId()));
+		seasonRepository.findByIdForUpdate(matchday.getSeason().getId())
+				.orElseThrow(() -> new EntityNotFoundException("Season", matchday.getSeason().getId()));
 		var match = new Match(matchday, homeTeam, awayTeam);
 		match.setBye(bye);
 		match = matchRepository.save(match);
@@ -316,6 +320,7 @@ public class MatchService {
 				race.setHomeTeamOverride(awayTeam);
 				race.setAwayTeamOverride(homeTeam);
 			}
+			race.enrolForPicksIfEnabled();
 			raceRepository.save(race);
 		}
 		return match;
@@ -327,6 +332,7 @@ public class MatchService {
 	 */
 	@Transactional
 	public Match addLeg(UUID matchId) {
+		scoreLocks.lockMatch(matchId);
 		var match = matchRepository.findById(matchId)
 				.orElseThrow(() -> new EntityNotFoundException("Match", matchId));
 		var matchday = match.getMatchday();
@@ -345,6 +351,7 @@ public class MatchService {
 			race.setAwayTeamOverride(match.getHomeTeam());
 		}
 		match.getRaces().add(race);
+		race.enrolForPicksIfEnabled();
 		raceRepository.save(race);
 
 		log.info("Added leg {} for match {} vs {}",
@@ -371,7 +378,7 @@ public class MatchService {
 		var match = matchRepository.findById(matchId)
 				.orElseThrow(() -> new EntityNotFoundException("Match", matchId));
         UUID seasonId = match.getMatchday().getSeason().getId();
-        seasonRepository.findByIdForUpdate(seasonId).orElseThrow();
+		seasonRepository.findByIdForUpdate(seasonId).orElseThrow();
         raceRepository.findBySeasonForSelectionUpdate(seasonId);
         entityManager.refresh(match, LockModeType.PESSIMISTIC_WRITE);
         if (!seasonId.equals(match.getMatchday().getSeason().getId())) {

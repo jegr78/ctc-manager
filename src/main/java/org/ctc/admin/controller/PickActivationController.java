@@ -32,7 +32,7 @@ public class PickActivationController {
         if (result.hasErrors()) return view(seasonId, model);
         try {
             service.enable(seasonId, form, principal);
-            redirect.addFlashAttribute("successMessage", "Collection enabled. Confirmed public fields are retained and other managed choices stay withheld.");
+            redirect.addFlashAttribute("successMessage", "Pick enrollment updated. Collection is enabled; confirmed public fields are retained and other managed choices stay withheld.");
             return redirect(seasonId);
         } catch (BusinessRuleException failure) { result.reject("activation", failure.getMessage()); return view(seasonId, model); }
     }

@@ -64,7 +64,7 @@ public class PlayoffCarSelectionService {
                     incidentGuard.requireIdentity(race, race.getMatchday().getId(), home, away);
                     penaltyGuard.requireIdentity(race, race.getMatchday().getId(), home, away);
                     disqualificationGuard.requireIdentity(race, race.getMatchday().getId(), home, away);
-                    if (!PickTargetRules.isScheduledTarget(race) && PickTargetRules.isScheduledTarget(race, home, away)) newlyEligible.add(race);
+                    if (!PickTargetRules.isUnfinishedTarget(race) && PickTargetRules.isUnfinishedTarget(race, home, away)) newlyEligible.add(race);
                     var previousHome = race.getHomeTeam();
                     if (Objects.equals(previousHome == null ? null : previousHome.getId(), home == null ? null : home.getId())) continue;
                     assignments.add(new RaceCarSelectionService.Assignment(race.getId(), home == null ? null : home.getId(),

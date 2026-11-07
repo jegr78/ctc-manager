@@ -148,6 +148,13 @@ through 14 retain their original typed RS/RM/RH contract; historical native text
 Intermediate/Wet remains compatible. Equivalent native selections preserve exact saved text and
 fingerprints. The read-only audit reports known invalid settings without rewriting history.
 
+## Planning private picks
+
+Management opens a planned matchday for picks before teams agree their individual race dates.
+The matchday deadline and any explicit match override still apply. New eligible legs join an enabled
+season automatically. For an older missed leg, use **Season settings → Private picks collection →
+Enroll new races** and review its existing settings. Collection remains enabled and saved picks stay intact.
+
 ## Season lobby rules
 
 Existing and newly created seasons use **Previous CTC rules** until management explicitly selects

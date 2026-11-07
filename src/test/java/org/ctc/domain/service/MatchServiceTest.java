@@ -47,6 +47,11 @@ class MatchServiceTest {
 	@InjectMocks
 	private MatchService service;
 
+    @org.junit.jupiter.api.BeforeEach
+    void allowSeasonLockForExistingMocks() {
+        lenient().when(seasonRepository.findByIdForUpdate(any())).thenReturn(Optional.of(new Season("Test locked season")));
+    }
+
 
 	@Test
 	void givenValidTeamsAndMatchday_whenCreateMatch_thenMatchAndFirstRaceCreated() {
@@ -127,14 +132,16 @@ class MatchServiceTest {
 		verify(raceRepository).save(any(Race.class));
 	}
 
-	@Test
-	void givenSeasonWithTwoLegs_whenCreateMatch_thenTwoRacesCreatedWithSwappedSecondLeg() {
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+	void givenSeasonWithTwoLegs_whenCreateMatch_thenTwoRacesCreatedWithSwappedSecondLeg(boolean collectionEnabled) {
 		// given
 		var matchdayId = UUID.randomUUID();
 		var homeTeamId = UUID.randomUUID();
 		var awayTeamId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
+        season.setPicksCollectionEnabled(collectionEnabled);
 		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
 		// legs lives on the phase. Configure two legs for this scenario.
@@ -172,7 +179,12 @@ class MatchServiceTest {
 		assertThat(result.getHomeTeam()).isEqualTo(homeTeam);
 		assertThat(result.getAwayTeam()).isEqualTo(awayTeam);
 
-		// Leg 1: no override, resolves to match home/away
+		assertThat(saved).allSatisfy(race -> {
+            assertThat(race.isPicksManaged()).isEqualTo(collectionEnabled);
+            assertThat(race.getDateTime()).isNull();
+        });
+
+        // Leg 1: no override, resolves to match home/away
 		assertThat(saved.get(0).getHomeTeam()).isEqualTo(homeTeam);
 		assertThat(saved.get(0).getAwayTeam()).isEqualTo(awayTeam);
 
@@ -318,11 +330,13 @@ class MatchServiceTest {
 		verify(raceRepository).save(any(Race.class));
 	}
 
-	@Test
-	void givenMatchWith1Leg_whenAddLeg_thenSecondLegHasSwappedHomeAway() {
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+	void givenMatchWith1Leg_whenAddLeg_thenSecondLegHasSwappedHomeAway(boolean collectionEnabled) {
 		// given
 		var matchId = UUID.randomUUID();
 		var season = new Season("Test Season");
+        season.setPicksCollectionEnabled(collectionEnabled);
 		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(UUID.randomUUID());
 		// legs lives on the phase. Allow more legs for addLeg tests.
@@ -350,6 +364,8 @@ class MatchServiceTest {
 
 		// then
 		var savedRace = match.getRaces().get(1);
+        assertThat(savedRace.isPicksManaged()).isEqualTo(collectionEnabled);
+        assertThat(savedRace.getDateTime()).isNull();
 		assertThat(savedRace.getHomeTeam()).isEqualTo(awayTeam);
 		assertThat(savedRace.getAwayTeam()).isEqualTo(homeTeam);
 	}

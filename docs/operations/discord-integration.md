@@ -856,6 +856,12 @@ Enable collection after reviewing all configured targets. Pause stops new collec
 removing race enrollment, private history or confirmed public content. The Gateway still requires
 its own explicit opt-in, even when the season is configured for collection.
 
+An open matchday allows teams to submit picks before agreeing the individual race date. New
+unfinished legs inherit enrollment in an enabled season, including reversed home legs and
+generated pairings. If an older leg was missed, **Review collection → Enroll new races** applies
+the current settings classification without pausing collection or changing existing submissions.
+The race date remains unset until the teams agree it after pick publication.
+
 ### Explicit publication and public pages
 
 Use the existing pairing settings, lobby-settings or explicit match-preview button. Managed races

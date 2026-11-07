@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -22,6 +23,7 @@ import static org.mockito.Mockito.when;
 @CtcDevSpringBootContext
 @Tag("integration")
 class PickLifecycleIT {
+    @Autowired EntityManager entityManager;
     @Autowired TestHelper helper;
     @Autowired TransactionTemplate tx;
     @Autowired SeasonRepository seasons;
@@ -96,6 +98,35 @@ class PickLifecycleIT {
             cars.deleteAllById(carIds);
             tracks.deleteAllById(trackIds);
             teams.deleteAllById(List.of(fixture.homeTeam().getId(), fixture.awayTeam().getId(), thirdTeam));
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"match", "leg"})
+    void givenCachedPausedSeason_whenCollectionIsEnabledBeforePlanning_thenUseTheLockedCurrentEnrollmentFlag(String creation) {
+        tx.executeWithoutResult(status -> {
+            var season = seasons.findById(fixture.season().getId()).orElseThrow();
+            season.setPicksCollectionEnabled(false);
+            races.findById(fixture.race().getId()).orElseThrow().getMatchday().getPhase().setLegs(2);
+        });
+        var separate = new TransactionTemplate(tx.getTransactionManager());
+        separate.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        tx.executeWithoutResult(status -> {
+            var owner = seasons.findById(fixture.season().getId()).orElseThrow();
+            var day = entityManager.find(Matchday.class, emptyDay);
+            assertThat(owner.isPicksCollectionEnabled()).isFalse();
+            separate.executeWithoutResult(other -> seasons.findById(owner.getId()).orElseThrow().setPicksCollectionEnabled(true));
+            var match = creation.equals("match")
+                    ? matchService.createMatchWithLegs(day, teams.findById(fixture.homeTeam().getId()).orElseThrow(),
+                            teams.findById(fixture.awayTeam().getId()).orElseThrow(), false)
+                    : matchService.addLeg(fixture.match().getId());
+            entityManager.flush();
+            var created = races.findByMatchId(match.getId()).stream()
+                    .filter(race -> !race.getId().equals(fixture.race().getId())).toList();
+            assertThat(owner.isPicksCollectionEnabled()).isTrue();
+            assertThat(created).isNotEmpty().allSatisfy(race -> {
+                assertThat(race.isPicksManaged()).isTrue(); assertThat(race.getDateTime()).isNull();
+            });
         });
     }
 

@@ -8,18 +8,18 @@
     <div class="card">
         <h2>Collection status</h2>
         <p data-testid="collection-status" th:text="${collection.review.enabled ? 'Enabled' : 'Paused'}"></p>
-        <p class="text-dim">Collection starts disabled for each season. Enabling it enrolls the reviewed unfinished races, including those without a date. Teams can use eligible scheduled targets. Pausing retains their confidential history and confirmed public fields.</p>
+        <p class="text-dim">Collection starts disabled for each season. Enabling it enrolls the reviewed unfinished races, including those without a date. Teams can enter picks when their matchday is open; the race date can be agreed after picks are published. Pausing retains their confidential history and confirmed public fields.</p>
         <dl class="detail-fields"><dt>Targets to enroll</dt><dd th:text="${collection.review.newTargetCount}"></dd>
             <dt>Already managed races</dt><dd th:text="${collection.review.managedTargetCount}"></dd>
             <dt>Other legacy races</dt><dd th:text="${collection.review.legacyHistoricalCount}"></dd></dl>
         <p class="text-dim">Completed and other ineligible legacy races retain their existing public display.</p>
         <p th:if="${collection.review.pendingPublicationCount > 0}" class="field-error">Reconcile pending publication outputs before enrolling these races.</p>
     </div>
-    <form th:object="${form}" th:action="@{/admin/seasons/{id}/pick-collection/enable(id=${collection.review.seasonId})}" method="post" class="card entity-editor-form" th:unless="${collection.review.enabled}">
+    <form th:object="${form}" th:action="@{/admin/seasons/{id}/pick-collection/enable(id=${collection.review.seasonId})}" method="post" class="card entity-editor-form" th:if="${!collection.review.enabled or collection.review.newTargetCount > 0}">
         <input type="hidden" th:field="*{expectedFingerprint}"><input type="hidden" th:field="*{expectedGeneration}">
         <h2>Review existing settings</h2>
         <div th:if="${#fields.hasErrors('*')}" class="field-error" role="alert"><p>The review was not applied. Check the errors and reload if settings changed.</p><ul><li th:each="error : ${#fields.errors('*')}" th:text="${error}"></li></ul></div>
-        <p class="text-dim">Classify each configured target before enabling collection. Confirmed public fields remain visible. Other choices stay withheld until an explicit management publication succeeds.</p>
+        <p class="text-dim">Classify each configured target before enrolling it. Confirmed public fields remain visible. Other choices stay withheld until an explicit management publication succeeds. In an enabled season, this review adds newly eligible races without pausing collection.</p>
         <p class="text-dim">Already-public classification requires a matching confirmed post. Use the existing settings or lobby publishing control with its builtin template when that evidence is missing.</p>
         <p th:if="${collection.rows.isEmpty()}">No configured legacy target requires classification. Unconfigured eligible targets start withheld.</p>
         <fieldset th:each="row : ${collection.rows}" class="pick-history-entry">
@@ -36,7 +36,7 @@
                 </select>
             </div>
         </fieldset>
-        <div class="actions"><button type="submit" class="btn btn-primary" data-testid="enable-pick-collection">Enable collection</button>
+        <div class="actions"><button type="submit" class="btn btn-primary" data-testid="enable-pick-collection" th:text="${collection.review.enabled ? 'Enroll new races' : 'Enable collection'}">Enable collection</button>
             <a class="btn btn-secondary" th:href="@{/admin/seasons/{id}/pick-collection(id=${collection.review.seasonId})}">Reload current review</a></div>
     </form>
     <form th:if="${collection.review.enabled}" th:object="${form}" th:action="@{/admin/seasons/{id}/pick-collection/pause(id=${collection.review.seasonId})}" method="post" class="card entity-editor-form">

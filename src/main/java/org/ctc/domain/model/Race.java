@@ -150,7 +150,7 @@ public class Race extends BaseEntity {
 
     public void enrolForPicksIfEnabled() {
         if (!picksManaged && matchday != null && matchday.getSeason() != null
-                && matchday.getSeason().isPicksCollectionEnabled() && PickTargetRules.isScheduledTarget(this)) {
+                && matchday.getSeason().isPicksCollectionEnabled() && PickTargetRules.isUnfinishedTarget(this)) {
             picksManaged = true;
         }
     }
