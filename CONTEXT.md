@@ -77,7 +77,7 @@ The ordinary team-submission cutoff shared by a matchday’s matches unless an i
 _Avoid_: Approval deadline, publication time
 
 **Pick opening**:
-Management's manual opening of a whole matchday for team picks. A planned matchday can remain closed; opening never bypasses the applicable deadline.
+Management's manual opening of a whole matchday for team picks, independent of the individual race dates agreed after pick publication. A planned matchday can remain closed; opening never bypasses the applicable deadline.
 _Avoid_: Per-race opening, scheduled start, deadline override
 
 **Active matchday**:

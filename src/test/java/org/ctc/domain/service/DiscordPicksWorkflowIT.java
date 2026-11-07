@@ -61,6 +61,7 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
     @Autowired TeamPickChannelBindingRepository bindings;
     @Autowired DiscordGlobalConfigRepository configs;
     @Autowired MatchRepository matches;
+    @Autowired MatchService planningMatches;
     @Autowired RaceRepository races;
     @Autowired PhaseTeamRepository phaseTeams;
     @Autowired DiscordPostRepository postRecords;
@@ -307,9 +308,9 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
         String awayChannel = "200000000000000003";
         UUID returnLeg = tx.execute(status -> {
             var match = matches.findById(fixture.match().getId()).orElseThrow();
-            var race = helper.createRace(match.getMatchday(), match);
-            race.setHomeTeamOverride(match.getAwayTeam()); race.setAwayTeamOverride(match.getHomeTeam());
-            race.setDateTime(LocalDateTime.of(2035, 1, 1, 21, 0)); race.setPicksManaged(true);
+            match.getMatchday().getPhase().setLegs(2);
+            var race = planningMatches.addLeg(match.getId()).getRaces().getLast();
+            assertThat(race.isPicksManaged()).isTrue(); assertThat(race.getDateTime()).isNull();
             match.getMatchday().setPickDeadline(LocalDateTime.of(2020, 1, 1, 12, 0));
             bindings.save(new TeamPickChannelBinding(match.getMatchday().getSeason(), match.getAwayTeam(), GUILD, awayChannel));
             return race.getId();
@@ -325,7 +326,11 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
         assertThat(saved.receipt().revisionNumber()).isEqualTo(1);
         assertThat(saved.matchdayOpen()).isTrue();
         assertThat(saved.target().label()).contains("Leg 2");
-        tx.executeWithoutResult(status -> assertThat(races.findById(returnLeg).orElseThrow().getMatchday().getPickDeadline()).isEqualTo(LocalDateTime.of(2020, 1, 1, 12, 0)));
+        tx.executeWithoutResult(status -> {
+            var race = races.findById(returnLeg).orElseThrow();
+            assertThat(race.getMatchday().getPickDeadline()).isEqualTo(LocalDateTime.of(2020, 1, 1, 12, 0));
+            assertThat(race.getDateTime()).isNull();
+        });
         away.command(); away.select(returnLeg);
         tx.executeWithoutResult(status -> entityManager.find(Race.class, returnLeg).getMatchday().setPicksOpen(false));
         away.click("Refresh current submission");

@@ -294,7 +294,7 @@ public class RaceService {
             boolean firstSchedule = race.getDateTime() == null && dateTime != null;
             boolean dateTimeChanged = id != null && !Objects.equals(race.getDateTime(), dateTime);
             race.setDateTime(dateTime);
-            if (firstSchedule) race.enrolForPicksIfEnabled();
+            if (id == null || firstSchedule) race.enrolForPicksIfEnabled();
 
             settingsApplication.apply(race, track, car, selectedEntry, submittedSettings);
 

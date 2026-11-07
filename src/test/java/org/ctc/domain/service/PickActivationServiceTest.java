@@ -156,6 +156,30 @@ class PickActivationServiceTest {
         assertThat(PickSetupSnapshot.from(configured)).isEqualTo(content);
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void givenEnabledSeasonAndLaterUnscheduledRace_whenReviewingAgain_thenEnrollItWithoutPausingOrChangingExistingHistory(boolean hasSettings) {
+        // given
+        season.setPicksCollectionEnabled(true); configured.setPicksManaged(true);
+        var original = PickSetupSnapshot.from(configured);
+        var later = race(); later.setDateTime(null);
+        if (hasSettings) later.setCar(configured.getCar());
+        rows.add(later);
+        var review = service.review(season.getId());
+        var choices = hasSettings ? Map.of(later.getId(), LegacyPickClassification.WITHHELD)
+                : Map.<UUID, LegacyPickClassification>of();
+        // when
+        service.enable(season.getId(), review.fingerprint(), choices, actor());
+        // then
+        assertThat(review.enabled()).isTrue(); assertThat(review.newTargetCount()).isEqualTo(1);
+        assertThat(season.isPicksCollectionEnabled()).isTrue(); assertThat(later.isPicksManaged()).isTrue();
+        assertThat(later.getDateTime()).isNull(); assertThat(configured.isPicksManaged()).isTrue();
+        assertThat(PickSetupSnapshot.from(configured)).isEqualTo(original);
+        verify(snapshots, never()).save(any());
+        assertThatThrownBy(() -> service.enable(season.getId(), review.fingerprint(), choices, actor()))
+                .isInstanceOf(BusinessRuleException.class);
+    }
+
     private ManagementPickActor actor() { return new ManagementPickActor("test-admin", epoch.managementGeneration()); }
     private Race race() {
         var day = PhaseTestFixtures.matchdayInRegularPhase(season, "Test scheduled picks", 1); day.setId(UUID.randomUUID());

@@ -316,6 +316,7 @@ public class MatchService {
 				race.setHomeTeamOverride(awayTeam);
 				race.setAwayTeamOverride(homeTeam);
 			}
+			race.enrolForPicksIfEnabled();
 			raceRepository.save(race);
 		}
 		return match;
@@ -345,6 +346,7 @@ public class MatchService {
 			race.setAwayTeamOverride(match.getHomeTeam());
 		}
 		match.getRaces().add(race);
+		race.enrolForPicksIfEnabled();
 		raceRepository.save(race);
 
 		log.info("Added leg {} for match {} vs {}",

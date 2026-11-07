@@ -1,16 +1,17 @@
 package org.ctc.domain.model;
 
 import java.time.LocalDateTime;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import static org.assertj.core.api.Assertions.*;
 
 class PickEnrollmentTest {
-    @Test
-    void givenEnabledSeasonAndNewScheduledHomeRace_whenPersisting_thenEnrollAndRetainMarkerAfterDisable() {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void givenEnabledSeasonAndNewHomeRace_whenPersisting_thenEnrollRegardlessOfScheduleAndRetainMarkerAfterDisable(boolean scheduled) {
         // given
         var race = candidate();
+        if (!scheduled) race.setDateTime(null);
         race.getMatchday().getSeason().setPicksCollectionEnabled(true);
         // when
         race.enrolForPicksIfEnabled();
@@ -23,14 +24,13 @@ class PickEnrollmentTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"disabled", "unscheduled", "no-home", "no-away", "bye", "same-team", "detached", "results", "score", "walkover"})
+    @ValueSource(strings = {"disabled", "no-home", "no-away", "bye", "same-team", "detached", "results", "score", "walkover"})
     void givenNonTargetRace_whenPersisting_thenDoNotEnroll(String cause) {
         // given
         var race = candidate();
         race.getMatchday().getSeason().setPicksCollectionEnabled(true);
         switch (cause) {
             case "disabled" -> race.getMatchday().getSeason().setPicksCollectionEnabled(false);
-            case "unscheduled" -> race.setDateTime(null);
             case "no-home" -> race.getMatch().setHomeTeam(null);
             case "no-away" -> race.getMatch().setAwayTeam(null);
             case "bye" -> race.getMatch().setBye(true);

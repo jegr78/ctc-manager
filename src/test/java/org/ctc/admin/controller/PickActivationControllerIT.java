@@ -104,6 +104,35 @@ class PickActivationControllerIT {
     }
 
     @Test @WithMockUser("test-manager")
+    void givenEnabledSeasonAndMissedUnscheduledLeg_whenUsingTheNativeReview_thenEnrollItWithoutPausing() throws Exception {
+        // given
+        UUID added = tx.execute(status -> {
+            var season = seasons.findById(fixture.season().getId()).orElseThrow();
+            season.setPicksCollectionEnabled(true);
+            var existing = races.findById(fixture.race().getId()).orElseThrow(); existing.setPicksManaged(true);
+            var later = helper.createRace(existing.getMatchday(), existing.getMatch());
+            later.setHomeTeamOverride(existing.getAwayTeam()); later.setAwayTeamOverride(existing.getHomeTeam());
+            later.setDateTime(null);
+            return later.getId();
+        });
+        mvc.perform(get(path())).andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Enroll new races")));
+        var review = activation.review(fixture.season().getId());
+        // when
+        mvc.perform(post(path() + "/enable").with(csrf()).param("expectedFingerprint", review.fingerprint())
+                .param("expectedGeneration", review.generation()))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl(path()));
+        // then
+        assertThat(activation.review(fixture.season().getId()).enabled()).isTrue();
+        tx.executeWithoutResult(status -> {
+            var later = races.findById(added).orElseThrow();
+            assertThat(later.isPicksManaged()).isTrue(); assertThat(later.getDateTime()).isNull();
+            assertThat(races.findById(fixture.race().getId()).orElseThrow().isPicksManaged()).isTrue();
+            assertThat(picks.findByRaceId(added)).isEmpty();
+        });
+    }
+
+    @Test @WithMockUser("test-manager")
     void givenChangedSettingsAfterReview_whenPosting_thenRejectTheStaleFingerprintBeforeEnrollment() throws Exception {
         // given
         var review = activation.review(fixture.season().getId());
