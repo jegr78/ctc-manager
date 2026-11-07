@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.ctc.discord.DiscordTimestamps;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.picks.PickTeamView;
@@ -39,7 +40,8 @@ final class PickInteractionViews {
     static String status(PickTeamView view) {
         var text = new StringBuilder(escape(view.target().label())).append("\nState: ").append(view.target().state())
                 .append("\nSeason rules: ").append(view.lobbyRulesProfile().getLabel())
-                .append("\n").append(escape(view.target().reason())).append("\nDeadline: ").append(escape(view.deadline()))
+                .append("\n").append(escape(view.target().reason())).append("\nDeadline: ").append(view.deadlineAt() == null ? escape(view.deadline())
+                        : DiscordTimestamps.fullDateTime(view.deadlineAt()) + " · <t:" + view.deadlineAt().getEpochSecond() + ":R>")
                 .append("\nMatchday picks: ").append(view.matchdayOpen() ? "Open" : "Closed");
         if (view.returnReason() != null) text.append("\nReturn reason: ").append(escape(view.returnReason()));
         if (view.payload() != null) text.append("\n\nCurrent ").append(receipt(view.receipt())).append("\n")
@@ -53,7 +55,7 @@ final class PickInteractionViews {
         String author = user != null && user.matches("[0-9]{1,20}") && !user.chars().allMatch(c -> c == '0')
                 ? "<@" + user + ">" : "an unknown team member";
         return "revision " + receipt.revisionNumber() + ", version " + receipt.aggregateVersion() + ", saved "
-                + receipt.confirmedAt() + " by " + author;
+                + DiscordTimestamps.fullDateTime(receipt.confirmedAt()) + " by " + author;
     }
 
     static String payload(PickPayload payload, String track, String car) {
@@ -117,7 +119,8 @@ final class PickInteractionViews {
                 }
                 yield result;
             }
-            default -> List.of(new PickGatewayModal.Text("query", "Search local catalog", false, null, 0, 100, false));
+            default -> List.of(new PickGatewayModal.Text("query", stage.equals("search-track")
+                    ? "Season tracks; leave blank to show all" : "Search local catalog", false, null, 0, 100, false));
         };
         return new PickGatewayModal(id, stage.startsWith("search-") ? "Search private picks" : "Private picks: " + stage, fields);
     }

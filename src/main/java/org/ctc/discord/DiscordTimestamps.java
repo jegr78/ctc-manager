@@ -1,6 +1,7 @@
 package org.ctc.discord;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,6 +16,10 @@ public class DiscordTimestamps {
 	public DiscordTimestamps(Clock clock, @Value("${app.timezone:Europe/Berlin}") String zoneIdName) {
 		this.clock = clock;
 		this.zone = ZoneId.of(zoneIdName);
+	}
+
+	public static String fullDateTime(Instant instant) {
+		return "<t:" + instant.getEpochSecond() + ":F>";
 	}
 
 	public String longDateTime(LocalDateTime dt) {
