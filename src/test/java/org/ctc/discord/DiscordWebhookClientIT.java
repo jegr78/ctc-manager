@@ -133,7 +133,9 @@ class DiscordWebhookClientIT {
         assertThatThrownBy(() -> client.execute(wm.baseUrl() + webhookPath, new WebhookPayload("Test frozen output", List.of())))
                 .isInstanceOf(DiscordTransientException.class);
         assertThat(java.time.Duration.ofNanos(System.nanoTime() - started)).isLessThan(java.time.Duration.ofSeconds(3));
-        wm.verify(postRequestedFor(urlPathEqualTo(webhookPath)).withQueryParam("wait", equalTo("true")));
+        // Server-side matching/journaling may finish after the bounded client timeout.
+        org.awaitility.Awaitility.await().atMost(java.time.Duration.ofSeconds(3)).untilAsserted(() ->
+                wm.verify(postRequestedFor(urlPathEqualTo(webhookPath)).withQueryParam("wait", equalTo("true"))));
     }
 
     @Test
