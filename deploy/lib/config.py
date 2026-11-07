@@ -91,12 +91,7 @@ def main():
     root, config = load(installation)
     if command == 'validate':
         return
-    if command == 'journal':
-        state = root / 'state'
-        state.mkdir(mode=0o700, exist_ok=True)
-        private_path(state, directory=True)
-        atomic_json(state / 'operation.json', {'operation': sys.argv[3], 'stage': sys.argv[4], 'updatedAt': time.time()})
-    elif command == 'get':
+    if command == 'get':
         value = config[sys.argv[3]]
         if not isinstance(value, str) or '\n' in value or '\r' in value:
             raise ValueError('invalid configuration value')
