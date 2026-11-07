@@ -23,7 +23,7 @@ Nothing is committed to `master`: `pom.xml` stays on the snapshot version, the b
 
 ## Bundle
 
-The bundle keeps its exact inventory check in `deploy/lib/release.py`, with trees verified against their own manifest so an older verifier accepts newer bundles and the new code accepts the installed tree. It carries the launcher, the systemd units, a home launcher `deploy/ctc-manager-launcher` and the phpMyAdmin tools, which move from the hand-installed `/srv/ctc-manager/phpmyadmin` into `ops/phpmyadmin` in the repository. The deploy installs them, so no file is copied by hand.
+The bundle keeps its exact inventory check in `deploy/lib/release.py`, with trees verified against their own manifest so an older verifier accepts newer bundles and the new code accepts the installed tree. It carries the launcher, the systemd units, a home launcher `deploy/ctc-manager-launcher` and the phpMyAdmin tools, which move from the hand-installed `/srv/ctc-manager/phpmyadmin` into `deploy/phpmyadmin` in the repository. The deploy installs them, so no file is copied by hand.
 
 ## Deploy
 
@@ -61,7 +61,7 @@ Nightly units keep their full isolated restore proof, including credentials and 
 
 ## phpMyAdmin
 
-phpMyAdmin keeps its private port 9444 and its pinned image. Its unit runs `service.py` from `/srv/ctc-manager/current/ops/phpmyadmin`, so code and configuration come from the running release. Deploy, backup and restore stop the unit first and start it again afterwards if it was active, also after a failure. Its start waits for the installation lock, because those operations restart it while they still hold the lock. The backup drop-in `phpmyadmin.conf`, its marker `state/phpmyadmin-backup-resume`, the wrapper `ctc-maintenance.sh` and `/srv/ctc-manager/phpmyadmin` go away; the first successful deploy removes them.
+phpMyAdmin keeps its private port 9444 and its pinned image. Its unit runs `service.py` from `/srv/ctc-manager/current/phpmyadmin`, so code and configuration come from the running release. Deploy, backup and restore stop the unit first and start it again afterwards if it was active, also after a failure. Its start waits for the installation lock, because those operations restart it while they still hold the lock. The backup drop-in `phpmyadmin.conf`, its marker `state/phpmyadmin-backup-resume`, the wrapper `ctc-maintenance.sh` and `/srv/ctc-manager/phpmyadmin` go away; the first successful deploy removes them.
 
 ## What goes
 

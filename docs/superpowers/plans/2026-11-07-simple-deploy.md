@@ -4,7 +4,7 @@
 
 **Goal:** `ctc-manager deploy [VERSION|latest]` updates the box in place with one update unit and automatic rollback; releases stop re-testing and stop committing to `master`.
 
-**Architecture:** A new `deploy/lib/rollout.py` holds `deploy`, `restore`, `switch_release`, `install_host_files` and `remove_legacy`, built on `NativeRuntime` (`deploy/lib/recovery.py`) and `compose_spec` (`deploy/lib/runtime.py`). `update.py`, `live.py`, `migration.py`, the update journal and the Mac migration go. phpMyAdmin moves into `ops/phpmyadmin`. The reference implementation is CLR's `deploy/lib/rollout.py` (`gitlab.com/community-league-racing/driver-index`).
+**Architecture:** A new `deploy/lib/rollout.py` holds `deploy`, `restore`, `switch_release`, `install_host_files` and `remove_legacy`, built on `NativeRuntime` (`deploy/lib/recovery.py`) and `compose_spec` (`deploy/lib/runtime.py`). `update.py`, `live.py`, `migration.py`, the update journal and the Mac migration go. phpMyAdmin moves into `deploy/phpmyadmin`. The reference implementation is CLR's `deploy/lib/rollout.py` (`gitlab.com/community-league-racing/driver-index`).
 
 **Tech Stack:** Python 3 standard library, bash launcher, rootless Docker Compose, systemd user units, GitHub Actions, Maven.
 
