@@ -4,14 +4,22 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.UUID;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -22,9 +30,114 @@ import static org.mockito.BDDMockito.given;
 
 @SpringBootTest
 @ActiveProfiles("dev")
-class SiteGeneratorServiceTest {
+@Tag("integration")
+class SiteGeneratorFixtureIsolationIT {
 
     private String uniqueSuffix;
+
+    @Autowired JdbcTemplate jdbc;
+    private FixtureState initialState;
+    @org.junit.jupiter.api.extension.RegisterExtension
+    final org.junit.jupiter.api.extension.AfterEachCallback fixtureIsolation = context ->
+            assertEquals(initialState, fixtureState(), "JUnit must restore the original fixture after every scenario");
+    private record LinkState(String name, String url) { }
+    private record FixtureState(Map<String, Set<String>> rows, Set<UUID> activeSeasons, String output,
+                                String uploads, String teamUploads, List<LinkState> links, Map<UUID, java.time.LocalDateTime> seasonTimestamps) {
+        @Override public String toString() {
+            return "FixtureState[rows=" + rows.entrySet().stream().map(entry -> entry.getKey() + "=" + entry.getValue().size()).toList()
+                    + ", activeSeasons=" + activeSeasons + ", output=" + output + ", uploads=" + uploads + ", teamUploads=" + teamUploads + ", links=" + links + "]";
+        }
+    }
+    private FixtureState fixtureState() {
+        var rows = new LinkedHashMap<String, Set<String>>();
+        for (String table : List.of("seasons", "season_phases", "phase_teams", "season_teams", "season_drivers",
+                "teams", "drivers", "psn_aliases", "cars", "tracks", "race_scorings", "match_scorings", "matchdays",
+                "matches", "races", "race_results", "race_lineups", "playoffs", "playoff_rounds", "playoff_matchups", "site_slugs")) {
+            rows.put(table, new HashSet<>(jdbc.query("select id from " + table, (row, index) -> row.getObject(1).toString())));
+        }
+        var active = new HashSet<UUID>();
+        var observedSeasons = seasonRepository.findAll();
+        observedSeasons.stream().filter(Season::isActive).forEach(row -> active.add(row.getId()));
+        var timestamps = new LinkedHashMap<UUID, java.time.LocalDateTime>();
+        observedSeasons.forEach(row -> timestamps.put(row.getId(), row.getUpdatedAt()));
+        return new FixtureState(rows, active, siteProperties.getOutputDir(),
+                (String) ReflectionTestUtils.getField(siteGeneratorService, "uploadDir"),
+                (String) ReflectionTestUtils.getField(teamProfiles, "uploadDir"),
+                siteProperties.getLinks().stream().map(link -> new LinkState(link.getName(), link.getUrl())).toList(), timestamps);
+    }
+
+    @Autowired org.ctc.TestHelper helper;
+    @Autowired org.springframework.transaction.support.TransactionTemplate transactions;
+    @Autowired SiteSlugRepository slugs;
+    @Autowired TeamProfilePageGenerator teamProfiles;
+    private final Set<UUID> ownedSeasons = new HashSet<>(), ownedTeams = new HashSet<>(), ownedDrivers = new HashSet<>();
+    private final Set<UUID> ownedCars = new HashSet<>(), ownedTracks = new HashSet<>(), ownedRaceScorings = new HashSet<>(), ownedMatchScorings = new HashSet<>();
+    private String originalOutputDir, originalUploadDir, originalTeamUploadDir;
+    private List<SiteProperties.LinkEntry> originalLinks;
+
+    private static <T> T remember(T row, Set<UUID> owned, java.util.function.Function<T, UUID> identifier) {
+        owned.add(identifier.apply(row));
+        return row;
+    }
+    private Season ownSeason(Season row) { return remember(seasonRepository.save(row), ownedSeasons, Season::getId); }
+    private Team ownTeam(Team row) { return remember(teamRepository.save(row), ownedTeams, Team::getId); }
+    private Driver ownDriver(Driver row) { return remember(driverRepository.save(row), ownedDrivers, Driver::getId); }
+    private Car ownCar(Car row) { return remember(carRepository.save(row), ownedCars, Car::getId); }
+    private Track ownTrack(Track row) { return remember(trackRepository.save(row), ownedTracks, Track::getId); }
+    private RaceScoring ownRaceScoring(RaceScoring row) { return remember(raceScoringRepository.save(row), ownedRaceScorings, RaceScoring::getId); }
+    private MatchScoring ownMatchScoring(MatchScoring row) { return remember(matchScoringRepository.save(row), ownedMatchScorings, MatchScoring::getId); }
+
+    @AfterEach
+    void tearDown() {
+        try {
+            transactions.executeWithoutResult(status -> {
+                for (UUID id : ownedSeasons) {
+                    for (var phase : seasonPhaseRepository.findBySeasonIdOrderBySortIndex(id)) {
+                        phaseTeamRepository.deleteAll(phaseTeamRepository.findByPhaseId(phase.getId()));
+                        phase.setRaceScoring(null);
+                        phase.setMatchScoring(null);
+                    }
+                }
+                phaseTeamRepository.flush();
+                seasonPhaseRepository.flush();
+                for (var row : seasonRepository.findAllById(ownedSeasons)) helper.deleteSeasonCascade(row);
+                seasonRepository.flush();
+                slugs.deleteAll(slugs.findAll().stream().filter(row -> !initialState.rows().get("site_slugs").contains(row.getId().toString())).toList());
+                slugs.flush();
+                for (var row : teamRepository.findAllById(ownedTeams)) row.setParentTeam(null);
+                teamRepository.flush();
+                driverRepository.deleteAllById(ownedDrivers); driverRepository.flush();
+                teamRepository.deleteAllById(ownedTeams); teamRepository.flush();
+                carRepository.deleteAllById(ownedCars);
+                trackRepository.deleteAllById(ownedTracks);
+                raceScoringRepository.deleteAllById(ownedRaceScorings);
+                matchScoringRepository.deleteAllById(ownedMatchScorings);
+                for (UUID id : initialState.activeSeasons()) assertEquals(1, jdbc.update("update seasons set active = true where id = ?", id));
+                seasonRepository.flush();
+            });
+        } finally {
+            siteProperties.setOutputDir(originalOutputDir);
+            siteProperties.setLinks(originalLinks);
+            siteGeneratorService.setUploadDir(originalUploadDir);
+            teamProfiles.setUploadDir(originalTeamUploadDir);
+        }
+        ownedSeasons.clear(); ownedTeams.clear(); ownedDrivers.clear(); ownedCars.clear(); ownedTracks.clear();
+        ownedRaceScorings.clear(); ownedMatchScorings.clear();
+    }
+
+
+    @Test
+    void givenConsecutiveGenerationScenarios_whenCleaningTheirFixtures_thenRestoreOriginalRowsAndActiveSeason() throws IOException {
+        var expected = initialState;
+        givenDriverWithTeamChange_whenGenerate_thenAlltimeDriverRankingShowsAllTeams();
+        tearDown();
+        assertEquals(expected, fixtureState(), "The multi-season scenario must restore its original database state");
+        setUp();
+        givenRaceLineupWithSubTeam_whenGenerate_thenDriverAttributedToSubTeam();
+        tearDown();
+        assertEquals(expected, fixtureState(), "The subteam scenario must leave no graph or slug rows behind");
+        setUp();
+    }
 
     @Autowired
     private SiteGeneratorService siteGeneratorService;
@@ -100,40 +213,39 @@ class SiteGeneratorServiceTest {
 
     @BeforeEach
     void setUp() {
+        initialState = fixtureState();
+        originalOutputDir = siteProperties.getOutputDir();
+        originalLinks = siteProperties.getLinks();
+        originalUploadDir = (String) ReflectionTestUtils.getField(siteGeneratorService, "uploadDir");
+        originalTeamUploadDir = (String) ReflectionTestUtils.getField(teamProfiles, "uploadDir");
         given(youTubeScraperService.scrapeVideoId(anyString(), anyString()))
                 .willReturn("dQw4w9WgXcQ");
 
         uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
 
-        // Deactivate any previously active seasons
-        seasonRepository.findAll().forEach(s -> {
-            if (s.isActive()) {
-                s.setActive(false);
-                seasonRepository.save(s);
-            }
-        });
+        for (UUID id : initialState.activeSeasons()) assertEquals(1, jdbc.update("update seasons set active = false where id = ?", id));
 
-        raceScoring = raceScoringRepository.save(
+        raceScoring = ownRaceScoring(
                 new RaceScoring("Gen RS " + uniqueSuffix, "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
-        matchScoring = matchScoringRepository.save(
+        matchScoring = ownMatchScoring(
                 new MatchScoring("Gen MS " + uniqueSuffix, 3, 1, 0));
 
         // scoring lives on SeasonPhase, attached below.
         season = new Season("Gen Season " + uniqueSuffix, 2026, 1);
         season.setActive(true);
-        seasonRepository.save(season);
+        ownSeason(season);
 
-        var tnr = teamRepository.save(new Team("The Neutrals Racing " + uniqueSuffix, "GTNR" + uniqueSuffix));
-        var p1r = teamRepository.save(new Team("Project One Racing " + uniqueSuffix, "GP1R" + uniqueSuffix));
+        var tnr = ownTeam(new Team("The Neutrals Racing " + uniqueSuffix, "GTNR" + uniqueSuffix));
+        var p1r = ownTeam(new Team("Project One Racing " + uniqueSuffix, "GP1R" + uniqueSuffix));
 
         season.addTeam(tnr);
         season.addTeam(p1r);
-        seasonRepository.save(season);
+        ownSeason(season);
 
-        driver1 = driverRepository.save(new Driver("gen_panic_" + uniqueSuffix, "panicpotato"));
-        var driver2 = driverRepository.save(new Driver("gen_levit_" + uniqueSuffix, "LEVITIUS"));
-        var driver3 = driverRepository.save(new Driver("gen_valky_" + uniqueSuffix, "P1R_Valkyrie"));
-        var driver4 = driverRepository.save(new Driver("gen_motor_" + uniqueSuffix, "motorstormhero"));
+        driver1 = ownDriver(new Driver("gen_panic_" + uniqueSuffix, "panicpotato"));
+        var driver2 = ownDriver(new Driver("gen_levit_" + uniqueSuffix, "LEVITIUS"));
+        var driver3 = ownDriver(new Driver("gen_valky_" + uniqueSuffix, "P1R_Valkyrie"));
+        var driver4 = ownDriver(new Driver("gen_motor_" + uniqueSuffix, "motorstormhero"));
 
         seasonDriverRepository.save(new SeasonDriver(season, driver1, tnr));
         seasonDriverRepository.save(new SeasonDriver(season, driver2, tnr));
@@ -155,8 +267,8 @@ class SiteGeneratorServiceTest {
         phaseTeamRepository.save(new PhaseTeam(regularPhase, p1r));
 
         var matchday = matchdayRepository.save(new Matchday(regularPhase, "Spieltag 1", 1));
-        var testTrack = trackRepository.save(new Track("Tsukuba " + uniqueSuffix, "Japan"));
-        var testCar = carRepository.save(new Car("Mazda " + uniqueSuffix, "RX-Vision GT3"));
+        var testTrack = ownTrack(new Track("Tsukuba " + uniqueSuffix, "Japan"));
+        var testCar = ownCar(new Car("Mazda " + uniqueSuffix, "RX-Vision GT3"));
         var match = matchRepository.save(new Match(matchday, tnr, p1r));
         var race = new Race();
         race.setMatchday(matchday);
@@ -342,7 +454,7 @@ class SiteGeneratorServiceTest {
         // given — create sub-team and RaceLineup pointing driver1 to sub-team
         var subTeam = new Team("Sub Team " + uniqueSuffix, "GSUB" + uniqueSuffix);
         subTeam.setParentTeam(testRace.getHomeTeam());
-        teamRepository.save(subTeam);
+        ownTeam(subTeam);
         raceLineupRepository.save(new RaceLineup(testRace, driver1, subTeam));
 
         // when
@@ -427,11 +539,10 @@ class SiteGeneratorServiceTest {
     }
 
     @Test
-    void givenTeamWithLogo_whenGenerate_thenLogoCopiedAndLinkedRelatively() throws IOException {
+    void givenTeamWithLogo_whenGenerate_thenLogoCopiedAndLinkedRelatively(@TempDir Path uploadBase) throws IOException {
         // given — create a fake logo file in a separate temp uploadDir
         // NOTE: uploadBase must be OUTSIDE tempDir (the output dir) so cleanOutputDirectory
         // does not delete it before generate() copies logos to assets.
-        var uploadBase = Files.createTempDirectory("ctc-test-uploads-");
         var logoRelPath = "teams/test-uuid/test-logo.png";
         var logoFile = uploadBase.resolve(logoRelPath);
         Files.createDirectories(logoFile.getParent());
@@ -446,7 +557,7 @@ class SiteGeneratorServiceTest {
                 .filter(t -> t.getShortName().startsWith("GTNR" + uniqueSuffix))
                 .findFirst().orElseThrow();
         testTeam.setLogoUrl("/uploads/" + logoRelPath);
-        teamRepository.save(testTeam);
+        ownTeam(testTeam);
 
         // when
         siteGeneratorService.generate();
@@ -504,11 +615,11 @@ class SiteGeneratorServiceTest {
         // given — add a season from an earlier year and one from a later year
         // scoring lives on the REGULAR phase, set inside setupRegularPhase.
         var earlier = new Season("Earlier Era " + uniqueSuffix, 2023, 1);
-        seasonRepository.save(earlier);
+        ownSeason(earlier);
         setupRegularPhase(earlier); // production seasons need a REGULAR phase
         var later = new Season("Future Era " + uniqueSuffix, 2028, 2);
-        seasonRepository.save(later);
-        setupRegularPhase(later); // 
+        ownSeason(later);
+        setupRegularPhase(later); //
         // when
         siteGeneratorService.generate();
 
@@ -584,7 +695,7 @@ class SiteGeneratorServiceTest {
         // given
         driver1.addAlias("panic_alt_" + uniqueSuffix);
         driver1.addAlias("panic_old_" + uniqueSuffix);
-        driverRepository.save(driver1);
+        ownDriver(driver1);
 
         // when
         siteGeneratorService.generate();
@@ -720,7 +831,7 @@ class SiteGeneratorServiceTest {
     void givenTestSeason_whenGenerate_thenNoSeasonPagesCreated() {
         // given — create a second season whose name contains "Test"
         var testSeason = new Season("Test Throwaway " + uniqueSuffix, 2025, 99);
-        seasonRepository.save(testSeason);
+        ownSeason(testSeason);
         var testSeasonDir = tempDir.resolve("season").resolve(
                 slugify(testSeason.getDisplayLabel()));
 
@@ -736,7 +847,7 @@ class SiteGeneratorServiceTest {
     void givenTestSeason_whenGenerate_thenNotInArchive() throws IOException {
         // given — create a second season whose name contains "Test"
         var testSeason = new Season("Test Throwaway " + uniqueSuffix, 2025, 99);
-        seasonRepository.save(testSeason);
+        ownSeason(testSeason);
 
         // when
         siteGeneratorService.generate();
@@ -1306,10 +1417,10 @@ class SiteGeneratorServiceTest {
     void givenMultipleSeasons_whenGenerate_thenTeamsPageHasSeasonFilter() throws IOException {
         // given — create a second production season with a team
         var season2 = new Season("Second Season " + uniqueSuffix, 2025, 1);
-        seasonRepository.save(season2);
-        var extraTeam = teamRepository.save(new Team("Filter Team " + uniqueSuffix, "FLT" + uniqueSuffix));
+        ownSeason(season2);
+        var extraTeam = ownTeam(new Team("Filter Team " + uniqueSuffix, "FLT" + uniqueSuffix));
         season2.addTeam(extraTeam);
-        seasonRepository.save(season2);
+        ownSeason(season2);
         setupRegularPhase(season2); // production seasons need a REGULAR phase
 
         // when
@@ -1394,7 +1505,7 @@ class SiteGeneratorServiceTest {
         var parentTeam = teamRepository.findAll().stream()
                 .filter(t -> t.getShortName().startsWith("GTNR" + uniqueSuffix))
                 .findFirst().orElseThrow();
-        var subTeam = teamRepository.save(new Team("Sub Alpha " + uniqueSuffix, "SUBA" + uniqueSuffix, parentTeam));
+        var subTeam = ownTeam(new Team("Sub Alpha " + uniqueSuffix, "SUBA" + uniqueSuffix, parentTeam));
         seasonTeamRepository.save(new SeasonTeam(season, subTeam));
 
         // when
@@ -1413,10 +1524,10 @@ class SiteGeneratorServiceTest {
     void givenTestSeason_whenGenerate_thenTestSeasonNotInOverviewFilter() throws IOException {
         // given — create a season with "Test" in name
         var testSeason = new Season("Test League " + uniqueSuffix, 2024, 1);
-        seasonRepository.save(testSeason);
-        var extraTeam = teamRepository.save(new Team("Test Only Team " + uniqueSuffix, "TOT" + uniqueSuffix));
+        ownSeason(testSeason);
+        var extraTeam = ownTeam(new Team("Test Only Team " + uniqueSuffix, "TOT" + uniqueSuffix));
         testSeason.addTeam(extraTeam);
-        seasonRepository.save(testSeason);
+        ownSeason(testSeason);
 
         // when
         siteGeneratorService.generate();
@@ -1526,7 +1637,7 @@ class SiteGeneratorServiceTest {
     @Test
     void givenTeamWithZeroGames_whenGenerate_thenTeamsOverviewDoesNotLinkToMissingProfile() throws IOException {
         // given — add a third team with no races/results (0 played games)
-        var zeroGameTeam = teamRepository.save(new Team("Zero Games Team " + uniqueSuffix, "GZGT" + uniqueSuffix));
+        var zeroGameTeam = ownTeam(new Team("Zero Games Team " + uniqueSuffix, "GZGT" + uniqueSuffix));
         // Use repository directly to avoid duplicate SeasonTeam inserts via cascade
         seasonTeamRepository.save(new SeasonTeam(season, zeroGameTeam));
 
@@ -1611,12 +1722,12 @@ class SiteGeneratorServiceTest {
     @Test
     void givenTestSeason_whenGenerate_thenNotInAlltimePages() throws IOException {
         // given — create a Test season with its own team, drivers, and race results
-        var testTeam = teamRepository.save(new Team("Test Phantom Racing " + uniqueSuffix, "TPHR" + uniqueSuffix));
-        var testDriver = driverRepository.save(new Driver("test_phantom_" + uniqueSuffix, "PhantomRacer"));
+        var testTeam = ownTeam(new Team("Test Phantom Racing " + uniqueSuffix, "TPHR" + uniqueSuffix));
+        var testDriver = ownDriver(new Driver("test_phantom_" + uniqueSuffix, "PhantomRacer"));
 
         var testSeason = new Season("Test Throwaway Alltime " + uniqueSuffix, 2025, 99);
         testSeason.addTeam(testTeam);
-        seasonRepository.save(testSeason);
+        ownSeason(testSeason);
 
         seasonDriverRepository.save(new SeasonDriver(testSeason, testDriver, testTeam));
 
@@ -1696,13 +1807,13 @@ class SiteGeneratorServiceTest {
     @Test
     void givenDriverWithTeamChange_whenGenerate_thenAlltimeDriverRankingShowsAllTeams() throws IOException {
         // given — create a second season where driver1 switches from GTNR to GP1R
-        var raceScoring2 = raceScoringRepository.save(
+        var raceScoring2 = ownRaceScoring(
                 new RaceScoring("Gen RS2 " + uniqueSuffix, "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
-        var matchScoring2 = matchScoringRepository.save(
+        var matchScoring2 = ownMatchScoring(
                 new MatchScoring("Gen MS2 " + uniqueSuffix, 3, 1, 0));
 
         var season2 = new Season("Gen Season2 " + uniqueSuffix, 2026, 2);
-        seasonRepository.save(season2);
+        ownSeason(season2);
 
         // Reuse existing teams from setUp
         var tnr = teamRepository.findAll().stream()
@@ -1712,7 +1823,7 @@ class SiteGeneratorServiceTest {
 
         season2.addTeam(tnr);
         season2.addTeam(p1r);
-        seasonRepository.save(season2);
+        ownSeason(season2);
 
         // driver1 now drives for P1R in season2 (was GTNR in season1)
         seasonDriverRepository.save(new SeasonDriver(season2, driver1, p1r));
