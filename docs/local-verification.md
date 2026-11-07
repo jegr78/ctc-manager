@@ -1,6 +1,6 @@
 # Local verification
 
-Use Python 3 on Linux or macOS and the repository Maven wrapper. Focused checks support edits; finalization needs the complete reviewed source, canonical verification and exact-head CI.
+Use Python 3 on Linux or macOS and the repository Maven wrapper. The shared Box uses bounded focused checks for edits and complete reviewed exact-head CI for finalization. Owner instruction on 2026-11-07 replaces routine local full-build requirements. The separate CPU/RAM-limit setup is outside this workflow and must not be changed or worked around.
 
 ## Edit loop
 
@@ -13,7 +13,7 @@ Choose tests for the changed behavior and its failure cases. The helper prints i
 ./scripts/test-feedback.py browser MatchdayPicksE2ETest --unit PickDeadlinePolicyTest
 ```
 
-Integration and browser modes run the complete unit phase unless `--unit` explicitly selects associated unit cases. Browser mode uses the existing `e2e` profile; add `--integration ClassNameIT` when the change also needs an integration scenario. Selectors use normal positive Maven patterns, including method selectors. No shell evaluates a selector.
+All focused modes request one test fork through `ctc.test.forks=1`. Integration and browser modes require `--unit` to select associated unit cases; they cannot silently run the entire unit suite. Browser mode uses the existing `e2e` profile; add `--integration ClassNameIT` when the change also needs an integration scenario. Selectors use normal positive Maven patterns, including method selectors. No shell evaluates a selector.
 
 Warm the normal dependency/browser cache first. An optional `--offline` requires all dependencies already cached and fails if anything is missing. `--maven-repo /absolute/cache/path` selects an existing Maven dependency cache. Neither option changes the selected tests. Do not infer a speedup before measuring the same edit loop on the same host.
 
@@ -27,13 +27,19 @@ A focused edit can start from a dirty tree; its tracked diff and untracked sourc
 
 One per-user host lock serializes cooperating helper invocations across worktrees. It does not coordinate arbitrary manual Maven commands. Avoid starting other heavy JVM/container/browser runs concurrently. Do not terminate unrelated projects. The November 2026 reference host has eight CPUs and 15 GiB RAM; concurrent CTC and unrelated builds reached load 15 and 13–14 GiB swap. Such runs are useful verification but unsuitable as clean timing comparisons.
 
-The helper requests a 1,024 MiB test/compiler heap through `JAVA_TOOL_OPTIONS` and a 512 MiB Maven heap through `MAVEN_OPTS`. These are per-JVM heap requests, not a total process-memory limit; native memory, metaspace, database containers and browsers need additional headroom. The current POM has no overriding heap argument. Explicit `--test-heap-mib` and `--maven-heap-mib` budgets are recorded. Choose a larger budget only from measured need and available host memory; a heap failure remains a failed run and never removes tests. No Spring cache size or fork count is changed.
+The helper requests a 1,024 MiB test/compiler heap through `JAVA_TOOL_OPTIONS` and a 512 MiB Maven heap through `MAVEN_OPTS`. These are per-JVM heap requests, not a total process-memory limit; native memory, metaspace, database containers and browsers need additional headroom. The current POM has no overriding heap argument. Explicit `--test-heap-mib` and `--maven-heap-mib` budgets are recorded. Choose a larger budget only from measured need and available host memory; a heap failure remains a failed run and never removes tests. Spring cache size and complete/CI fork counts remain unchanged. Focused checks use one test fork to reduce local concurrent JVM memory; full verification keeps the default two unit/integration forks and the existing single browser fork.
+
+Prefer direct Python fixture suites for script-only edits. Choose the smallest relevant Java selector when JVM verification is needed, and avoid incidental database/browser work. Heap requests are not a host-wide CPU/RAM policy. Respect the separately installed resource limits and do not raise or bypass them. Keep commands in the normal execution context; do not move builds into detached services or scopes to escape those limits.
+
+If a local filesystem-sensitive check is needed, set both `TMPDIR` and Java `java.io.tmpdir` to a private directory on the same filesystem as synthetic uploads; setting `TMPDIR` alone does not affect Java. Preserve the staging-space and atomic-swap guards.
 
 Stopping the helper terminates its own Maven process group and records failure. It checks the group independently of the Maven leader and escalates stubborn descendants after a grace period. Interrupted work never becomes a successful receipt. It does not reset data or operate any running deployment.
 
 ## Finalization loop
 
-Finish the code review, independent security pass and fixes before the expensive full run. Expose committed work and pending checks in a draft PR rather than leaving the tracker silent. Use focused checks for edits, then commit a clean final source and run:
+Expose committed work and pending checks in a draft PR. Finish code review, independent security review and fixes, then require the complete CI aggregate on the reviewed head and current base. CI retains every discovered unit/integration/browser case, all coverage inputs, the 82% line minimum, static/security analysis and Docker/native checks. A passing selected worker or focused local run is insufficient by itself.
+
+Do not run a routine local full build on the Box. Full mode is available only for an explicit owner request or an agreed resource-qualified environment:
 
 ```sh
 ./scripts/test-feedback.py full
@@ -41,7 +47,7 @@ Finish the code review, independent security pass and fixes before the expensive
 
 Full mode invokes `./mvnw clean verify -Pe2e --no-transfer-progress -Ddocker.available=true`. Ambient test filters, skip/gate overrides and alternate goals are rejected before Maven starts. Full mode accepts only bounded platform/network options from Maven/JVM environment variables and project configuration; user-settings profile properties cannot disable or filter tests. The record lists accepted option kinds and property names, never their sensitive values. Set JDK 25 in the invoking shell: additional Maven RC files are not loaded by the helper, and Maven's base directory is fixed to the current repository. Environment `#` characters are literal; project JVM configuration is never treated as a shell-comment script. It refuses focused selectors and requires a clean committed tree. Real Docker/MariaDB and preinstalled browser dependencies remain necessary. Existing reports, coverage and static-analysis artifacts are archived; all three test categories must produce fresh passing reports, without skips. The existing 82% line minimum, complete SpotBugs/FindSecBugs evidence and Maven lifecycle must pass. A full local result still requires the normal reviewed exact-head CI before merge.
 
-Run the complete lifecycle once after review for the final phase source, not after every small edit. A relevant source change requires new affected evidence and the repository's final checks. A Git-only rebase can reuse a completed local run only when the entire Git tree is identical, the equivalence is recorded and review/CI cover the new exact head. Never carry evidence across a changed tree by assuming the changed files are harmless.
+A relevant source change requires affected focused evidence and new complete exact-head CI. It does not automatically require another local full run on the shared Box. A Git-only rebase can reuse a completed local run only when the entire Git tree is identical, the equivalence is recorded and review/CI cover the new exact head. Never carry evidence across a changed tree by assuming the changed files are harmless.
 
 Record source SHA, host/runner, dependency-cache state, suite counts, context/container starts, elapsed time and competing workload when comparing performance. Keep focused-class and whole-build timings separate. No test or assertion is disabled to improve the reported time.
 
@@ -55,4 +61,4 @@ The workflow itself was exercised on Linux with 8 logical CPUs, 15 GiB RAM, warm
 
 The same helper also verified the two-mode startup comparison recorded in [Test startup overhead](test-startup-overhead.md), retaining all 6 unit and 22 H2/MariaDB cases. These are focused examples, not complete verification timings. The recorded commands, fresh XML and source identities distinguish their scope; final CI remains required.
 
-A retained successful `BackupRoundTripIT` XML demonstrates the runner discrepancy: its header says 8 tests, but it contains all 10 passing cases, including same-named H2/MariaDB methods. The helper now counts all 10. Two additional workflow fixtures reproduce this undercount and case outcomes hidden by zero header counters; all 21 Python fixtures pass.
+A retained successful `BackupRoundTripIT` XML demonstrates the runner discrepancy: its header says 8 tests, but it contains all 10 passing cases, including same-named H2/MariaDB methods. The helper now counts all 10. Two additional workflow fixtures reproduce this undercount and case outcomes hidden by zero header counters; all 21 original Python fixtures pass. Two further resource-policy fixtures cover single-fork focused commands and rejection of implicit full-unit work. A further blank-selector regression prevents whitespace-only or separator-only values from reaching Maven; all 24 pass.

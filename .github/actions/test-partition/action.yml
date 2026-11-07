@@ -16,19 +16,22 @@ runs:
       with:
         name: compiled-test-source-${{ github.run_attempt }}
         path: target
+    - name: Resolve browser dependency identity
+      id: browser
+      shell: bash
+      run: |
+        ./mvnw dependency:build-classpath -DincludeScope=test -Dmdep.outputFile="$RUNNER_TEMP/ctc-browser-classpath.txt" -q
+        python3 scripts/ci/browser-cache.py --classpath-file "$RUNNER_TEMP/ctc-browser-classpath.txt" >> "$GITHUB_OUTPUT"
     - name: Cache Playwright Browsers
       uses: actions/cache@v6
       with:
         path: ~/.cache/ms-playwright
-        key: ${{ runner.os }}-playwright-1.59.0
-        restore-keys: |
-          ${{ runner.os }}-playwright-
+        key: ${{ steps.browser.outputs.key }}-all
 
     - name: Install Playwright Browsers
       shell: bash
       run: |
-        mvn dependency:build-classpath -DincludeScope=test -Dmdep.outputFile=/tmp/cp.txt -q
-        java -cp "$(cat /tmp/cp.txt)" com.microsoft.playwright.CLI install --with-deps
+        java -cp "$(cat "$RUNNER_TEMP/ctc-browser-classpath.txt")" com.microsoft.playwright.CLI install --with-deps
 
     - name: Run the assigned tests
       shell: bash
