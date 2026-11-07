@@ -18,3 +18,10 @@ Verification policy: one bounded local test fork for relevant TDD checks; comple
 Initial TDD: native form validation reported the intended eight assertion failures for unsafe/overlong URLs before adding the shared URL guard. The first cold validation attempt with a 256 MiB Maven heap exhausted Checkstyle's heap; it is not test evidence. The bounded follow-up used 512 MiB Maven and test requests with one test fork.
 
 Focused green: 116 cases across SeasonFormTest, SeasonDocumentLinksTest, SeasonDocumentArchiveTest, SeasonRuleDocumentsTest, SeasonManagementServiceTest, SeasonRestorerTest and TemplateWriterTest. No failures/errors/skips. Database, actual generation and browser evidence are pending complete CI. No full local verification claimed.
+
+
+Independent guard falsification covered HTTPS-only acceptance, old-schema document rejection and owning-season rendering. Each mutation failed at its intended assertions; the isolated worktree was restored cleanly. The first guard log collector expected the wrong Maven summary severity; the actual assertion failure was verified without rerunning it.
+
+Code review corrected the archive fixture's excluded name/missing REGULAR phase. The initial independent read-only security audit found no outstanding issues. CodeQL then flagged the encoded-control regular expression as polynomial work. It was replaced with a bounded linear character scan, without suppressing or dismissing the alert. Focused feedback after this correction passed 117 cases. The immutable snapshot test confirms that metadata changes do not alter generated/captured bytes and that publication selects the exact approved snapshot.
+
+Complete head-specific CI and browser screenshots remain the merge gate, recorded in PR #379. Tests save visual evidence inside the browser partition's `failsafe-reports/season-documents` directory. No routine full Box build, deployment, owner database change or resource-limit workaround is part of this delivery.

@@ -6,6 +6,14 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static org.assertj.core.api.Assertions.*;
 
 class SeasonDocumentLinksTest {
+    @org.junit.jupiter.api.Test
+    void longEncodedControlSequenceIsRejectedAndOrdinaryEscapesArePreserved() {
+        assertThatThrownBy(() -> SeasonDocumentLinks.normalize("https://example.org/" + "%00".repeat(600)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(SeasonDocumentLinks.normalize("https://example.org/a%20b%2Fc?x=%2A"))
+                .isEqualTo("https://example.org/a%20b%2Fc?x=%2A");
+    }
+
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = {" ", "\t"})
