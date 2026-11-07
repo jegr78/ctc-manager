@@ -236,7 +236,9 @@ class FeedbackWorkflowTest(unittest.TestCase):
                            ("MAVEN_OPTS","-Dmaven.test.skip=true"),
                            ("JAVA_TOOL_OPTIONS","-Dgroups=unit"),
                            ("JDK_JAVA_OPTIONS","-Dspotbugs.skip=true"),
-                           ("_JAVA_OPTIONS","-Dit.test=OnlyOneIT")]:
+                           ("_JAVA_OPTIONS","-Dit.test=OnlyOneIT"),
+                           ("MAVEN_ARGS","-Duser.timezone=UTC# -Dtest=*,!SomeRegressionTest"),
+                           ("JAVA_TOOL_OPTIONS","-Duser.timezone=UTC# -Dgroups=unit")]:
             with self.subTest(variable=name):
                 result=self.run_cli("full",extra_env={name:value})
                 self.assertNotEqual(result.returncode,0,result.stdout+result.stderr)

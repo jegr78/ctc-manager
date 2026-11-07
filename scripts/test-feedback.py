@@ -45,8 +45,10 @@ def ambient_configuration(strict):
     for name, raw in sources.items():
         if name in {"JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"} and any(c in raw for c in "\r\n"):
             raise ValueError("Multiline ambient JVM options are unsupported in " + name)
+        if name in {".mvn/maven.config", ".mvn/jvm.config"}:
+            raw = "\n".join(line for line in raw.splitlines() if not line.lstrip().startswith("#"))
         try:
-            options = shlex.split(raw, comments=True)
+            options = shlex.split(raw, comments=False)
         except ValueError:
             raise ValueError("Malformed ambient Maven configuration in " + name) from None
         accepted = []
