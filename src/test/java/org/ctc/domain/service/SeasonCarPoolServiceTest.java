@@ -18,6 +18,70 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class SeasonCarPoolServiceTest {
     @Test
+    void givenUsedFrozenPool_whenAddingCategory_thenFreezeOnlyNewMembersAndPreserveExistingSnapshot() {
+        // given
+        var oldCar = car("Original", CarCategory.GR_3, Drivetrain.FR, 2016);
+        var addedCar = car("Additional", CarCategory.GR_4, Drivetrain.FR, 2017);
+        when(cars.findAllByOrderByManufacturerAscNameAsc()).thenReturn(List.of(oldCar, addedCar));
+        save("Original", clause(CarCategory.GR_3, null, null)); service.freeze(season.getId());
+        var oldEntry = season.getCarPoolEntries().getFirst(); oldEntry.setSortIndex(7);
+        var oldMember = oldEntry.getMembers().getFirst();
+        when(pickHistory.hasSelection(season.getId())).thenReturn(true);
+        assertThatThrownBy(() -> service.reopen(season.getId())).isInstanceOf(BusinessRuleException.class);
+        oldCar.setCategory(CarCategory.GR_B);
+        // when
+        service.addFrozenEntry(season.getId(), "Additional", List.of(clause(CarCategory.GR_4, null, null)));
+        // then
+        assertThat(season.getCarPoolState()).isEqualTo(CarPoolState.FROZEN);
+        assertThat(season.getCarPoolEntries()).hasSize(2);
+        assertThat(oldEntry.getMembers()).containsExactly(oldMember);
+        assertThat(oldEntry.getSortIndex()).isEqualTo(7);
+        assertThat(oldEntry.getClauses().getFirst().getCategory()).isEqualTo(CarCategory.GR_3);
+        var added = season.getCarPoolEntries().getLast();
+        assertThat(added.getSortIndex()).isEqualTo(8);
+        assertThat(added.getMembers()).extracting(member -> member.getCar().getId()).containsExactly(addedCar.getId());
+        assertThatThrownBy(() -> service.saveEntry(season.getId(), oldEntry.getId(), "Changed", List.of(clause(CarCategory.GR_4, null, null))))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("frozen");
+        assertThatThrownBy(() -> service.removeEntry(season.getId(), oldEntry.getId()))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("frozen");
+    }
+
+    @Test
+    void givenFrozenPool_whenAddingOneMake_thenFreezeExactCarAndRejectEmptyOrOverlappingAdditions() {
+        // given
+        var oldCar = car("Original", CarCategory.GR_3, Drivetrain.FR, 2016);
+        var addedCar = car("One Make", null, null, null);
+        when(cars.findAllByOrderByManufacturerAscNameAsc()).thenReturn(List.of(oldCar, addedCar));
+        save("Original", clause(CarCategory.GR_3, null, null)); service.freeze(season.getId());
+        when(cars.findById(addedCar.getId())).thenReturn(Optional.of(addedCar));
+        // when
+        service.addFrozenOneMakeEntry(season.getId(), "New One-Make", addedCar.getId());
+        // then
+        assertThat(season.getCarPoolEntries()).hasSize(2);
+        var added = season.getCarPoolEntries().getLast();
+        assertThat(added.getOneMakeCar()).isSameAs(addedCar);
+        assertThat(added.getMembers()).extracting(member -> member.getCar().getId()).containsExactly(addedCar.getId());
+        assertThatThrownBy(() -> service.addFrozenOneMakeEntry(season.getId(), "Duplicate", addedCar.getId()))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("overlap");
+        assertThatThrownBy(() -> service.addFrozenEntry(season.getId(), "Duplicate category", List.of(clause(CarCategory.GR_3, null, null))))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("overlap");
+        assertThatThrownBy(() -> service.addFrozenEntry(season.getId(), "Empty", List.of(clause(CarCategory.GR_2, null, null))))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("eligible");
+        assertThat(season.getCarPoolEntries()).hasSize(2);
+    }
+
+    @Test
+    void givenDraftPool_whenSubmittingFrozenAddition_thenRejectStaleIntentWithoutMutation() {
+        // when / then
+        assertThatThrownBy(() -> service.addFrozenEntry(season.getId(), "Stale addition", List.of(clause(CarCategory.GR_3, null, null))))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Reload");
+        assertThat(season.getCarPoolEntries()).isEmpty();
+        verifyNoInteractions(entries, cars);
+        assertThatThrownBy(() -> service.addFrozenOneMakeEntry(season.getId(), "Missing car", null))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Choose a car");
+    }
+
+    @Test
     void givenMixedPool_whenFrozen_thenKeepFilteredCategoriesAndExactOneMakes() {
         // given
         var categoryCar = car("Category", CarCategory.GR_3, Drivetrain.FR, 2016);

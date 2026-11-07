@@ -320,6 +320,10 @@ public class SeasonController {
     @GetMapping("/{id}/car-pool/entries/{entryId}/edit")
     public String editPoolEntry(@PathVariable UUID id, @PathVariable UUID entryId, Model model) {
         var season = seasonManagementService.findById(id);
+        if (season.getCarPoolState() == org.ctc.domain.model.CarPoolState.FROZEN) {
+            model.addAttribute("errorMessage", "Existing entries are frozen. Add a new entry to expand the pool.");
+            return edit(id, model);
+        }
         var entry = season.getCarPoolEntries().stream().filter(item -> item.getId().equals(entryId)).findFirst()
                 .orElseThrow(() -> new BusinessRuleException("Pool entry does not belong to this season."));
         model.addAttribute("poolEntryForm", SeasonPoolEntryForm.from(entry));
@@ -345,7 +349,9 @@ public class SeasonController {
             } catch (NumberFormatException e) { result.reject("pool", "Choose an existing clause to remove."); }
             return edit(id, model);
         }
-        if (!action.equals("save")) result.reject("pool", "Unknown pool action.");
+        boolean addition = action.equals("add-frozen");
+        if (!action.equals("save") && !addition) result.reject("pool", "Unknown pool action.");
+        if (addition && form.getEntryId() != null) result.reject("pool", "Existing entries are frozen. Only new entries can be added.");
         validator.validate(form).forEach(violation -> result.rejectValue(violation.getPropertyPath().toString(), "pool", violation.getMessage()));
         Class<?> definitionGroup = form.getEntryType() == SeasonPoolEntryForm.EntryType.ONE_MAKE
                 ? SeasonPoolEntryForm.OneMakeDefinition.class : SeasonPoolEntryForm.CategoryDefinition.class;
@@ -353,13 +359,17 @@ public class SeasonController {
         if (!result.hasErrors()) {
             try {
                 if (form.getEntryType() == SeasonPoolEntryForm.EntryType.ONE_MAKE) {
-                    carPoolService.saveOneMakeEntry(id, form.getEntryId(), form.getLabel(), form.getOneMakeCarId());
-                } else carPoolService.saveEntry(id, form.getEntryId(), form.getLabel(), form.toInputs());
+                    if (addition) carPoolService.addFrozenOneMakeEntry(id, form.getLabel(), form.getOneMakeCarId());
+                    else carPoolService.saveOneMakeEntry(id, form.getEntryId(), form.getLabel(), form.getOneMakeCarId());
+                } else if (addition) carPoolService.addFrozenEntry(id, form.getLabel(), form.toInputs());
+                else carPoolService.saveEntry(id, form.getEntryId(), form.getLabel(), form.toInputs());
             }
             catch (BusinessRuleException e) { result.reject("pool", e.getMessage()); }
         }
         if (result.hasErrors()) return edit(id, model);
-        redirect.addFlashAttribute("successMessage", "Pool entry saved. Review the preview before freezing.");
+        redirect.addFlashAttribute("successMessage", addition
+                ? "New entry added and frozen. Existing entries and picks are unchanged."
+                : "Pool entry saved. Review the preview before freezing.");
         return poolRedirect(id);
     }
 

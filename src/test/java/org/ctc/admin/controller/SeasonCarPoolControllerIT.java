@@ -24,6 +24,50 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Tag("integration")
 class SeasonCarPoolControllerIT {
     @Test
+    void givenFrozenPool_whenSubmittingExplicitAddition_thenRejectDraftOrExistingEntryIntentAndAddNewOneMake() throws Exception {
+        // given
+        var season = helper.createSeason("Test explicit addition " + UUID.randomUUID());
+        pools.changeMode(season.getId(), CarPoolMode.CATEGORY_POOL);
+        var original = cars.saveAndFlush(new Car("Test explicit addition", "Original " + UUID.randomUUID()));
+        var additional = cars.saveAndFlush(new Car("Test explicit addition", "Additional " + UUID.randomUUID()));
+        var originalEntry = pools.saveOneMakeEntry(season.getId(), null, "Original", original.getId());
+        pools.freeze(season.getId());
+        // when / then
+        mvc.perform(post(base(season) + "/entries/save").param("entryType", "ONE_MAKE").param("label", "Stale draft")
+                .param("oneMakeCarId", additional.getId().toString()).param("action", "save"))
+                .andExpect(status().isOk()).andExpect(model().attributeHasErrors("poolEntryForm"));
+        mvc.perform(post(base(season) + "/entries/save").param("entryType", "ONE_MAKE").param("label", "Forged edit")
+                .param("entryId", originalEntry.toString()).param("oneMakeCarId", additional.getId().toString()).param("action", "add-frozen"))
+                .andExpect(status().isOk()).andExpect(model().attributeHasErrors("poolEntryForm"));
+        assertThat(pools.preview(season.getId()).entries()).hasSize(1);
+        mvc.perform(post(base(season) + "/entries/save").param("entryType", "ONE_MAKE").param("label", "Additional")
+                .param("oneMakeCarId", additional.getId().toString()).param("action", "add-frozen"))
+                .andExpect(status().is3xxRedirection()).andExpect(flash().attribute("successMessage", containsString("added and frozen")));
+        var preview = pools.preview(season.getId());
+        assertThat(preview.frozen()).isTrue();
+        assertThat(preview.entries()).hasSize(2);
+        assertThat(preview.entries().getFirst().id()).isEqualTo(originalEntry);
+        assertThat(preview.entries().getFirst().carIds()).containsExactly(original.getId());
+        assertThat(preview.entries().getLast().carIds()).containsExactly(additional.getId());
+    }
+
+    @Test
+    void givenDraftPool_whenSubmittingFrozenAddition_thenRequireReloadAndKeepPoolDraft() throws Exception {
+        // given
+        var season = helper.createSeason("Test stale addition " + UUID.randomUUID());
+        pools.changeMode(season.getId(), CarPoolMode.CATEGORY_POOL);
+        var car = cars.saveAndFlush(new Car("Test stale addition", UUID.randomUUID().toString()));
+        // when
+        mvc.perform(post(base(season) + "/entries/save").param("entryType", "ONE_MAKE").param("label", "Stale addition")
+                .param("oneMakeCarId", car.getId().toString()).param("action", "add-frozen"))
+                .andExpect(status().isOk()).andExpect(model().attributeHasErrors("poolEntryForm"))
+                .andExpect(content().string(containsString("Reload")));
+        // then
+        assertThat(pools.preview(season.getId()).entries()).isEmpty();
+        assertThat(pools.preview(season.getId()).frozen()).isFalse();
+    }
+
+    @Test
     void givenNativeOneMakeSubmission_whenSaving_thenValidateCarAndRetainErrors() throws Exception {
         // given
         var season = helper.createSeason("Test OneMake " + UUID.randomUUID());
@@ -46,7 +90,9 @@ class SeasonCarPoolControllerIT {
         assertThat(entry.getClauses()).isEmpty();
         pools.freeze(season.getId());
         mvc.perform(get(base(season) + "/entries/" + entry.getId() + "/edit"))
-                .andExpect(status().isOk()).andExpect(content().string(containsString("One-Makes")));
+                .andExpect(status().isOk()).andExpect(content().string(containsString("One-Makes")))
+                .andExpect(content().string(containsString("Add and freeze entry")))
+                .andExpect(content().string(containsString("Existing entries are frozen")));
         assertThat(pools.preview(season.getId()).entries().getFirst().carIds()).containsExactly(car.getId());
     }
 

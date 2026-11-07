@@ -1217,3 +1217,7 @@ The following live actions belong to a separately authorized operator rollout:
 ### Finding the pick deadline
 
 The matchday workspace always shows **Pick deadline & event window**, including when Discord announcements are disabled. Use **Edit pick deadline** there or directly from team-pick review status. The deadline applies to every home race on that matchday in Europe/Berlin. Saving does not publish an announcement. The filtered picks overview links back to its selected matchday.
+
+### Expanding a frozen season car pool
+
+In Season settings → Car pool, use Add pool entry to add a category or One-Make to an already frozen pool. Add and freeze entry stores only the new exact membership. Existing entry identities, membership and saved picks remain unchanged. Empty additions or cars shared with an existing frozen entry are rejected. Existing frozen entries cannot be edited or removed. Reopen unused pool remains available only before races or pick history use the pool. Track selection is configured independently in the season track pool.

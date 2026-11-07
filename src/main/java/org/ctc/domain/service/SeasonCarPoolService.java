@@ -30,26 +30,44 @@ public class SeasonCarPoolService {
 
     @Transactional
     public UUID saveEntry(UUID seasonId, UUID entryId, String label, List<ClauseInput> clauses) {
-        return saveDefinition(seasonId, entryId, label, clauses, null);
+        return saveDefinition(seasonId, entryId, label, clauses, null, false);
     }
 
     @Transactional
     public UUID saveOneMakeEntry(UUID seasonId, UUID entryId, String label, UUID carId) {
         if (carId == null) throw new BusinessRuleException("Choose a car for the one-make entry.");
-        return saveDefinition(seasonId, entryId, label, List.of(), carId);
+        return saveDefinition(seasonId, entryId, label, List.of(), carId, false);
     }
 
-    private UUID saveDefinition(UUID seasonId, UUID entryId, String label, List<ClauseInput> clauses, UUID carId) {
+    @Transactional
+    public UUID addFrozenEntry(UUID seasonId, String label, List<ClauseInput> clauses) {
+        return saveDefinition(seasonId, null, label, clauses, null, true);
+    }
+
+    @Transactional
+    public UUID addFrozenOneMakeEntry(UUID seasonId, String label, UUID carId) {
+        if (carId == null) throw new BusinessRuleException("Choose a car for the one-make entry.");
+        return saveDefinition(seasonId, null, label, List.of(), carId, true);
+    }
+
+    private UUID saveDefinition(UUID seasonId, UUID entryId, String label, List<ClauseInput> clauses, UUID carId, boolean addition) {
         var season = locked(seasonId);
-        requireEditable(season);
+        if (addition) {
+            requireCategoryMode(season);
+            if (season.getCarPoolState() != CarPoolState.FROZEN) {
+                throw new BusinessRuleException("The pool is no longer frozen. Reload before adding an entry.");
+            }
+        } else requireEditable(season);
         validateDefinition(label, clauses, carId);
         var oneMakeCar = carId == null ? null : cars.findById(carId)
                 .orElseThrow(() -> new BusinessRuleException("The selected one-make car no longer exists."));
+        var addedMembers = addition ? additionMembers(season, clauses, oneMakeCar) : List.<Car>of();
         var entry = entryId == null ? new SeasonCarPoolEntry() : ownedEntry(season, entryId);
         if (entryId == null) {
             entry.setSeason(season);
-            int nextIndex = 0;
-            for (var existing : season.getCarPoolEntries()) existing.setSortIndex(nextIndex++);
+            int nextIndex = addition ? season.getCarPoolEntries().stream().mapToInt(SeasonCarPoolEntry::getSortIndex)
+                    .max().orElse(-1) + 1 : 0;
+            if (!addition) for (var existing : season.getCarPoolEntries()) existing.setSortIndex(nextIndex++);
             entry.setSortIndex(nextIndex);
             season.getCarPoolEntries().add(entry);
         }
@@ -66,7 +84,23 @@ public class SeasonCarPoolService {
             clause.setSortIndex(i);
             entry.getClauses().add(clause);
         }
+        for (var car : addedMembers) {
+            var member = new SeasonCarPoolMember(); member.setEntry(entry); member.setCar(car);
+            entry.getMembers().add(member);
+        }
         return entries.save(entry).getId();
+    }
+
+    private List<Car> additionMembers(Season season, List<ClauseInput> clauses, Car oneMakeCar) {
+        var members = oneMakeCar != null ? List.of(oneMakeCar) : cars.findAllByOrderByManufacturerAscNameAsc().stream()
+                .filter(car -> clauses.stream().anyMatch(clause -> matches(car, clause))).toList();
+        if (members.isEmpty()) throw new BusinessRuleException("The new entry has no eligible cars.");
+        var existingIds = season.getCarPoolEntries().stream().flatMap(entry -> entry.getMembers().stream())
+                .map(member -> member.getCar().getId()).collect(java.util.stream.Collectors.toSet());
+        if (members.stream().anyMatch(car -> existingIds.contains(car.getId()))) {
+            throw new BusinessRuleException("The new entry would overlap an existing frozen entry.");
+        }
+        return members;
     }
 
     @Transactional
@@ -209,7 +243,7 @@ public class SeasonCarPoolService {
 
     private void requireEditable(Season season) {
         requireCategoryMode(season);
-        if (season.getCarPoolState() == CarPoolState.FROZEN) throw new BusinessRuleException("The pool is frozen. Reopen the unused pool before editing.");
+        if (season.getCarPoolState() == CarPoolState.FROZEN) throw new BusinessRuleException("The pool is frozen. Reload to add a new entry; existing entries require reopening an unused pool.");
         requireUnused(season);
     }
 

@@ -35,6 +35,8 @@ class PickPersistenceIT {
     @Autowired PickSubmissionService submissions;
     @Autowired PickReviewService reviews;
     @Autowired PickReservationService reservations;
+    @Autowired SeasonCarPoolService poolService;
+    UUID addedPoolCar;
     @Autowired EntityManager entityManager;
     @MockitoBean PickCollectionStatus collection;
     TestHelper.SeasonFixture fixture;
@@ -72,8 +74,48 @@ class PickPersistenceIT {
             helper.deleteSeasonCascade(seasons.findById(fixture.season().getId()).orElseThrow());
             seasons.flush();
             cars.deleteById(payload.carId());
+            if (addedPoolCar != null) cars.deleteById(addedPoolCar);
             tracks.deleteById(payload.trackId());
             teams.deleteAllById(java.util.List.of(fixture.homeTeam().getId(), fixture.awayTeam().getId()));
+        });
+    }
+
+    @Test
+    void givenSubmittedPicks_whenExpandingFrozenPool_thenPreserveRevisionAndAllowNewEntry() {
+        // given
+        var originalEntry = tx.execute(status -> {
+            if (payload.carPoolEntryId() != null) return payload.carPoolEntryId();
+            poolService.changeMode(fixture.season().getId(), CarPoolMode.CATEGORY_POOL);
+            var id = poolService.saveOneMakeEntry(fixture.season().getId(), null, "Original One-Make", payload.carId());
+            poolService.freeze(fixture.season().getId());
+            return id;
+        });
+        payload = new PickPayload(payload.trackId(), payload.carId(), originalEntry, payload.laps(), payload.tyreWear(),
+                payload.fuelConsumption(), payload.refuelingSpeed(), payload.initialFuel(), payload.requiredPitStops(),
+                payload.timeProgressionMode(), payload.timeProgressionMultiplier(), payload.weather(), payload.timeOfDay(),
+                payload.availableTyres(), payload.mandatoryTyres(), payload.lobbyRulesProfile(), payload.startType(), payload.slipstream());
+        var originalSnapshot = poolService.preview(fixture.season().getId()).entries();
+        var request = UUID.randomUUID();
+        var receipt = submissions.submit(fixture.race().getId(), 0, request, actor, payload);
+        addedPoolCar = tx.execute(status -> cars.saveAndFlush(new Car("Test extension", UUID.randomUUID().toString())).getId());
+        // when
+        var addedEntry = poolService.addFrozenOneMakeEntry(fixture.season().getId(), "Additional One-Make", addedPoolCar);
+        // then
+        tx.executeWithoutResult(status -> {
+            entityManager.clear();
+            var revision = revisions.findByRequestId(request).orElseThrow();
+            assertThat(revision.getPayload()).isEqualTo(payload);
+            assertThat(revision.receipt()).isEqualTo(receipt);
+            var pool = poolService.preview(fixture.season().getId());
+            assertThat(pool.frozen()).isTrue();
+            assertThat(pool.entries()).hasSize(originalSnapshot.size() + 1);
+            assertThat(pool.entries().subList(0, originalSnapshot.size())).isEqualTo(originalSnapshot);
+            assertThat(pool.entries()).filteredOn(entry -> entry.id().equals(originalEntry)).singleElement()
+                    .satisfies(entry -> assertThat(entry.carIds()).contains(payload.carId()));
+            assertThat(pool.entries().getLast().id()).isEqualTo(addedEntry);
+            assertThat(pool.entries().getLast().carIds()).containsExactly(addedPoolCar);
+            assertThat(reservations.pending(fixture.season().getId(), true)).singleElement()
+                    .satisfies(reservation -> assertThat(reservation.entryId()).isEqualTo(originalEntry));
         });
     }
 
