@@ -127,6 +127,38 @@ class SiteGeneratorFixtureIsolationIT {
 
 
     @Test
+    void everyGeneratedSeasonPageKeepsItsOwningRuleDocuments() throws Exception {
+        season.setRulebookUrl("https://example.org/current/rules");
+        season.setRacingEtiquetteUrl("https://example.org/current/etiquette");
+        transactions.executeWithoutResult(status -> {
+            var current = seasonRepository.findByIdForUpdate(season.getId()).orElseThrow();
+            current.setRulebookUrl(season.getRulebookUrl());
+            current.setRacingEtiquetteUrl(season.getRacingEtiquetteUrl());
+        });
+        var archived = new Season("Gen Archived Documents " + uniqueSuffix, 2025, 2);
+        archived.setRulebookUrl("https://example.org/archive/rules");
+        archived.setRacingEtiquetteUrl("https://example.org/archive/etiquette");
+        ownSeason(archived);
+        setupRegularPhase(archived);
+        siteGeneratorService.generate();
+        for (var owner : List.of(season, archived)) {
+            var directory = tempDir.resolve("season").resolve(siteSlugger.slugify(owner.getDisplayLabel()));
+            assertTrue(Files.isDirectory(directory));
+            try (var paths = Files.walk(directory)) {
+                var pages = paths.filter(path -> path.toString().endsWith(".html")).toList();
+                assertFalse(pages.isEmpty());
+                for (var page : pages) {
+                    var document = Jsoup.parse(Files.readString(page));
+                    assertEquals(List.of(owner.getRulebookUrl(), owner.getRacingEtiquetteUrl()),
+                            document.select(".subnav a[target='_blank']").eachAttr("href"), page.toString());
+                }
+            }
+        }
+        var global = Jsoup.parse(Files.readString(tempDir.resolve("index.html")));
+        assertTrue(global.select("a[href='https://example.org/current/rules']").isEmpty());
+    }
+
+    @Test
     void givenConsecutiveGenerationScenarios_whenCleaningTheirFixtures_thenRestoreOriginalRowsAndActiveSeason() throws IOException {
         var expected = initialState;
         givenDriverWithTeamChange_whenGenerate_thenAlltimeDriverRankingShowsAllTeams();

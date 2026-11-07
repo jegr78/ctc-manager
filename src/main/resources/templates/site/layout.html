@@ -60,7 +60,11 @@
             <a th:if="${hasPlayoff}"
                th:href="${rootPath + '/season/' + (playoffSeasonSlug != null ? playoffSeasonSlug : seasonSlug) + '/playoff.html'}"
                th:class="${currentPage == 'playoff'} ? 'subnav-link active' : 'subnav-link'"
-               th:attr="aria-current=${currentPage == 'playoff' ? 'page' : null}">Playoff</a>
+               th:attr="aria-current=${currentPage == 'playoff' ? 'page' : null}">Playoff</a><a th:each="document : ${seasonDocumentLinks}" th:href="${document.url}"
+               class="subnav-link" target="_blank" rel="noopener noreferrer">
+                <span th:text="${document.label}">Rulebook</span>
+                <span aria-hidden="true"> ↗</span><span class="sr-only"> (opens in a new tab)</span>
+            </a>
         </div>
     </nav>
     <nav class="breadcrumb" aria-label="breadcrumb"

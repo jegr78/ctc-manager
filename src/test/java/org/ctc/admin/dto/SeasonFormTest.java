@@ -46,6 +46,33 @@ class SeasonFormTest {
 				.anyMatch(v -> v.getPropertyPath().toString().equals("name"));
 	}
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"http://example.org/rules", "javascript:alert(1)", "//example.org/rules", "https://user:pass@example.org/rules", "https:///missing-host", "https://example.org/\\rules", "https://example.org/%0aevil"})
+    void unsafeDocumentLinksHaveFieldErrors(String url) {
+        var form = newForm("Test Rules");
+        form.setRulebookUrl(url);
+        form.setRacingEtiquetteUrl(url);
+        assertThat(validator.validate(form)).extracting(v -> v.getPropertyPath().toString())
+                .containsExactlyInAnyOrder("rulebookUrl", "racingEtiquetteUrl");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.NullAndEmptySource
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"  ", "https://docs.google.com/document/d/e/Test-Rules/pub?embedded=true#rules", "https://example.org/rules.pdf"})
+    void optionalOrPublishedHttpsDocumentsAreAccepted(String url) {
+        var form = newForm("Test Rules");
+        form.setRulebookUrl(url);
+        form.setRacingEtiquetteUrl(url);
+        assertThat(validator.validate(form)).isEmpty();
+    }
+
+    @Test
+    void documentUrlsHaveBoundedLength() {
+        var form = newForm("Test Rules");
+        form.setRulebookUrl("https://example.org/" + "a".repeat(2048));
+        assertThat(validator.validate(form)).extracting(v -> v.getPropertyPath().toString()).contains("rulebookUrl");
+    }
+
 	private static SeasonForm newForm(String name) {
 		SeasonForm form = new SeasonForm();
 		form.setName(name);

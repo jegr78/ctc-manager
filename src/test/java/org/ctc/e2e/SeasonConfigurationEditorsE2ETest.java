@@ -30,6 +30,45 @@ class SeasonConfigurationEditorsE2ETest extends PlaywrightConfig {
     void tearDown() { teardownPage(); }
 
     @Test
+    void seasonRuleDocumentFieldsRetainErrorsAndSaveWithoutJavascript() throws Exception {
+        var fixture = helper.createFullSeasonFixture("Test Document Editor " + UUID.randomUUID().toString().substring(0, 8));
+        var evidence = java.nio.file.Path.of("target/failsafe-reports/season-documents");
+        java.nio.file.Files.createDirectories(evidence);
+        page.navigate(url("/admin/seasons/" + fixture.season().getId() + "/edit"));
+        page.locator("form[action='/admin/seasons/save']").evaluate("form => form.noValidate = true");
+        page.getByLabel("Rulebook URL", new com.microsoft.playwright.Page.GetByLabelOptions().setExact(true)).fill("http://example.org/unsafe");
+        page.getByLabel("Racing Etiquette URL", new com.microsoft.playwright.Page.GetByLabelOptions().setExact(true)).fill("https://example.org/test/etiquette");
+        page.locator("form[action='/admin/seasons/save'] .entity-editor-actions button").click();
+        assertThat(page.locator("#rulebookUrl-error")).containsText("HTTPS URL");
+        assertThat(page.locator("#racingEtiquetteUrl")).hasValue("https://example.org/test/etiquette");
+        assertThat(page.locator("#rulebookUrl")).hasAttribute("aria-invalid", "true");
+        org.junit.jupiter.api.Assertions.assertNull(seasons.findById(fixture.season().getId()).orElseThrow().getRulebookUrl());
+        for (int width : java.util.List.of(1440, 390)) {
+            page.setViewportSize(width, 900);
+            if (width < 768) page.waitForFunction("document.querySelector('.sidebar').getBoundingClientRect().right <= 0");
+            page.locator(".entity-section-nav a[href='#season-documents']").click();
+            page.waitForFunction("document.querySelector('#season-documents').getBoundingClientRect().top >= 60 && document.querySelector('#season-documents').getBoundingClientRect().top <= 80");
+            page.locator("#racingEtiquetteUrl").click();
+            assertThat(page.locator("#racingEtiquetteUrl")).isFocused();
+            org.junit.jupiter.api.Assertions.assertFalse((Boolean) page.evaluate("document.documentElement.scrollWidth > innerWidth"));
+            page.locator("#season-documents").screenshot(new com.microsoft.playwright.Locator.ScreenshotOptions()
+                    .setAnimations(com.microsoft.playwright.options.ScreenshotAnimations.DISABLED)
+                    .setPath(evidence.resolve("admin-" + width + ".png")));
+        }
+        try (var nativeContext = browser.newContext(new com.microsoft.playwright.Browser.NewContextOptions().setJavaScriptEnabled(false))) {
+            var nativePage = nativeContext.newPage();
+            nativePage.navigate(url("/admin/seasons/" + fixture.season().getId() + "/edit"));
+            nativePage.locator("#rulebookUrl").fill("https://example.org/test/rules");
+            nativePage.locator("#racingEtiquetteUrl").fill("https://example.org/test/etiquette");
+            nativePage.locator("form[action='/admin/seasons/save'] .entity-editor-actions button").click();
+            assertThat(nativePage).hasURL(url("/admin/seasons"));
+            nativePage.navigate(url("/admin/seasons/" + fixture.season().getId() + "/edit"));
+            assertThat(nativePage.locator("#rulebookUrl")).hasValue("https://example.org/test/rules");
+            assertThat(nativePage.locator("#racingEtiquetteUrl")).hasValue("https://example.org/test/etiquette");
+        }
+    }
+
+    @Test
     void givenExistingSeason_whenInvalidNameIsCorrected_thenCatalogsAndSubmittedDetailsRemainAndSaveSucceeds() {
         // given
         var fixture = helper.createFullSeasonFixture("Test Season Editor " + UUID.randomUUID().toString().substring(0, 8));

@@ -34,8 +34,21 @@ public class TemplateWriter {
         context.setVariable("activeSeasonSlug", activeSeasonSlug);
         context.setVariable("activeSeasonName", activeSeasonName);
 
+        var documents = new java.util.ArrayList<DocumentLink>();
+        if (context.getVariable("season") instanceof org.ctc.domain.model.Season season
+                && context.getVariable("seasonSlug") instanceof String slug && !slug.isBlank()) {
+            addDocument(documents, "Rulebook", season.getRulebookUrl());
+            addDocument(documents, "Racing Etiquette", season.getRacingEtiquetteUrl());
+        }
+        context.setVariable("seasonDocumentLinks", java.util.List.copyOf(documents));
         String html = templateEngine.process(templateName, context);
         Files.writeString(outputFile, html);
         log.debug("Generated: {}", outputFile);
     }
+    private static void addDocument(java.util.List<DocumentLink> documents, String label, String value) {
+        String url = org.ctc.domain.model.SeasonDocumentLinks.normalize(value);
+        if (url != null) documents.add(new DocumentLink(label, url));
+    }
+
+    public record DocumentLink(String label, String url) { }
 }

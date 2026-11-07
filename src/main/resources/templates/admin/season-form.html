@@ -8,6 +8,7 @@ th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
         </h1>
         <nav class="entity-section-nav" aria-label="Season editing sections">
             <a href="#season-identity">Season details</a>
+            <a href="#season-documents">Rule documents</a>
             <a th:if="${seasonForm.id != null}" href="#season-lobby-rules">Lobby rules</a>
             <a th:if="${seasonForm.id != null}" href="#season-teams">Teams</a>
             <a th:if="${seasonForm.id != null}" href="#carPool">Cars</a>
@@ -50,8 +51,23 @@ th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
                         <label for="active">Active season</label>
                     </div>
                 </fieldset>
+                <fieldset id="season-documents">
+                    <legend>Season rule documents</legend>
+                    <p id="season-documents-help">Optional HTTPS links for this season, including its archived pages. Save these with the season details. Generate Site, preview and explicitly publish to update the website. Saving does not send Discord messages.</p>
+                    <p>For a completed season, keep each document unchanged or link to a stable published copy or PDF.</p>
+                    <div class="form-group">
+                        <label for="rulebookUrl">Rulebook URL</label>
+                        <input type="url" id="rulebookUrl" th:field="*{rulebookUrl}" maxlength="2048" placeholder="https://" aria-describedby="season-documents-help rulebookUrl-error" th:attr="aria-invalid=${#fields.hasErrors('rulebookUrl')}">
+                        <p id="rulebookUrl-error" class="field-error" th:if="${#fields.hasErrors('rulebookUrl')}" th:errors="*{rulebookUrl}"></p>
+                    </div>
+                    <div class="form-group">
+                        <label for="racingEtiquetteUrl">Racing Etiquette URL</label>
+                        <input type="url" id="racingEtiquetteUrl" th:field="*{racingEtiquetteUrl}" maxlength="2048" placeholder="https://" aria-describedby="season-documents-help racingEtiquetteUrl-error" th:attr="aria-invalid=${#fields.hasErrors('racingEtiquetteUrl')}">
+                        <p id="racingEtiquetteUrl-error" class="field-error" th:if="${#fields.hasErrors('racingEtiquetteUrl')}" th:errors="*{racingEtiquetteUrl}"></p>
+                    </div>
+                </fieldset>
                 <div class="entity-editor-actions">
-                    <span class="text-dim">Season details</span>
+                    <span class="text-dim">Season details and rule documents</span>
                     <div class="actions">
                         <button type="submit" class="btn btn-primary">Save</button>
                         <a th:href="@{/admin/seasons}" class="btn btn-secondary">Cancel</a>

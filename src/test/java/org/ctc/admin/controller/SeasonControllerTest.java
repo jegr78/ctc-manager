@@ -50,6 +50,35 @@ class SeasonControllerTest {
 	private TestHelper testHelper;
 
     @Test
+    void nativeSeasonFormSavesOwnDocumentsAndRetainsSubmittedValuesOnFieldErrors() throws Exception {
+        var first = testHelper.createSeason("Test Document Season A");
+        var second = testHelper.createSeason("Test Document Season B");
+        second.setRulebookUrl("https://example.org/archive/rules"); seasonRepository.saveAndFlush(second);
+        mockMvc.perform(post("/admin/seasons/save").param("id", first.getId().toString())
+                        .param("name", first.getName()).param("year", "2027").param("number", "1")
+                        .param("rulebookUrl", "https://example.org/2027/rules")
+                        .param("racingEtiquetteUrl", "https://example.org/2027/etiquette"))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/admin/seasons"));
+        assertThat(seasonRepository.findById(first.getId()).orElseThrow().getRulebookUrl()).isEqualTo("https://example.org/2027/rules");
+        mockMvc.perform(get("/admin/seasons/" + first.getId() + "/edit"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("seasonForm", hasProperty("rulebookUrl", is("https://example.org/2027/rules"))))
+                .andExpect(model().attribute("seasonForm", hasProperty("racingEtiquetteUrl", is("https://example.org/2027/etiquette"))));
+        mockMvc.perform(post("/admin/seasons/save").param("id", first.getId().toString())
+                        .param("name", first.getName()).param("year", "2027").param("number", "1")
+                        .param("description", "Test retained description")
+                        .param("rulebookUrl", "http://example.org/unsafe")
+                        .param("racingEtiquetteUrl", "https://example.org/retained/etiquette"))
+                .andExpect(status().isOk()).andExpect(view().name("admin/season-form"))
+                .andExpect(model().attributeHasFieldErrors("seasonForm", "rulebookUrl"))
+                .andExpect(model().attribute("seasonForm", hasProperty("racingEtiquetteUrl", is("https://example.org/retained/etiquette"))))
+                .andExpect(content().string(containsString("rulebookUrl-error")))
+                .andExpect(model().attributeExists("allTeams", "allCars", "allTracks", "lobbyRulesForm"));
+        assertThat(seasonRepository.findById(first.getId()).orElseThrow().getRacingEtiquetteUrl()).isEqualTo("https://example.org/2027/etiquette");
+        assertThat(seasonRepository.findById(second.getId()).orElseThrow().getRulebookUrl()).isEqualTo("https://example.org/archive/rules");
+    }
+
+    @Test
     void givenAnActiveSeason_whenSavingAnotherActiveSeason_thenReturnConflictWithoutCreatingIt() throws Exception {
         // given
         var active = seasonRepository.findByActiveTrue().orElseGet(() -> {

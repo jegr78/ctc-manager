@@ -23,6 +23,12 @@ public class SeasonForm {
 
 	private String description;
 
+    @org.ctc.admin.validation.SeasonDocumentUrl
+    private String rulebookUrl;
+
+    @org.ctc.admin.validation.SeasonDocumentUrl
+    private String racingEtiquetteUrl;
+
 	private boolean active;
 
     private CarPoolMode carPoolMode = CarPoolMode.FIXED_CARS;

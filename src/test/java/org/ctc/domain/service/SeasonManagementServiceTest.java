@@ -65,6 +65,38 @@ class SeasonManagementServiceTest {
     private SeasonManagementService service;
 
     @Test
+    void documentSaveUsesOwningSeasonLockPreservesOtherSettingsAndLegacySaveKeepsLinks() {
+        var season = createSeason("Test Documents");
+        season.setCarPoolMode(CarPoolMode.CATEGORY_POOL);
+        season.setCarPoolState(CarPoolState.FROZEN);
+        season.setLobbyRulesProfile(LobbyRulesProfile.CTC_2027);
+        when(seasonRepository.findByIdForUpdate(season.getId())).thenReturn(Optional.of(season));
+        when(seasonRepository.save(season)).thenReturn(season);
+        service.save(season.getId(), "Test Rules", 2027, 1, "Test", false,
+                " https://example.org/2027/rules ", "https://example.org/2027/etiquette");
+        assertThat(season.getRulebookUrl()).isEqualTo("https://example.org/2027/rules");
+        assertThat(season.getRacingEtiquetteUrl()).isEqualTo("https://example.org/2027/etiquette");
+        assertThat(season.getCarPoolMode()).isEqualTo(CarPoolMode.CATEGORY_POOL);
+        assertThat(season.getCarPoolState()).isEqualTo(CarPoolState.FROZEN);
+        assertThat(season.getLobbyRulesProfile()).isEqualTo(LobbyRulesProfile.CTC_2027);
+        service.save(season.getId(), "Test Rename", 2027, 1, "Test", false);
+        assertThat(season.getRulebookUrl()).isEqualTo("https://example.org/2027/rules");
+        verify(seasonRepository, times(2)).findByIdForUpdate(season.getId());
+        verifyNoInteractions(seasonPhaseService);
+        service.save(season.getId(), "Test Rules", 2027, 1, "Test", false, " ", null);
+        assertThat(season.getRulebookUrl()).isNull();
+        assertThat(season.getRacingEtiquetteUrl()).isNull();
+    }
+
+    @Test
+    void invalidDocumentSaveRefusesBeforeAnyRepositoryMutation() {
+        assertThatThrownBy(() -> service.save(UUID.randomUUID(), "Test Rules", 2027, 1, "Test", false,
+                "https://example.org/rules", "javascript:alert(1)"))
+                .isInstanceOf(BusinessRuleException.class).hasMessage(SeasonDocumentLinks.MESSAGE);
+        verifyNoInteractions(seasonRepository, seasonPhaseService);
+    }
+
+    @Test
     void givenTeamNotInSeason_whenAddTeamToSeason_thenTeamAdded() {
         // given
         var season = createSeason("Test Season");
