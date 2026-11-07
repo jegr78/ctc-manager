@@ -45,8 +45,10 @@ def ambient_configuration(strict):
     for name, raw in sources.items():
         if name in {"JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"} and any(c in raw for c in "\r\n"):
             raise ValueError("Multiline ambient JVM options are unsupported in " + name)
-        if name in {".mvn/maven.config", ".mvn/jvm.config"}:
+        if name == ".mvn/maven.config":
             raw = "\n".join(line for line in raw.splitlines() if not line.lstrip().startswith("#"))
+        if any(critical(key) for key in re.findall(r"-D([A-Za-z0-9_.-]+)", raw)):
+            raise ValueError("Unsafe ambient Maven configuration in " + name)
         try:
             options = shlex.split(raw, comments=False)
         except ValueError:
@@ -225,6 +227,7 @@ def run(args, output):
     command = command_for(args)
     record = dict(mode=args.mode, evidenceKind="canonical" if args.mode == "full" else "focused",
                   ambientConfiguration=ambient,
+                  launcherPolicy=dict(additionalRcFiles=False, projectBasedir=str(ROOT)),
                   sourceBefore=before, command=command,
                   requestedJvmBudget=dict(testHeapMiB=args.test_heap_mib, mavenHeapMiB=args.maven_heap_mib),
                   startedUtc=datetime.datetime.now(datetime.timezone.utc).isoformat())
@@ -247,6 +250,8 @@ def run(args, output):
         print(shlex.join(command), flush=True)
         with (output / "maven.log").open("w") as log:
             environment = dict(os.environ)
+            environment["MAVEN_SKIP_RC"] = "true"
+            environment["MAVEN_BASEDIR"] = str(ROOT)
             environment["JAVA_TOOL_OPTIONS"] = (environment.get("JAVA_TOOL_OPTIONS", "")
                                                 + " -Xmx" + str(args.test_heap_mib) + "m").strip()
             environment["MAVEN_OPTS"] = (environment.get("MAVEN_OPTS", "")

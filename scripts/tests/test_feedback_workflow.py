@@ -18,6 +18,7 @@ def heap(name):
  values=re.findall(r"-Xmx(\d+)m",os.environ.get(name,""))
  return int(values[-1]) if values else None
 Path("target/budgets.json").write_text(json.dumps({"testHeapMiB":heap("JAVA_TOOL_OPTIONS"),"mavenHeapMiB":heap("MAVEN_OPTS")}))
+Path("target/launcher.json").write_text(json.dumps({"skipRc":os.environ.get("MAVEN_SKIP_RC"),"basedir":os.environ.get("MAVEN_BASEDIR")}))
 if mode=="changed":Path("fixture.txt").write_text("changed during Maven")
 if mode=="untracked-change":Path("new-fixture.py").write_text("changed untracked source")
 if mode=="stubborn":
@@ -226,6 +227,8 @@ class FeedbackWorkflowTest(unittest.TestCase):
         self.assertEqual(result.returncode,0,result.stdout+result.stderr)
         self.assertEqual(json.loads((self.root/"target/budgets.json").read_text()),
                          {"testHeapMiB":1024,"mavenHeapMiB":512})
+        self.assertEqual(json.loads((self.root/"target/launcher.json").read_text()),
+                         {"skipRc":"true","basedir":str(self.root)})
         result=self.run_cli("unit","ExampleTest","--test-heap-mib","768","--maven-heap-mib","384")
         self.assertEqual(result.returncode,0,result.stdout+result.stderr)
         self.assertEqual(json.loads((self.root/"target/budgets.json").read_text()),
@@ -238,7 +241,8 @@ class FeedbackWorkflowTest(unittest.TestCase):
                            ("JDK_JAVA_OPTIONS","-Dspotbugs.skip=true"),
                            ("_JAVA_OPTIONS","-Dit.test=OnlyOneIT"),
                            ("MAVEN_ARGS","-Duser.timezone=UTC# -Dtest=*,!SomeRegressionTest"),
-                           ("JAVA_TOOL_OPTIONS","-Duser.timezone=UTC# -Dgroups=unit")]:
+                           ("JAVA_TOOL_OPTIONS","-Duser.timezone=UTC# -Dgroups=unit"),
+                           ("MAVEN_OPTS",r"-Duser.timezone=UTC\ -Dtest=*,!SomeRegressionTest")]:
             with self.subTest(variable=name):
                 result=self.run_cli("full",extra_env={name:value})
                 self.assertNotEqual(result.returncode,0,result.stdout+result.stderr)
