@@ -19,12 +19,19 @@ public class DevDataSeeder implements CommandLineRunner {
 	private final SiteGeneratorService siteGeneratorService;
 	private final RaceLineupRepository raceLineupRepository;
 
+	@org.springframework.beans.factory.annotation.Value("${app.seed.generate-site:true}")
+	private boolean generateSiteOnStartup;
+
 	@Override
 	public void run(String... args) {
 		testDataService.seed();
 		// The demo profile renders the dev seed verbatim, so the guest example must be present here.
 		verifyGuestExample();
-		generateSite();
+		if (generateSiteOnStartup) {
+			generateSite();
+		} else {
+			log.info("Skipping site generation (app.seed.generate-site=false)");
+		}
 	}
 
 	private void verifyGuestExample() {

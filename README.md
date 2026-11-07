@@ -363,6 +363,8 @@ The full-site generation integration suite is `SiteGeneratorFixtureIsolationIT`.
 
 MariaDB integration tests require Docker and `-Ddocker.available=true`; CI enables that flag. Existing optional local container-reuse guidance remains in [`docs/test-performance.md`](docs/test-performance.md#perf-04-testcontainers-reuse). Fixture isolation does not change the container lifecycle or enable reuse automatically.
 
+Automated Maven tests retain seeded fixture data but disable the incidental website render at every application startup with `app.seed.generate-site=false`. Normal dev startup keeps its existing default. Explicit generation tests still render the real website. Per-fork initialization/cache counters are included in CI test artifacts. See [test startup measurements](docs/test-startup-overhead.md) for evidence and lifecycle boundaries.
+
 ## Dependency and security checks
 
 Renovate proposes current stable dependency updates, including majors, without a dashboard

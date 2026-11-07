@@ -24,9 +24,7 @@ public class ContextLoadCountListener
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 long pid = ProcessHandle.current().pid();
-                Path out = Paths.get("target/test-perf/context-loads-" + pid + ".txt");
-                Files.createDirectories(out.getParent());
-                Files.writeString(out, "total " + count.get());
+                writeMarkers(Paths.get("target/test-perf"), pid, new CacheAccess().cache());
             } catch (IOException e) {
                 System.err.println("ContextLoadCountListener: could not write marker file: "
                         + e.getMessage());
@@ -37,6 +35,20 @@ public class ContextLoadCountListener
     @Override
     public void initialize(ConfigurableApplicationContext applicationContext) {
         count.incrementAndGet();
+    }
+
+    static void writeMarkers(Path directory, long pid,
+            org.springframework.test.context.cache.ContextCache cache) throws IOException {
+        Files.createDirectories(directory);
+        Files.writeString(directory.resolve("context-loads-" + pid + ".txt"), "total " + count.get());
+        Files.writeString(directory.resolve("context-loads-" + pid + "-cache.txt"),
+                "size " + cache.size() + "\nhits " + cache.getHitCount() + "\nmisses " + cache.getMissCount() + "\n");
+    }
+
+    private static class CacheAccess extends org.springframework.test.context.cache.DefaultCacheAwareContextLoaderDelegate {
+        org.springframework.test.context.cache.ContextCache cache() {
+            return getContextCache();
+        }
     }
 
     static int getCount() {

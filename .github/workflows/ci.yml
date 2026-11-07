@@ -135,6 +135,7 @@ jobs:
           path: |
             target/surefire-reports/
             target/failsafe-reports/
+            target/test-perf/
           retention-days: 7
 
       - name: Upload Coverage Report
