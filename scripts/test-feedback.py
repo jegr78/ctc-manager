@@ -1,0 +1,224 @@
+#!/usr/bin/env python3
+"""Run explicit Maven scopes and reject deferred or stale test failures."""
+import argparse
+import datetime
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import shlex
+import shutil
+import signal
+import subprocess
+import sys
+import xml.etree.ElementTree as ET
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def git(*args):
+    return subprocess.check_output(["git", *args], cwd=ROOT)
+
+
+def source_state():
+    untracked = {}
+    for raw in git("ls-files", "--others", "--exclude-standard", "-z").split(b"\0"):
+        if raw:
+            path = ROOT / os.fsdecode(raw)
+            content = os.fsencode(os.readlink(path)) if path.is_symlink() else path.read_bytes()
+            untracked[os.fsdecode(raw)] = hashlib.sha256(content).hexdigest()
+    return dict(head=git("rev-parse", "HEAD").decode().strip(),
+                tree=git("rev-parse", "HEAD^{tree}").decode().strip(),
+                status=git("status", "--porcelain").decode(), untracked=untracked,
+                diffSha256=hashlib.sha256(git("diff", "HEAD", "--binary")).hexdigest())
+
+
+def arguments():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("mode", choices=["unit", "integration", "browser", "full"])
+    parser.add_argument("selector", nargs="?")
+    parser.add_argument("--unit", help="Associated unit selector; otherwise all units run")
+    parser.add_argument("--integration", help="Associated integration selector in browser mode")
+    parser.add_argument("--docker", action="store_true", help="Enable real MariaDB cases")
+    parser.add_argument("--offline", action="store_true", help="Require a warm dependency cache")
+    parser.add_argument("--maven-repo", type=Path)
+    args = parser.parse_args()
+    if args.mode == "full" and (args.selector or args.unit or args.integration):
+        parser.error("full mode does not accept focused selectors")
+    if args.mode != "full" and not args.selector:
+        parser.error("a focused selector is required")
+    if args.mode != "browser" and args.integration:
+        parser.error("--integration belongs to browser mode")
+    if args.mode == "unit" and args.unit:
+        parser.error("unit mode uses its positional selector")
+    for value in [args.selector, args.unit, args.integration]:
+        if value and (value.startswith("-") or "!" in value or any(ord(c) < 32 for c in value)):
+            parser.error("selectors must be positive patterns without control characters")
+    return args
+
+
+def command_for(args):
+    command = ["./mvnw"]
+    if args.mode == "full":
+        command += ["clean", "verify", "-Pe2e", "-Ddocker.available=true"]
+    elif args.mode == "unit":
+        command += ["test", "-Dtest=" + args.selector]
+    else:
+        command += ["integration-test"]
+        if args.mode == "browser":
+            command += ["-Pe2e"]
+        command += ["-Dit.test=" + ",".join(s for s in [args.integration, args.selector] if s)]
+        if args.unit:
+            command += ["-Dtest=" + args.unit]
+    if args.docker and args.mode != "full":
+        command += ["-Ddocker.available=true"]
+    command += ["--no-transfer-progress"]
+    if args.offline:
+        command += ["--offline"]
+    if args.maven_repo:
+        command += ["-Dmaven.repo.local=" + str(args.maven_repo.resolve())]
+    return command
+
+
+def reports():
+    totals = {group: dict(tests=0, failures=0, errors=0, skipped=0)
+              for group in ["unit", "integration", "browser"]}
+    suites = []
+    for folder in ["surefire-reports", "failsafe-reports"]:
+        for path in sorted((ROOT / "target" / folder).glob("TEST-*.xml")):
+            suite = ET.parse(path).getroot()
+            if suite.tag != "testsuite":
+                raise ValueError("Unexpected test-report format: " + path.name)
+            name = suite.attrib["name"]
+            group = "unit" if folder == "surefire-reports" else (
+                "browser" if name.startswith("org.ctc.e2e.") else "integration")
+            counts = {key: int(suite.attrib[key]) for key in totals[group]}
+            if any(value < 0 for value in counts.values()):
+                raise ValueError("Negative report counter: " + path.name)
+            for key, value in counts.items():
+                totals[group][key] += value
+            suites.append(dict(name=name, group=group, **counts))
+    for path in (ROOT / "target/failsafe-reports").glob("failsafe-summary*.xml"):
+        summary = ET.parse(path).getroot()
+        if (any(int(summary.findtext(key, "0")) != 0 for key in ["failures", "errors", "skipped"])
+                or summary.get("result") not in {None, "null", "0"}
+                or summary.get("timeout", "false") != "false"
+                or (summary.findtext("failureMessage") or "").strip()):
+            raise ValueError("Failsafe reports deferred failures or an incomplete fork: " + path.name)
+    return totals, suites
+
+
+def full_gates():
+    coverage = ET.parse(ROOT / "target/site/jacoco/jacoco.xml").getroot()
+    line = next(counter for counter in coverage.findall("counter") if counter.get("type") == "LINE")
+    covered, missed = int(line.attrib["covered"]), int(line.attrib["missed"])
+    if covered < 0 or missed < 0 or covered + missed == 0 or covered / (covered + missed) < 0.82:
+        raise ValueError("Complete coverage must meet the existing 82% minimum")
+    path = ROOT / "target/spotbugsXml.xml"
+    bugs = ET.parse(path).getroot()
+    errors = bugs.find("Errors")
+    if (bugs.findall("BugInstance") or errors is None or int(errors.get("errors", "0"))
+            or int(errors.get("missingClasses", "0")) or "findsecbugs" not in path.read_text().lower()):
+        raise ValueError("Complete SpotBugs/FindSecBugs evidence is missing or failed")
+    return dict(lineCoveragePercent=round(100 * covered / (covered + missed), 2), spotbugsBugs=0)
+
+
+def run(args, output):
+    before = source_state()
+    if args.mode == "full" and before["status"]:
+        raise ValueError("Commit a clean reviewed source before full verification")
+    command = command_for(args)
+    record = dict(mode=args.mode, evidenceKind="canonical" if args.mode == "full" else "focused",
+                  sourceBefore=before, command=command,
+                  startedUtc=datetime.datetime.now(datetime.timezone.utc).isoformat())
+    output.mkdir(parents=True)
+    metadata = output / "run.json"
+    proc = None
+    try:
+        prior_artifacts = ["surefire-reports", "failsafe-reports", "test-perf"]
+        if args.mode == "full":
+            prior_artifacts += ["site/jacoco", "spotbugsXml.xml"]
+        for name in prior_artifacts:
+            existing = ROOT / "target" / name
+            if existing.is_symlink():
+                raise ValueError("Refusing a symlink report directory: " + name)
+            if existing.exists():
+                archived = output / "previous-reports" / name
+                archived.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(existing), archived)
+        print("Scope: " + args.mode + "; source " + before["head"], flush=True)
+        print(shlex.join(command), flush=True)
+        with (output / "maven.log").open("w") as log:
+            proc = subprocess.Popen(command, cwd=ROOT, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT, text=True, start_new_session=True)
+            record["mavenPid"] = proc.pid
+            metadata.write_text(json.dumps(record, indent=2) + "\n")
+            for line in proc.stdout:
+                log.write(line)
+                print(line, end="", flush=True)
+            record["mavenExitCode"] = proc.wait()
+        totals, suites = reports()
+        record.update(totals=totals, suites=suites, sourceAfter=source_state())
+        required = {"unit"}
+        if args.mode in {"integration", "full"} or args.integration:
+            required.add("integration")
+        if args.mode in {"browser", "full"}:
+            required.add("browser")
+        failures = [name for name, count in totals.items()
+                    if any(count[key] for key in ["failures", "errors", "skipped"])]
+        missing = [name for name in required if totals[name]["tests"] == 0]
+        if record["mavenExitCode"] or failures or missing or record["sourceAfter"] != before:
+            raise ValueError("Verification failed: Maven status, failed/skipped or missing cases, or changed source")
+        if args.mode == "full":
+            record["gates"] = full_gates()
+        record["passed"] = True
+        print(json.dumps(dict(scope=args.mode, totals=totals, passed=True)), flush=True)
+        if args.mode != "full":
+            print("Focused evidence only. Finalization requires reviewed clean verify -Pe2e and green CI.")
+        else:
+            print("Canonical local evidence complete. Exact-head reviewed CI is still required before merge.")
+        return 0
+    except BaseException as error:
+        if proc is not None and proc.poll() is None:
+            os.killpg(proc.pid, signal.SIGTERM)
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                os.killpg(proc.pid, signal.SIGKILL)
+                proc.wait()
+        message = "Interrupted" if isinstance(error, KeyboardInterrupt) else str(error)
+        record.update(passed=False, error=message)
+        print("FAILED: " + message, file=sys.stderr)
+        return 130 if isinstance(error, KeyboardInterrupt) else 1
+    finally:
+        record["endedUtc"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        metadata.write_text(json.dumps(record, indent=2) + "\n")
+
+
+def main():
+    args = arguments()
+    lock = Path(os.environ.get("CTC_FEEDBACK_LOCK_PATH", str(Path.home() / ".cache/ctc-manager/test-feedback.lock")))
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    with lock.open("a") as stream:
+        try:
+            fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print("Another feedback run owns this host lock; wait for its result.", file=sys.stderr)
+            return 2
+        stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+        output = ROOT / ".test-feedback" / (stamp + "-" + str(os.getpid()))
+        try:
+            return run(args, output)
+        except Exception as error:
+            print("FAILED: " + str(error), file=sys.stderr)
+            return 1
+
+
+def interrupted(_signum, _frame):
+    raise KeyboardInterrupt
+
+
+if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, interrupted)
+    raise SystemExit(main())
