@@ -95,6 +95,26 @@ class PartitionTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.module.require_reports(root)
 
+    def test_real_failsafe_success_and_independent_failure_signals(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); reports = root / 'failsafe-reports'; reports.mkdir()
+            (reports / 'TEST-Example.xml').write_text('<testsuite tests="22" failures="0" errors="0" skipped="0"/>')
+            path = reports / 'failsafe-summary.xml'
+            success = ('<failsafe-summary xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" result="null" timeout="false">'
+                       '<completed>22</completed><errors>0</errors><failures>0</failures><skipped>0</skipped>'
+                       '<failureMessage xsi:nil="true"/></failsafe-summary>')
+            path.write_text(success)
+            self.assertEqual(self.module.require_reports(root), 22)
+            for broken in [success.replace('result="null"', 'result="255"'),
+                           success.replace('timeout="false"', 'timeout="true"'),
+                           success.replace('<errors>0', '<errors>1'),
+                           success.replace('<failures>0', '<failures>1'),
+                           success.replace('<skipped>0', '<skipped>1'),
+                           success.replace('<failureMessage xsi:nil="true"/>', '<failureMessage>failed</failureMessage>')]:
+                path.write_text(broken)
+                with self.subTest(summary=broken), self.assertRaises(ValueError):
+                    self.module.require_reports(root)
+
     def test_all_expected_github_children_must_succeed_even_if_skipped_is_green(self):
         children = {'changes': {'result': 'success', 'outputs': {'code': 'true'}},
                     'prepare-tests': {'result': 'success'}, 'test-core': {'result': 'success'},

@@ -83,7 +83,7 @@ def require_reports(root):
             total += counts['tests']
         for path in root.glob('failsafe-reports/failsafe-summary*.xml'):
             summary = ET.parse(path).getroot()
-            if summary.tag != 'failsafe-summary' or summary.get('result') not in [None, '0'] or summary.get('timeout') not in [None, 'false']:
+            if summary.tag != 'failsafe-summary' or summary.get('result') not in [None, '0', 'null'] or summary.get('timeout') not in [None, 'false']:
                 raise ValueError('Deferred Failsafe failure')
             for key in ['failures', 'errors', 'skipped']:
                 if int(summary.findtext(key) or '0'):
