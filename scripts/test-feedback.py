@@ -191,6 +191,12 @@ def reports():
             counts = {key: int(suite.attrib[key]) for key in totals[group]}
             if any(value < 0 for value in counts.values()):
                 raise ValueError("Negative report counter: " + path.name)
+            cases = suite.findall("testcase")
+            if not cases or counts["tests"] > len(cases):
+                raise ValueError("Missing test cases: " + path.name)
+            counts["tests"] = len(cases)
+            for counter, element in [("failures", "failure"), ("errors", "error"), ("skipped", "skipped")]:
+                counts[counter] = max(counts[counter], sum(case.find(element) is not None for case in cases))
             for key, value in counts.items():
                 totals[group][key] += value
             suites.append(dict(name=name, group=group, **counts))

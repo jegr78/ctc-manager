@@ -39,7 +39,10 @@ if "integration-test" in args or full:
  if browser and mode!="missing-browser":rows.append(("failsafe-reports","org.ctc.e2e.ExampleE2ETest",0))
 for folder,name,failures in rows if mode!="none" else []:
  p=Path("target")/folder;p.mkdir(exist_ok=True)
- raw='<testsuite name="'+name+'" tests="1" failures="'+str(failures)+'" errors="0" skipped="'+str(int(mode=="skip"))+'"/>'
+ payload='<testcase name="example" classname="'+name+'">'+('<failure/>' if failures or mode=="hidden-case-failure" else '')+('<error/>' if mode=="hidden-case-error" else '')+('<skipped/>' if mode in {"skip","hidden-case-skip"} else '')+'</testcase>'
+ if mode=="nested-counters":payload='<testcase name="sameMethod" classname="Nested$H2"/><testcase name="sameMethod" classname="Nested$MariaDb"/>'
+ if mode=="empty-cases":payload=''
+ raw='<testsuite name="'+name+'" tests="1" failures="'+str(failures)+'" errors="0" skipped="'+str(int(mode=="skip"))+'">'+payload+'</testsuite>'
  p.joinpath("TEST-"+name+".xml").write_text('<broken' if mode=="malformed" else raw)
 if mode=="summary":
  p=Path("target/failsafe-reports");p.mkdir(exist_ok=True)
@@ -93,6 +96,17 @@ class FeedbackWorkflowTest(unittest.TestCase):
         paths=list((self.root/".test-feedback").glob("*/run.json"))
         self.assertEqual(len(paths),1)
         return json.loads(paths[0].read_text())
+
+    def test_nested_same_named_cases_are_counted_from_actual_elements(self):
+        result=self.run_cli("unit","ExampleTest",fixture="nested-counters")
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertEqual(self.record()["totals"]["unit"]["tests"],2)
+
+    def test_case_outcomes_and_missing_cases_cannot_hide_behind_successful_suite_headers(self):
+        for fixture in ["hidden-case-failure","hidden-case-error","hidden-case-skip","empty-cases"]:
+            with self.subTest(fixture=fixture):
+                result=self.run_cli("unit","ExampleTest",fixture=fixture)
+                self.assertNotEqual(result.returncode,0,result.stdout+result.stderr)
 
     def test_deferred_integration_failure_must_fail_even_when_maven_exits_zero(self):
         result=self.run_cli("integration","ExampleIT","--unit","ExampleTest",fixture="deferred")
