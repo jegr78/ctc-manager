@@ -45,3 +45,9 @@ The restore-admission fixture also uses canonical weather so its successful writ
 continue to reach their original commit/interrupt barriers. Added handler scenarios
 cover reducing eight slots to six, switching Custom to Preset and rejected retired
 weather-page nonces. The complete CI remains the final gate.
+
+The first complete CI attempt exposed an additional shared tyre-test fixture that
+assembled a final payload using the former time-form weather field. It now supplies
+`Preset S01` explicitly. All tyre assertions remain unchanged. The focused follow-up
+passed 135 unit cases, including all 21 tyre-dialog cases. Complete CI is repeated
+for the corrected head; the failed and superseded run is not passing evidence.
