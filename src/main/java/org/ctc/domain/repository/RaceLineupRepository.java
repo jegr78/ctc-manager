@@ -9,6 +9,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface RaceLineupRepository extends JpaRepository<RaceLineup, UUID> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_READ)
+    @EntityGraph(attributePaths = {"driver", "team"})
+    @Query("select lineup from RaceLineup lineup where lineup.race.id=:raceId order by lineup.id")
+    List<RaceLineup> findByRaceIdForIncidentUpdate(UUID raceId);
+
 
 	@EntityGraph(attributePaths = {"driver", "team"})
 	List<RaceLineup> findByRaceId(UUID raceId);

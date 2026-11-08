@@ -58,7 +58,9 @@ public final class IncidentDraftSessionStore {
         long windowVersion, reportVersion;
         IncidentParty party;
         IncidentPayload payload;
-        String label, reportingParty;
+        org.ctc.domain.incidents.IncidentDriverChoices driverChoices;
+        java.util.Set<UUID> selectedDrivers = java.util.Set.of();
+        String label, reportingParty, lineupNotice;
         Session(PickGatewayInteraction event, IncidentReporterView view, long generation, Instant expires) {
             guild = event.guildId(); channel = event.channelId(); user = event.userId();
             contextId = view.contextId(); windowId = view.windowId(); this.generation = generation; this.expires = expires;

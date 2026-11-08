@@ -183,6 +183,6 @@ class IncidentReportServiceTest {
         return new AuthorizedIncidentActor(f.context.getId(), IncidentUnitFixture.GUILD, IncidentUnitFixture.CHANNEL, user, party);
     }
     private IncidentReportService service(Optional<IncidentReportAccess> authorization) {
-        return new IncidentReportService(reports, revisions, events, windows, contexts, authorization, writes, clock, em, mock(org.springframework.context.ApplicationEventPublisher.class));
+        return new IncidentReportService(reports, revisions, events, windows, contexts, authorization, writes, clock, em, mock(org.springframework.context.ApplicationEventPublisher.class), mock(IncidentLineupService.class));
     }
 }

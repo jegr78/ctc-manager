@@ -75,6 +75,7 @@ class IncidentWorkflowAcceptanceIT extends IncidentIntakeIntegrationFixture {
     @MockitoBean IncidentRulingSender rulingPort;
 
     String previousParent, previousStaff, previousTags;
+    String selectedDriverSnapshot;
     @org.junit.jupiter.api.BeforeEach void rememberSettings() {
         tx.executeWithoutResult(status -> {
             var config = configs.findById(configId).orElseThrow();
@@ -147,6 +148,7 @@ class IncidentWorkflowAcceptanceIT extends IncidentIntakeIntegrationFixture {
         client.send(PickGatewayInteraction.Kind.BUTTON, confirmation, Map.of());
         assertThat(client.message().content()).isEqualTo(receipt);
         UUID active = rows().getFirst().getId();
+        selectedDriverSnapshot = tx.execute(status -> revisionRows.findByReportIdOrderByRevisionNumberAsc(active).getFirst().getPayload().getInvolvedDrivers());
         client.edit(active, FINAL).click("Confirm changes");
         flow().draft(fixture.race().getId(), WITHDRAWN).click("Confirm report");
         UUID withdrawn = rows().stream().filter(row -> !row.getId().equals(active)).findFirst().orElseThrow().getId();
@@ -190,7 +192,7 @@ class IncidentWorkflowAcceptanceIT extends IncidentIntakeIntegrationFixture {
         assertThat(disclosures.dispatch(disclosure)).isFalse();
         assertThat(steps).hasSize(5);
         String publicBody = steps.stream().filter(claim -> claim.work().stage() == IncidentThreadStage.PUBLIC_STARTER).findFirst().orElseThrow().work().content();
-        assertThat(publicBody).contains(FINAL, "Test involved guest", rows().getFirst().getParty().getLabel()).doesNotContain(ORIGINAL, WITHDRAWN, USER, manager.id(), REASON);
+        assertThat(publicBody).contains(FINAL, selectedDriverSnapshot, rows().getFirst().getParty().getLabel()).doesNotContain(ORIGINAL, WITHDRAWN, USER, manager.id(), REASON);
         rulings.saveDraft(active, 0, RULING, REASON, manager, epoch.managementGeneration());
         verifyNoInteractions(rulingPort);
         UUID publication = rulings.publish(active, 1, 1, manager, epoch.managementGeneration());
@@ -232,7 +234,8 @@ class IncidentWorkflowAcceptanceIT extends IncidentIntakeIntegrationFixture {
         assertThat(rulings.dispatch(publication)).isFalse(); verifyNoInteractions(receiptPort, threadPort, rulingPort);
     }
 
-    private static void assertPrivateAbsent(String value) {
-        assertThat(value).doesNotContain(ORIGINAL, FINAL, WITHDRAWN, USER, REASON, "Test involved guest", "https://example.invalid/video");
+    private void assertPrivateAbsent(String value) {
+        assertThat(value).doesNotContain(ORIGINAL, FINAL, WITHDRAWN, USER, REASON, "https://example.invalid/video");
+        if (selectedDriverSnapshot != null) assertThat(value).doesNotContain(selectedDriverSnapshot);
     }
 }

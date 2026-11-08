@@ -8,17 +8,58 @@ import org.ctc.domain.model.IncidentPayload;
 
 final class IncidentInteractionViews {
     private IncidentInteractionViews() { }
-    static PickGatewayModal form(String id) { return form(id, null); }
-    static PickGatewayModal form(String id, IncidentPayload saved) {
+    static PickGatewayModal form(String id, IncidentPayload saved, org.ctc.domain.incidents.IncidentDriverChoices choices,
+                                 java.util.Set<java.util.UUID> selected) {
         boolean longDescription = saved != null && tooLong(saved.getDescription(), 4000);
         boolean longLinks = hasLongFootage(saved);
-        return new PickGatewayModal(id, "Incident report", List.of(
-                new PickGatewayModal.Text("drivers", "Involved drivers", true, saved == null ? null : saved.getInvolvedDrivers(), 1, 2000, true),
-                new PickGatewayModal.Text("replay", "Replay timestamp", false, saved == null ? null : saved.getReplayTimestamp(), 1, 200, true),
-                new PickGatewayModal.Text("description", longDescription ? "Description (blank keeps saved)" : "Description", true,
-                        saved == null || longDescription ? null : saved.getDescription(), longDescription ? 0 : 1, 4000, !longDescription),
-                new PickGatewayModal.Text("links", longLinks ? "Footage/links (blank keeps saved)" : "Additional footage / links", true,
-                        saved == null || longLinks ? null : saved.getEvidenceLinks(), 0, 4000, false)));
+        var fields = new ArrayList<PickGatewayModal.Field>();
+        if (choices.drivers().size() <= 25) {
+            fields.add(driverMenu("drivers", "Involved drivers", choices.drivers(), selected, 1));
+        } else {
+            fields.add(driverMenu("drivers-home", "Involved home drivers", choices.drivers().stream().filter(org.ctc.domain.incidents.IncidentDriverChoices.DriverChoice::home).toList(), selected, 0));
+            fields.add(driverMenu("drivers-away", "Involved away drivers", choices.drivers().stream().filter(driver -> !driver.home()).toList(), selected, 0));
+        }
+        fields.add(new PickGatewayModal.Text("replay", "Replay timestamp, e.g. 00:13.500", false, saved == null ? null : saved.getReplayTimestamp(), 1, 200, true));
+        fields.add(new PickGatewayModal.Text("description", longDescription ? "Description (blank keeps saved)" : "Description", true,
+                saved == null || longDescription ? null : saved.getDescription(), longDescription ? 0 : 1, 4000, !longDescription));
+        fields.add(new PickGatewayModal.Text("links", longLinks ? "Footage/links (blank keeps saved)" : "Additional footage / links", true,
+                saved == null || longLinks ? null : saved.getEvidenceLinks(), 0, 4000, false));
+        return new PickGatewayModal(id, "Incident report", fields);
+    }
+    private static PickGatewayModal.Selection driverMenu(String id, String label,
+            List<org.ctc.domain.incidents.IncidentDriverChoices.DriverChoice> choices, java.util.Set<java.util.UUID> selected, int minimum) {
+        return new PickGatewayModal.Selection(id, label, choices.stream().map(driver ->
+                new PickGatewayModal.Option(option(driver.label()), driver.id().toString(), selected.contains(driver.id()))).toList(), minimum, choices.size());
+    }
+    static IncidentPayload retainDraft(java.util.Map<String, List<String>> fields, IncidentPayload saved) {
+        var normalized = new java.util.HashMap<String, List<String>>();
+        for (String key : java.util.List.of("replay", "description", "links")) if (fields.containsKey(key)) normalized.put(key, fields.get(key));
+        normalized.put("drivers", List.of(saved == null ? "Unconfirmed driver selection" : saved.getInvolvedDrivers()));
+        return payload(normalized, saved);
+    }
+    static Submitted submitted(java.util.Map<String, List<String>> fields, IncidentPayload saved,
+                               org.ctc.domain.incidents.IncidentDriverChoices choices) {
+        var keys = choices.drivers().size() <= 25 ? java.util.Set.of("drivers") : java.util.Set.of("drivers-home", "drivers-away");
+        var allowed = new java.util.HashSet<>(java.util.Set.of("replay", "description", "links"));allowed.addAll(keys);
+        if (!allowed.containsAll(fields.keySet())) throw invalid();
+        var selected = new ArrayList<java.util.UUID>();
+        for (String key : keys) {
+            for (String value : fields.getOrDefault(key, List.of())) {
+                final java.util.UUID id;
+                try { id = java.util.UUID.fromString(value); }
+                catch (IllegalArgumentException invalidId) { throw invalid(); }
+                var driver = choices.drivers().stream().filter(choice -> choice.id().equals(id)).findFirst().orElseThrow(IncidentInteractionViews::invalid);
+                if (key.equals("drivers-home") && !driver.home() || key.equals("drivers-away") && driver.home()) throw invalid();
+                selected.add(id);
+            }
+        }
+        String drivers = choices.selectedText(selected);
+        var normalized = new java.util.HashMap<>(fields);keys.forEach(normalized::remove);normalized.put("drivers", List.of(drivers));
+        return new Submitted(payload(normalized, saved), selected);
+    }
+    record Submitted(IncidentPayload payload, List<java.util.UUID> selected) {
+        Submitted { selected = List.copyOf(selected); }
+        @Override public String toString() { return "SubmittedIncidentFields[private]"; }
     }
     static IncidentPayload payload(java.util.Map<String, List<String>> fields) { return payload(fields, null); }
     static IncidentPayload payload(java.util.Map<String, List<String>> fields, IncidentPayload saved) {

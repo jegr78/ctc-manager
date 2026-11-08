@@ -28,8 +28,9 @@ class IncidentInteractionHandlerTest {
     final IncidentAccessService access = mock(IncidentAccessService.class);
     final IncidentPrivateReadService reads = mock(IncidentPrivateReadService.class);
     final IncidentReportService reports = mock(IncidentReportService.class);
+    final IncidentLineupService lineups = mock(IncidentLineupService.class);
     final IncidentDraftSessionStore sessions = new IncidentDraftSessionStore(clock, epoch, 16);
-    final IncidentInteractionHandler handler = new IncidentInteractionHandler(access, reads, reports, sessions, imports, epoch);
+    final IncidentInteractionHandler handler = new IncidentInteractionHandler(access, reads, reports, sessions, imports, epoch, lineups);
     final UUID context = UUID.randomUUID(), window = UUID.randomUUID(), race = UUID.randomUUID(), report = UUID.randomUUID();
     final AuthorizedIncidentActor actor = new AuthorizedIncidentActor(context, GUILD, CHANNEL, USER,
             new IncidentParty(IncidentPartyType.TEAM, UUID.randomUUID(), "Test reporting team", "500000000000000005"));
@@ -44,8 +45,12 @@ class IncidentInteractionHandlerTest {
         view = new IncidentReporterView(context, window, 7, true, "Test pairing", List.of(choice), List.of());
         when(access.authorizeChannel(GUILD, CHANNEL, USER)).thenReturn(actor);
         when(reads.home(actor)).thenAnswer(call -> view);
-        when(reports.submit(eq(window), eq(race), anyLong(), any(), eq(actor), any())).thenAnswer(call -> receipt(IncidentEventKind.SUBMITTED, call.getArgument(3)));
-        when(reports.edit(eq(report), anyLong(), anyLong(), any(), eq(actor), any())).thenAnswer(call -> receipt(IncidentEventKind.EDITED, call.getArgument(3)));
+        var labels = List.of("Test involved guest", "Test newer ä🚗", "Test guest", "Test changed guest", "Test driver");
+        var choices = labels.stream().map(label -> new IncidentDriverChoices.DriverChoice(UUID.nameUUIDFromBytes(label.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                actor.party().getId(), label, true)).toList();
+        when(lineups.load(eq(actor), any())).thenAnswer(call -> new IncidentDriverChoices(call.getArgument(1), "f".repeat(64), choices));
+        when(reports.submitSelected(eq(window), eq(race), anyLong(), any(), eq(actor), any(), any(IncidentDriverSelection.class))).thenAnswer(call -> receipt(IncidentEventKind.SUBMITTED, call.getArgument(3)));
+        when(reports.editSelected(eq(report), anyLong(), anyLong(), any(), eq(actor), any(), any(IncidentDriverSelection.class))).thenAnswer(call -> receipt(IncidentEventKind.EDITED, call.getArgument(3)));
         when(reports.withdraw(eq(report), anyLong(), anyLong(), any(), eq(actor))).thenAnswer(call -> receipt(IncidentEventKind.WITHDRAWN, call.getArgument(3)));
     }
 
@@ -57,9 +62,11 @@ class IncidentInteractionHandlerTest {
         // when
         click("Enter report");
         // then
-        var defaults = response.modal.fields().stream().map(PickGatewayModal.Text.class::cast)
+        var defaults = response.modal.fields().stream().filter(PickGatewayModal.Text.class::isInstance).map(PickGatewayModal.Text.class::cast)
                 .collect(java.util.stream.Collectors.toMap(PickGatewayModal.Text::id, field -> String.valueOf(field.value())));
-        assertThat(defaults).containsEntry("drivers", payload.getInvolvedDrivers()).containsEntry("replay", payload.getReplayTimestamp())
+        assertThat(((PickGatewayModal.Selection) response.modal.fields().getFirst()).options().stream().filter(PickGatewayModal.Option::defaultSelected))
+                .extracting(PickGatewayModal.Option::label).containsExactly(payload.getInvolvedDrivers());
+        assertThat(defaults).containsEntry("replay", payload.getReplayTimestamp())
                 .containsEntry("description", payload.getDescription()).containsEntry("links", payload.getEvidenceLinks());
         assertThat(response.deferred).isFalse();
         verifyNoInteractions(reports); verifyNoMoreInteractions(reads, access);
@@ -88,12 +95,14 @@ class IncidentInteractionHandlerTest {
         // when
         click("Edit report"); click("Enter report");
         var defaults = modalDefaults();
-        assertThat(defaults).isEqualTo(fields(latest.getInvolvedDrivers(), latest.getReplayTimestamp(), latest.getDescription(), ""));
+        assertThat(defaults).containsEntry("replay", List.of(latest.getReplayTimestamp())).containsEntry("description", List.of(latest.getDescription()));
+        assertThat(((PickGatewayModal.Selection) response.modal.fields().getFirst()).options().stream().filter(PickGatewayModal.Option::defaultSelected))
+                .extracting(PickGatewayModal.Option::label).containsExactly(latest.getInvolvedDrivers());
         dispatch(PickGatewayInteraction.Kind.MODAL, response.modal.id(), defaults);
         verifyNoInteractions(reports);
         click("Confirm changes");
         // then
-        verify(reports).edit(eq(report), eq(7L), eq(5L), any(), eq(actor), eq(latest));
+        verify(reports).editSelected(eq(report), eq(7L), eq(5L), any(), eq(actor), eq(latest), any(IncidentDriverSelection.class));
         assertThat(payload.getDescription()).isEqualTo("Test private incident marker");
     }
 
@@ -104,7 +113,8 @@ class IncidentInteractionHandlerTest {
         // when
         command(); click("New report"); click("Enter report");
         // then
-        assertThat(response.modal.fields()).allMatch(field -> field instanceof PickGatewayModal.Text text && text.value() == null);
+        assertThat(response.modal.fields()).allMatch(field -> field instanceof PickGatewayModal.Text text ? text.value() == null
+                : ((PickGatewayModal.Selection) field).options().stream().noneMatch(PickGatewayModal.Option::defaultSelected));
         verifyNoInteractions(reports);
     }
 
@@ -128,7 +138,7 @@ class IncidentInteractionHandlerTest {
     @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
     void givenSavedTextAboveDiscordLimits_whenKeepingOrClearingLongFootage_thenPreserveAllOtherTextUntilConfirmation(boolean clearFootage) {
         // given
-        ownCase(); var saved = new IncidentPayload("Test long report", "lap 3", "🚗".repeat(10000), "https://example.invalid/" + "x".repeat(7000));
+        ownCase(); var saved = new IncidentPayload("Test involved guest", "lap 3", "🚗".repeat(10000), "https://example.invalid/" + "x".repeat(7000));
         when(reads.load(actor, report)).thenReturn(new IncidentReporterView.CaseDetail(view.cases().getFirst(), saved));
         command(); click("My reports"); select(report);
         while (last().buttons().stream().anyMatch(button -> button.label().equals("Next"))) click("Next");
@@ -143,15 +153,20 @@ class IncidentInteractionHandlerTest {
         verifyNoInteractions(reports); click("Confirm changes");
         // then
         var submitted = ArgumentCaptor.forClass(IncidentPayload.class);
-        verify(reports).edit(eq(report), eq(7L), eq(3L), any(), eq(actor), submitted.capture());
+        verify(reports).editSelected(eq(report), eq(7L), eq(3L), any(), eq(actor), submitted.capture(), any(IncidentDriverSelection.class));
         assertThat(submitted.getValue().getDescription()).isEqualTo(saved.getDescription());
         assertThat(submitted.getValue().getEvidenceLinks()).isEqualTo(clearFootage ? "" : saved.getEvidenceLinks());
         assertThat(saved.getEvidenceLinks()).hasSizeGreaterThan(4000);
     }
 
     Map<String, List<String>> modalDefaults() {
-        return response.modal.fields().stream().map(PickGatewayModal.Text.class::cast)
-                .collect(java.util.stream.Collectors.toMap(PickGatewayModal.Text::id, text -> List.of(text.value() == null ? "" : text.value())));
+        var fields = new HashMap<String, List<String>>();
+        for (var field : response.modal.fields()) {
+            if (field instanceof PickGatewayModal.Text text) fields.put(text.id(), List.of(text.value() == null ? "" : text.value()));
+            else if (field instanceof PickGatewayModal.Selection select) fields.put(select.id(), select.options().stream()
+                    .filter(PickGatewayModal.Option::defaultSelected).map(PickGatewayModal.Option::value).toList());
+        }
+        return fields;
     }
 
     @Test
@@ -171,7 +186,7 @@ class IncidentInteractionHandlerTest {
         assertThat(last().content()).contains("Stored", "INC-test", "pending");
         dispatch(PickGatewayInteraction.Kind.BUTTON, confirm, Map.of());
         var requests = ArgumentCaptor.forClass(UUID.class); var values = ArgumentCaptor.forClass(IncidentPayload.class);
-        verify(reports, times(2)).submit(eq(window), eq(race), eq(7L), requests.capture(), eq(actor), values.capture());
+        verify(reports, times(2)).submitSelected(eq(window), eq(race), eq(7L), requests.capture(), eq(actor), values.capture(), any(IncidentDriverSelection.class));
         assertThat(requests.getAllValues().getFirst()).isEqualTo(requests.getAllValues().getLast());
         assertThat(values.getValue().getReplayTimestamp()).isEqualTo(replay); assertThat(values.getValue().getDescription()).isEqualTo(payload.getDescription());
     }
@@ -219,18 +234,18 @@ class IncidentInteractionHandlerTest {
     @Test
     void givenOwnStoredCase_whenEditingAndWithdrawing_thenUseOriginalVersionsAndNoNewSubmit() {
         ownCase(); command(); click("My reports"); select(report); assertThat(last().content()).contains("Test private incident marker");
-        click("Edit report"); click("Enter report"); assertThat(response.modal.fields()).allMatch(field -> field instanceof PickGatewayModal.Text text && text.value() != null);
+        click("Edit report"); click("Enter report"); assertThat(response.modal.fields().stream().filter(PickGatewayModal.Text.class::isInstance)).allMatch(field -> ((PickGatewayModal.Text) field).value() != null);
         dispatch(PickGatewayInteraction.Kind.MODAL, response.modal.id(), fields("Test changed guest", "00:00", "Test corrected description", ""));
-        click("Confirm changes"); verify(reports).edit(eq(report), eq(7L), eq(3L), any(), eq(actor), any());
+        click("Confirm changes"); verify(reports).editSelected(eq(report), eq(7L), eq(3L), any(), eq(actor), any(), any(IncidentDriverSelection.class));
         command(); click("My reports"); select(report); click("Withdraw report"); click("Confirm withdrawal");
-        verify(reports).withdraw(eq(report), eq(7L), eq(3L), any(), eq(actor)); verify(reports, never()).submit(any(), any(), anyLong(), any(), any(), any());
+        verify(reports).withdraw(eq(report), eq(7L), eq(3L), any(), eq(actor)); verify(reports, never()).submitSelected(any(), any(), anyLong(), any(), any(), any(), any());
     }
 
     @Test
     void givenStaleEdit_whenConfirming_thenKeepItsBaseVersionAndWarnWithoutReplacingTheCase() {
         ownCase(); command(); click("My reports"); select(report); click("Edit report"); click("Enter report");
         dispatch(PickGatewayInteraction.Kind.MODAL, response.modal.id(), fields("Test guest", "00:00", "Test correction", ""));
-        when(reports.edit(eq(report), eq(7L), eq(3L), any(), eq(actor), any())).thenThrow(new BusinessRuleException("version changed"));
+        when(reports.editSelected(eq(report), eq(7L), eq(3L), any(), eq(actor), any(), any(IncidentDriverSelection.class))).thenThrow(new BusinessRuleException("version changed"));
         click("Confirm changes"); assertThat(response.text).contains("changed"); assertAdmissionReleased();
     }
 
@@ -309,6 +324,16 @@ class IncidentInteractionHandlerTest {
     String button(String label) { var found = last().buttons().stream().filter(button -> button.label().equals(label)).findFirst().orElse(null); assertThat(found).as(label).isNotNull(); return found.id(); }
     PickGatewayMessage last() { assertThat(response.messages).isNotEmpty(); return response.messages.getLast(); }
     void dispatch(PickGatewayInteraction.Kind kind, String action, Map<String,List<String>> fields) {
+        if (kind == PickGatewayInteraction.Kind.MODAL && response != null && response.modal != null && fields.containsKey("drivers")) {
+            var menu = response.modal.fields().stream().filter(PickGatewayModal.Selection.class::isInstance).map(PickGatewayModal.Selection.class::cast)
+                    .filter(field -> field.id().equals("drivers")).findFirst();
+            if (menu.isPresent()) {
+                fields = new HashMap<>(fields);
+                fields.put("drivers", fields.get("drivers").stream().map(value -> menu.get().options().stream()
+                        .filter(option -> option.label().equals(value)).map(PickGatewayModal.Option::value).findFirst().orElse(value)).toList());
+            }
+        }
+
         var previous = response; response = new Response(); if (previous != null) { response.modal = previous.modal; response.messages.addAll(previous.messages); response.onPublish = previous.onPublish; }
         var event = new PickGatewayInteraction(UUID.randomUUID().toString(), GUILD, eventChannel, eventUser, kind, action, fields, NOW, response);
         handler.onInteraction(event, new PickGatewayReply(response, clock, NOW, epoch, Runnable::run));
