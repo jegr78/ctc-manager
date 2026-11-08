@@ -51,6 +51,19 @@ public class ScoreWriteLockService {
         }
     }
 
+    public void lockPhase(UUID phaseId) {
+        var owners=entityManager.createQuery("select p.season.id from SeasonPhase p where p.id=:phase",UUID.class)
+                .setParameter("phase",phaseId).getResultList();
+        if (owners.isEmpty()) throw new EntityNotFoundException("SeasonPhase",phaseId);
+        UUID ownerId=owners.getFirst();
+        seasons.findByIdForUpdate(ownerId).orElseThrow(() -> new EntityNotFoundException("Season",ownerId));
+        var phase=entityManager.find(org.ctc.domain.model.SeasonPhase.class,phaseId);
+        if (phase!=null) entityManager.refresh(phase,LockModeType.PESSIMISTIC_WRITE);
+        if (phase==null || !ownerId.equals(phase.getSeason().getId()))
+            throw new BusinessRuleException("The phase context changed. Reload before saving.");
+        races.findBySeasonForSelectionUpdate(ownerId);
+    }
+
     public void lockAllSeasons() {
         try {
             entityManager.flush();

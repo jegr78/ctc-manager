@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface RaceDisqualificationRevisionRepository extends JpaRepository<RaceDisqualificationRevision, UUID> {
+    boolean existsByRaceId(UUID raceId);
+
     // Current native reads also protect initialized empty collections after MariaDB lock waits.
     @Query(value = "select * from race_disqualification_revisions where result_id = :resultId order by revision_number for update", nativeQuery = true)
     List<RaceDisqualificationRevision> findResultHistoryForUpdate(UUID resultId);

@@ -43,6 +43,10 @@ class MatchdayServiceTest {
     private MatchdayService service;
 
 
+    @org.junit.jupiter.api.BeforeEach void admitCurrentSeasonLock() {
+        org.mockito.Mockito.lenient().when(seasonRepository.findByIdForUpdate(any())).thenAnswer(call -> seasonRepository.findById(call.getArgument(0)));
+    }
+
     @Test
     void givenSeasonId_whenGetMatchdayList_thenReturnsFilteredMatchdays() {
         // given

@@ -97,15 +97,16 @@ public class MatchdayService {
                 RaceCarPresentation.forRaces(matchday.getRaces()));
     }
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public Matchday saveMatchday(String label, int sortIndex, UUID seasonId, UUID matchdayId) {
-        var season = seasonRepository.findById(seasonId)
+        var season = seasonRepository.findByIdForUpdate(seasonId)
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
 
         Matchday matchday;
         if (matchdayId != null) {
             matchday = matchdayRepository.findById(matchdayId)
                     .orElseThrow(() -> new EntityNotFoundException("Matchday", matchdayId));
+            entityManager.refresh(matchday, LockModeType.PESSIMISTIC_WRITE);
             if (!matchday.getSeason().getId().equals(season.getId())) {
                 throw new BusinessRuleException("A matchday cannot move to another season");
             }
@@ -179,7 +180,7 @@ public class MatchdayService {
      * collisions with PLAYOFF matchdays (which use sortIndex &gt;= 100).
      */
     public MatchdayData createInline(UUID seasonId, String label) {
-        var season = seasonRepository.findById(seasonId)
+        var season = seasonRepository.findByIdForUpdate(seasonId)
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         var regular = seasonPhaseService.findRegularPhase(season.getId());
 

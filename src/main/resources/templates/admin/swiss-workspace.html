@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/layout :: layout('Swiss rounds', ~{::section})}">
+<body><section class="entity-editor swiss-workspace">
+    <a class="back-link" th:href="@{/admin/seasons/{sid}/phases/{pid}(sid=${swiss.seasonId},pid=${swiss.phaseId})}">&larr; Back to season phase</a>
+    <div class="toolbar"><div><h1>Swiss rounds</h1><p th:text="${swiss.seasonLabel + ' · ' + swiss.phaseLabel}"></p></div>
+        <a th:if="${swiss.canCreate}" class="btn btn-primary" data-testid="swiss-create-round"
+           th:href="@{/admin/swiss-rounds/edit(phaseId=${swiss.phaseId},groupId=${swiss.groupId})}">Create round manually</a>
+    </div>
+    <aside th:if="${swissWarnings!=null}" class="alert alert-warning"><p th:each="warning:${swissWarnings}" th:text="${warning}"></p></aside>
+    <div class="card form-row">
+        <form method="get" th:action="@{/admin/swiss-rounds}" class="form-group">
+            <label for="swiss-phase">Phase</label><select id="swiss-phase" name="phaseId">
+                <option th:each="p:${swiss.phases}" th:value="${p.id}" th:text="${p.label}" th:selected="${p.id==swiss.phaseId}"></option>
+            </select><button class="btn btn-secondary" type="submit">Choose phase</button>
+        </form>
+        <form th:if="${!swiss.groups.isEmpty()}" method="get" th:action="@{/admin/swiss-rounds}" class="form-group">
+            <input type="hidden" name="phaseId" th:value="${swiss.phaseId}"><label for="swiss-group">Group</label>
+            <select id="swiss-group" name="groupId" required><option value="">Choose group</option>
+                <option th:each="g:${swiss.groups}" th:value="${g.id}" th:text="${g.label}" th:selected="${g.id==swiss.groupId}"></option>
+            </select><button class="btn btn-secondary" type="submit">Choose group</button>
+        </form>
+    </div>
+    <p th:if="${swiss.chooseGroup}" class="alert alert-info">Choose a group to maintain its rounds.</p>
+    <th:block th:unless="${swiss.chooseGroup}">
+        <p>Enter the actual pairings for each round. Manual setup is available before earlier rounds have results.</p>
+        <p th:if="${swiss.teams.isEmpty()}" class="alert alert-warning">Assign teams to this phase/group in the season phase workspace first.</p>
+        <p th:if="${swiss.rounds.isEmpty()}" class="text-dim">No rounds configured yet.</p>
+        <article th:each="round:${swiss.rounds}" class="card" th:id="|round-${round.id}|">
+            <div class="toolbar"><h2 th:text="${round.label}"></h2><div class="actions">
+                <a class="btn btn-secondary" th:href="@{/admin/swiss-rounds/edit(phaseId=${swiss.phaseId},groupId=${swiss.groupId},matchdayId=${round.id})}">Edit pairings</a>
+                <a class="btn btn-secondary" th:href="@{/admin/matchdays/{id}(id=${round.id})}">Open matchday</a>
+            </div></div>
+            <p th:if="${round.pairings.isEmpty()}" class="text-dim">Pairings are missing.</p>
+            <ul><li th:each="pair:${round.pairings}"><a class="context-link" th:href="@{/admin/matches/{id}(id=${pair.id})}" th:text="${pair.home + ' vs ' + pair.away}"></a></li></ul>
+        </article>
+        <div class="card"><h2>Automatic pairing</h2><p>The current round must be decided before generating the next pairings automatically. Stored manual opponents are included.</p>
+            <form th:if="${swiss.canGenerate}" method="post" th:action="@{/admin/swiss-rounds/generate}">
+                <input type="hidden" name="phaseId" th:value="${swiss.phaseId}"><input type="hidden" name="groupId" th:value="${swiss.groupId}">
+                <input type="hidden" name="scope" th:value="${swiss.scope}"><input type="hidden" name="generation" th:value="${swiss.generation}">
+                <button type="submit" class="btn btn-secondary">Generate next round automatically</button>
+            </form>
+            <p th:unless="${swiss.canGenerate}" class="text-dim">Complete the current round and check the configured round limit before automatic generation.</p>
+        </div>
+    </th:block>
+</section></body></html>

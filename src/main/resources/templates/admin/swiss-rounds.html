@@ -9,6 +9,7 @@
             <h1 th:text="'Swiss Rounds — ' + ${season.displayLabel}"></h1>
         </div>
         <div class="actions">
+            <a class="btn btn-secondary" th:href="@{/admin/swiss-rounds(phaseId=${swissPhaseId})}">Maintain round pairings</a>
             <span class="text-dim" th:text="${totalRounds != null ? 'Round ' + currentRound + ' of ' + totalRounds : 'Round ' + currentRound}"></span>
             <form th:if="${canGenerateNext}" th:action="@{/admin/seasons/{id}/swiss/generate(id=${season.id})}" method="post">
                 <button type="submit" class="btn btn-primary">Generate Next Round</button>
@@ -23,7 +24,7 @@
     <p th:if="${!canGenerateNext and (totalRounds == null or rounds.size() < totalRounds)}" class="text-dim mb-md">Complete the current round before generating the next pairings.</p>
     <th:block th:each="md, iter : ${rounds}">
         <div class="card" th:id="|swiss-round-${md.id}|">
-            <div class="toolbar"><h2 th:text="${md.label}"></h2><a th:href="@{/admin/matchdays/{id}(id=${md.id})}" class="btn btn-secondary btn-sm">Open Matchday</a></div>
+            <div class="toolbar"><h2 th:text="${md.label}"></h2><a class="btn btn-secondary btn-sm" th:href="@{/admin/swiss-rounds/edit(phaseId=${swissPhaseId},matchdayId=${md.id})}">Edit pairings</a><a th:href="@{/admin/matchdays/{id}(id=${md.id})}" class="btn btn-secondary btn-sm">Open Matchday</a></div>
             <div th:if="${!md.matches.isEmpty()}" class="swiss-grid">
                 <th:block th:each="pairing : ${pairings[md.id]}" th:with="match=${pairing.match}">
                     <div th:if="${!match.bye}" class="swiss-matchup">

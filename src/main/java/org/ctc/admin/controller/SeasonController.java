@@ -470,6 +470,7 @@ public class SeasonController {
 		var data = seasonManagementService.getSwissRoundData(id);
 		var regular = seasonPhaseService.findRegularPhase(id);
 		Integer totalRounds = regular.getTotalRounds();
+		model.addAttribute("swissPhaseId", regular.getId());
 		model.addAttribute("season", data.season());
 		model.addAttribute("rounds", data.rounds());
 		model.addAttribute("pairings", data.pairings());

@@ -28,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class RaceAttachmentService {
 
+    private final org.ctc.domain.service.ScoreWriteLockService scoreLocks;
     private final RaceRepository raceRepository;
     private final RaceAttachmentRepository raceAttachmentRepository;
     private final FileStorageService fileStorageService;
@@ -41,6 +42,7 @@ public class RaceAttachmentService {
         if (!hasText(originalFilename)) {
             throw new IllegalArgumentException("Filename is required");
         }
+        scoreLocks.lockRace(raceId);
         var race = raceRepository.findById(raceId).orElseThrow();
         try {
             String url = fileStorageService.store(raceId, file);
@@ -58,6 +60,7 @@ public class RaceAttachmentService {
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             throw new IllegalArgumentException("Link must start with http:// or https://");
         }
+        scoreLocks.lockRace(raceId);
         var race = raceRepository.findById(raceId).orElseThrow();
         var attachment = new RaceAttachment(race, AttachmentType.LINK, name, url);
         raceAttachmentRepository.save(attachment);
@@ -68,6 +71,7 @@ public class RaceAttachmentService {
     public UUID deleteAttachment(UUID attachmentId) {
         var attachment = raceAttachmentRepository.findById(attachmentId).orElseThrow();
         UUID raceId = attachment.getRace().getId();
+        scoreLocks.lockRace(raceId);
         if (attachment.getType() == AttachmentType.FILE) {
             fileStorageService.delete(attachment.getUrl());
         }

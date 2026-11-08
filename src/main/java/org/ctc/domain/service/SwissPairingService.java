@@ -30,7 +30,7 @@ public class SwissPairingService {
 	 * <p>Layout validation: LEAGUE requires {@code groupId=null}; GROUPS requires non-null groupId.
 	 * Per-group isolation: each group tracks its own round counter and bye list.
 	 */
-	@Transactional
+	@Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
 	public Matchday generateNextRound(UUID phaseId, UUID groupId) {
 		var phase = seasonPhaseService.findById(phaseId);
 		seasonRepository.findByIdForUpdate(phase.getSeason().getId())
@@ -58,7 +58,10 @@ public class SwissPairingService {
 		}
 
 		int roundNumber = currentRound + 1;
-		var matchday = new Matchday(phase, "Round " + roundNumber, roundNumber);
+		int nextIndex;
+        try { nextIndex=Math.addExact(matchdays.stream().mapToInt(Matchday::getSortIndex).max().orElse(0),1); }
+        catch (ArithmeticException failure) { throw new org.ctc.domain.exception.BusinessRuleException("The matchday order is exhausted. Adjust ordering before adding a round."); }
+        var matchday = new Matchday(phase, "Round " + roundNumber, nextIndex);
 		SeasonPhaseGroup group = resolveGroup(groupId);
 		if (group != null) {
 			matchday.setGroup(group);

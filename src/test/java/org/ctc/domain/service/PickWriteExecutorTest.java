@@ -98,6 +98,16 @@ class PickWriteExecutorTest {
         }
     }
 
+    @Test void givenCurrentReadWriter_whenStartingTransaction_thenUseReadCommittedAndKeepRestoreAdmission() {
+        var imports=new ImportLockService(Duration.ofMillis(1)); var manager=new Manager(imports);
+        var executor=new PickWriteExecutor(imports,manager);
+        assertThat(executor.executeReadCommitted(() -> "current")).isEqualTo("current");
+        assertThat(manager.isolation).isEqualTo(TransactionDefinition.ISOLATION_READ_COMMITTED);
+        assertThat(imports.tryLock()).isTrue();
+        try { assertThatThrownBy(() -> executor.executeReadCommitted(() -> "forbidden")).isInstanceOf(BusinessRuleException.class).hasMessageContaining("restore"); }
+        finally { imports.unlock(); }
+    }
+
     private static void assertWriterHeld(ImportLockService imports) {
         assertThat(imports.tryLock()).isTrue();
         try {
@@ -111,12 +121,13 @@ class PickWriteExecutorTest {
         private final ImportLockService imports;
         private boolean active;
         boolean committed;
+        int isolation;
         boolean rolledBack;
 
         Manager(ImportLockService imports) { this.imports = imports; }
         @Override protected Object doGetTransaction() { return new Object(); }
         @Override protected boolean isExistingTransaction(Object transaction) { return active; }
-        @Override protected void doBegin(Object transaction, TransactionDefinition definition) { active = true; }
+        @Override protected void doBegin(Object transaction, TransactionDefinition definition) { active = true; isolation=definition.getIsolationLevel(); }
         @Override protected void doCommit(DefaultTransactionStatus status) { assertWriterHeld(imports); committed = true; }
         @Override protected void doRollback(DefaultTransactionStatus status) { assertWriterHeld(imports); rolledBack = true; }
         @Override protected void doCleanupAfterCompletion(Object transaction) { active = false; }

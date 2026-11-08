@@ -12,6 +12,9 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface DiscordPostRepository
 		extends JpaRepository<DiscordPost, Long>, JpaSpecificationExecutor<DiscordPost> {
+    boolean existsByMatchId(UUID matchId);
+    boolean existsByRaceId(UUID raceId);
+
 
 	/**
 	 * Full-table finder used by {@code BackupExportService}.

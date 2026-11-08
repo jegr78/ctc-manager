@@ -2939,3 +2939,9 @@ body:has(.archive-dialog[open]) { overflow: hidden; }
 .dsq-history-table th:nth-child(3) { width: 170px; }
 .dsq-history-table th:nth-child(4), .dsq-history-table th:nth-child(5) { width: 110px; }
 .dsq-history-table th:nth-child(6) { width: 160px; }
+
+/* Manual Swiss round forms keep touch controls separate on narrow screens. */
+.swiss-pairing-options { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; }
+.swiss-pairing-options .checkbox-label { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; }
+.swiss-round-editor .form-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.swiss-round-editor fieldset { min-width: 0; }

@@ -52,6 +52,7 @@
             <div class="toolbar mt-md">
                 <h2 th:text="${effectivePhaseLabel}"></h2>
                 <div class="actions">
+                    <a th:if="${phase.format != null and phase.format.name() == 'SWISS'}" class="btn btn-secondary btn-sm" th:href="@{/admin/swiss-rounds(phaseId=${phase.id},groupId=${selectedGroupId})}">Maintain Swiss rounds</a>
                     <a th:href="@{/admin/seasons/{sid}/phases/{pid}/edit(sid=${season.id}, pid=${phase.id})}" class="btn btn-secondary btn-sm">Edit Phase</a>
                     <form th:action="@{/admin/seasons/{sid}/phases/{pid}/delete(sid=${season.id}, pid=${phase.id})}" method="post"
                           onsubmit="return confirm('Really delete this phase? This will fail if it has matchdays or roster entries.');">

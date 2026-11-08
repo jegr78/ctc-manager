@@ -29,6 +29,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class RaceAttachmentServiceTest {
+    @Mock private org.ctc.domain.service.ScoreWriteLockService scoreLocks;
 
     @Mock private RaceRepository raceRepository;
     @Mock private RaceAttachmentRepository raceAttachmentRepository;
@@ -42,6 +43,18 @@ class RaceAttachmentServiceTest {
         ReflectionTestUtils.setField(service, "uploadDir", "uploads");
     }
 
+
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(strings={"upload","link"})
+    void givenIdentityLockFailure_whenRecordingEvidence_thenDoNotStoreOrAttachIt(String kind) {
+        var raceId=UUID.randomUUID();
+        doThrow(new org.ctc.domain.exception.BusinessRuleException("Test identity changed")).when(scoreLocks).lockRace(raceId);
+        if(kind.equals("upload")) {
+            var file=new org.springframework.mock.web.MockMultipartFile("file","Test.png","image/png",new byte[]{1});
+            assertThatThrownBy(() -> service.uploadAttachment(raceId,file)).isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class).hasMessageContaining("identity changed");
+        } else assertThatThrownBy(() -> service.addLink(raceId,"Test proof","https://example.invalid/proof"))
+                .isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class).hasMessageContaining("identity changed");
+        verifyNoInteractions(raceRepository,raceAttachmentRepository,fileStorageService);
+    }
 
     @Test
     void givenValidUrl_whenAddLink_thenAttachmentSaved() {

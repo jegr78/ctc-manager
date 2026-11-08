@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class RaceGraphicService {
 
+    private final org.ctc.domain.service.ScoreWriteLockService scoreLocks;
     private final RaceRepository raceRepository;
     private final RaceAttachmentRepository raceAttachmentRepository;
     private final LineupGraphicService lineupGraphicService;
@@ -57,6 +58,7 @@ public class RaceGraphicService {
     }
 
     private void generateAndSaveGraphic(UUID raceId, String suffix, GraphicGenerator generator) {
+        scoreLocks.lockRace(raceId);
         var race = raceRepository.findById(raceId).orElseThrow();
         try {
             String url = generator.generate(race);
