@@ -186,12 +186,15 @@ public class MatchdaysPageGenerator {
             context.setVariable("matchday", matchday);
             context.setVariable("matchdaysIndexHref", matchdaysIndexHref(matchday));
             var walkoverPairings = new java.util.HashSet<java.util.UUID>();
-            var raceViews = raceRepository.findByMatchdayId(matchday.getId()).stream()
-                    .filter(r -> !org.ctc.domain.model.WalkoverScoring.isWalkover(r) || walkoverPairings.add(r.getMatch() != null ? r.getMatch().getId() : r.getPlayoffMatchup().getId()))
+            var sourceRaces = raceRepository.findByMatchdayId(matchday.getId());
+            var representedMatches = sourceRaces.stream().filter(org.ctc.domain.model.WalkoverScoring::isWalkover)
+                    .filter(r -> r.getMatch() != null).map(r -> r.getMatch().getId()).collect(java.util.stream.Collectors.toSet());
+            var raceViews = sourceRaces.stream()
+                    .filter(r -> !org.ctc.domain.model.WalkoverScoring.isWalkover(r) || walkoverPairings.add(org.ctc.domain.model.WalkoverScoring.pairingId(r)))
                     .map(r -> toRaceView(r, season, "../driver/", allLineups, ctx.slugs())).toList();
             var allViews = new java.util.ArrayList<>(raceViews);
             for (var match : matchday.getMatches()) {
-                if (match.getWalkoverTeam() != null && walkoverPairings.add(match.getId())) {
+                if (match.getWalkoverTeam() != null && !representedMatches.contains(match.getId()) && walkoverPairings.add(match.getId())) {
                     int home = match.getOfficialHomeScore(), away = match.getOfficialAwayScore();
                     allViews.add(new RaceView(match.getHomeTeam().getShortName() + (match.isWalkoverFor(match.getHomeTeam()) ? " (w.o.)" : ""),
                             match.getAwayTeam().getShortName() + (match.isWalkoverFor(match.getAwayTeam()) ? " (w.o.)" : ""),
@@ -266,7 +269,7 @@ public class MatchdaysPageGenerator {
 
         boolean walkover = org.ctc.domain.model.WalkoverScoring.isWalkover(race);
         if (walkover) {
-            var forfeiter = race.getMatch() != null ? race.getMatch().getWalkoverTeam() : race.getPlayoffMatchup().getWalkoverTeam();
+            var forfeiter = org.ctc.domain.model.WalkoverScoring.forfeitingTeam(race);
             if (homeTeam != null && homeTeam.getId().equals(forfeiter.getId())) homeShortName += " (w.o.)";
             else awayShortName += " (w.o.)";
         }

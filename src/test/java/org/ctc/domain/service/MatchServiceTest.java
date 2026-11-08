@@ -53,6 +53,20 @@ class MatchServiceTest {
     }
 
 
+    @Test void givenPlayoffLinkedAnchor_whenSettingRegularWalkover_thenRejectBeforeChangingHistory() {
+        var home = new Team("Test home", "TestH"); home.setId(UUID.randomUUID());
+        var away = new Team("Test away", "TestA"); away.setId(UUID.randomUUID());
+        var day = PhaseTestFixtures.matchdayInRegularPhase(new Season("Test season"), "Test round", 1);
+        var match = new Match(day, home, away); match.setId(UUID.randomUUID());
+        var race = new Race(); race.setMatch(match); race.setPlayoffMatchup(new PlayoffMatchup());
+        when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
+        when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
+        lenient().when(teamRepository.findById(home.getId())).thenReturn(Optional.of(home));
+        assertThatThrownBy(() -> service.updateWalkover(match.getId(), home.getId()))
+                .isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class).hasMessageContaining("playoff");
+        assertThat(match.getWalkoverTeam()).isNull(); verify(matchRepository, never()).save(any());
+    }
+
 	@Test
 	void givenValidTeamsAndMatchday_whenCreateMatch_thenMatchAndFirstRaceCreated() {
 		// given

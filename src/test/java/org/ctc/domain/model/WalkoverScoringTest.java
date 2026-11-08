@@ -45,4 +45,19 @@ class WalkoverScoringTest {
         match.setWalkoverTeam(null); assertThat(WalkoverScoring.countsForDriverStatistics(result)).isTrue(); assertThat(result.getPointsTotal()).isEqualTo(25);
         match.setBye(true); assertThat(match.getOfficialHomeScore()).isNull();
     }
+    @Test void givenPlayoffWalkoverWithRegularMatchAnchor_whenScoring_thenUsePlayoffParticipantsAndScoring() {
+        var regular = new SeasonPhase(); regular.setRaceScoring(scoring);
+        var day = new Matchday(regular, "Test anchor", 1);
+        var playoffPhase = new SeasonPhase(); playoffPhase.setRaceScoring(new RaceScoring("Test playoff", "10,9,8,7,6,5", "50", 50));
+        var playoff = new Playoff(); playoff.setPhase(playoffPhase);
+        var matchup = new PlayoffMatchup(new PlayoffRound(playoff, "Test final", 1), 0); matchup.setId(UUID.randomUUID());
+        matchup.setTeam1(home); matchup.setTeam2(away); matchup.setWalkoverTeam(away);
+        var race = new Race(); race.setMatchday(day); race.setMatch(new Match(day, home, away)); race.setPlayoffMatchup(matchup);
+        assertThat(WalkoverScoring.isPlayoffWalkover(race)).isTrue();
+        assertThat(WalkoverScoring.forfeitingTeam(race)).isSameAs(away);
+        assertThat(WalkoverScoring.pairingId(race)).isEqualTo(matchup.getId());
+        assertThat(WalkoverScoring.score(race, home.getId())).isEqualTo(new WalkoverScoring.Score(45, 0));
+        assertThat(WalkoverScoring.score(race, away.getId())).isEqualTo(new WalkoverScoring.Score(0, 45));
+    }
+
 }

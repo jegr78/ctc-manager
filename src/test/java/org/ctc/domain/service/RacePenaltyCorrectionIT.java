@@ -28,6 +28,17 @@ class RacePenaltyCorrectionIT extends RacePenaltyFixture {
 
     @org.springframework.beans.factory.annotation.Autowired RaceLineupService lineupService;
 
+    @Test void givenPlayoffLinkedRegularAnchor_whenDeclaringRegularWalkover_thenRejectWithoutChangingEitherIdentity() {
+        UUID matchup = attachPlayoff();
+        assertThatThrownBy(() -> matchService.updateWalkover(matchId, homeId))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("playoff");
+        tx.executeWithoutResult(status -> {
+            assertThat(matches.findById(matchId).orElseThrow().getWalkoverTeam()).isNull();
+            assertThat(matchupRows.findById(matchup).orElseThrow().getWalkoverTeam()).isNull();
+        });
+        assertScores(80, 70);
+    }
+
     @Test
     void givenViewOverlappingCorrection_whenReturningForm_thenKeepAmountsAndRevisionFromOneSnapshot() throws Exception {
         // given

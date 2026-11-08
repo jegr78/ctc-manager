@@ -109,6 +109,12 @@ public class DataAuditService {
 		auditMatchAggregates(matches, legs, findings.get(STALE_AGGREGATE));
 		auditPlayoffAggregates(matchups, legs, findings.get(STALE_AGGREGATE));
 		auditPairings(matches, findings.get(PAIRING));
+        for (var race : races) {
+            if (race.getPlayoffMatchup() != null && race.getMatch() != null && race.getMatch().getWalkoverTeam() != null)
+                findings.get(PAIRING).add(new DataAuditFinding(PAIRING, AMBIGUOUS, "Race " + race.getId(),
+                        "A playoff race has a walkover on its regular pairing anchor.",
+                        "Review the playoff decision and regular anchor. Preserve historical evidence; do not award both walkovers."));
+        }
 		auditLegs(races, findings);
 		auditPhaseGroups(matches, phaseTeams, findings.get(PHASE_GROUP));
         findings.get(Category.SEASON_CONFIGURATION).addAll(auditActiveSeasons(seasonRepository.findAll()));

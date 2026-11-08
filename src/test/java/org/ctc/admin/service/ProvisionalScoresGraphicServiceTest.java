@@ -147,6 +147,15 @@ class ProvisionalScoresGraphicServiceTest {
 		return t;
 	}
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void givenHistoricalPlayoffWalkover_whenRenderingProvisionalScores_thenRejectTeamOnlyResult(boolean file) {
+        var race = new Race(); var matchup = new org.ctc.domain.model.PlayoffMatchup();
+        matchup.setWalkoverTeam(new Team("Test forfeiter", "Test forfeiter")); race.setPlayoffMatchup(matchup);
+        assertThatThrownBy(() -> { if (file) createService().generateProvisionalFile(race); else createService().generateProvisional(race, 1); })
+                .isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class).hasMessageContaining("Walkover");
+    }
+
 	@Test
 	void whenRaceHasNoResults_thenThrowsIllegalStateException() {
 		// given

@@ -44,7 +44,7 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 	}
 
 	public String generateProvisionalFile(Race race) throws IOException {
-		if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
+		if (org.ctc.domain.model.WalkoverScoring.isWalkover(race)) {
 			throw new BusinessRuleException("Walkover match has no provisional scores");
 		}
 		if (race.getResults().isEmpty()) {
@@ -84,7 +84,7 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 	}
 
 	public byte[] generateProvisional(Race race, int raceIndex) throws IOException {
-		if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
+		if (org.ctc.domain.model.WalkoverScoring.isWalkover(race)) {
 			throw new BusinessRuleException("Walkover match has no provisional scores");
 		}
 		if (race.getResults().isEmpty()) {

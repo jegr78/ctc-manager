@@ -15,9 +15,24 @@ public final class WalkoverScoring {
         return total;
     }
 
+    public static boolean isPlayoffWalkover(Race race) {
+        return race != null && race.getPlayoffMatchup() != null && race.getPlayoffMatchup().getWalkoverTeam() != null;
+    }
+
+    public static Team forfeitingTeam(Race race) {
+        if (race == null) return null;
+        if (isPlayoffWalkover(race))
+            return race.getPlayoffMatchup().getWalkoverTeam();
+        return race.getMatch() == null ? null : race.getMatch().getWalkoverTeam();
+    }
+
+    public static UUID pairingId(Race race) {
+        return isPlayoffWalkover(race)
+                ? race.getPlayoffMatchup().getId() : race.getMatch().getId();
+    }
+
     public static boolean isWalkover(Race race) {
-        return race != null && (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null
-                || race.getPlayoffMatchup() != null && race.getPlayoffMatchup().getWalkoverTeam() != null);
+        return forfeitingTeam(race) != null;
     }
 
     public static boolean countsForDriverStatistics(RaceResult result) {
@@ -33,13 +48,15 @@ public final class WalkoverScoring {
     }
 
     public static Score score(Race race, UUID firstTeamId) {
-        Team home; Team away; Team forfeiter;
-        if (race.getMatch() != null) {
-            var match = race.getMatch(); home = match.getHomeTeam(); away = match.getAwayTeam(); forfeiter = match.getWalkoverTeam();
-        } else if (race.getPlayoffMatchup() != null) {
+        Team home; Team away; Team forfeiter; RaceScoring scoring;
+        if (isPlayoffWalkover(race)) {
             var matchup = race.getPlayoffMatchup(); home = matchup.getTeam1(); away = matchup.getTeam2(); forfeiter = matchup.getWalkoverTeam();
+            scoring = matchup.getRound().getPlayoff().getPhase().getRaceScoring();
+        } else if (race.getMatch() != null) {
+            var match = race.getMatch(); home = match.getHomeTeam(); away = match.getAwayTeam(); forfeiter = match.getWalkoverTeam();
+            scoring = match.getMatchday().getPhase().getRaceScoring();
         } else throw new BusinessRuleException("A walkover requires its owning pairing");
-        var score = score(home, away, forfeiter, race.getMatchday().getPhase().getRaceScoring());
+        var score = score(home, away, forfeiter, scoring);
         if (Objects.equals(firstTeamId, home.getId())) return score;
         if (Objects.equals(firstTeamId, away.getId())) return new Score(score.away(), score.home());
         throw new BusinessRuleException("Walkover score orientation requires one of its participants");

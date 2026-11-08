@@ -108,8 +108,9 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 		ctx.setVariable("homeTotal", homeTotal);
         ctx.setVariable("penaltyTotals", penaltyTotals);
 		ctx.setVariable("awayTotal", awayTotal);
-		ctx.setVariable("homeIsWalkover", race.getMatch() != null ? race.getMatch().isWalkoverFor(homeTeam) : race.getPlayoffMatchup() != null && homeTeam.equals(race.getPlayoffMatchup().getWalkoverTeam()));
-        ctx.setVariable("awayIsWalkover", race.getMatch() != null ? race.getMatch().isWalkoverFor(awayTeam) : race.getPlayoffMatchup() != null && awayTeam.equals(race.getPlayoffMatchup().getWalkoverTeam()));
+        var forfeiter = WalkoverScoring.forfeitingTeam(race);
+        ctx.setVariable("homeIsWalkover", forfeiter != null && homeTeam.getId().equals(forfeiter.getId()));
+        ctx.setVariable("awayIsWalkover", forfeiter != null && awayTeam.getId().equals(forfeiter.getId()));
 		ctx.setVariable("homeIsWinner", homeTotal > awayTotal);
 		ctx.setVariable("awayIsWinner", awayTotal > homeTotal);
 		ctx.setVariable("resultRows", resultRows);

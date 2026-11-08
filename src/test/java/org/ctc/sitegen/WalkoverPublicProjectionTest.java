@@ -110,4 +110,23 @@ class WalkoverPublicProjectionTest {
         });
     }
 
+    @Test void givenPlayoffWalkoverAndRegularAnchor_whenPublishingMatchday_thenUsePlayoffOwnerAndForfeiter() throws Exception {
+        match.setWalkoverTeam(home); day.getMatches().add(match);
+        var playoff = new Playoff(); playoff.setPhase(phase);
+        var matchup = new PlayoffMatchup(new PlayoffRound(playoff, "Test final", 1), 0); matchup.setId(UUID.randomUUID());
+        matchup.setTeam1(home); matchup.setTeam2(away); matchup.setWalkoverTeam(away); walkover.setPlayoffMatchup(matchup);
+        var days = mock(MatchdayRepository.class); var races = mock(RaceRepository.class); var scoring = mock(ScoringService.class);
+        when(days.findBySeasonIdOrderBySortIndexAsc(season.getId())).thenReturn(List.of(day));
+        when(races.findByMatchdayId(day.getId())).thenReturn(List.of(walkover));
+        when(scoring.calculateRaceTotals(walkover, home.getId())).thenReturn(RacePenaltyTotals.calculate(81,0,0,0));
+        new MatchdaysPageGenerator(writer, slugger, days, races, lineups, phases, mock(SeasonPhaseGroupRepository.class), disclosure, scoring)
+                .generateDetails(context(), new SiteGeneratorService.GenerationResult());
+        var rendered = ArgumentCaptor.forClass(Context.class);
+        verify(writer).write(eq("site/matchday"), rendered.capture(), any(), eq(out), anyString(), anyString());
+        assertThat(rendered.getValue().getVariable("races")).asList().singleElement().isInstanceOfSatisfying(RaceView.class, row -> {
+            assertThat(row.getScore()).isEqualTo("81 : 0"); assertThat(row.awayTeamShortName()).contains("w.o.");
+            assertThat(row.results()).isEmpty();
+        });
+    }
+
 }

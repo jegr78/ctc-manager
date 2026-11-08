@@ -67,6 +67,21 @@ class MatchResultsGraphicServiceTest {
         assertThat(match.getRaces()).allSatisfy(race -> assertThat(race.getResults()).isEmpty());
     }
 
+    @Test void givenTwoPlayoffWalkoverLegsWithRegularAnchor_whenBuildingGraphic_thenScoreActualPairingOnce() {
+        var home = new Team("Test home", "TestH"); home.setId(UUID.randomUUID());
+        var away = new Team("Test away", "TestA"); away.setId(UUID.randomUUID());
+        var day = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("Test WO"), "Test round", 1);
+        var match = new Match(day, home, away); match.setId(UUID.randomUUID());
+        var phase = new SeasonPhase(); phase.setRaceScoring(new RaceScoring("Test playoff", "10,9,8,7,6,5", "50", 50));
+        var playoff = new Playoff(); playoff.setPhase(phase);
+        var matchup = new PlayoffMatchup(new PlayoffRound(playoff, "Test final", 1), 0); matchup.setId(UUID.randomUUID());
+        matchup.setTeam1(home); matchup.setTeam2(away); matchup.setWalkoverTeam(home); match.setWalkoverTeam(away);
+        for (int i = 0; i < 2; i++) { var race = new Race(); race.setMatchday(day); race.setMatch(match); race.setPlayoffMatchup(matchup); match.getRaces().add(race); }
+        assertThat(createService().buildRaceRows(match)).singleElement().satisfies(row -> {
+            assertThat(row.homePoints()).isZero(); assertThat(row.awayPoints()).isEqualTo(45);
+        });
+    }
+
 	@Test
 	void givenMatchWith2Races_whenBuildRaceRows_thenReturns2RowsWithCorrectLabelsAndPoints() {
 		// given

@@ -195,10 +195,10 @@ public class DiscordPostService {
 
 	public boolean matchCanRenderResults(Match match) {
 		if (match.getWalkoverTeam() != null) {
-			return false;
+			return true;
 		}
 		List<Race> races = match.getRaces();
-		return !races.isEmpty() && races.stream().allMatch(r -> !r.getResults().isEmpty());
+		return !races.isEmpty() && races.stream().allMatch(r -> org.ctc.domain.model.WalkoverScoring.isWalkover(r) || !r.getResults().isEmpty());
 	}
 
 	@Transactional
@@ -211,8 +211,9 @@ public class DiscordPostService {
 		try {
 			byte[] overviewPng = matchResultsGraphicService.generateMatchResults(match);
 			attachments.add(new NamedAttachment("match-results.png", overviewPng));
-			for (int i = 0; i < races.size(); i++) {
-				byte[] racePng = readPng(resultsGraphicService.generateResults(races.get(i)));
+			for (int i = 0; match.getWalkoverTeam() == null && i < races.size(); i++) {
+				if (org.ctc.domain.model.WalkoverScoring.isWalkover(races.get(i))) continue;
+                byte[] racePng = readPng(resultsGraphicService.generateResults(races.get(i)));
 				attachments.add(new NamedAttachment("race-" + (i + 1) + "-results.png", racePng));
 			}
 		} catch (IOException e) {
@@ -734,7 +735,8 @@ public class DiscordPostService {
 			return false;
 		}
 		List<Race> races = match.getRaces();
-		return !races.isEmpty() && races.stream().anyMatch(r -> !r.getResults().isEmpty());
+		return !races.isEmpty() && races.stream().noneMatch(org.ctc.domain.model.WalkoverScoring::isWalkover)
+                && races.stream().anyMatch(r -> !r.getResults().isEmpty());
 	}
 
 	@Transactional

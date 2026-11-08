@@ -94,13 +94,11 @@ public class Match extends BaseEntity {
 		return walkoverTeam != null && team != null && walkoverTeam.getId().equals(team.getId());
 	}
 
-    @com.fasterxml.jackson.annotation.JsonIgnore
     public Integer getOfficialHomeScore() {
         if (walkoverTeam == null) return homeScore;
         return WalkoverScoring.score(homeTeam, awayTeam, walkoverTeam, matchday.getPhase().getRaceScoring()).home();
     }
 
-    @com.fasterxml.jackson.annotation.JsonIgnore
     public Integer getOfficialAwayScore() {
         if (walkoverTeam == null) return awayScore;
         return WalkoverScoring.score(homeTeam, awayTeam, walkoverTeam, matchday.getPhase().getRaceScoring()).away();

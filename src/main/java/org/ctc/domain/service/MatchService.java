@@ -232,6 +232,8 @@ public class MatchService {
                 match.getHomeTeam() == null ? null : match.getHomeTeam().getId(), match.getAwayTeam().getId(), match.isBye())) {
 			throw new BusinessRuleException("Walkover team must be one of the match's two teams.");
 		}
+        if (raceRepository.findByMatchId(matchId).stream().anyMatch(race -> race.getPlayoffMatchup() != null))
+            throw new BusinessRuleException("Use the playoff matchup to record this walkover; preserve its regular pairing anchor");
         penaltyGuard.requireNoHistory(raceRepository.findByMatchId(matchId));
         disqualificationGuard.requireNoHistory(raceRepository.findByMatchId(matchId));
 		Team team = teamRepository.findById(walkoverTeamId)
