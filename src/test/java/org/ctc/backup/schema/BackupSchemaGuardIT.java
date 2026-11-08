@@ -26,11 +26,11 @@ class BackupSchemaGuardIT {
     ObjectMapper backupObjectMapper;
 
     @Test
-    void givenBackupSchema_whenInspected_thenSchemaVersionIsNineteen() {
+    void givenBackupSchema_whenInspected_thenSchemaVersionIsTwenty() {
         // when / then
         assertThat(BackupSchema.SCHEMA_VERSION)
-                .as("BackupSchema.SCHEMA_VERSION changed from 19; this is a wire contract bump")
-                .isEqualTo(19);
+                .as("BackupSchema.SCHEMA_VERSION changed from 20; this is a wire contract bump")
+                .isEqualTo(20);
     }
 
     @Test

@@ -73,6 +73,29 @@ class GtPlanetEnvironmentSourceTest {
         assertThatThrownBy(() -> GtPlanetEnvironmentSource.parse(" ".repeat(1_048_576), Instant.EPOCH)).isInstanceOf(java.io.IOException.class);
     }
 
+    @Test void givenLiveFetch_whenTransporting_thenUseFixedBoundedNonRedirectingRequestAndRejectIncompleteSources() throws Exception {
+        var outbound=org.mockito.Mockito.mock(org.ctc.integration.OutboundPolicy.class);
+        var connection=org.mockito.Mockito.mock(org.jsoup.Connection.class,org.mockito.Mockito.RETURNS_SELF);
+        var response=org.mockito.Mockito.mock(org.jsoup.Connection.Response.class);
+        var now=Instant.parse("2026-11-08T12:00:00Z");
+        var source=new GtPlanetEnvironmentSource(outbound,java.time.Clock.fixed(now,java.time.ZoneOffset.UTC));
+        try(var jsoup=org.mockito.Mockito.mockStatic(org.jsoup.Jsoup.class)) {
+            jsoup.when(()->org.jsoup.Jsoup.connect(GtPlanetEnvironmentSource.URL)).thenReturn(connection);
+            org.mockito.Mockito.when(connection.execute()).thenReturn(response);
+            org.mockito.Mockito.when(response.statusCode()).thenReturn(200);
+            var profiles=new StringBuilder();for(int index=0;index<48;index++)profiles.append(profile("Test "+index,List.of("Dawn"),false,""));
+            org.mockito.Mockito.when(response.body()).thenReturn(document(profiles.toString()));
+            var snapshot=source.fetch();assertThat(snapshot.profiles()).hasSize(48);assertThat(snapshot.retrievedAt()).isEqualTo(now.toString());
+            org.mockito.Mockito.verify(connection).timeout(10_000);org.mockito.Mockito.verify(connection).maxBodySize(1_048_576);org.mockito.Mockito.verify(connection).followRedirects(false);
+            org.mockito.Mockito.when(response.body()).thenReturn(document(profile("Test",List.of("Dawn"),false,"")));
+            assertThatThrownBy(source::fetch).isInstanceOf(java.io.IOException.class).hasMessageContaining("incomplete");
+            org.mockito.Mockito.when(response.statusCode()).thenReturn(302);
+            assertThatThrownBy(source::fetch).isInstanceOf(java.io.IOException.class).hasMessageContaining("unavailable");
+            org.mockito.Mockito.doThrow(new org.ctc.integration.ExternalIntegrationDisabledException()).when(outbound).requireEnabled();
+            jsoup.clearInvocations();assertThatThrownBy(source::fetch).isInstanceOf(org.ctc.integration.ExternalIntegrationDisabledException.class);jsoup.verifyNoInteractions();
+        }
+    }
+
     static String document(String content) { return "<article data-content='post-14046048'>" + content + "<div class='message-lastEdit'><time datetime='2026-07-08T02:07:32+0100'></time></div></article>"; }
     static String profile(String name, List<String> times, boolean rain, String nested) {
         String sections = times == null ? "" : "<b>Time of Day:</b><ul>" + times.stream().map(t -> "<li>" + t + "</li>").collect(Collectors.joining()) + "</ul><b>Weather:</b><ul>"

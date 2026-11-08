@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.ArrayList;
 import org.ctc.domain.model.TrackEnvironmentValues;
 import org.ctc.domain.model.TrackRainCapability;
+import org.ctc.domain.model.Track;
+import org.ctc.domain.model.TrackEnvironmentProvenance;
 
 public final class TrackEnvironmentArchive {
     private TrackEnvironmentArchive() { }
@@ -29,7 +31,24 @@ public final class TrackEnvironmentArchive {
             if (!time.isTextual()) throw new IllegalArgumentException("Invalid track time of day label");
             labels.add(time.textValue());
         }
-        try { new TrackEnvironmentValues(labels, TrackRainCapability.valueOf(rain.textValue())); }
+        try {
+            new TrackEnvironmentValues(labels, TrackRainCapability.valueOf(rain.textValue()));
+            boolean manual=token.longValue()>0 || !labels.isEmpty() || !rain.textValue().equals("UNKNOWN");
+            if(version<20) {
+                if(copy.hasNonNull("environmentSource") || copy.hasNonNull("environmentImportHash")
+                        || copy.hasNonNull("environmentOverride") && (!copy.path("environmentOverride").isBoolean() || copy.path("environmentOverride").booleanValue()!=manual))
+                    throw new IllegalArgumentException("Track environment source data requires backup schema 20");
+                copy.putNull("environmentSource");copy.putNull("environmentImportHash");copy.put("environmentOverride",manual);
+            }
+            if(!copy.path("environmentOverride").isBoolean())throw new IllegalArgumentException("Invalid manual layout override");
+            for(String field:java.util.List.of("environmentSource","environmentImportHash"))
+                if(copy.hasNonNull(field) && !copy.path(field).isTextual())throw new IllegalArgumentException("Invalid layout source field");
+            var track=new Track();track.setTimeOfDayOptions(labels);track.setRainCapability(rain.textValue());track.setEnvironmentVersion(token.longValue());
+            track.setEnvironmentSource(copy.hasNonNull("environmentSource")?copy.path("environmentSource").textValue():null);
+            track.setEnvironmentImportHash(copy.hasNonNull("environmentImportHash")?copy.path("environmentImportHash").textValue():null);
+            track.setEnvironmentOverride(copy.path("environmentOverride").booleanValue());
+            TrackEnvironmentProvenance.requireConsistent(track);
+        }
         catch (RuntimeException invalid) { throw new IllegalArgumentException("Invalid track environment metadata", invalid); }
         return copy;
     }

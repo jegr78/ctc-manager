@@ -36,6 +36,9 @@
     <div th:if="${trackForm.id != null}" class="card mt-md" id="track-environment">
         <h2>Time &amp; weather for this layout</h2>
         <p class="text-dim">Maintain the available times in game order. At most 25 distinct options, each up to 100 characters. An empty list is unverified and keeps manual entry in Discord. Changes apply to new submissions; saved pick history remains unchanged.</p>
+        <p th:if="${environment.source != null}" class="text-dim">Imported from <a th:href="${environmentSourceUrl}" target="_blank" rel="noopener noreferrer">GTPlanet</a>: <span th:text="${environment.source.profile}"></span>. Source edited <time th:text="${environment.source.sourceEditedAt}"></time>.</p>
+        <p th:if="${environment.manualOverride}" class="text-dim">Manually maintained. Source imports will preserve these settings.</p>
+        <p><a class="btn btn-secondary" th:href="@{/admin/gt7-sync/environment}">Preview source defaults</a></p>
         <form th:action="@{/admin/tracks/{id}/environment(id=${trackForm.id})}" th:object="${environmentForm}" method="post" class="entity-editor-form">
             <input type="hidden" th:field="*{expectedVersion}"><input type="hidden" th:field="*{expectedGeneration}">
             <div th:if="${#fields.hasErrors('*')}" class="field-error" role="alert"><ul><li th:each="error : ${#fields.errors('*')}" th:text="${error}"></li></ul></div>

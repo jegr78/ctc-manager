@@ -93,6 +93,7 @@ public class TrackController {
     private void prepareEnvironment(UUID id, Model model) {
         var view = environments.view(id);
         model.addAttribute("environment", view);
+        model.addAttribute("environmentSourceUrl", org.ctc.domain.model.TrackEnvironmentProvenance.SOURCE_URL);
         model.addAttribute("rainCapabilities", TrackRainCapability.values());
         if (!model.containsAttribute("environmentForm")) {
             var form = new TrackEnvironmentForm(); form.setTimeOfDayText(view.timeOfDayText());

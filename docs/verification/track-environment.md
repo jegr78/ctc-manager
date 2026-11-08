@@ -20,12 +20,29 @@ unchanged. This change does not add a 32-option Discord select.
 ## Source investigation
 
 The [GTPlanet reference](https://www.gtplanet.net/forum/threads/time-and-weather-settings-for-all-tracks-and-layouts-in-gran-turismo-7.420661/)
-contains its spoiler contents in the returned HTML. A feasibility probe parsed the first post and
-nested layout exceptions without JavaScript or login. It is a community reference with gaps,
-including SUGO, and cannot authorize circuit-wide assumptions. The current feature adds offline
-manual maintenance and the common preset catalog. It introduces no live source importer or
-automatic mapping. A future importer must preview concrete layout matches, retain provenance,
-require explicit confirmation and conditionally protect manually edited values.
+contains its spoiler contents in the returned HTML. The importer validates the first post,
+including parent profiles and nested exceptions. It stores only factual layout/time/code lists in
+a reviewed bundled reference, so startup, editing and picks work offline. Optional refresh uses the
+fixed URL, no redirects, a 10-second timeout and a 1 MiB response limit, respecting outbound suspension.
+
+Under **GT7 Sync → Preview layout environments**, compare current values with source defaults.
+Select eligible layouts and use **Apply selected defaults**. Nothing is selected initially.
+**Refresh from GTPlanet** loads a new preview without writing settings. The preview identifies the
+source edit/retrieval dates and exact profile. It expires after 20 minutes and is bound to the
+current manager and management generation. Application rechecks every selected row under a fresh
+write lock, validates the whole selection, and commits through restore writer admission.
+
+The reviewed mapping covers119 of123 catalog names. Le Mans and No Chicane both receive11 times
+and rain. Spa Full Course has4 times and Spa24h has11; Tokyo South differs from Central/East.
+SUGO, Nürburgring Endurance II and Nordschleife Tourist lack a reviewed mapping. The synthetic
+Test Circuit also remains unmatched. There is no prefix or fuzzy matching. New/missing layouts
+remain manually editable; another source is not required for profiles already explicit here.
+
+Manual saves protect the whole layout environment, including an explicit empty/Unknown choice.
+Source imports can fill pristine records or refresh unchanged imported values. Source provenance
+and the previous imported fingerprint survive manual edits. Schema20 preserves these fields;
+schema19 restores configured values as manual, while schemas<=18 restore pristine Unknown.
+Historic pick strings, receipt replay, approval hashes, identities and logos retain their contracts.
 
 ## Verification contract
 
@@ -34,7 +51,7 @@ require explicit confirmation and conditionally protect manually edited values.
 | Manual metadata | Native create/edit preserves order, identity and logo | Duplicate labels, stale versions/generations and missing CSRF do not mutate |
 | Current layout choice | Actual JDA select/default serialization and handler confirmation | Wrong layout time cannot advance; final confirmation refreshes cached state |
 | Historic compatibility | Exact receipt replay bypasses new metadata validation | New invalid time creates no revision |
-| Recovery | Schema19 full restore retains values/version; schema18 defaults unknown | Malformed metadata is rejected before deleting live rows |
+| Recovery | Schema20 retains source, values and override; schema19 protects configured values; schema18 defaults unknown | Malformed metadata is rejected before deleting live rows |
 | Database integrity | H2 and explicit MariaDB migration/round trips | Fresh connections reject unknown rain codes and negative versions |
 | Audit | Valid and unknown metadata remain readable | Malformed persisted times are reported without repair |
 | Native UI | Desktop/mobile and JavaScript-disabled save/reload | Validation retains submitted values and current tokens |
@@ -42,4 +59,4 @@ require explicit confirmation and conditionally protect manually edited values.
 Focused local checks use the bounded helper, one fork and at most 512 MiB Maven / 1024 MiB test
 heap. Complete exact-head CI covers the full discovered inventory, coverage, database/browser
 partitions, static security and Docker checks. Exact runs and guard falsification evidence are
-recorded in the PR. The Box installation is unchanged.
+recorded in the PR. Deployment and selected source application remain explicit operator actions.

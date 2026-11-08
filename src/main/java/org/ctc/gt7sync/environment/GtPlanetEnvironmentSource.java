@@ -23,7 +23,7 @@ import org.springframework.stereotype.Service;
 
 @Service @RequiredArgsConstructor
 public class GtPlanetEnvironmentSource {
-    public static final String URL = "https://www.gtplanet.net/forum/threads/time-and-weather-settings-for-all-tracks-and-layouts-in-gran-turismo-7.420661/";
+    public static final String URL = org.ctc.domain.model.TrackEnvironmentProvenance.SOURCE_URL;
     private static final int MAX = 1_048_576;
     private static final ObjectMapper JSON = new ObjectMapper().enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
             .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);

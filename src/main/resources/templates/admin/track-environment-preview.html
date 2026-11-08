@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/layout :: layout('Layout environment import', ~{::section})}">
+<body>
+<section class="gt7-sync" data-environment-preview>
+    <div class="toolbar"><div><a class="back-link" th:href="@{/admin/gt7-sync}">← Back to GT7 Sync</a><h1>Layout environment import</h1></div><a class="btn btn-secondary" th:href="@{/admin/tracks}">Tracks</a></div>
+    <p class="admin-list-intro text-dim">Review time of day and rain availability for each layout. Manual settings are protected. Applying selected defaults affects new picks and preserves saved submissions.</p>
+    <div class="card">
+        <h2 th:text="${preview.label}"></h2>
+        <p><a th:href="${sourceUrl}" target="_blank" rel="noopener noreferrer">GTPlanet time and weather reference</a></p>
+        <p class="text-dim">Source edited <time th:datetime="${preview.source.sourceEditedAt}" th:text="${preview.source.sourceEditedAt}"></time> · Retrieved <time th:datetime="${preview.source.retrievedAt}" th:text="${preview.source.retrievedAt}"></time></p>
+        <p><strong th:text="${preview.readyCount()}"></strong> eligible updates · <span th:text="${preview.manualCount()}"></span> manually maintained · <span th:text="${preview.unmappedCount()}"></span> without an unambiguous reviewed mapping</p>
+        <div class="actions"><a class="btn btn-secondary" th:href="@{/admin/gt7-sync/environment}">Load bundled reference</a><form th:action="@{/admin/gt7-sync/environment/refresh}" method="post"><button class="btn btn-secondary" type="submit">Refresh from GTPlanet</button></form></div>
+    </div>
+    <form th:action="@{/admin/gt7-sync/environment/apply}" method="post" data-environment-import>
+        <input type="hidden" name="previewId" th:value="${preview.id}">
+        <div class="admin-list sync-catalog mt-md" data-admin-list data-page-size="20" data-unit="layout" data-plural="layouts">
+            <div class="card admin-list-card">
+                <h2>Compare layouts</h2>
+                <div class="admin-list-controls" data-list-tools hidden>
+                    <label for="layoutSearch"><span>Search layouts</span><input type="search" id="layoutSearch" data-list-search autocomplete="off" placeholder="Layout name"></label>
+                    <label for="layoutStatus"><span>Status</span><select id="layoutStatus" data-list-status><option value="all">All layouts</option><option th:each="status : ${statuses}" th:value="${status.name()}" th:text="${status.label}"></option></select></label>
+                    <button type="button" class="btn btn-secondary" data-list-reset disabled>Reset filters</button><p class="admin-list-count text-dim" data-list-count role="status"></p>
+                </div>
+                <div class="sync-selection-tools" data-environment-tools hidden><button type="button" class="btn btn-secondary" data-environment-select>Select all eligible updates</button><button type="button" class="btn btn-secondary" data-environment-clear>Clear selection</button></div>
+                <div class="table-scroll" role="region" aria-label="Layout environment comparison" tabindex="0">
+                    <table data-list-table><thead><tr><th scope="col">Apply</th><th scope="col">Layout</th><th scope="col">Status</th><th scope="col">Current settings</th><th scope="col">Source defaults</th></tr></thead>
+                        <tbody><tr th:each="entry : ${preview.entries}" data-list-entry th:attr="data-search=${entry.name},data-status=${entry.status.name()}">
+                            <td><input th:if="${entry.selectable()}" type="checkbox" name="selectedTracks" th:value="${entry.id}" th:attr="aria-label=${'Import environment for ' + entry.name}"><span th:unless="${entry.selectable()}" class="text-dim">—</span></td>
+                            <td><a th:href="@{/admin/tracks/{id}/edit(id=${entry.id})}" th:text="${entry.name}"></a></td>
+                            <td th:text="${entry.status.label}"></td>
+                            <td><th:block th:if="${entry.current != null}"><span th:text="${entry.current.rainCapability.label}"></span><ol><li th:each="time : ${entry.current.timeOfDayOptions}" th:text="${time}"></li></ol><span th:if="${entry.current.timeOfDayOptions.isEmpty()}" class="text-dim">Times unverified</span></th:block><span th:if="${entry.current == null}" class="text-dim">Review invalid saved metadata</span></td>
+                            <td><details th:if="${entry.proposed != null}"><summary><span th:text="${entry.proposed.values().rainCapability.label}"></span> · <span th:text="${entry.proposed.timeOfDay.size()}"></span> times</summary><p class="text-dim" th:text="${entry.proposed.key}"></p><ol><li th:each="time : ${entry.proposed.timeOfDay}" th:text="${time}"></li></ol></details><span th:if="${entry.proposed == null}" class="text-dim">Maintain this layout manually</span></td>
+                        </tr></tbody>
+                    </table>
+                </div>
+                <div data-list-empty hidden class="empty-state"><p>No matching layouts. Try another search or reset the filters.</p></div>
+                <div th:if="${preview.entries.isEmpty()}" data-list-initial-empty class="empty-state"><p>No layouts in your catalog.</p></div>
+                <div class="pagination pagination-bar" data-list-pagination hidden aria-label="Layout comparison pagination"><span data-list-page-info class="text-dim"></span><div class="actions"><button type="button" data-list-prev class="btn btn-secondary" disabled>Previous</button><button type="button" data-list-next class="btn btn-secondary">Next</button></div></div>
+            </div>
+        </div>
+        <div class="sync-import-bar"><div><p data-environment-count role="status">Choose eligible layout updates</p><p class="text-dim">Selections include other pages and filtered layouts.</p><p data-environment-progress role="status" hidden>Importing selected layout environments…</p></div><div class="actions"><button class="btn btn-primary" type="submit" th:disabled="${preview.readyCount() == 0}">Apply selected defaults</button><a class="btn btn-secondary" th:href="@{/admin/gt7-sync}">Cancel</a></div></div>
+    </form>
+    <script defer th:src="@{/admin/js/management-list.js}"></script><script defer th:src="@{/admin/js/track-environment-import.js}"></script>
+</section>
+</body>
+</html>

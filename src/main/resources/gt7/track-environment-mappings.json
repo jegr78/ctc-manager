@@ -1,0 +1,482 @@
+[
+  {
+    "trackName": "24 Heures du Mans Racing Circuit",
+    "profileKey": "Europe-Middle East | 24 Heures du Mans Racing Circuit (All Layouts)"
+  },
+  {
+    "trackName": "24 Heures du Mans Racing Circuit No Chicane",
+    "profileKey": "Europe-Middle East | 24 Heures du Mans Racing Circuit (All Layouts)"
+  },
+  {
+    "trackName": "Alsace - Test Course",
+    "profileKey": "Europe-Middle East | Alsace (All Layouts)"
+  },
+  {
+    "trackName": "Alsace - Test Course Reverse",
+    "profileKey": "Europe-Middle East | Alsace (All Layouts)"
+  },
+  {
+    "trackName": "Alsace - Village",
+    "profileKey": "Europe-Middle East | Alsace (All Layouts)"
+  },
+  {
+    "trackName": "Alsace - Village Reverse",
+    "profileKey": "Europe-Middle East | Alsace (All Layouts)"
+  },
+  {
+    "trackName": "Autodrome Lago Maggiore - Centre",
+    "profileKey": "Europe-Middle East | Autodrome Lago Maggiore"
+  },
+  {
+    "trackName": "Autodrome Lago Maggiore - Centre Reverse",
+    "profileKey": "Europe-Middle East | Autodrome Lago Maggiore"
+  },
+  {
+    "trackName": "Autodrome Lago Maggiore - East",
+    "profileKey": "Europe-Middle East | Autodrome Lago Maggiore | East & West"
+  },
+  {
+    "trackName": "Autodrome Lago Maggiore - East End",
+    "profileKey": "Europe-Middle East | Autodrome Lago Maggiore"
+  },
+  {
+    "trackName": "Autodrome Lago Maggiore - East End Reverse",
+    "profileKey": "Europe-Middle East | Autodrome Lago Maggiore"
+  },
+  {
+    "trackName": "Autodrome Lago Maggiore - East Reverse",
+    "profileKey": "Europe-Middle East | Autodrome Lago Maggiore | East & West"
+  },
+  {
+    "trackName": "Autodrome Lago Maggiore - Full Course",
+    "profileKey": "Europe-Middle East | Autodrome Lago Maggiore"
+  },
+  {
+    "trackName": "Autodrome Lago Maggiore - Full Course Reverse",
+    "profileKey": "Europe-Middle East | Autodrome Lago Maggiore"
+  },
+  {
+    "trackName": "Autodrome Lago Maggiore - West",
+    "profileKey": "Europe-Middle East | Autodrome Lago Maggiore | East & West"
+  },
+  {
+    "trackName": "Autodrome Lago Maggiore - West End",
+    "profileKey": "Europe-Middle East | Autodrome Lago Maggiore"
+  },
+  {
+    "trackName": "Autodrome Lago Maggiore - West End Reverse",
+    "profileKey": "Europe-Middle East | Autodrome Lago Maggiore"
+  },
+  {
+    "trackName": "Autodrome Lago Maggiore - West Reverse",
+    "profileKey": "Europe-Middle East | Autodrome Lago Maggiore | East & West"
+  },
+  {
+    "trackName": "Autodromo Nazionale Monza",
+    "profileKey": "Europe-Middle East | Autodromo Nazionale Monza (All Layouts)"
+  },
+  {
+    "trackName": "Autodromo Nazionale Monza No Chicane",
+    "profileKey": "Europe-Middle East | Autodromo Nazionale Monza (All Layouts)"
+  },
+  {
+    "trackName": "Autopolis International Racing Course",
+    "profileKey": "Asia-Oceania | Autopolis (All Layouts)"
+  },
+  {
+    "trackName": "Autopolis International Racing Course - Short Course",
+    "profileKey": "Asia-Oceania | Autopolis (All Layouts)"
+  },
+  {
+    "trackName": "Autódromo de Interlagos",
+    "profileKey": "Americas | Autódromo de Interlagos"
+  },
+  {
+    "trackName": "BB Raceway",
+    "profileKey": "Asia-Oceania | Broad Bean Raceway"
+  },
+  {
+    "trackName": "BB Raceway Reverse",
+    "profileKey": "Asia-Oceania | Broad Bean Raceway"
+  },
+  {
+    "trackName": "Blue Moon Bay Speedway",
+    "profileKey": "Americas | Blue Moon Bay Speedway (All Layouts)"
+  },
+  {
+    "trackName": "Blue Moon Bay Speedway - Infield A",
+    "profileKey": "Americas | Blue Moon Bay Speedway (All Layouts)"
+  },
+  {
+    "trackName": "Blue Moon Bay Speedway - Infield A Reverse",
+    "profileKey": "Americas | Blue Moon Bay Speedway (All Layouts)"
+  },
+  {
+    "trackName": "Blue Moon Bay Speedway - Infield B",
+    "profileKey": "Americas | Blue Moon Bay Speedway (All Layouts)"
+  },
+  {
+    "trackName": "Blue Moon Bay Speedway - Infield B Reverse",
+    "profileKey": "Americas | Blue Moon Bay Speedway (All Layouts)"
+  },
+  {
+    "trackName": "Blue Moon Bay Speedway Reverse",
+    "profileKey": "Americas | Blue Moon Bay Speedway (All Layouts)"
+  },
+  {
+    "trackName": "Brands Hatch Grand Prix Circuit",
+    "profileKey": "Europe-Middle East | Brands Hatch (All Layouts)"
+  },
+  {
+    "trackName": "Brands Hatch Indy Circuit",
+    "profileKey": "Europe-Middle East | Brands Hatch (All Layouts)"
+  },
+  {
+    "trackName": "Circuit Gilles-Villeneuve",
+    "profileKey": "Americas | Circuit Gilles-Villeneuve"
+  },
+  {
+    "trackName": "Circuit de Barcelona-Catalunya GP Layout",
+    "profileKey": "Europe-Middle East | Circuit de Barcelona-Catalunya (All Layouts)"
+  },
+  {
+    "trackName": "Circuit de Barcelona-Catalunya GP Layout No Chicane",
+    "profileKey": "Europe-Middle East | Circuit de Barcelona-Catalunya (All Layouts)"
+  },
+  {
+    "trackName": "Circuit de Barcelona-Catalunya National Layout",
+    "profileKey": "Europe-Middle East | Circuit de Barcelona-Catalunya (All Layouts)"
+  },
+  {
+    "trackName": "Circuit de Barcelona-Catalunya Rallycross Layout",
+    "profileKey": "Europe-Middle East | Circuit de Barcelona-Catalunya (All Layouts)"
+  },
+  {
+    "trackName": "Circuit de Sainte-Croix - A",
+    "profileKey": "Europe-Middle East | Circuit de Sainte-Croix (All Layouts)"
+  },
+  {
+    "trackName": "Circuit de Sainte-Croix - A Reverse",
+    "profileKey": "Europe-Middle East | Circuit de Sainte-Croix (All Layouts)"
+  },
+  {
+    "trackName": "Circuit de Sainte-Croix - B",
+    "profileKey": "Europe-Middle East | Circuit de Sainte-Croix (All Layouts)"
+  },
+  {
+    "trackName": "Circuit de Sainte-Croix - B Reverse",
+    "profileKey": "Europe-Middle East | Circuit de Sainte-Croix (All Layouts)"
+  },
+  {
+    "trackName": "Circuit de Sainte-Croix - C",
+    "profileKey": "Europe-Middle East | Circuit de Sainte-Croix (All Layouts)"
+  },
+  {
+    "trackName": "Circuit de Sainte-Croix - C Reverse",
+    "profileKey": "Europe-Middle East | Circuit de Sainte-Croix (All Layouts)"
+  },
+  {
+    "trackName": "Circuit de Spa-Francorchamps",
+    "profileKey": "Europe-Middle East | Circuit de Spa-Francorchamps"
+  },
+  {
+    "trackName": "Circuit de Spa-Francorchamps 24h Layout",
+    "profileKey": "Europe-Middle East | Circuit de Spa-Francorchamps | 24h"
+  },
+  {
+    "trackName": "Colorado Springs - Lake",
+    "profileKey": "Americas | Colorado Springs"
+  },
+  {
+    "trackName": "Colorado Springs - Lake Reverse",
+    "profileKey": "Americas | Colorado Springs"
+  },
+  {
+    "trackName": "Daytona Road Course",
+    "profileKey": "Americas | Daytona International Speedway"
+  },
+  {
+    "trackName": "Daytona Tri-Oval",
+    "profileKey": "Americas | Daytona International Speedway"
+  },
+  {
+    "trackName": "Deep Forest Raceway",
+    "profileKey": "Europe-Middle East | Deep Forest Raceway"
+  },
+  {
+    "trackName": "Deep Forest Raceway Reverse",
+    "profileKey": "Europe-Middle East | Deep Forest Raceway"
+  },
+  {
+    "trackName": "Dragon Trail - Gardens",
+    "profileKey": "Europe-Middle East | Dragon Trail | Gardens"
+  },
+  {
+    "trackName": "Dragon Trail - Gardens Reverse",
+    "profileKey": "Europe-Middle East | Dragon Trail | Gardens"
+  },
+  {
+    "trackName": "Dragon Trail - Seaside",
+    "profileKey": "Europe-Middle East | Dragon Trail"
+  },
+  {
+    "trackName": "Dragon Trail - Seaside Reverse",
+    "profileKey": "Europe-Middle East | Dragon Trail"
+  },
+  {
+    "trackName": "Eiger Nordwand",
+    "profileKey": "Europe-Middle East | Eiger Nordwand"
+  },
+  {
+    "trackName": "Eiger Nordwand Reverse",
+    "profileKey": "Europe-Middle East | Eiger Nordwand"
+  },
+  {
+    "trackName": "Fishermans Ranch",
+    "profileKey": "Americas | Fisherman’s Ranch"
+  },
+  {
+    "trackName": "Fishermans Ranch Reverse",
+    "profileKey": "Americas | Fisherman’s Ranch"
+  },
+  {
+    "trackName": "Fuji International Speedway",
+    "profileKey": "Asia-Oceania | Fuji International Speedway (All Layouts)"
+  },
+  {
+    "trackName": "Fuji International Speedway (Short)",
+    "profileKey": "Asia-Oceania | Fuji International Speedway (All Layouts)"
+  },
+  {
+    "trackName": "Goodwood Motor Circuit",
+    "profileKey": "Europe-Middle East | Goodwood"
+  },
+  {
+    "trackName": "Grand Valley - Highway 1",
+    "profileKey": "Americas | Grand Valley - Highway 1 (All Layouts)"
+  },
+  {
+    "trackName": "Grand Valley - Highway 1 Reverse",
+    "profileKey": "Americas | Grand Valley - Highway 1 (All Layouts)"
+  },
+  {
+    "trackName": "Grand Valley - South",
+    "profileKey": "Americas | Grand Valley - Highway 1 (All Layouts)"
+  },
+  {
+    "trackName": "Grand Valley - South Reverse",
+    "profileKey": "Americas | Grand Valley - Highway 1 (All Layouts)"
+  },
+  {
+    "trackName": "High Speed Ring",
+    "profileKey": "Asia-Oceania | High Speed Ring"
+  },
+  {
+    "trackName": "High Speed Ring Reverse",
+    "profileKey": "Asia-Oceania | High Speed Ring"
+  },
+  {
+    "trackName": "Kyoto Driving Park - Miyabi",
+    "profileKey": "Asia-Oceania | Kyoto Driving Park (All Layouts)"
+  },
+  {
+    "trackName": "Kyoto Driving Park - Yamagiwa",
+    "profileKey": "Asia-Oceania | Kyoto Driving Park (All Layouts)"
+  },
+  {
+    "trackName": "Kyoto Driving Park - Yamagiwa Reverse",
+    "profileKey": "Asia-Oceania | Kyoto Driving Park (All Layouts)"
+  },
+  {
+    "trackName": "Kyoto Driving Park - Yamagiwa+Miyabi",
+    "profileKey": "Asia-Oceania | Kyoto Driving Park (All Layouts)"
+  },
+  {
+    "trackName": "Kyoto Driving Park - Yamagiwa+Miyabi Reverse",
+    "profileKey": "Asia-Oceania | Kyoto Driving Park (All Layouts)"
+  },
+  {
+    "trackName": "Lake Louise Long Track",
+    "profileKey": "Americas | Lake Louise (All Layouts)"
+  },
+  {
+    "trackName": "Lake Louise Long Track Reverse",
+    "profileKey": "Americas | Lake Louise (All Layouts)"
+  },
+  {
+    "trackName": "Lake Louise Short Track",
+    "profileKey": "Americas | Lake Louise (All Layouts)"
+  },
+  {
+    "trackName": "Lake Louise Short Track Reverse",
+    "profileKey": "Americas | Lake Louise (All Layouts)"
+  },
+  {
+    "trackName": "Lake Louise Tri-Oval",
+    "profileKey": "Americas | Lake Louise (All Layouts)"
+  },
+  {
+    "trackName": "Lake Louise Tri-Oval Reverse",
+    "profileKey": "Americas | Lake Louise (All Layouts)"
+  },
+  {
+    "trackName": "Michelin Raceway Road Atlanta",
+    "profileKey": "Americas | Michelin Raceway Road Atlanta"
+  },
+  {
+    "trackName": "Mount Panorama Motor Racing Circuit",
+    "profileKey": "Asia-Oceania | Mount Panorama"
+  },
+  {
+    "trackName": "Northern Isle Speedway",
+    "profileKey": "Americas | Northern Isle Speedway"
+  },
+  {
+    "trackName": "Nürburgring 24h",
+    "profileKey": "Europe-Middle East | Nürburgring | 24h"
+  },
+  {
+    "trackName": "Nürburgring Endurance",
+    "profileKey": "Europe-Middle East | Nürburgring"
+  },
+  {
+    "trackName": "Nürburgring GP",
+    "profileKey": "Europe-Middle East | Nürburgring | Grand Prix & Sprint"
+  },
+  {
+    "trackName": "Nürburgring Nordschleife",
+    "profileKey": "Europe-Middle East | Nürburgring"
+  },
+  {
+    "trackName": "Nürburgring Sprint",
+    "profileKey": "Europe-Middle East | Nürburgring | Grand Prix & Sprint"
+  },
+  {
+    "trackName": "Red Bull Ring",
+    "profileKey": "Europe-Middle East | Red Bull Ring (All Layouts)"
+  },
+  {
+    "trackName": "Red Bull Ring Short Track",
+    "profileKey": "Europe-Middle East | Red Bull Ring (All Layouts)"
+  },
+  {
+    "trackName": "Sardegna - Road Track - A",
+    "profileKey": "Europe-Middle East | Sardegna - Road Track (All Layouts)"
+  },
+  {
+    "trackName": "Sardegna - Road Track - A Reverse",
+    "profileKey": "Europe-Middle East | Sardegna - Road Track (All Layouts)"
+  },
+  {
+    "trackName": "Sardegna - Road Track - B",
+    "profileKey": "Europe-Middle East | Sardegna - Road Track (All Layouts)"
+  },
+  {
+    "trackName": "Sardegna - Road Track - B Reverse",
+    "profileKey": "Europe-Middle East | Sardegna - Road Track (All Layouts)"
+  },
+  {
+    "trackName": "Sardegna - Road Track - C",
+    "profileKey": "Europe-Middle East | Sardegna - Road Track (All Layouts)"
+  },
+  {
+    "trackName": "Sardegna - Road Track - C Reverse",
+    "profileKey": "Europe-Middle East | Sardegna - Road Track (All Layouts)"
+  },
+  {
+    "trackName": "Sardegna - Windmills",
+    "profileKey": "Europe-Middle East | Sardegna - Windmills"
+  },
+  {
+    "trackName": "Sardegna - Windmills Reverse",
+    "profileKey": "Europe-Middle East | Sardegna - Windmills"
+  },
+  {
+    "trackName": "Spa 24h Layout",
+    "profileKey": "Europe-Middle East | Circuit de Spa-Francorchamps | 24h"
+  },
+  {
+    "trackName": "Special Stage Route X",
+    "profileKey": "Americas | Special Stage Route X"
+  },
+  {
+    "trackName": "Suzuka Circuit",
+    "profileKey": "Asia-Oceania | Suzuka Circuit (All Layouts)"
+  },
+  {
+    "trackName": "Suzuka Circuit East Course",
+    "profileKey": "Asia-Oceania | Suzuka Circuit (All Layouts)"
+  },
+  {
+    "trackName": "Tokyo Expressway - Central Clockwise",
+    "profileKey": "Asia-Oceania | Tokyo Expressway"
+  },
+  {
+    "trackName": "Tokyo Expressway - Central Counterclockwise",
+    "profileKey": "Asia-Oceania | Tokyo Expressway"
+  },
+  {
+    "trackName": "Tokyo Expressway - East Clockwise",
+    "profileKey": "Asia-Oceania | Tokyo Expressway"
+  },
+  {
+    "trackName": "Tokyo Expressway - East Counterclockwise",
+    "profileKey": "Asia-Oceania | Tokyo Expressway"
+  },
+  {
+    "trackName": "Tokyo Expressway - South Clockwise",
+    "profileKey": "Asia-Oceania | Tokyo Expressway | South Routes"
+  },
+  {
+    "trackName": "Tokyo Expressway - South Counterclockwise",
+    "profileKey": "Asia-Oceania | Tokyo Expressway | South Routes"
+  },
+  {
+    "trackName": "Trial Mountain Circuit",
+    "profileKey": "Americas | Trial Mountain Circuit"
+  },
+  {
+    "trackName": "Trial Mountain Circuit Reverse",
+    "profileKey": "Americas | Trial Mountain Circuit"
+  },
+  {
+    "trackName": "Tsukuba Circuit",
+    "profileKey": "Asia-Oceania | Tsukuba Circuit"
+  },
+  {
+    "trackName": "Watkins Glen Long Course",
+    "profileKey": "Americas | Watkins Glen International (All Layouts)"
+  },
+  {
+    "trackName": "Watkins Glen Short Course",
+    "profileKey": "Americas | Watkins Glen International (All Layouts)"
+  },
+  {
+    "trackName": "WeatherTech Raceway Laguna Seca",
+    "profileKey": "Americas | WeatherTech Raceway Laguna Seca"
+  },
+  {
+    "trackName": "Willow Springs International Raceway: Big Willow",
+    "profileKey": "Americas | Willow Springs International Raceway"
+  },
+  {
+    "trackName": "Willow Springs International Raceway: Horse Thief Mile",
+    "profileKey": "Americas | Willow Springs International Raceway | Horse Thief Mile"
+  },
+  {
+    "trackName": "Willow Springs International Raceway: Horse Thief Mile Reverse",
+    "profileKey": "Americas | Willow Springs International Raceway | Horse Thief Mile"
+  },
+  {
+    "trackName": "Willow Springs International Raceway: Streets of Willow Springs",
+    "profileKey": "Americas | Willow Springs International Raceway"
+  },
+  {
+    "trackName": "Willow Springs International Raceway: Streets of Willow Springs Reverse",
+    "profileKey": "Americas | Willow Springs International Raceway"
+  },
+  {
+    "trackName": "Yas Marina Circuit",
+    "profileKey": "Europe-Middle East | Yas Marina Circuit"
+  }
+]

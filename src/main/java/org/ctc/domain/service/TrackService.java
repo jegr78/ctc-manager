@@ -54,7 +54,7 @@ public class TrackService {
 			var environment = org.ctc.domain.model.TrackEnvironmentValues.fromText(timeOfDayText, rain);
             track = new Track(name, country);
             track.setTimeOfDayOptions(environment.timeOfDayOptions()); track.setRainCapability(environment.rainCapability().name());
-            if (!environment.timeOfDayOptions().isEmpty() || rain != org.ctc.domain.model.TrackRainCapability.UNKNOWN) track.setEnvironmentVersion(1);
+            if (!environment.timeOfDayOptions().isEmpty() || rain != org.ctc.domain.model.TrackRainCapability.UNKNOWN) { track.setEnvironmentVersion(1); track.setEnvironmentOverride(true); }
 		}
 		try {
 			track = trackRepository.saveAndFlush(track);
