@@ -12,7 +12,7 @@ operation=$3
 shift 3
 case "$operation" in
   doctor|status|up|stop|publish-site) [ "$#" -eq 0 ] || fail 'unexpected operation arguments' ;;
-  backup|restore-check|restore|resume-integrations|update-check|update|maintenance|prune|backup-check) ;;
+  deploy|backup|maintenance|restore|resume-integrations) ;;
   *) fail 'unknown operation' ;;
 esac
 python3 "$DEPLOY_ROOT/lib/config.py" validate "$installation"
@@ -20,6 +20,7 @@ installation=$(cd "$installation" && pwd -P)
 cd "$installation"
 docker_host=$(config_value dockerHost)
 verify_daemon
+# phpMyAdmin holds the lock for up to a minute while it starts.
 case "$operation" in
   doctor)
     printf '%s\n' 'CTC configuration valid; rootless daemon and memory limits available'
@@ -27,52 +28,32 @@ case "$operation" in
     ;;
   status) compose ps --format json ;;
   publish-site)
-    acquire_lock
+    acquire_lock "${CTC_SHORT_LOCK_WAIT_SECONDS:-90}"
     trap release_lock EXIT
     python3 "$DEPLOY_ROOT/lib/publication.py" --directory "$installation" --deploy-root "$DEPLOY_ROOT"
     ;;
   up|stop)
-    acquire_lock
+    acquire_lock "${CTC_SHORT_LOCK_WAIT_SECONDS:-90}"
     trap release_lock EXIT
-    write_journal started
     if [ "$operation" = up ]; then
       check_port
       compose up -d --wait --wait-timeout 180
     else
       compose stop app
     fi
-    write_journal completed
     ;;
-  backup|restore-check|restore|resume-integrations|update-check|update|maintenance|prune|backup-check)
-    if [[ "$operation" == maintenance || "$operation" == prune || "$operation" == backup-check ]]; then
-      # shellcheck source=lib/maintenance.sh
-      source "$DEPLOY_ROOT/lib/maintenance.sh"
-      runner=run_maintenance
-    elif [[ "$operation" == update* ]]; then
-      # shellcheck source=lib/update.sh
-      source "$DEPLOY_ROOT/lib/update.sh"
-      runner=run_update
-    else
-      # shellcheck source=lib/recovery.sh
-      source "$DEPLOY_ROOT/lib/recovery.sh"
-      runner=run_recovery
-    fi
-    acquire_lock
+  resume-integrations)
+    acquire_lock "${CTC_SHORT_LOCK_WAIT_SECONDS:-90}"
     trap release_lock EXIT
-    trap 'write_journal interrupted; trap - EXIT; exit 143' TERM
-    trap 'write_journal interrupted; trap - EXIT; exit 130' INT
-    write_journal started
-    if "$runner" "$@"; then
-      write_journal completed
-    else
-      result=$?
-      if [ "$result" -ge 128 ]; then
-        write_journal interrupted
-        trap - EXIT
-      else
-        write_journal failed
-      fi
-      exit "$result"
-    fi
+    python3 "$DEPLOY_ROOT/lib/recovery.py" --directory "$installation" --deploy-root "$DEPLOY_ROOT" "$operation" "$@"
+    ;;
+  deploy|backup|maintenance|restore)
+    [ "$operation" = maintenance ] && operation=backup
+    acquire_lock "${CTC_LOCK_WAIT_SECONDS:-960}"
+    trap release_lock EXIT
+    # The Python child handles interrupts and rolls back; the launcher keeps the lock until it exits.
+    trap '' HUP
+    trap ':' TERM INT
+    python3 "$DEPLOY_ROOT/lib/rollout.py" --directory "$installation" --deploy-root "$DEPLOY_ROOT" "$operation" "$@"
     ;;
 esac

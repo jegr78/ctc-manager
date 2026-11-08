@@ -191,7 +191,7 @@ def validate_unit(path):
 
 
 def installed_release(path):
-    from release import SUPPORTED_INVENTORIES, canonical_database_image, digest, version
+    from release import CORE_FILES, canonical_database_image, digest, version
     root = Path(path).resolve()
     manifest = read_json(root / 'manifest.json')
     if set(manifest) != {'format', 'version', 'appImage', 'databaseImage', 'files'} or manifest['format'] != 1:
@@ -209,7 +209,7 @@ def installed_release(path):
                 raise ValueError('installed release symlink')
         if not artifact.is_file() or sha256(artifact) != checksum:
             raise ValueError('installed release checksum mismatch: ' + name)
-    if set(manifest['files']) not in SUPPORTED_INVENTORIES:
+    if not set(CORE_FILES) <= set(manifest['files']):
         raise ValueError('unsupported installed release inventory')
     for field, repository in [('appImage', 'ghcr.io/jegr78/ctc-manager'), ('databaseImage', 'mariadb')]:
         value = manifest[field]
@@ -488,8 +488,6 @@ def restore_check(runtime, unit):
     return Probe(runtime, unit, manifest, app['Id'], database['Id']).run()
 
 
-from live import recovery_target, restore
-
 
 def resume_integrations(runtime, confirmation):
     from config import atomic_json
@@ -506,45 +504,15 @@ def resume_integrations(runtime, confirmation):
 
 def main():
     import argparse
-    import sys
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument('--directory', required=True)
     parser.add_argument('--deploy-root', required=True)
     commands = parser.add_subparsers(dest='operation', required=True)
-    backup = commands.add_parser('backup', allow_abbrev=False)
-    backup.add_argument('--destination', required=True)
-    check = commands.add_parser('restore-check', allow_abbrev=False)
-    check.add_argument('--recovery', required=True)
-    recover = commands.add_parser('restore', allow_abbrev=False)
-    recover.add_argument('--recovery', required=True)
-    recover.add_argument('--confirm', required=True)
     resume = commands.add_parser('resume-integrations', allow_abbrev=False)
     resume.add_argument('--confirm', required=True)
     arguments = parser.parse_args()
-    deploy_root = arguments.deploy_root
-    if arguments.operation in ['restore-check', 'restore']:
-        validate_unit(arguments.recovery)
-        installed_release(private_path(Path(deploy_root).resolve(), directory=True))
-        deploy_root = select_recovery_release(arguments.directory,
-                                              read_json(Path(arguments.recovery) / 'release.json'))
-    runtime = NativeRuntime(arguments.directory, deploy_root,
-                            require_selected=arguments.operation in ['backup', 'resume-integrations'])
-    state = runtime.root / 'state'
-    state.mkdir(mode=0o700, exist_ok=True)
-    private_path(state, directory=True)
-    diagnostics = state / ('recovery-operation-' + uuid.uuid4().hex + '.log')
-    diagnostics.touch(mode=0o600)
-    runtime.diagnostic = diagnostics
-    if arguments.operation == 'backup':
-        completed = capture(runtime, arguments.destination)
-        result = {'status': 'completed', 'unit': str(completed), 'manifestSha256': sha256(completed / 'manifest.json')}
-    elif arguments.operation == 'restore-check':
-        result = restore_check(runtime, arguments.recovery)
-    elif arguments.operation == 'restore':
-        result = restore(runtime, arguments.recovery, arguments.confirm)
-    else:
-        result = resume_integrations(runtime, arguments.confirm)
-    print(json.dumps(result))
+    runtime = NativeRuntime(arguments.directory, arguments.deploy_root, require_selected=True)
+    print(json.dumps(resume_integrations(runtime, arguments.confirm)))
 
 
 if __name__ == '__main__':

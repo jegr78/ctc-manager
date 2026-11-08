@@ -37,8 +37,8 @@ class MaintenanceTest(unittest.TestCase):
     def timestamp(self, value):
         return dt.datetime.strptime(value, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=dt.timezone.utc).timestamp()
 
-    def unit(self, date='2026-11-30T03:00:00Z'):
-        path = self.units / ('recovery-' + uuid.uuid4().hex)
+    def unit(self, date='2026-11-30T03:00:00Z', prefix='recovery-'):
+        path = self.units / (prefix + uuid.uuid4().hex)
         shutil.copytree(self.fixture.unit, path)
         manifest = json.loads((path / 'manifest.json').read_text())
         manifest.update(id=str(uuid.uuid4()), createdAt=date)
@@ -122,30 +122,24 @@ class MaintenanceTest(unittest.TestCase):
         self.assertEqual('capture-failed', state['lastAttempt']['stage'])
         self.assertNotIn('fixture-private-secret', json.dumps(state) + str(caught.exception))
 
-    def test_pending_update_recovery_survives_retention(self):
-        protected = self.unit('2026-09-01T03:00:00Z')
-        older = self.unit('2026-09-02T03:00:00Z')
+    def test_retention_keeps_three_newest_update_units(self):
+        updates = [self.unit('2026-11-2%dT12:00:00Z' % day, prefix='recovery-update-') for day in range(1, 6)]
         newest = self.unit()
-        self.unit('2026-11-29T03:00:00Z')
-        inflight = self.unit('2026-08-01T03:00:00Z')
-        state = self.state(newest)
-        atomic_json(self.root / 'state/protected-recovery.json',
-                    {'unit': str(protected), 'manifestSha256': sha256(protected / 'manifest.json'), 'previousUnits': [str(older)]})
-        atomic_json(self.root / 'state/update.json', {'stage': 'failed-recovery-required', 'recoveryUnit': str(inflight)})
-        self.assertEqual([], maintenance.retention_plan(self.runtime, self.units, state, self.now))
-        atomic_json(self.root / 'state/update.json', {'stage': 'completed'})
-        self.assertEqual({protected, older, inflight}, set(maintenance.retention_plan(self.runtime, self.units, state, self.now)))
+        yesterday = self.unit('2026-11-29T03:00:00Z')
+        monthly = self.unit('2026-11-01T03:00:00Z')
+        plan = maintenance.retention_plan(self.runtime, self.units, self.state(newest), self.now)
+        self.assertEqual(set(updates[:2]), set(plan), 'the three newest update units stay, older ones go')
+        self.assertTrue({newest, yesterday, monthly}.isdisjoint(plan))
 
-    def test_preupdate_unit_waits_for_verified_backup_of_active_image(self):
-        protected = self.unit('2026-09-01T03:00:00Z')
+    def test_update_units_do_not_count_toward_daily_keeps(self):
+        self.unit('2026-11-01T03:00:00Z')
+        older = self.unit('2026-11-28T03:00:00Z')
+        yesterday = self.unit('2026-11-29T03:00:00Z')
+        update = self.unit('2026-11-29T23:00:00Z', prefix='recovery-update-')
         newest = self.unit()
-        state = self.state(newest)
-        self.unit('2026-11-29T03:00:00Z')
-        state['local']['appImage'] = 'old-image'
-        atomic_json(self.root / 'state/protected-recovery.json',
-                    {'unit': str(protected), 'manifestSha256': sha256(protected / 'manifest.json'), 'previousUnits': []})
-        atomic_json(self.root / 'state/update.json', {'stage': 'completed'})
-        self.assertNotIn(protected, maintenance.retention_plan(self.runtime, self.units, state, self.now))
+        plan = maintenance.retention_plan(self.runtime, self.units, self.state(newest), self.now)
+        self.assertEqual([older], plan, 'an update unit must not take the place of a daily stand')
+        self.assertTrue(update.exists() and yesterday.exists())
 
     def test_failed_run_unknown_corrupt_or_foreign_unit_prevents_deletion(self):
         unit = self.unit()
@@ -167,13 +161,6 @@ class MaintenanceTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'installation'):
             maintenance.retention_plan(self.runtime, self.units, state, self.now)
 
-    def test_changed_protected_reference_refuses(self):
-        unit = self.unit()
-        state = self.state(unit)
-        atomic_json(self.root / 'state/protected-recovery.json', {'unit': str(unit), 'manifestSha256': '0' * 64})
-        with self.assertRaisesRegex(ValueError, 'protected'):
-            maintenance.retention_plan(self.runtime, self.units, state, self.now)
-
     def test_dry_run_then_prune_removes_only_planned_units(self):
         old = self.unit('2026-10-01T03:00:00Z')
         newest = self.unit()
@@ -184,18 +171,6 @@ class MaintenanceTest(unittest.TestCase):
         self.assertEqual([old], maintenance.prune(self.runtime, self.units, now=self.now))
         self.assertFalse(old.exists())
         self.assertTrue(newest.exists())
-
-    def test_pruned_update_receipt_does_not_break_the_next_backup(self):
-        old = self.unit('2026-09-01T03:00:00Z')
-        newest = self.unit()
-        self.unit('2026-11-29T03:00:00Z')
-        self.state(newest)
-        atomic_json(self.root / 'state/protected-recovery.json',
-                    {'unit': str(old), 'manifestSha256': sha256(old / 'manifest.json')})
-        atomic_json(self.root / 'state/update.json', {'stage': 'completed'})
-        maintenance.prune(self.runtime, self.units, now=self.now)
-        self.assertFalse((self.root / 'state/protected-recovery.json').exists())
-        self.assertEqual([], maintenance.prune(self.runtime, self.units, now=self.now))
 
     def test_missing_latest_verified_unit_prevents_pruning(self):
         old = self.unit('2026-09-01T03:00:00Z')
@@ -295,23 +270,6 @@ class MaintenanceTest(unittest.TestCase):
                 maintenance.prune(self.runtime, self.units, now=self.now)
         self.assertTrue(old.exists())
 
-    def test_mutating_cli_requires_the_launcher_parent_lock(self):
-        lock = self.root / '.ctc-manager.lock'
-        lock.mkdir(mode=0o700)
-        owner = lock / 'owner'
-        owner.write_text(str(os.getppid() + 1))
-        owner.chmod(0o600)
-        argv = ['maintenance.py', '--directory', str(self.root), 'maintenance']
-        with patch.object(sys, 'argv', argv), patch.object(maintenance, 'NativeRuntime', return_value=self.runtime),                 patch.object(maintenance, 'UNIT_ROOT', self.units), patch.object(maintenance, 'run_backup') as run:
-            run.return_value = {'lastAttempt': {'stage': 'completed'}, 'local': {'unit': '/fixture'}}
-            with self.assertRaisesRegex(ValueError, 'launcher-owned'):
-                maintenance.main()
-            run.assert_not_called()
-            owner.write_text(str(os.getppid()))
-            run.return_value = {'lastAttempt': {'stage': 'completed'}, 'local': {'unit': '/fixture'}}
-            maintenance.main()
-            run.assert_called_once_with(self.runtime, self.units)
-
     def test_future_unit_or_mismatched_capture_identity_refuses(self):
         future = self.unit('2026-12-01T03:00:00Z')
         with self.assertRaisesRegex(ValueError, 'future'):
@@ -327,24 +285,6 @@ class MaintenanceTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'capture-failed'):
             maintenance.run_backup(self.runtime, self.units, capture_unit=lambda *a: unit, now=self.now)
 
-    def test_cli_rejects_ignored_flags_and_missing_mount_before_creating_units(self):
-        with patch.object(sys, 'argv', ['maintenance.py', '--directory', str(self.root), 'maintenance', '--dry-run']), \
-                patch.object(maintenance, 'NativeRuntime', side_effect=AssertionError('invalid flags must fail before runtime')):
-            with self.assertRaises(SystemExit) as caught:
-                maintenance.main()
-            self.assertEqual(2, caught.exception.code)
-        lock = self.root / '.ctc-manager.lock'
-        lock.mkdir(mode=0o700)
-        (lock / 'owner').write_text(str(os.getppid()))
-        (lock / 'owner').chmod(0o600)
-        destination = self.root / 'absent/units'
-        destination.parent.mkdir(mode=0o700)
-        self.runtime.check_destination = lambda path: (_ for _ in ()).throw(ValueError('missing device'))
-        with patch.object(sys, 'argv', ['maintenance.py', '--directory', str(self.root), 'maintenance']),                 patch.object(maintenance, 'NativeRuntime', return_value=self.runtime),                 patch.object(maintenance, 'UNIT_ROOT', destination):
-            with self.assertRaises(ValueError):
-                maintenance.main()
-        self.assertFalse(destination.exists())
-
     def test_doctor_rejects_missing_verified_unit_even_with_fresh_timestamps(self):
         unit = self.unit()
         self.state(unit)
@@ -359,6 +299,8 @@ class MaintenanceTest(unittest.TestCase):
         self.assertIn('UMask=0077', service)
         self.assertFalse((ROOT / 'deploy/systemd/ctc-manager-backup-alert@.service').exists())
         self.assertFalse((ROOT / 'deploy/systemd/ctc-manager-backup-check.timer').exists())
+        self.assertIn('--directory /srv/ctc-manager backup', service)
+        self.assertIn('After=ctc-manager-site-publisher.service', service)
         timer = (ROOT / 'deploy/systemd/ctc-manager-backup.timer').read_text()
         self.assertIn('03:45:00 Europe/Berlin', timer)
         self.assertIn('Persistent=true', timer)

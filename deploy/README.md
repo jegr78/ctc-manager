@@ -23,17 +23,20 @@ account JSON as `secrets/google.json` without exposing it in logs or a public di
 Run commands as the installation owner:
 
 ```sh
-/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager doctor
-/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager up
-/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager status
-/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager stop
+~/.local/bin/ctc-manager doctor
+~/.local/bin/ctc-manager up
+~/.local/bin/ctc-manager status
+~/.local/bin/ctc-manager stop
 ```
+
+The home launcher runs `/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager`. `deploy`
+installs it.
 
 `doctor` validates private files, digest pins, the configured daemon's rootless status and
 memory-limit support. `up` starts the stack with bounded readiness waits. `stop` stops only the
-app, retaining the database and volumes. Mutations use an installation lock and record their
-stage under `state/operation.json`. An abandoned lock refuses further changes until the operator
-checks its owner, journal and runtime. Never delete a lock based only on a PID that could have
+app, retaining the database and volumes. Mutations share one installation lock; `up`, `stop`,
+`resume-integrations` and `publish-site` wait up to 90 seconds for it. An abandoned
+lock refuses further changes until the operator checks its owner and runtime. Never delete a lock based only on a PID that could have
 been reused. A failure after starting services is visible and does not reset data.
 
 Initial limits are 2 GiB for the app and 1 GiB for MariaDB. The Java heap uses at most 50 percent
@@ -55,8 +58,7 @@ python3 scripts/ci/deployment-bundle.py verify ctc-manager-deployment-<version>.
 
 The inventory proves integrity, not publisher authenticity. Obtain archives only from the
 expected GitHub release and compare its exact version/image identity. Do not execute a launcher
-copied from an untrusted backup. Full backup/update/recovery and Mac migration are separate
-parent-issue deliverables. Publishing scripts is not evidence of a completed migration.
+copied from an untrusted backup.
 
 `database-image` records the tested MariaDB version tag and digest for Renovate. Release
 archives retain the immutable canonical image identity. Change it deliberately
@@ -65,37 +67,24 @@ ones; they refuse to overwrite completed assets with different bytes.
 
 ## complete recovery
 
-[guides/recovery.md](guides/recovery.md) documents complete recovery units, isolated restore
-checks, independent live-recovery storage and explicit integration resumption. Capture preserves
-the app's prior state and seals database/files/configuration/secret artifacts together. Probe runs
-have no host port or external network. The `recovery-check` profile forces outbound integration
-suspension and retains production Basic authentication. Optional `storageGeneration` selects
-separate named volumes; `outboundPaused` must be a JSON boolean.
+[guides/recovery.md](guides/recovery.md) documents recovery units, in-place `restore --unit` and
+explicit integration resumption. Capture preserves the app's prior state and seals
+database/files/configuration/secret artifacts together. The nightly proof runs without host port or
+external network. The `recovery-check` profile forces outbound integration suspension and retains
+production Basic authentication. `storageGeneration` is the permanent volume prefix;
+`outboundPaused` must be a JSON boolean.
 
-Recovery receipts and diagnostics live under private installation state, outside sealed units.
-Automatic full checks reject historical images without the supported recovery policy. These
-commands do not establish that the separate Mac cutover has completed.
+## deploy
 
-## checked updates
-
-[guides/updates.md](guides/updates.md) describes `update-check --release VERSION` and
-`update --release VERSION`. Both commands select exact published deployment material under the
-installation lock. An update preserves the selected volumes and keeps the app stopped from final
-capture through restore proof and activation. A candidate that may have changed the schema never
-triggers an old-image-only rollback. Private `state/update.json` and `state/protected-recovery.json`
-record the recovery path and retain the pre-update unit.
+[guides/updates.md](guides/updates.md) describes `deploy [VERSION|latest]`. It writes an update unit,
+starts the release with integrations paused and rolls back by itself on failure. Only the operator
+starts it.
 
 ## scheduled backups
 
-The [backup runbook](guides/backups.md) covers local `maintenance`, manual `doctor` and
-`prune --dry-run`. Keep two daily stands and one monthly stand. One user timer starts the backup;
+The [backup runbook](guides/backups.md) covers `backup`, `doctor` and retention. Keep two daily
+stands, one monthly stand and the three newest update units. One user timer starts the backup;
 errors remain in its local journal. No replication, alert hook or external service is required.
-
-## Native Mac cutover
-
-Use [migration.md](guides/migration.md) for source export, isolated rehearsal and the initial real-data cutover.
-`migrate-from-mac.sh` reuses the installation lock and complete recovery tools. It records the point
-before target HTTP exposure after which recovery must preserve new target writes. It adds no service.
 
 ## Public website snapshots
 

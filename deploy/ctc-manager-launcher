@@ -1,0 +1,5 @@
+#!/bin/sh
+for argument in "$@"; do
+    case "$argument" in --d|--di|--dir*) echo "ctc-manager: --directory is fixed to /srv/ctc-manager" >&2; exit 2;; esac
+done
+exec /srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager "$@"

@@ -18,7 +18,12 @@ compose() {
 }
 acquire_lock() {
   lock_directory="$installation/.ctc-manager.lock"
-  mkdir "$lock_directory" 2>/dev/null || fail 'installation lock exists; reconcile its owner and journal before retrying'
+  local waited=0
+  until mkdir "$lock_directory" 2>/dev/null; do
+    [ "$waited" -lt "${1:-0}" ] || fail 'installation lock is held by another operation'
+    sleep 1
+    waited=$((waited + 1))
+  done
   printf '%s\n' "$$" > "$lock_directory/owner"
   python3 -c 'import json,os,sys,time; json.dump({"pid":os.getpid(),"launcherPid":int(sys.argv[2]),"startedAt":time.time(),"operation":sys.argv[3]},open(sys.argv[1],"w"))' "$lock_directory/metadata.json" "$$" "$operation"
 }
@@ -27,9 +32,6 @@ release_lock() {
     rm -f "$lock_directory/owner" "$lock_directory/metadata.json"
     rmdir "$lock_directory"
   fi
-}
-write_journal() {
-  python3 "$DEPLOY_ROOT/lib/config.py" journal "$installation" "$operation" "$1"
 }
 check_port() {
   local running

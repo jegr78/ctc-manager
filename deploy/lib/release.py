@@ -7,22 +7,17 @@ import tarfile
 
 CORE_FILES = ['ctc-manager', 'compose.yaml', 'config.example', 'lib/common.sh', 'lib/config.py',
          'README.md', 'database-image', 'release-manifest.schema.json']
-HOST_FILES = CORE_FILES + ['setup-host.sh', 'lib/host.py', 'systemd/docker-rootless.service', 'guides/host.md']
-RECOVERY_FILES = HOST_FILES + ['lib/runtime.py', 'lib/release.py', 'lib/recovery.py', 'lib/recovery.sh',
-                      'lib/probe.py', 'lib/live.py', 'recovery-manifest.schema.json', 'guides/recovery.md']
-UPDATE_FILES = RECOVERY_FILES + ['lib/update.py', 'lib/update.sh', 'upgrade.json', 'guides/updates.md']
-LEGACY_MAINTENANCE_FILES = UPDATE_FILES + ['lib/maintenance.py', 'lib/maintenance.sh', 'guides/backups.md',
-                        'systemd/ctc-manager-backup.service', 'systemd/ctc-manager-backup.timer',
-                        'systemd/ctc-manager-backup-check.service', 'systemd/ctc-manager-backup-check.timer',
-                        'systemd/ctc-manager-backup-alert@.service']
-LOCAL_BACKUP_FILES = UPDATE_FILES + ['lib/maintenance.py', 'lib/maintenance.sh', 'guides/backups.md',
-                        'systemd/ctc-manager-backup.service', 'systemd/ctc-manager-backup.timer']
-MIGRATION_FILES = LOCAL_BACKUP_FILES + ['migrate-from-mac.sh', 'lib/migration.py', 'guides/migration.md']
-FILES = MIGRATION_FILES + ['lib/publication.py', 'guides/pages.md', 'systemd/ctc-manager-site-publisher.service',
-                           'systemd/ctc-manager-site-publisher.timer']
-SUPPORTED_INVENTORIES = [set(CORE_FILES), set(HOST_FILES), set(RECOVERY_FILES), set(UPDATE_FILES),
-                         set(LEGACY_MAINTENANCE_FILES), set(LOCAL_BACKUP_FILES), set(MIGRATION_FILES), set(FILES)]
-EXECUTABLES = {'ctc-manager', 'setup-host.sh', 'migrate-from-mac.sh'}
+FILES = CORE_FILES + [
+    'ctc-manager-launcher', 'setup-host.sh', 'lib/host.py', 'systemd/docker-rootless.service', 'guides/host.md',
+    'lib/runtime.py', 'lib/release.py', 'lib/recovery.py', 'lib/probe.py', 'lib/rollout.py', 'lib/maintenance.py',
+    'lib/publication.py', 'recovery-manifest.schema.json', 'upgrade.json',
+    'guides/recovery.md', 'guides/updates.md', 'guides/backups.md', 'guides/pages.md',
+    'systemd/ctc-manager-backup.service', 'systemd/ctc-manager-backup.timer',
+    'systemd/ctc-manager-site-publisher.service', 'systemd/ctc-manager-site-publisher.timer',
+    'phpmyadmin/service.py', 'phpmyadmin/start.sh', 'phpmyadmin/config.user.inc.php',
+    'phpmyadmin/ctc-manager-phpmyadmin.service',
+]
+EXECUTABLES = {'ctc-manager', 'ctc-manager-launcher', 'setup-host.sh', 'phpmyadmin/start.sh'}
 MAX_MEMBER = 4 * 1024 * 1024
 MAX_ARCHIVE = 32 * 1024 * 1024
 
@@ -62,15 +57,17 @@ def verify(path):
                 raise ValueError('mixed archive releases')
             prefix = name.parts[0]
             relative = str(PurePosixPath(*name.parts[1:]))
-            if relative in values or relative not in set().union(*SUPPORTED_INVENTORIES) | {'manifest.json'}:
+            if relative in values or relative.startswith('.'):
                 raise ValueError('unexpected or duplicate archive entry')
             total += member.size
             if total > MAX_ARCHIVE:
                 raise ValueError('archive too large')
             values[relative] = archive.extractfile(member).read(MAX_MEMBER + 1)
-    if 'manifest.json' not in values or set(values) - {'manifest.json'} not in SUPPORTED_INVENTORIES:
+    if 'manifest.json' not in values:
         raise ValueError('incomplete archive inventory')
     manifest = json.loads(values.pop('manifest.json'))
+    if not isinstance(manifest.get('files'), dict) or set(manifest['files']) != set(values) or not set(CORE_FILES) <= set(values):
+        raise ValueError('incomplete archive inventory')
     if set(manifest) != {'format', 'version', 'appImage', 'databaseImage', 'files'}:
         raise ValueError('unexpected manifest fields')
     if manifest.get('format') != 1 or prefix != 'ctc-manager-deployment-' + version(manifest.get('version', '')):
