@@ -24,6 +24,7 @@ public class PickSubmissionService {
     private final PickCollectionStatus collection;
     private final PickWriteExecutor writes;
     private final Clock clock;
+    private final TrackEnvironmentService environments;
 
     public SubmissionReceipt submit(UUID raceId, long expectedVersion, UUID requestId, AuthorizedPickActor actor, PickPayload payload) {
         return writes.execute(() -> {
@@ -42,6 +43,7 @@ public class PickSubmissionService {
                     : new MatchdayPick(target.race(), target.season(), target.race().getHomeTeam());
             pick.requireVersion(expectedVersion);
             eligibility.validate(target.race(), payload);
+            environments.requireTimeOfDay(payload.trackId(), payload.timeOfDay());
             var acceptedAt = clock.instant();
             var decision = deadlines.assessAt(new PickDeadlinePolicy.Context(pick.getState(),
                     target.season().isPicksCollectionEnabled(), collection.isAvailable(),

@@ -12,6 +12,23 @@ import org.junit.jupiter.params.provider.CsvSource;
 import static org.assertj.core.api.Assertions.*;
 
 class PickInteractionViewsTest {
+    @Test
+    void givenLayoutOptions_whenOpeningTime_thenUseOrderedRequiredSelectWithOnlyValidSavedDefault() {
+        var defaults = Map.of("daytime", List.of("Night"));
+        var modal = PickInteractionViews.modal("test", "time", LobbyRulesProfile.CTC_2027, false, defaults, List.of("Sunrise", "Night"));
+        var field = (PickGatewayModal.Selection) modal.fields().stream().filter(f -> f.id().equals("daytime")).findFirst().orElseThrow();
+        assertThat(field.options()).extracting(PickGatewayModal.Option::value).containsExactly("Sunrise", "Night");
+        assertThat(field.options().stream().filter(PickGatewayModal.Option::defaultSelected).map(PickGatewayModal.Option::value)).containsExactly("Night");
+        assertThat(field.minValues()).isEqualTo(1); assertThat(field.maxValues()).isEqualTo(1);
+        assertThat(modal.fields()).hasSize(5);
+        var other = PickInteractionViews.modal("test", "time", LobbyRulesProfile.CTC_2027, false, defaults, List.of("Afternoon"));
+        var changed = (PickGatewayModal.Selection) other.fields().stream().filter(f -> f.id().equals("daytime")).findFirst().orElseThrow();
+        assertThat(changed.options()).noneMatch(PickGatewayModal.Option::defaultSelected);
+        var unknown = PickInteractionViews.modal("test", "time", LobbyRulesProfile.CTC_2027, false, defaults, List.of());
+        var manual = (PickGatewayModal.Text) unknown.fields().stream().filter(f -> f.id().equals("daytime")).findFirst().orElseThrow();
+        assertThat(manual.value()).isEqualTo("Night"); assertThat(manual.label()).contains("unverified");
+    }
+
     @ParameterizedTest
     @CsvSource({"wear,7,x", "consumption,6,x", "refuel,10,' L/s'"})
     void givenNewRules_whenOpening_thenRequireOneChoiceFromEachCompleteNumericRange(String id, int max, String unit) {

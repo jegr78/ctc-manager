@@ -2330,6 +2330,7 @@ input:not([type='checkbox']):not([type='radio']):not([type='color']), select { b
 .entity-section-nav a { color: var(--text); text-decoration: none; padding: 10px 0; font-size: 14px; border-bottom: 2px solid transparent; }
 .entity-section-nav a:hover { border-color: var(--accent); }
 .entity-editor [id] { scroll-margin-top: 20px; }
+.entity-editor #track-environment { scroll-margin-top: 72px; }
 .entity-editor-form fieldset { min-width: 0; border: 0; padding: 0 0 24px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
 .entity-editor-form legend { font-size: 18px; font-weight: 600; padding: 0 0 16px; }
 .entity-editor .field-error { color: #ffaaaa; font-size: 14px; margin-top: 8px; }

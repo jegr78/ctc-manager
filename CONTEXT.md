@@ -29,6 +29,14 @@ _Avoid_: Edited original finishing position
 One leg in which every participating driver uses the same concrete car and race setup.
 _Avoid_: Match
 
+**Track layout**:
+The concrete configuration of a circuit chosen for a race, with its own available times of day and rain capability.
+_Avoid_: All variants of a circuit, circuit family
+
+**Verified layout options**:
+The times of day and rain availability checked for one concrete track layout. Unverified options remain unknown until reviewed.
+_Avoid_: Inferred circuit defaults, unavailable weather
+
 **Matchday**:
 A round containing multiple team pairings, with one shared pick opening and an ordinary pick deadline.
 _Avoid_: Match, race

@@ -31,6 +31,7 @@ class PickSubmissionServiceTest {
     final PickEligibilityService eligibility = mock(PickEligibilityService.class);
     final PickCollectionStatus collection = mock(PickCollectionStatus.class);
     final PickWriteExecutor writes = mock(PickWriteExecutor.class);
+    final TrackEnvironmentService environments = mock(TrackEnvironmentService.class);
     final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
     final Race race = new Race();
     final Season season = new Season("Test_PickSubmission");
@@ -62,7 +63,7 @@ class PickSubmissionServiceTest {
         when(revisions.findByRequestId(request)).thenReturn(Optional.empty());
         when(picks.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(writes.execute(any())).thenAnswer(invocation -> ((Supplier<?>) invocation.getArgument(0)).get());
-        service = new PickSubmissionService(picks, revisions, targets, eligibility, new PickDeadlinePolicy(clock), collection, writes, clock);
+        service = new PickSubmissionService(picks, revisions, targets, eligibility, new PickDeadlinePolicy(clock), collection, writes, clock, environments);
     }
 
     @Test
@@ -78,6 +79,17 @@ class PickSubmissionServiceTest {
         assertThat(saved.getValue().getPick()).isSameAs(pick);
         assertThat(pick.getState()).isEqualTo(PickState.SUBMITTED);
         verify(eligibility).validate(race, payload);
+        verify(environments).requireTimeOfDay(payload.trackId(), payload.timeOfDay());
+    }
+
+    @Test
+    void givenChangedLayoutTimeOptions_whenConfirmingNewSubmission_thenRejectBeforeSavingARevision() {
+        doThrow(new BusinessRuleException("Choose a time of day from current options"))
+                .when(environments).requireTimeOfDay(any(), any());
+        assertThatThrownBy(() -> service.submit(race.getId(), 0, request, actor, payload()))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("current options");
+        verify(picks, never()).save(any()); verify(revisions, never()).save(any());
+        assertThat(pick.getVersion()).isZero();
     }
 
     @Test
@@ -92,7 +104,7 @@ class PickSubmissionServiceTest {
         assertThat(receipt).isEqualTo(original.receipt());
         assertThat(pick.getVersion()).isEqualTo(3);
         verify(revisions, never()).save(any());
-        verifyNoInteractions(eligibility);
+        verifyNoInteractions(eligibility, environments);
     }
 
     @Test
@@ -172,7 +184,7 @@ class PickSubmissionServiceTest {
         var advancing = mock(Clock.class);
         when(advancing.instant()).thenReturn(accepted, cutoff);
         var boundaryService = new PickSubmissionService(picks, revisions, targets, eligibility,
-                new PickDeadlinePolicy(advancing), collection, writes, advancing);
+                new PickDeadlinePolicy(advancing), collection, writes, advancing, environments);
         // when
         var receipt = boundaryService.submit(race.getId(), 0, request, actor, payload());
         // then
@@ -191,7 +203,7 @@ class PickSubmissionServiceTest {
         assertThatCode(() -> recovered.set(service.submit(race.getId(), 0, request, actor, null))).doesNotThrowAnyException();
         assertThat(recovered.get()).isEqualTo(original.receipt());
         verify(revisions, never()).save(any());
-        verifyNoInteractions(eligibility);
+        verifyNoInteractions(eligibility, environments);
     }
 
     static PickPayload payload() {

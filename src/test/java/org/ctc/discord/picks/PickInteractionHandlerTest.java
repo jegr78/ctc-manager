@@ -271,6 +271,26 @@ class PickInteractionHandlerTest {
         assertThat(response.allText()).contains("reload").doesNotContain("Saved revision");
     }
 
+    @Test
+    void givenKnownLayout_whenForgingTimeOutsideChoices_thenRetainTimeStepAndDoNotSave() {
+        view = new PickTeamView(target, null, null, null, null, view.deadline(), false, false, null, view.cars(),
+                List.of(new PickTeamView.Choice(track, null, "Test track", false, null, List.of("Night", "Sunrise"))));
+        enterCatalogs(); open("Open rules form"); submitModal(rules);
+        open("Open race strategy form"); submitModal(fuel);
+        open("Open mandatory form"); submitModal(fields("mandatory", "None")); open("Open time form");
+        submitModal(fields("progression", "0", "weather", "S01; R03", "daytime", "Afternoon"));
+        assertThat(response.last().content()).contains("Check all required values");
+        assertThat(response.last().buttons()).extracting(PickGatewayMessage.Button::label).containsExactly("Open time form");
+        verifyNoInteractions(submissions);
+        open("Open time form");
+        submitModal(fields("progression", "0", "weather", "S01; R03", "daytime", "Night"));
+        click("Confirm submission");
+        var payload = ArgumentCaptor.forClass(PickPayload.class);
+        verify(submissions).submit(eq(race), eq(0L), any(), eq(actor), payload.capture());
+        assertThat(payload.getValue().timeOfDay()).isEqualTo("Night");
+        assertThat(payload.getValue().weather()).isEqualTo("S01; R03");
+    }
+
     final PickAccessService access = mock(PickAccessService.class);
     final PickTargetService targets = mock(PickTargetService.class);
     final PickTeamReadService reads = mock(PickTeamReadService.class);

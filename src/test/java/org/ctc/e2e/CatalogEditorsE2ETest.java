@@ -66,7 +66,7 @@ class CatalogEditorsE2ETest extends PlaywrightConfig {
         page.locator("[data-list-entry]:visible").first().locator("a.detail-link").click();
         var editorUrl = page.url();
         assertThat(page.locator("label[for='" + (catalog.equals("cars") ? "carImage" : "trackImage") + "']")).hasText("Image file");
-        page.locator(".entity-editor-form").evaluate("form => form.noValidate = true");
+        page.locator(".entity-editor-form:has(#name)").evaluate("form => form.noValidate = true");
         page.locator("#name").fill("");
         page.locator(".entity-editor-actions button").click();
         assertThat(page.locator("#name-error")).isVisible();

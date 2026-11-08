@@ -81,6 +81,11 @@ final class PickInteractionViews {
 
     static PickGatewayModal modal(String id, String stage, LobbyRulesProfile profile, boolean oneMake,
                                   Map<String, List<String>> defaults) {
+        return modal(id, stage, profile, oneMake, defaults, List.of());
+    }
+
+    static PickGatewayModal modal(String id, String stage, LobbyRulesProfile profile, boolean oneMake,
+                                  Map<String, List<String>> defaults, List<String> timeOfDayOptions) {
         var family = family(profile, oneMake, defaults);
         List<PickGatewayModal.Field> fields = switch (stage) {
             case "rules" -> {
@@ -111,7 +116,8 @@ final class PickInteractionViews {
                 for (int i = 0; i <= 6; i++) progression.add(new PickGatewayModal.Option(i + "x", Integer.toString(i)));
                 var result = new ArrayList<PickGatewayModal.Field>(List.of(select(defaults, "progression", "Time progression", progression, 1),
                         new PickGatewayModal.Text("weather", "Weather, keep slot order", true, defaultText(defaults, "weather"), 1, 255, true),
-                        text(defaults, "daytime", "Time of day", 255)));
+                        timeOfDayOptions.isEmpty() ? text(defaults, "daytime", "Time of day (unverified; enter manually)", 255)
+                                : select(defaults, "daytime", "Time of day", timeOfDayOptions.stream().map(value -> new PickGatewayModal.Option(value, value)).toList(), 1)));
                 if (profile == LobbyRulesProfile.CTC_2027) {
                     result.add(select(defaults, "start", "Start type", profile.getStartTypes().stream()
                             .map(value -> new PickGatewayModal.Option(value.getLabel(), value.name())).toList(), 1));
