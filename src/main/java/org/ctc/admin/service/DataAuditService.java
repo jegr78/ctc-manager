@@ -389,7 +389,8 @@ public class DataAuditService {
             var phase=day.getPhase();
             if (phase.getFormat()!=org.ctc.domain.model.SeasonFormat.SWISS) continue;
             var members=roster.stream().filter(row -> phase.getId().equals(row.getPhase().getId()))
-                    .filter(row -> Objects.equals(day.getGroup()==null?null:day.getGroup().getId(),row.getGroup()==null?null:row.getGroup().getId())).toList();
+                    .filter(row -> phase.getLayout()!=org.ctc.domain.model.PhaseLayout.GROUPS
+                            || Objects.equals(day.getGroup()==null?null:day.getGroup().getId(),row.getGroup()==null?null:row.getGroup().getId())).toList();
             var places=org.ctc.domain.model.SwissRoundRoster.from(phase.getSeason(),members).places();
             var pairings=matches.stream().filter(match -> day.getId().equals(match.getMatchday().getId())).toList();
             var rows=new ArrayList<org.ctc.domain.model.SwissRoundRules.Row>();

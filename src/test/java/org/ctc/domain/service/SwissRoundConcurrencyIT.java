@@ -45,6 +45,14 @@ class SwissRoundConcurrencyIT extends SwissRoundFixture {
         var next=automatic.generateNextRound(phaseId,null);
         assertThat(next.getSortIndex()).isEqualTo(10); assertThat(next.getLabel()).isEqualTo("Round 2");
     }
+    @Test void givenExhaustedOrdering_whenAppendingManualOrAutomaticRound_thenRejectWithoutWrappingOrder() {
+        UUID day=firstRound();
+        tx.executeWithoutResult(status -> { em.find(Matchday.class,day).setSortIndex(Integer.MAX_VALUE); for(var match:matches.findByMatchdayId(day)) {match.setHomeScore(20); match.setAwayScore(10);} });
+        var form=rounds.editor(phaseId,null,null,null).form(); form.getRows().getFirst().setHomeTeamId(teamIds.get(0)); form.getRows().getFirst().setAwayTeamId(teamIds.get(2));
+        assertThatThrownBy(() -> rounds.save(form)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("order is exhausted");
+        assertThatThrownBy(() -> automatic.generateNextRound(phaseId,null)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("order is exhausted");
+        assertThat(days.findByPhaseIdOrderBySortIndexAsc(phaseId)).singleElement().satisfies(round -> assertThat(round.getSortIndex()).isEqualTo(Integer.MAX_VALUE));
+    }
     @Test void givenRestoreAdmissionHeld_whenSavingRound_thenRejectBeforeAnyWrite() {
         var form=rounds.editor(phaseId,null,null,null).form();
         assertThat(imports.tryLock()).isTrue();

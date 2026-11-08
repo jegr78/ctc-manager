@@ -52,16 +52,22 @@ public class ScoreWriteLockService {
     }
 
     public void lockPhase(UUID phaseId) {
-        var owners=entityManager.createQuery("select p.season.id from SeasonPhase p where p.id=:phase",UUID.class)
-                .setParameter("phase",phaseId).getResultList();
-        if (owners.isEmpty()) throw new EntityNotFoundException("SeasonPhase",phaseId);
-        UUID ownerId=owners.getFirst();
-        seasons.findByIdForUpdate(ownerId).orElseThrow(() -> new EntityNotFoundException("Season",ownerId));
-        var phase=entityManager.find(org.ctc.domain.model.SeasonPhase.class,phaseId);
-        if (phase!=null) entityManager.refresh(phase,LockModeType.PESSIMISTIC_WRITE);
-        if (phase==null || !ownerId.equals(phase.getSeason().getId()))
-            throw new BusinessRuleException("The phase context changed. Reload before saving.");
-        races.findBySeasonForSelectionUpdate(ownerId);
+        try {
+            String query="select p.season.id from SeasonPhase p where p.id=:phase";
+            var owners=entityManager.createQuery(query,UUID.class).setParameter("phase",phaseId).getResultList();
+            if (owners.isEmpty()) throw new EntityNotFoundException("SeasonPhase",phaseId);
+            UUID ownerId=owners.getFirst();
+            seasons.findByIdForUpdate(ownerId).orElseThrow(() -> new EntityNotFoundException("Season",ownerId));
+            // A scalar locking read checks current ownership without recursively refreshing the
+            // already refreshed phase graph, including newly persisted roster/group entities.
+            var current=entityManager.createQuery(query,UUID.class).setParameter("phase",phaseId)
+                    .setLockMode(LockModeType.PESSIMISTIC_WRITE).getResultList();
+            if (current.isEmpty() || !ownerId.equals(current.getFirst()))
+                throw new BusinessRuleException("The phase context changed. Reload before saving.");
+            races.findBySeasonForSelectionUpdate(ownerId);
+        } catch (RuntimeException failure) {
+            throw RaceSelectionConcurrency.translate(failure);
+        }
     }
 
     public void lockAllSeasons() {

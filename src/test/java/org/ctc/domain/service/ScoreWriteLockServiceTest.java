@@ -31,9 +31,10 @@ class ScoreWriteLockServiceTest {
         var other=new Season("Test other owner"); other.setId(UUID.randomUUID());
         var phase=new org.ctc.domain.model.SeasonPhase(); phase.setId(UUID.randomUUID()); phase.setSeason(other);
         when(entityManager.createQuery(anyString(),eq(UUID.class))).thenReturn(ids);
-        when(ids.setParameter(anyString(),any())).thenReturn(ids); when(ids.getResultList()).thenReturn(List.of(owner.getId()));
+        when(ids.setParameter(anyString(),any())).thenReturn(ids);
+        when(ids.setLockMode(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)).thenReturn(ids);
+        when(ids.getResultList()).thenReturn(List.of(owner.getId()),deleted?List.of():List.of(other.getId()));
         when(seasons.findByIdForUpdate(owner.getId())).thenReturn(Optional.of(owner));
-        when(entityManager.find(org.ctc.domain.model.SeasonPhase.class,phase.getId())).thenReturn(deleted?null:phase);
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> locks.lockPhase(phase.getId()))
                 .isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class).hasMessageContaining("changed");
         verifyNoInteractions(races);

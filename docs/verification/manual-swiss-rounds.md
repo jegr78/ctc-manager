@@ -26,3 +26,9 @@ Run focused helper checks with bounded heaps locally. Full exact-head inventory,
 - Correct source is committed before isolated negative probes. Their exact assertions, reviewed head/base, complete CI inventory and merge evidence are recorded in the PR. Focused runs alone do not certify completion.
 
 The external Challonge page remains unavailable to the investigation. Exact user-supplied historical pairings can be recorded, but no claim is made that the 2026 final table was independently compared with that source. No schema migration, automatic external import or deployment is included.
+
+## Full-suite corrections
+
+The first complete CI found two integration differences: MariaDB rejected an artifact writer's repeatable-read snapshot after a lock wait, and a transactional group-creation fixture exposed Hibernate's duplicate recursive phase refresh. Artifact writers now start READ_COMMITTED transactions while retaining existing locking/conflict rejection. Phase admission uses a current scalar locking ownership read, preserving pending roster/group entities. The previously failing group-controller cases and Swiss writes passed together: 52 unit and 28 H2 integration cases. The updated real MariaDB cases remain required in complete CI.
+
+A separate audit regression showed that LEAGUE membership must include the complete phase roster even if old group assignments remain. The narrowed test failed before the audit filter was aligned with the editor, then passed. The focused correction run passed 47 unit and 12 integration cases. Both manual and automatic append-order overflow are explicitly rejected without creating a round.

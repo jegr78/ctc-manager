@@ -68,8 +68,9 @@ class DataAuditServiceIT {
     @Test void givenSwissTeamUsedTwiceInRound_whenAuditing_thenReportRoundRuleWithoutChangingPairings() {
         var fixture=testHelper.createFullSeasonFixture("Test_Swiss_Audit_"+id);
         fixture.race().getMatchday().getPhase().setFormat(SeasonFormat.SWISS);
-        entityManager.persist(new PhaseTeam(fixture.matchday().getPhase(),fixture.homeTeam()));
-        entityManager.persist(new PhaseTeam(fixture.matchday().getPhase(),fixture.awayTeam()));
+        var retainedGroup=seasonPhaseGroupRepository.save(new SeasonPhaseGroup(fixture.matchday().getPhase(),"Test retained group",0));
+        var homePlace=new PhaseTeam(fixture.matchday().getPhase(),fixture.homeTeam()); homePlace.setGroup(retainedGroup); entityManager.persist(homePlace);
+        var awayPlace=new PhaseTeam(fixture.matchday().getPhase(),fixture.awayTeam()); awayPlace.setGroup(retainedGroup); entityManager.persist(awayPlace);
         var duplicate=new Match(fixture.matchday(),fixture.homeTeam(),fixture.awayTeam()); entityManager.persist(duplicate);
         entityManager.flush(); entityManager.clear();
         assertThat(dataAuditService.audit().findings(PAIRING)).anySatisfy(f -> {

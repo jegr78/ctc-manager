@@ -36,7 +36,7 @@ public class RaceAttachmentService {
     @Value("${app.upload-dir:uploads}")
     private String uploadDir;
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public String uploadAttachment(UUID raceId, MultipartFile file) {
         String originalFilename = file.getOriginalFilename();
         if (!hasText(originalFilename)) {
@@ -55,7 +55,7 @@ public class RaceAttachmentService {
         }
     }
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public String addLink(UUID raceId, String name, String url) {
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             throw new IllegalArgumentException("Link must start with http:// or https://");
@@ -67,7 +67,7 @@ public class RaceAttachmentService {
         return name;
     }
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public UUID deleteAttachment(UUID attachmentId) {
         var attachment = raceAttachmentRepository.findById(attachmentId).orElseThrow();
         UUID raceId = attachment.getRace().getId();
