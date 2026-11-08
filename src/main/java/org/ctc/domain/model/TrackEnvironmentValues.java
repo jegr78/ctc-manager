@@ -23,7 +23,10 @@ public record TrackEnvironmentValues(List<String> timeOfDayOptions, TrackRainCap
         return new TrackEnvironmentValues(text == null ? List.of() : text.lines().map(String::strip).filter(s -> !s.isEmpty()).toList(), rain);
     }
     public static TrackEnvironmentValues from(Track track) {
+        if (track == null || track.getRainCapability() == null) {
+            throw new BusinessRuleException("Track environment metadata is invalid; review this layout");
+        }
         try { return new TrackEnvironmentValues(track.getTimeOfDayOptions(), TrackRainCapability.valueOf(track.getRainCapability())); }
-        catch (IllegalArgumentException | NullPointerException invalid) { throw new BusinessRuleException("Track environment metadata is invalid; review this layout"); }
+        catch (IllegalArgumentException invalid) { throw new BusinessRuleException("Track environment metadata is invalid; review this layout"); }
     }
 }

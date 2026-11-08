@@ -33,6 +33,21 @@ class TrackEnvironmentValuesTest {
         assertThatThrownBy(() -> TrackEnvironmentValues.fromText(" ".repeat(3001), TrackRainCapability.UNKNOWN))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("too long");
     }
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.NullSource
+    @ValueSource(strings = {"INVALID", "rain"})
+    void givenMissingOrUnknownPersistedRain_whenReadingLayout_thenReportDomainError(String rain) {
+        var layout = new Track("Test invalid metadata", "Test country");
+        layout.setRainCapability(rain);
+        assertThatThrownBy(() -> TrackEnvironmentValues.from(layout))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("metadata is invalid");
+    }
+
+    @Test void givenMissingLayout_whenReadingMetadata_thenReportDomainError() {
+        assertThatThrownBy(() -> TrackEnvironmentValues.from(null))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("metadata is invalid");
+    }
+
     @Test void givenGlobalPresets_whenFilteringRainCapability_thenReturnOrdered24Or32WithoutInventingRainSupport() {
         assertThat(WeatherPreset.available(TrackRainCapability.DRY_ONLY)).hasSize(24);
         assertThat(WeatherPreset.available(TrackRainCapability.UNKNOWN)).hasSize(24);
