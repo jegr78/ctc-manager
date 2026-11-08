@@ -109,6 +109,7 @@ public class DataAuditService {
 		auditMatchAggregates(matches, legs, findings.get(STALE_AGGREGATE));
 		auditPlayoffAggregates(matchups, legs, findings.get(STALE_AGGREGATE));
 		auditPairings(matches, findings.get(PAIRING));
+        auditSwissRounds(matchdayRepository.findAll(), matches, phaseTeams, findings.get(PAIRING));
         for (var race : races) {
             if (race.getPlayoffMatchup() != null && race.getMatch() != null && race.getMatch().getWalkoverTeam() != null)
                 findings.get(PAIRING).add(new DataAuditFinding(PAIRING, AMBIGUOUS, "Race " + race.getId(),
@@ -382,6 +383,27 @@ public class DataAuditService {
 					"Decide which match keeps the legs and results, and merge the others into it"));
 		}
 	}
+
+    private static void auditSwissRounds(List<Matchday> days, List<Match> matches, List<PhaseTeam> roster, List<DataAuditFinding> out) {
+        for (var day : days) {
+            var phase=day.getPhase();
+            if (phase.getFormat()!=org.ctc.domain.model.SeasonFormat.SWISS) continue;
+            var members=roster.stream().filter(row -> phase.getId().equals(row.getPhase().getId()))
+                    .filter(row -> phase.getLayout()!=org.ctc.domain.model.PhaseLayout.GROUPS
+                            || Objects.equals(day.getGroup()==null?null:day.getGroup().getId(),row.getGroup()==null?null:row.getGroup().getId())).toList();
+            var places=org.ctc.domain.model.SwissRoundRoster.from(phase.getSeason(),members).places();
+            var pairings=matches.stream().filter(match -> day.getId().equals(match.getMatchday().getId())).toList();
+            var rows=new ArrayList<org.ctc.domain.model.SwissRoundRules.Row>();
+            for (int i=0;i<pairings.size();i++) {
+                var match=pairings.get(i);
+                rows.add(new org.ctc.domain.model.SwissRoundRules.Row(i,match.getHomeTeam()==null?null:match.getHomeTeam().getId(),
+                        match.getAwayTeam()==null?null:match.getAwayTeam().getId(),match.isBye()));
+            }
+            for (var issue : org.ctc.domain.model.SwissRoundRules.validate(places,rows))
+                out.add(new DataAuditFinding(PAIRING,AMBIGUOUS,"Swiss round " + day.getId(),issue.message(),
+                        "Review the actual historical round in Swiss round maintenance. Preserve results and permanent history."));
+        }
+    }
 
 	private static void auditLegs(List<Race> races, Map<Category, List<DataAuditFinding>> out) {
 		for (Race race : races) {

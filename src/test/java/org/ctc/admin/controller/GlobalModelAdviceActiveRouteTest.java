@@ -19,6 +19,8 @@ class GlobalModelAdviceActiveRouteTest {
 			"/admin/seasons/abc-def,seasons",
 			"/admin/seasons/abc/phases,seasons",
 			"/admin/matchdays,matchdays",
+            "/admin/swiss-rounds,matchdays",
+            "/admin/swiss-rounds/edit,matchdays",
 			"/admin/matchday-picks,matchdays",
 			"/admin/matchday-picks/abc/correction,matchdays",
 			"/admin/matchdays/123/pairings,matchdays",

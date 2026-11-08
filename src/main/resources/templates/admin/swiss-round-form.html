@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
+<body><section class="entity-editor swiss-round-editor">
+    <a class="back-link" th:href="@{/admin/swiss-rounds(phaseId=${swiss.phaseId},groupId=${swiss.groupId})}">&larr; Back to Swiss rounds</a>
+    <h1 th:text="${pageTitle}"></h1><p th:text="${swiss.seasonLabel + ' · ' + swiss.phaseLabel}"></p>
+    <p>Save the actual historical pairings. Locked pairings retain their recorded teams and race identities. Empty additional rows are ignored.</p>
+    <p th:if="${editor.readOnlyReason!=null}" class="alert alert-warning" th:text="${editor.readOnlyReason}"></p>
+    <form method="post" th:action="@{/admin/swiss-rounds/save}" th:object="${roundForm}" data-swiss-editor>
+        <div th:if="${#fields.hasAnyErrors()}" class="field-error" role="alert"><p th:each="error:${#fields.allErrors()}" th:text="${error}"></p></div>
+        <input type="hidden" th:field="*{phaseId}"><input type="hidden" th:field="*{groupId}"><input type="hidden" th:field="*{matchdayId}">
+        <input type="hidden" th:field="*{scope}"><input type="hidden" th:field="*{generation}">
+        <fieldset class="card"><legend>Round</legend><div class="form-row">
+            <div class="form-group"><label for="roundNumber">Round number</label><input type="number" th:field="*{roundNumber}" readonly></div>
+            <div class="form-group"><label for="label">Round label</label><input th:field="*{label}" maxlength="255" required><p class="field-error" th:errors="*{label}"></p></div>
+        </div></fieldset>
+        <div class="card"><h2>Missing participants</h2><p data-swiss-missing th:text="${editor.missingLabel}"></p>
+            <p class="text-dim">Missing places remain visible while you prepare a round. Historical predecessors share the current team's place.</p>
+            <ul hidden data-swiss-history><li th:each="pair:${editor.previousPairs}" th:attr="data-previous-pair=${pair}"></li><li th:each="team:${editor.previousByes}" th:attr="data-previous-bye=${team}"></li></ul>
+            <ul hidden data-swiss-places><li th:each="team:${swiss.teams}" th:if="${team.id==team.placeId}" th:attr="data-place-id=${team.id}" th:text="${team.label}"></li></ul>
+        </div>
+        <fieldset th:each="row,stat:*{rows}" th:if="${row!=null}" class="card swiss-pairing-row" th:with="locked=${row.matchId!=null && editor.lockedRows.containsKey(row.matchId)}" data-swiss-row>
+            <legend th:text="|Pairing ${stat.index+1}|"></legend>
+            <input type="hidden" th:field="*{rows[__${stat.index}__].matchId}">
+            <p class="field-error" th:errors="*{rows[__${stat.index}__].matchId}"></p>
+            <p th:if="${locked}" class="alert alert-info" th:text="|Locked: ${editor.lockedRows.get(row.matchId)}. Keep this pairing unchanged.|"></p>
+            <div class="form-row">
+                <div class="form-group"><label th:for="|swiss-home-${stat.index}|">Home team</label>
+                    <input th:if="${locked}" type="hidden" th:field="*{rows[__${stat.index}__].homeTeamId}">
+                    <select th:id="|swiss-home-${stat.index}|" th:name="|rows[${stat.index}].homeTeamId|" th:disabled="${locked}" data-swiss-home>
+                        <option value="">Choose team</option><option th:each="team:${editor.choices}" th:value="${team.id}" th:text="${team.label}" th:selected="${team.id==row.homeTeamId}" th:attr="data-place-id=${team.placeId}"></option>
+                    </select><p class="field-error" th:errors="*{rows[__${stat.index}__].homeTeamId}"></p>
+                </div>
+                <div class="form-group"><label th:for="|swiss-away-${stat.index}|">Away team</label>
+                    <input th:if="${locked}" type="hidden" th:field="*{rows[__${stat.index}__].awayTeamId}">
+                    <select th:id="|swiss-away-${stat.index}|" th:name="|rows[${stat.index}].awayTeamId|" th:disabled="${locked or row.bye}" data-swiss-away>
+                        <option value="">Choose team</option><option th:each="team:${editor.choices}" th:value="${team.id}" th:text="${team.label}" th:selected="${team.id==row.awayTeamId}" th:attr="data-place-id=${team.placeId}"></option>
+                    </select><p class="field-error" th:errors="*{rows[__${stat.index}__].awayTeamId}"></p>
+                </div>
+            </div>
+            <div class="swiss-pairing-options">
+            <input th:if="${locked}" type="hidden" th:field="*{rows[__${stat.index}__].bye}">
+            <label class="checkbox-label" th:for="|swiss-bye-${stat.index}|"><input type="checkbox" th:id="|swiss-bye-${stat.index}|" th:name="|rows[${stat.index}].bye|" th:checked="${row.bye}" th:disabled="${locked}" data-swiss-bye> Bye, no away team</label>
+            <p class="field-error" th:errors="*{rows[__${stat.index}__].bye}"></p>
+            <label class="checkbox-label" th:for="|swiss-remove-${stat.index}|"><input type="checkbox" th:id="|swiss-remove-${stat.index}|" th:name="|rows[${stat.index}].remove|" th:checked="${row.remove}" th:disabled="${locked}" data-swiss-remove> Remove pairing</label>
+            <p class="field-error" th:errors="*{rows[__${stat.index}__].remove}"></p>
+            </div>
+        </fieldset>
+        <div th:hidden="${editor.warnings.isEmpty()}" class="alert alert-warning" data-swiss-warnings role="status" aria-live="polite"><p th:each="warning:${editor.warnings}" th:text="${warning}"></p></div>
+        <div class="form-actions"><button type="submit" class="btn btn-primary" th:disabled="${editor.readOnlyReason!=null}" data-testid="swiss-save-round">Save round</button>
+            <a class="btn btn-secondary" th:href="@{/admin/swiss-rounds/edit(phaseId=${swiss.phaseId},groupId=${swiss.groupId},matchdayId=${roundForm.matchdayId})}">Reload current values</a>
+            <a class="btn btn-secondary" th:href="@{/admin/swiss-rounds(phaseId=${swiss.phaseId},groupId=${swiss.groupId})}">Cancel</a>
+        </div>
+    </form>
+    <script th:src="@{/admin/js/swiss-round-editor.js}"></script>
+</section></body></html>

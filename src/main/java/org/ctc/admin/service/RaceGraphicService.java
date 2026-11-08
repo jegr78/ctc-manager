@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class RaceGraphicService {
 
+    private final org.ctc.domain.service.ScoreWriteLockService scoreLocks;
     private final RaceRepository raceRepository;
     private final RaceAttachmentRepository raceAttachmentRepository;
     private final LineupGraphicService lineupGraphicService;
@@ -26,37 +27,38 @@ public class RaceGraphicService {
     private final LobbySettingsGraphicService lobbySettingsGraphicService;
     private final OverlayGraphicService overlayGraphicService;
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void generateLineup(UUID raceId) {
         generateAndSaveGraphic(raceId, "Lineups", lineupGraphicService::generateLineup);
     }
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void generateResults(UUID raceId) {
         generateAndSaveGraphic(raceId, "Results", resultsGraphicService::generateResults);
     }
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void generateProvisional(UUID raceId) {
         generateAndSaveGraphic(raceId, "Provisional", provisionalScoresGraphicService::generateProvisionalFile);
     }
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void generateSettings(UUID raceId) {
         generateAndSaveGraphic(raceId, "Settings", settingsGraphicService::generateSettings);
     }
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void generateLobbySettings(UUID raceId) {
         generateAndSaveGraphic(raceId, "LobbySettings", lobbySettingsGraphicService::generateLobbySettings);
     }
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void generateOverlay(UUID raceId) {
         generateAndSaveGraphic(raceId, "Overlay", overlayGraphicService::generateOverlay);
     }
 
     private void generateAndSaveGraphic(UUID raceId, String suffix, GraphicGenerator generator) {
+        scoreLocks.lockRace(raceId);
         var race = raceRepository.findById(raceId).orElseThrow();
         try {
             String url = generator.generate(race);

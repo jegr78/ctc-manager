@@ -65,6 +65,22 @@ import org.springframework.transaction.annotation.Transactional;
 @Tag("integration")
 @Transactional
 class DataAuditServiceIT {
+    @Test void givenSwissTeamUsedTwiceInRound_whenAuditing_thenReportRoundRuleWithoutChangingPairings() {
+        var fixture=testHelper.createFullSeasonFixture("Test_Swiss_Audit_"+id);
+        fixture.race().getMatchday().getPhase().setFormat(SeasonFormat.SWISS);
+        var retainedGroup=seasonPhaseGroupRepository.save(new SeasonPhaseGroup(fixture.matchday().getPhase(),"Test retained group",0));
+        var homePlace=new PhaseTeam(fixture.matchday().getPhase(),fixture.homeTeam()); homePlace.setGroup(retainedGroup); entityManager.persist(homePlace);
+        var awayPlace=new PhaseTeam(fixture.matchday().getPhase(),fixture.awayTeam()); awayPlace.setGroup(retainedGroup); entityManager.persist(awayPlace);
+        var duplicate=new Match(fixture.matchday(),fixture.homeTeam(),fixture.awayTeam()); entityManager.persist(duplicate);
+        entityManager.flush(); entityManager.clear();
+        assertThat(dataAuditService.audit().findings(PAIRING)).anySatisfy(f -> {
+            assertThat(f.subject()).contains("Swiss round "+fixture.matchday().getId());
+            assertThat(f.evidence()).contains("only once");
+        });
+        assertThat(entityManager.find(Match.class,duplicate.getId()).getHomeTeam().getId()).isEqualTo(fixture.homeTeam().getId());
+        assertThat(matchRepository.findByMatchdayId(fixture.matchday().getId())).hasSize(2);
+    }
+
     @Test void givenPlayoffRaceWithWalkoverOnRegularAnchor_whenAuditing_thenReportWithoutRewritingEitherMarker() {
         var fixture = testHelper.createFullSeasonFixture("Test_PO_WO_Audit_" + id);
         var playoff = testHelper.createPlayoffInPhase(fixture.season(), "Test audit final " + id, 2);

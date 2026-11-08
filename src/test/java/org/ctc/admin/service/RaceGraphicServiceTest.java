@@ -19,6 +19,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class RaceGraphicServiceTest {
+    @Mock private org.ctc.domain.service.ScoreWriteLockService scoreLocks;
 
 	@Mock
 	private RaceRepository raceRepository;
@@ -40,6 +41,13 @@ class RaceGraphicServiceTest {
 	@InjectMocks
 	private RaceGraphicService service;
 
+
+    @Test void givenIdentityLockFailure_whenGeneratingGraphic_thenDoNotRenderOrRecordStalePairing() {
+        var raceId=UUID.randomUUID();
+        org.mockito.Mockito.doThrow(new org.ctc.domain.exception.BusinessRuleException("Test identity changed")).when(scoreLocks).lockRace(raceId);
+        assertThatThrownBy(() -> service.generateResults(raceId)).isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class).hasMessageContaining("identity changed");
+        org.mockito.Mockito.verifyNoInteractions(raceRepository,resultsGraphicService,raceAttachmentRepository);
+    }
 
     @Test
     void givenExistingResultGraphic_whenRegenerating_thenKeepAttachmentIdentityAndAvoidDuplicateLinks() throws Exception {

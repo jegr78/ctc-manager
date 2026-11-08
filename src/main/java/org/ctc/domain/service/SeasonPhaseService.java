@@ -326,8 +326,9 @@ public class SeasonPhaseService {
      *
      * @param groupId nullable — null for LEAGUE-layout phases, non-null for GROUPS-layout
      */
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public PhaseTeam assignTeamToPhase(UUID phaseId, UUID teamId, UUID groupId) {
+        scoreLocks.lockPhase(phaseId);
         var phase = findById(phaseId);
         var team = new Team();
         team.setId(teamId);
@@ -346,8 +347,9 @@ public class SeasonPhaseService {
      * <p>Compares the submitted {@link Assignment} list against the current {@link PhaseTeam} rows
      * and applies minimal inserts, updates (group change), and deletes in a single transaction.
      */
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void assignTeamsToPhase(UUID phaseId, List<Assignment> assignments) {
+        scoreLocks.lockPhase(phaseId);
         var phase = seasonPhaseRepository.findById(phaseId)
                 .orElseThrow(() -> new EntityNotFoundException("SeasonPhase", phaseId));
 

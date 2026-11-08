@@ -472,7 +472,7 @@ public class SeasonManagementService {
      */
     @Transactional
     public String replaceTeam(UUID seasonId, UUID predecessorTeamId, UUID successorTeamId, LocalDate replacedAt) {
-        var season = seasonRepository.findById(seasonId)
+        var season = seasonRepository.findByIdForUpdate(seasonId)
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         var predecessor = teamRepository.findById(predecessorTeamId)
                 .orElseThrow(() -> new EntityNotFoundException("Team", predecessorTeamId));

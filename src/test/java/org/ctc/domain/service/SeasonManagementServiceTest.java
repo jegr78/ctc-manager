@@ -391,7 +391,7 @@ class SeasonManagementServiceTest {
             var successor = createTeam("NEW", "New Team");
             season.addTeam(predecessor);
 
-            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+            when(seasonRepository.findByIdForUpdate(season.getId())).thenReturn(Optional.of(season));
             when(teamRepository.findById(predecessor.getId())).thenReturn(Optional.of(predecessor));
             when(teamRepository.findById(successor.getId())).thenReturn(Optional.of(successor));
             when(seasonTeamRepository.findBySeasonIdAndTeamId(season.getId(), successor.getId()))
@@ -420,7 +420,7 @@ class SeasonManagementServiceTest {
             var predecessor = createTeam("OLD", "Old Team");
             var successor = createTeam("NEW", "New Team");
 
-            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+            when(seasonRepository.findByIdForUpdate(season.getId())).thenReturn(Optional.of(season));
             when(teamRepository.findById(predecessor.getId())).thenReturn(Optional.of(predecessor));
             when(teamRepository.findById(successor.getId())).thenReturn(Optional.of(successor));
 
@@ -446,7 +446,7 @@ class SeasonManagementServiceTest {
             var stMid = season.findSeasonTeam(firstSuccessor).orElseThrow();
             stOld.setSuccessor(stMid);
 
-            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+            when(seasonRepository.findByIdForUpdate(season.getId())).thenReturn(Optional.of(season));
             when(teamRepository.findById(predecessor.getId())).thenReturn(Optional.of(predecessor));
             when(teamRepository.findById(secondSuccessor.getId())).thenReturn(Optional.of(secondSuccessor));
 
@@ -466,7 +466,7 @@ class SeasonManagementServiceTest {
             season.addTeam(predecessor);
             season.addTeam(successor);
 
-            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+            when(seasonRepository.findByIdForUpdate(season.getId())).thenReturn(Optional.of(season));
             when(teamRepository.findById(predecessor.getId())).thenReturn(Optional.of(predecessor));
             when(teamRepository.findById(successor.getId())).thenReturn(Optional.of(successor));
             when(seasonTeamRepository.findBySeasonIdAndTeamId(season.getId(), successor.getId()))

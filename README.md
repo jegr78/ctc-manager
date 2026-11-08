@@ -25,7 +25,7 @@ The active season is unique. Deactivate the current season before activating ano
 - **Error Pages** — Consistent CTC styling, status-specific guidance and a native return to seasons. A history button appears only after navigation from another local admin page; development exception details stay collapsed.
 - **Standings & Rankings** — Season and all-time standings for teams and drivers. The admin has native season, phase and group navigation, labeled searches and keyboard sorting that preserves ranking positions across filters and pages. Driver rankings cover the entire selected phase.
 - **Playoffs** — Single/double elimination brackets (4/8 teams) with best-of-legs support
-- **Swiss Pairing** — Automatic round generation with Buchholz tiebreaker
+- **Swiss Pairing** — Automatic round generation with Buchholz tiebreaker; manually create historical rounds and edit unprotected pairings in the phase/group workspace
 - **Scoring integrity** — Match metadata edits preserve quick scores. Result and lineup changes share season locks; a concurrent MariaDB snapshot conflict asks the operator to reload. Race-scoring points and a phase's scoring assignment are protected once results exist. Create a new scheme for different points; historical mismatches appear in the read-only data audit.
 - **Round and Matchup Workspaces** — Swiss round navigation, labeled quick scores and match links; playoff legs show result counts once, with clear preparation and decision actions. New legs are configured in the race editor.
 - **Driver Sheet Import** — Preview season choices and explain conflict and fuzzy-match decisions beside labeled controls. Tabs without a selected season are skipped; invalid rows stay visible for correction.

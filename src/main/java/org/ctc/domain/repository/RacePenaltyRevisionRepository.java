@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface RacePenaltyRevisionRepository extends JpaRepository<RacePenaltyRevision, UUID> {
+    boolean existsByRaceId(UUID raceId);
+
     List<RacePenaltyRevision> findByRaceIdOrderByRevisionNumberAsc(UUID raceId);
 
     // Native locking reads retain current MariaDB visibility without upgrading immutable Hibernate entries.

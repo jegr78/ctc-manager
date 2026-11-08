@@ -24,6 +24,22 @@ class ScoreWriteLockServiceTest {
     @Mock TypedQuery<UUID> ids;
     @InjectMocks ScoreWriteLockService locks;
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans={false,true})
+    void givenPhaseChangedWhileWaitingForItsParent_whenLocking_thenRejectBeforeAnyRoundWrite(boolean deleted) {
+        var owner=new Season("Test owner"); owner.setId(UUID.randomUUID());
+        var other=new Season("Test other owner"); other.setId(UUID.randomUUID());
+        var phase=new org.ctc.domain.model.SeasonPhase(); phase.setId(UUID.randomUUID()); phase.setSeason(other);
+        when(entityManager.createQuery(anyString(),eq(UUID.class))).thenReturn(ids);
+        when(ids.setParameter(anyString(),any())).thenReturn(ids);
+        when(ids.setLockMode(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)).thenReturn(ids);
+        when(ids.getResultList()).thenReturn(List.of(owner.getId()),deleted?List.of():List.of(other.getId()));
+        when(seasons.findByIdForUpdate(owner.getId())).thenReturn(Optional.of(owner));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> locks.lockPhase(phase.getId()))
+                .isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class).hasMessageContaining("changed");
+        verifyNoInteractions(races);
+    }
+
     @Test
     void givenIdsAcrossTheSignBit_whenLockingAllSeasons_thenUseTheSameUuidOrderAsCrossSeasonMoves() {
         // given
