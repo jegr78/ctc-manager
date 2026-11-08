@@ -146,6 +146,45 @@ class IncidentBackupValidatorTest {
     @Test void givenAStoredPartialThreadPair_whenValidating_thenRetainItsOwnFrozenDeliveryAndExactReferences() {
         publication();assertThatCode(() -> validate(10)).doesNotThrowAnyException();
     }
+
+    @Test void givenReadableDisclosure_whenValidating_thenPreserveItsVersionAndChunkContract() {
+        publication();
+        var delivery = first("incident_deliveries");
+        delivery.put("presentationVersion", 1).put("pairingLabel", "Test home vs Test away")
+                .put("raceLabel", "Leg 1 · Test season · Test day");
+        assertThatCode(() -> validate(21)).doesNotThrowAnyException();
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"unsupported", "fraction", "text", "receipt", "missing-captions", "legacy-schema", "missing-version"})
+    void givenUntrustedPresentationMetadata_whenValidating_thenRejectBeforeRestore(String corruption) {
+        publication();
+        var delivery = first("incident_deliveries");
+        delivery.put("presentationVersion", 1).put("pairingLabel", "Test home vs Test away")
+                .put("raceLabel", "Leg 1 · Test season · Test day");
+        switch (corruption) {
+            case "unsupported" -> delivery.put("presentationVersion", 2);
+            case "fraction" -> delivery.put("presentationVersion", 1.1);
+            case "text" -> delivery.put("presentationVersion", "1");
+            case "receipt" -> delivery.put("operation", "RECEIPT");
+            case "missing-captions" -> delivery.putNull("pairingLabel").putNull("raceLabel");
+            case "missing-version" -> delivery.remove("presentationVersion");
+            case "legacy-schema" -> { }
+            default -> throw new AssertionError(corruption);
+        }
+        assertThatThrownBy(() -> validate(corruption.equals("legacy-schema") ? 20 : 21))
+                .isInstanceOf(IncidentBackupValidator.ValidationException.class).hasMessageNotContaining("Test private incident facts");
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"unsupported", "legacy-schema", "missing-captions"})
+    void givenDeliveryBeforeAnyRemoteMapping_whenPresentationIsInvalid_thenRejectAtTheEnvelopeBoundary(String corruption) {
+        close();
+        var delivery = delivery("DISCLOSURE");
+        delivery.put("presentationVersion", corruption.equals("unsupported") ? 2 : 1)
+                .put("pairingLabel", "Test home vs Test away").put("raceLabel", "Leg 1 · Test season · Test day");
+        if (corruption.equals("missing-captions")) delivery.putNull("pairingLabel").putNull("raceLabel");
+        assertThatThrownBy(() -> validate(corruption.equals("legacy-schema") ? 20 : 21))
+                .isInstanceOf(IncidentBackupValidator.ValidationException.class).hasMessageNotContaining("Test private incident facts");
+    }
     @ParameterizedTest @ValueSource(strings={"owner","receipt","destination","staff","tags","chunks","order","thread","reference","complete","review-grant","duplicate","shared-remote"})
     void givenContradictoryThreadHistory_whenValidating_thenRejectBeforeRestoreWithoutLeakingFacts(String cause) {
         var publication=publication();
@@ -364,7 +403,7 @@ class IncidentBackupValidatorTest {
         var node = JSON.createObjectNode();
         for (int i = 0; i < values.length; i += 2) node.set((String) values[i], JSON.valueToTree(values[i + 1]));
         if (table.startsWith("incident_")) { node.putNull("createdAt"); node.putNull("updatedAt"); }
-        if (table.equals("incident_deliveries")) { node.putNull("pairingLabel"); node.putNull("raceLabel"); }
+        if (table.equals("incident_deliveries")) { node.putNull("pairingLabel"); node.putNull("raceLabel"); node.putNull("presentationVersion"); }
         data.computeIfAbsent(table, ignored -> new ArrayList<>()).add(node); return node;
     }
     private static String id() { return UUID.randomUUID().toString(); }

@@ -212,17 +212,19 @@ class IncidentBackupRoundTripIT extends IncidentIntegrationFixture {
         var preview=imports.stage(upload(archive));imports.execute(preview.stagingId());
         assertThat(unzip(export()).get("data/incident-thread-publications.json")).isEqualTo(before);
         UUID operation=tx.execute(status -> {
-            var mapping=threadRows.findById(id).orElseThrow();assertThat(mapping.getPrivateThreadId()).isEqualTo("600");assertThat(mapping.getPrivateStarterId()).isEqualTo("601");assertThat(mapping.getPublicThreadId()).isEqualTo("801");assertThat(mapping.getReferenceMessageId()).isNull();assertThat(mapping.getDelivery().isRestoreReviewed()).isFalse();assertThat(mapping.getDelivery().getReport().getWindow().isDeliveryPaused()).isTrue();assertThat(mapping.getDelivery().getRevision().getPayload().getDescription()).isEqualTo("Test private correction");
+            var mapping=threadRows.findById(id).orElseThrow();assertThat(mapping.getPrivateThreadId()).isEqualTo("600");assertThat(mapping.getPrivateStarterId()).isEqualTo("601");assertThat(mapping.getPublicThreadId()).isEqualTo("801");assertThat(mapping.getReferenceMessageId()).isNull();assertThat(mapping.getDelivery().getPresentationVersion()).isEqualTo(1);assertThat(mapping.getDelivery().isRestoreReviewed()).isFalse();assertThat(mapping.getDelivery().getReport().getWindow().isDeliveryPaused()).isTrue();assertThat(mapping.getDelivery().getRevision().getPayload().getDescription()).isEqualTo("Test private correction");
             var config=configs.findById(configId).orElseThrow();assertThat(config.getStewardsChannelId()).isEqualTo("600000000000000006");assertThat(config.getIncidentStaffRoleIds()).isEqualTo("500000000000000005");assertThat(config.getStewardsForumTagIds()).isEqualTo("900000000000000009");return mapping.getDelivery().getId();
         });
         assertThat(threadPublication.dispatch(operation)).isFalse();verifyNoInteractions(discord);
     }
-    @ParameterizedTest @ValueSource(strings={"thread-owner","configuration"})
+    @ParameterizedTest @ValueSource(strings={"thread-owner","configuration","presentation-version"})
     void givenLinkedThreadArchiveWithForgedOwnerOrMalformedConfiguration_whenStagingAndExecuting_thenRejectBeforeAnyWipe(String cause) throws Exception {
         var id=linkedPublication();var valid=export();var files=unzip(valid);
-        String file=cause.equals("thread-owner")?"data/incident-thread-publications.json":"data/discord-global-config.json";
+        String file=cause.equals("thread-owner")?"data/incident-thread-publications.json":cause.equals("presentation-version")?"data/incident-deliveries.json":"data/discord-global-config.json";
         var rows=(ArrayNode)JSON.readTree(files.get(file));var row=(ObjectNode)rows.get(0);
-        if(cause.equals("thread-owner"))row.put("delivery",UUID.randomUUID().toString());else row.put("incidentStaffRoleIds",500);
+        if(cause.equals("thread-owner"))row.put("delivery",UUID.randomUUID().toString());
+        else if(cause.equals("presentation-version"))row.put("presentationVersion",2);
+        else row.put("incidentStaffRoleIds",500);
         files.put(file,JSON.writeValueAsBytes(rows));var broken=zip(files);
         assertThatThrownBy(() -> imports.stage(upload(broken))).isInstanceOfSatisfying(BackupArchiveException.class,error -> assertThat(error.reason()).isEqualTo(BackupArchiveException.Reason.DATA_MISMATCH));verify(imports,never()).wipeAllTables(anyMap());
         var preview=imports.stage(upload(valid));Files.write(ROOT.resolve("staging/upload-"+preview.stagingId()+".zip"),broken);clearInvocations(imports);
@@ -325,7 +327,7 @@ class IncidentBackupRoundTripIT extends IncidentIntegrationFixture {
             counts.remove(table); files.remove("data/" + table.replace('_', '-') + ".json");
         }
         var deliveries = (ArrayNode) JSON.readTree(files.get("data/incident-deliveries.json"));
-        for (var row : deliveries) ((ObjectNode) row).remove(java.util.List.of("pairingLabel", "raceLabel"));
+        for (var row : deliveries) ((ObjectNode) row).remove(java.util.List.of("pairingLabel", "raceLabel", "presentationVersion"));
         files.put("data/incident-deliveries.json", JSON.writeValueAsBytes(deliveries)); files.put("manifest.json", JSON.writeValueAsBytes(manifest));
         var preview = imports.stage(upload(zip(files))); imports.execute(preview.stagingId());
         assertThat(rulingRows.count()).isZero(); assertThat(rulingRevisions.count()).isZero(); assertThat(rulingPublications.count()).isZero();

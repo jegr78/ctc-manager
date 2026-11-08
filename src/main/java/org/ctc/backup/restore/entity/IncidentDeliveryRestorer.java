@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class IncidentDeliveryRestorer implements EntityRestorer {
-    private static final String SQL = "INSERT INTO incident_deliveries (id,report_id,revision_id,operation,operation_key,guild_id,channel_id,nonce,case_reference,party_label,captured_at,state,aggregate_version,attempts,claim_token,claim_generation,lease_until,next_attempt_at,completed_at,message_id,failure_code,reconciled_by,reconciliation_reason,created_at,updated_at,pairing_label,race_label) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+    private static final String SQL = "INSERT INTO incident_deliveries (id,report_id,revision_id,operation,operation_key,guild_id,channel_id,nonce,case_reference,party_label,captured_at,state,aggregate_version,attempts,claim_token,claim_generation,lease_until,next_attempt_at,completed_at,message_id,failure_code,reconciled_by,reconciliation_reason,created_at,updated_at,pairing_label,race_label,presentation_version) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
     @Override public String tableName() { return "incident_deliveries"; }
     @Override public void restore(List<JsonNode> rows, JdbcTemplate jdbc) {
         jdbc.batchUpdate(SQL, rows, 500, (ps, row) -> {
@@ -39,6 +39,7 @@ public class IncidentDeliveryRestorer implements EntityRestorer {
             ps.setObject(25, PickRestoreSupport.auditTime(row, "updatedAt"));
             ps.setObject(26, IncidentRestoreSupport.text(row, "pairingLabel"));
             ps.setObject(27, IncidentRestoreSupport.text(row, "raceLabel"));
+            ps.setObject(28, IncidentRestoreSupport.number(row, "presentationVersion"));
         });
     }
 }

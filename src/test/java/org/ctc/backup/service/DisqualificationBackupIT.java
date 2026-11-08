@@ -73,7 +73,7 @@ class DisqualificationBackupIT extends RacePenaltyFixture {
         jdbc.update("update race_disqualification_revisions set created_at=?,updated_at=? where race_id=?", time, time, raceId);
         var bytes = archive(); var files = unzip(bytes);
         var before = disqualifications.view(raceId, id);
-        assertThat(JSON.readTree(files.get("manifest.json")).path("schema_version").intValue()).isEqualTo(20);
+        assertThat(JSON.readTree(files.get("manifest.json")).path("schema_version").intValue()).isEqualTo(21);
         assertThat(JSON.readTree(files.get("manifest.json")).path("table_counts").size()).isEqualTo(48);
         assertThat(new String(files.get(RESULTS), java.nio.charset.StandardCharsets.UTF_8))
                 .doesNotContain("classificationPosition", "classificationLabel", "disqualificationRevisions");

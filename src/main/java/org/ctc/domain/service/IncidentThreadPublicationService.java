@@ -164,12 +164,13 @@ public class IncidentThreadPublicationService {
                 .filter(Objects::nonNull).filter(value -> !value.isBlank()).collect(Collectors.toUnmodifiableSet());
         var destination=new IncidentThreadClaim.Destination(row.getGuildId(),row.getChannelId(),mapping.getStewardsChannelId(),
                 IncidentThreadPublication.ids(mapping.getStaffRoleIds(),60),IncidentThreadPublication.ids(mapping.getForumTagIds(),5),participants);
-        String marker=marker(row,privateSide,index),content=projection.messages().get(index)+"\n"+marker;
+        String marker=marker(row,privateSide,index),content=projection.messages().get(index)+"\n"+IncidentDisplay.footer(marker,row.getPresentationVersion());
         if(stage==IncidentThreadStage.PRIVATE_REFERENCE) {
             marker="[CTC "+row.getCaseReference()+" REFERENCE]";
-            content="Incident "+row.getCaseReference()+"\nMatch discussion: https://discord.com/channels/"+row.getGuildId()+"/"+mapping.getPublicThreadId()+"\n"+marker;
+            String header = row.getPresentationVersion() == null ? "Incident " + row.getCaseReference() : "**Incident " + IncidentDisplay.reference(row.getCaseReference()) + "**";
+            content=header+"\nMatch discussion: https://discord.com/channels/"+row.getGuildId()+"/"+mapping.getPublicThreadId()+"\n"+IncidentDisplay.footer(marker,row.getPresentationVersion());
         }
-        var work=new IncidentThreadClaim.Work(stage,index,row.getCaseReference(),marker,projection.title(),content,projection.messages().getFirst()+"\n"+marker(row,privateSide,0),
+        var work=new IncidentThreadClaim.Work(stage,index,row.getCaseReference(),marker,projection.title(),content,projection.messages().getFirst()+"\n"+IncidentDisplay.footer(marker(row,privateSide,0),row.getPresentationVersion()),
                 nonce(row.getReport().getId(),marker),privateSide?mapping.getPrivateStarterId():mapping.getPublicStarterId(),privateSide?mapping.getPrivateThreadId():mapping.getPublicThreadId());
         return new IncidentThreadClaim(row.getId(),row.getReport().getWindow().getId(),row.getClaimToken(),row.getVersion(),generation,row.getLeaseUntil(),destination,work);
     }

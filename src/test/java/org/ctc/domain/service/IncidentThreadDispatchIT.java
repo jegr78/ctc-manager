@@ -13,6 +13,43 @@ import static org.mockito.Mockito.*;
 
 @Tag("integration")
 class IncidentThreadDispatchIT extends IncidentThreadDispatchFixture {
+    @org.springframework.beans.factory.annotation.Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    @Test void givenNewDisclosure_whenCapturingSteps_thenKeepCanonicalNoncesAndUseReadableFootersOnBothSides() {
+        var id = disclosure(); var sent = new java.util.ArrayList<IncidentThreadClaim.Work>();
+        doAnswer(call -> {
+            var work = call.getArgument(0, IncidentThreadClaim.class).work(); sent.add(work);
+            return switch (work.stage()) {
+                case PRIVATE_STARTER -> new IncidentThreadResult(IncidentSendResult.Disposition.SENT, "701", null, null);
+                case PRIVATE_THREAD -> new IncidentThreadResult(IncidentSendResult.Disposition.SENT, "701", "701", null);
+                case PUBLIC_STARTER -> new IncidentThreadResult(IncidentSendResult.Disposition.SENT, "801", null, null);
+                case PUBLIC_THREAD -> new IncidentThreadResult(IncidentSendResult.Disposition.SENT, "801", "801", null);
+                case PRIVATE_REFERENCE -> new IncidentThreadResult(IncidentSendResult.Disposition.SENT, "702", null, null);
+                default -> throw new AssertionError(work.stage());
+            };
+        }).when(threadSender).send(any());
+        for (int step = 0; step < 5; step++) assertThat(publication.dispatch(id)).isTrue();
+        assertThat(sent).hasSize(5).allSatisfy(work -> {
+            assertThat(work.content()).endsWith("\n-# ||" + work.marker() + "||").hasSizeLessThanOrEqualTo(2000);
+            assertThat(work.title()).endsWith(" · " + IncidentDisplay.reference(work.caseReference())).hasSizeLessThanOrEqualTo(100);
+            assertThat(work.marker()).contains(work.caseReference());
+        });
+        assertThat(sent.getLast().content()).startsWith("**Incident ").contains("https://discord.com/channels/");
+        assertThat(state(id)).isEqualTo(IncidentDeliveryState.SENT);
+    }
+
+    @Test void givenMigratedDatabase_whenWritingPresentationMetadata_thenRejectUnknownVersionsAndReceiptUpgrades() {
+        var id = disclosure();
+        assertThat(jdbc.queryForObject("SELECT presentation_version FROM incident_deliveries WHERE id=?", Integer.class, id)).isEqualTo(1);
+        assertThatThrownBy(() -> jdbc.update("UPDATE incident_deliveries SET presentation_version=2 WHERE id=?", id))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class).satisfies(failure -> assertThat(failure.getMessage()).containsIgnoringCase("chk_incident_presentation_version"));
+        var receipt = tx.execute(status -> deliveryRows.findByReportWindowId(windowId).stream()
+                .filter(row -> row.getOperation() == IncidentDeliveryOperation.RECEIPT).findFirst().orElseThrow().getId());
+        assertThatThrownBy(() -> jdbc.update("UPDATE incident_deliveries SET presentation_version=1 WHERE id=?", receipt))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class).satisfies(failure -> assertThat(failure.getMessage()).containsIgnoringCase("chk_incident_presentation_version"));
+        assertThatCode(() -> jdbc.update("UPDATE incident_deliveries SET presentation_version=NULL WHERE id=?", id)).doesNotThrowAnyException();
+        assertThat(jdbc.queryForObject("SELECT presentation_version FROM incident_deliveries WHERE id=?", Integer.class, id)).isNull();
+    }
     @Test void givenAFrozenActiveReport_whenDispatchingItsPair_thenCommitEachStepBeforeSendingTheNextAndRetainBothReferences() {
         var id=disclosure();assertThat(publication.dueDisclosures(1)).containsExactly(id);
         var stages=new IncidentThreadStage[]{IncidentThreadStage.PRIVATE_THREAD,IncidentThreadStage.PUBLIC_STARTER,IncidentThreadStage.PUBLIC_THREAD,IncidentThreadStage.PRIVATE_REFERENCE,IncidentThreadStage.COMPLETE};
@@ -55,7 +92,8 @@ class IncidentThreadDispatchIT extends IncidentThreadDispatchFixture {
             var previous=deliveryRows.findById(id).orElseThrow();var report=previous.getReport();var revision=previous.getRevision();var at=previous.getCapturedAt();var pairingLabel=previous.getPairingLabel();var raceLabel=previous.getRaceLabel();
             threadRows.delete(threadRows.findByDeliveryId(id).orElseThrow());threadRows.flush();deliveryRows.delete(previous);deliveryRows.flush();
             var recreated=IncidentDelivery.capture(report,revision,IncidentDeliveryOperation.DISCLOSURE,at);
-            if(pairingLabel!=null)recreated.freezePublicIdentity(pairingLabel,raceLabel);
+            if(previous.getPresentationVersion()!=null)recreated.freezeReadableIdentity(pairingLabel,raceLabel);
+            else if(pairingLabel!=null)recreated.freezePublicIdentity(pairingLabel,raceLabel);
             return deliveryRows.saveAndFlush(recreated).getId();
         });
         assertThat(replacement).isNotEqualTo(id);assertThat(publication.dispatch(replacement)).isTrue();assertThat(sent).hasSize(2);
