@@ -362,7 +362,7 @@ class PickInteractionHandlerTest {
         // when
         command();
         // then
-        assertThat(response.text).contains("Choose your home race to view or edit its picks.");
+        assertThat(response.text).isEmpty();
         assertThat(response.last().content()).contains("Test season 2026", "Matchday 2", "T-AWAY", "Leg 2");
         assertThat(response.last().selection().options()).hasSize(1);
         verifyNoInteractions(submissions);
