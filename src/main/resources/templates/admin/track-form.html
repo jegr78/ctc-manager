@@ -44,7 +44,7 @@
             <div class="actions"><button type="submit" class="btn btn-primary">Save environment</button><a class="btn btn-secondary" th:href="@{/admin/tracks/{id}/edit(id=${trackForm.id})}">Reload current values</a></div>
         </form>
         <p th:if="${environment.values.rainCapability.name() == 'UNKNOWN'}" class="text-dim">Rain availability is unverified. The reference shows the 24 presets available on every layout.</p>
-        <details><summary>Weather preset reference</summary><p class="text-dim">S01–S18 and C01–C06 are available on every layout. R01–R08 are additionally available where rain is verified. Keep the order when entering a weather sequence.</p><ul><li th:each="preset : ${environment.weatherPresets}" th:text="${preset.name() + ' · ' + preset.description}"></li></ul></details>
+        <details><summary>Weather preset reference</summary><ul><li th:each="preset : ${environment.weatherPresets}" th:text="${preset.name() + ' · ' + preset.description}"></li></ul></details>
     </div>
     <div th:if="${trackForm.id != null}" class="card mt-md" id="track-image">
         <h2>Image</h2>

@@ -45,6 +45,14 @@ _Avoid_: Multiple custom positions
 An ordered sequence of 6 to 8 independently selected weather positions. Codes may repeat; `?` is Random. Rain codes require verified rain availability for the chosen layout.
 _Avoid_: Unordered weather set, unique weather codes
 
+**Layout environment source**:
+The identified reference profile and source revision supporting one layout's times of day and rain capability.
+_Avoid_: Circuit-wide inference, guessed layout match
+
+**Manual environment override**:
+A layout environment explicitly maintained by management, including an explicit unknown state. Source refreshes preserve it.
+_Avoid_: Missing source data, permission to overwrite
+
 **Matchday**:
 A round containing multiple team pairings, with one shared pick opening and an ordinary pick deadline.
 _Avoid_: Match, race
