@@ -21,6 +21,8 @@ class V42TrackEnvironmentMigrationTest {
                     for(int index=0;index<3;index++){assertThat(rows.next()).isTrue();assertThat(rows.getBoolean("environment_override")).isTrue();assertThat(rows.getString("environment_source")).isNull();assertThat(rows.getString("environment_import_hash")).isNull();}
                     assertThat(rows.next()).isFalse();
                 }
+                assertThatCode(()->sql.executeUpdate("INSERT INTO tracks(id,name,environment_override) VALUES ('55555555-5555-5555-5555-555555555555','Test fresh false',FALSE),('66666666-6666-6666-6666-666666666666','Test fresh true',TRUE)"))
+                    .as("boolean checks remain valid after the migration connection closes").doesNotThrowAnyException();
                 assertThatThrownBy(()->sql.executeUpdate("UPDATE tracks SET environment_import_hash='"+"a".repeat(64)+"' WHERE name='Test pristine'")).isInstanceOf(java.sql.SQLException.class).satisfies(failure->assertThat(failure.getMessage()).containsIgnoringCase("chk_track_environment_source"));
             }
         }finally{try(var connection=DriverManager.getConnection(url,"sa","");var sql=connection.createStatement()){sql.execute("SHUTDOWN");}}
