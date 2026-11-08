@@ -82,7 +82,7 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
         wm.resetAll();
         payload = new PickPayload(payload.trackId(), payload.carId(), payload.carPoolEntryId(), payload.laps(), payload.tyreWear(),
                 payload.fuelConsumption(), payload.refuelingSpeed(), payload.initialFuel(), payload.requiredPitStops(),
-                payload.timeProgressionMode(), payload.timeProgressionMultiplier(), payload.weather(), payload.timeOfDay(),
+                payload.timeProgressionMode(), payload.timeProgressionMultiplier(), "Preset S01", payload.timeOfDay(),
                 Set.of(PickTyre.RS, PickTyre.RM, PickTyre.I, PickTyre.W), payload.mandatoryTyres());
         tx.executeWithoutResult(status -> {
             var config = configs.findFirstByOrderByIdAsc(); createdConfig = config == null;
@@ -110,6 +110,34 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
             if (createdConfig) configs.deleteById(configId);
             else configs.findById(configId).orElseThrow().setGuildId(originalGuild);
         });
+    }
+
+    @Test
+    void givenEightCustomWeatherSlots_whenConfirmingAndReplayingThroughGateway_thenPersistExactOrderDuplicatesAndRandom() {
+        // given
+        tx.executeWithoutResult(status -> tracks.findById(payload.trackId()).orElseThrow().setRainCapability("RAIN"));
+        String weather = "Custom S01; S01; ?; R03; R03; C06; ?; R08";
+        var driver = new Driver("12345"); driver.complete(weather); var confirm = driver.button("Confirm submission");
+        assertThat(current().payload()).isNull();
+        // when
+        driver.click("Confirm submission");
+        driver.dispatch(PickGatewayInteraction.Kind.BUTTON, confirm, Map.of());
+        // then
+        assertThat(current().payload().weather()).isEqualTo(weather);
+        assertThat(current().receipt().revisionNumber()).isEqualTo(1);
+        assertThat(driver.response.allText()).contains("Saved revision 1");
+    }
+
+    @Test
+    void givenRainRemovedAfterCustomReview_whenConfirmingThroughGateway_thenRejectWithoutPersisting() {
+        // given
+        tx.executeWithoutResult(status -> tracks.findById(payload.trackId()).orElseThrow().setRainCapability("RAIN"));
+        var driver = new Driver("12345"); driver.complete("Custom S01; S01; ?; R03; R03; C06");
+        tx.executeWithoutResult(status -> tracks.findById(payload.trackId()).orElseThrow().setRainCapability("DRY_ONLY"));
+        // when
+        driver.click("Confirm submission");
+        // then
+        assertThat(current().payload()).isNull(); assertThat(driver.response.allText()).contains("unavailable");
     }
 
     @Test
@@ -382,7 +410,8 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
         Reply response;
         Driver(String user) { this(user, CHANNEL, fixture.race().getId()); }
         Driver(String user, String channel, UUID target) { this.user = user; this.channel = channel; this.target = target; }
-        void complete() {
+        void complete() { complete(payload.weather()); }
+        void complete(String weather) {
             command(); select(target);
             click(response.last().buttons().stream().anyMatch(b -> b.label().equals("Replace picks")) ? "Replace picks" : "Enter picks");
             select(payload.trackId());
@@ -394,8 +423,16 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
             click("Open race strategy form"); var values = new HashMap<>(fields("initial", "DEFAULT", "stops", "1"));
             values.put("available", List.of("RS", "RM")); modal(values);
             click("Open mandatory form"); modal(fields("mandatory", "RM"));
-            click("Open time form"); modal(fields("progression", "equal", "weather", payload.weather(), "daytime", payload.timeOfDay()));
+            click("Open time form"); modal(fields("progression", "equal", "daytime", payload.timeOfDay()));
+            var selection = PickWeatherSelection.parseCanonical(weather);
+            selectCode(selection.mode().name());
+            if (selection.mode() == PickWeatherSelection.Mode.CUSTOM) selectCode(Integer.toString(selection.slots().size()));
+            for (String code : selection.slots()) {
+                while (response.last().selection().options().stream().noneMatch(option -> option.value().equals(code))) click("Next");
+                selectCode(code);
+            }
         }
+        void selectCode(String code) { dispatch(PickGatewayInteraction.Kind.SELECT, response.last().selection().id(), fields("selection", code)); }
         void command() { dispatch(PickGatewayInteraction.Kind.COMMAND, "picks", Map.of()); }
         void select(UUID value) { dispatch(PickGatewayInteraction.Kind.SELECT, response.last().selection().id(), fields("selection", value.toString())); }
         String button(String label) { return response.last().buttons().stream().filter(b -> b.label().equals(label)).findFirst().orElseThrow().id(); }

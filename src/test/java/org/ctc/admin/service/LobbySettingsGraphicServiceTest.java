@@ -17,6 +17,26 @@ class LobbySettingsGraphicServiceTest {
     @TempDir Path directory;
 
     @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"Custom S01; S01; ?; R03; R03; C06", "Custom ?; S01; S01; ?; R08; R08; C06; ?"})
+    void givenOrderedCustomSelection_whenPreparingLobbyWeather_thenKeepEverySlotIncludingRepeatsAndRandom(String weather) {
+        // given / when
+        var display = LobbySettingsGraphicService.parseWeather(weather);
+        // then
+        assertThat(display.weatherMethod()).isEqualTo("Custom Weather");
+        assertThat(display.customWeather()).isEqualTo(weather.substring(7));
+        assertThat(display.presetWeather()).isEqualTo("—");
+    }
+    @Test
+    void givenOnePresetSelection_whenPreparingLobbyWeather_thenRenderOnlyThatPreset() {
+        // given / when
+        var display = LobbySettingsGraphicService.parseWeather("Preset R03");
+        // then
+        assertThat(display.weatherMethod()).isEqualTo("Preset Weather");
+        assertThat(display.presetWeather()).isEqualTo("R03"); assertThat(display.customWeather()).isEqualTo("—");
+    }
+
+
+    @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.CsvSource({"'SS, SM, SH',SM,Sports", "'RS, RM, RH, I, W',RM,Racing"})
     void givenSavedOneMakeTyres_whenRenderingLobby_thenShowActualFamilyAndKeepExactCompoundText(String available, String mandatory, String family) throws Exception {
         // given

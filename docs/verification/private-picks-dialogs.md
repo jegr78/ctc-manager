@@ -4,6 +4,28 @@ Issue #283 implements team entry on the domain and outgoing Gateway delivered in
 
 The rules modal uses required single-choice lists for tyre wear (1x–7x), fuel consumption (1x–6x) and refuelling speed (1–10 L/s). Saved selections remain preselected when replacing picks; laps remains a positive-integer input. The following **race strategy** dialog groups initial fuel, required pit stops and available dry tyres. Internal stage identifiers and persisted numeric values are unchanged.
 
+## Weather selection
+
+Issue #394 replaces the weather text field in new Discord drafts with an explicit
+Preset or Custom choice after the time form. Preset selects exactly one existing
+weather code. Custom selects 6, 7 or 8 ordered positions, each independently filled
+with a weather code or `?` for Random. Repeated codes are allowed. Each private
+menu contains at most 25 options; rain layouts have a second page. S01–S18 and
+C01–C06 are always offered. R01–R08 require verified rain availability on the
+selected layout. Unknown rain capability is labeled and does not offer rain codes.
+
+Replacement preselects recognized saved mode, count and individual codes. Explicit
+keep buttons advance unchanged defaults. The final review includes Change weather
+and a menu to edit a single Custom position without re-entering the other picks.
+No weather selection saves before Confirm submission. The admitted transaction
+rechecks the current locked layout before accepting a new Gateway submission.
+
+The existing weather string remains the storage and backup contract. New values
+use `Preset S01` or `Custom S01; S01; ?; C01; C02; C06`. Historic free text is kept
+unchanged in saved history and receipts. Unsupported historic text requires a new
+explicit weather selection when replacing a submission. Durable receipt replay
+and management review of historic revisions do not reinterpret their values.
+
 ## Delivery checklist
 
 - [x] Record requirements and reproduce missing behavior before production changes.

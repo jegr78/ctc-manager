@@ -87,7 +87,11 @@ public final class PickDraftSessionStore {
         void clearActions() { actions.clear(); }
         @Override public String toString() { return "PickDraftSession[transient]"; }
     }
-    record Action(String name, PickGatewayInteraction.Kind kind, List<Choice> choices, List<HomeRaceTarget> targets, int page, String query) {
-        Action { choices = List.copyOf(choices); targets = List.copyOf(targets); }
+    record Action(String name, PickGatewayInteraction.Kind kind, List<Choice> choices, List<HomeRaceTarget> targets, int page, String query,
+                  List<String> values, int weatherSlot, boolean weatherEdit) {
+        Action(String name, PickGatewayInteraction.Kind kind, List<Choice> choices, List<HomeRaceTarget> targets, int page, String query) {
+            this(name, kind, choices, targets, page, query, List.of(), 0, false);
+        }
+        Action { choices = List.copyOf(choices); targets = List.copyOf(targets); values = List.copyOf(values); }
     }
 }

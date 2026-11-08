@@ -27,13 +27,54 @@ class JdaPickGatewayResponseTest {
     final JdaPickGatewayResponse response = new JdaPickGatewayResponse(event);
 
     @Test
+    void givenRainLayoutCustomWizard_whenSendingEveryPickerPage_thenSerializeRealSdkMenusWithinLimitsAndKeepRepliesPrivate() {
+        // given
+        when(event.deferReply(true)).thenReturn(initial);
+        var followup = mock(WebhookMessageCreateAction.class, RETURNS_SELF);
+        when(hook.sendMessage(anyString())).thenReturn(followup);
+        var future = response.deferPrivate().toCompletableFuture();
+        var acknowledged = ArgumentCaptor.forClass(Consumer.class);
+        verify(initial).queue(acknowledged.capture(), any()); acknowledged.getValue().accept(hook);
+        var messages = new java.util.ArrayList<PickGatewayMessage>();
+        var transport = new PickGatewayResponse.Continuation() {
+            public void replyPrivate(String text) { throw new AssertionError(text); }
+            public void replyPrivate(PickGatewayMessage message) { messages.add(message); future.join().replyPrivate(message); }
+        };
+        var session = new PickDraftSessionStore.Session("g", "c", "u", 0, java.time.Instant.MAX);
+        var layout = new org.ctc.domain.picks.PickTeamView.Choice(java.util.UUID.randomUUID(), null, "Test rain layout",
+                false, null, List.of(), org.ctc.domain.model.TrackRainCapability.RAIN);
+        // when
+        PickWeatherWizard.start(session, layout, transport);
+        for (String value : List.of("CUSTOM", "8")) {
+            String id = messages.getLast().selection().id();
+            PickWeatherWizard.handle(session, session.actions.get(id.substring(id.lastIndexOf(':') + 1)),
+                    Map.of("selection", List.of(value)), layout, transport);
+        }
+        String id = messages.getLast().buttons().stream().filter(b -> b.label().equals("Next")).findFirst().orElseThrow().id();
+        PickWeatherWizard.handle(session, session.actions.get(id.substring(id.lastIndexOf(':') + 1)), Map.of(), layout, transport);
+        // then
+        var rows = ArgumentCaptor.forClass(java.util.Collection.class); verify(followup, times(4)).setComponents(rows.capture());
+        var sizes = new java.util.ArrayList<Integer>();
+        for (var components : rows.getAllValues()) {
+            var data = new net.dv8tion.jda.api.utils.messages.MessageCreateBuilder().setContent("Test weather page")
+                    .setComponents(components).build().toData().getArray("components");
+            var menu = data.getObject(0).getArray("components").getObject(0);
+            assertThat(menu.getInt("min_values")).isEqualTo(1); assertThat(menu.getInt("max_values")).isEqualTo(1);
+            sizes.add(menu.getArray("options").length());
+        }
+        assertThat(sizes).containsExactly(2, 3, 25, 8);
+        assertThat(messages.get(2).selection().options().getFirst().value()).isEqualTo("?");
+        verify(followup, times(4)).setEphemeral(true); verify(followup, times(4)).setAllowedMentions(List.of());
+    }
+
+    @Test
     void givenConfiguredLayoutTimes_whenSerializingModal_thenUseRealRequiredSdkSelectAndSavedValue() {
         var action = mock(ModalCallbackAction.class); when(event.replyModal(any())).thenReturn(action);
         response.openModal(PickInteractionViews.modal("ctc-picks:opaque", "time", org.ctc.domain.model.LobbyRulesProfile.CTC_2027,
                 false, Map.of("daytime", List.of("Night")), List.of("Sunrise", "Night")));
         var captured = ArgumentCaptor.forClass(Modal.class); verify(event).replyModal(captured.capture());
-        var fields = captured.getValue().toData().getArray("components"); assertThat(fields.length()).isEqualTo(5);
-        var time = fields.getObject(2).getObject("component");
+        var fields = captured.getValue().toData().getArray("components"); assertThat(fields.length()).isEqualTo(4);
+        var time = fields.getObject(1).getObject("component");
         assertThat(time.getString("custom_id")).isEqualTo("daytime"); assertThat(time.getInt("type")).isEqualTo(3);
         assertThat(time.getInt("min_values")).isEqualTo(1); assertThat(time.getInt("max_values")).isEqualTo(1);
         var options = time.getArray("options"); assertThat(options.length()).isEqualTo(2);
@@ -94,7 +135,7 @@ class JdaPickGatewayResponseTest {
         assertThat(json).contains("ctc-picks:opaque");
         if (stage.equals("fuel")) assertThat(json).contains("DEFAULT", "max_values", "available").doesNotContain("mandatory");
         if (stage.equals("mandatory")) assertThat(json).contains("None", "mandatory");
-        if (stage.equals("time")) assertThat(json).contains("Equal Conditions", "0x", "weather", "daytime");
+        if (stage.equals("time")) assertThat(json).contains("Equal Conditions", "0x", "daytime");
         verify(event, never()).deferReply(anyBoolean());
     }
 

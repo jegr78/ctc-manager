@@ -138,6 +138,11 @@ public class PickInteractionHandler implements PickGatewayInteractionHandler {
             }
             return;
         }
+        if (name.startsWith("weather-")) {
+            var layout = currentLayout(session, view);
+            if (PickWeatherWizard.handle(session, action, event.values(), layout, reply)) review(session, reply);
+            return;
+        }
         boolean oneMake = session.car != null && session.car.oneMake();
         try {
             validateStage(name, event.values(), session.lobbyRulesProfile, oneMake, session.fields);
@@ -165,16 +170,24 @@ public class PickInteractionHandler implements PickGatewayInteractionHandler {
         switch (name) {
             case "rules" -> next(session, "fuel", "Choose initial fuel, stops and available dry tyres. Racing always includes Intermediate and Wet.", reply);
             case "fuel" -> next(session, "mandatory", "Choose None or mandatory compounds from your available dry tyres.", reply);
-            case "mandatory" -> next(session, "time", "Choose time progression and enter weather and time of day.", reply);
-            case "time" -> {
-                session.payload = payload(session);
-                session.clearActions();
-                send(reply, escape(session.label) + "\nReview all values before confirming. Nothing has been saved.\n"
-                                + payload(session.payload, session.track.label(), session.car.label()),
-                        List.of(button(session, "confirm", "Confirm submission")), null);
-            }
+            case "mandatory" -> next(session, "time", "Choose time progression and time of day. Weather selection follows.", reply);
+            case "time" -> PickWeatherWizard.start(session, currentLayout(session, view), reply);
             default -> throw new BusinessRuleException("Invalid dialog stage");
         }
+    }
+
+    private static Choice currentLayout(Session session, PickTeamView view) {
+        return view.tracks().stream().filter(layout -> session.track != null && layout.id().equals(session.track.id()))
+                .findFirst().orElseThrow(() -> new BusinessRuleException("Layout is no longer available"));
+    }
+
+    private void review(Session session, PickGatewayResponse.Continuation reply) {
+        session.payload = payload(session);
+        session.clearActions();
+        send(reply, escape(session.label) + "\nReview all values before confirming. Nothing has been saved.\n"
+                        + payload(session.payload, session.track.label(), session.car.label()),
+                List.of(button(session, "confirm", "Confirm submission"), button(session, "weather-change", "Change weather")),
+                PickWeatherWizard.editSlots(session));
     }
 
     private void selectCar(Session session, Choice chosen, PickGatewayResponse.Continuation reply) {
