@@ -93,6 +93,64 @@ class DiscordIncidentThreadSenderIT {
         wm.verify(1, postRequestedFor(urlEqualTo("/api/v10/channels/200/messages")));
     }
 
+    IncidentThreadClaim readable(IncidentThreadStage stage) {
+        var original = claim(stage, 0); var old = original.work();
+        String canonical = "INC-6E37B1BE-20ED-48EC-9C95-9D07812AF45E";
+        var payload = org.ctc.domain.service.IncidentThreadProjection.render(canonical, "Test party",
+                new org.ctc.domain.model.IncidentPayload("Test drivers", "00:13.500", "Test facts @everyone", "https://example.invalid/clip"),
+                "T-DLT vs T-CHR", "Leg 1 · Test season · MD 1", 1);
+        String marker = "[CTC " + canonical + " " + (privateSide(stage) ? "PRIVATE" : "PUBLIC") + ":0]";
+        String content = payload.messages().getFirst() + "\n" + IncidentDisplay.footer(marker, 1);
+        var work = new IncidentThreadClaim.Work(stage, 0, canonical, marker, payload.title(), content, content,
+                old.nonce(), old.starterId(), old.threadId());
+        return new IncidentThreadClaim(original.id(), original.windowId(), original.token(), original.version(), original.generation(),
+                original.validUntil(), original.destination(), work);
+    }
+
+    @Test void givenReadableReport_whenSending_thenPinProductionMarkdownAndSuppressAllMentions() {
+        var claim = readable(IncidentThreadStage.PUBLIC_STARTER); String body = claim.work().content();
+        wm.stubFor(post(urlEqualTo("/api/v10/channels/200/messages")).willReturn(okJson(json(message("801", "200", body)))));
+        assertThat(sender.send(claim).disposition()).isEqualTo(IncidentSendResult.Disposition.SENT);
+        assertThat(body).startsWith("**Incident INC:bjexviDtSOyclZ0HgSr0Xg**\n**Pairing:**")
+                .endsWith("\n-# ||[CTC INC-6E37B1BE-20ED-48EC-9C95-9D07812AF45E PUBLIC:0]||");
+        wm.verify(1, postRequestedFor(urlEqualTo("/api/v10/channels/200/messages"))
+                .withRequestBody(matchingJsonPath("$.content", equalTo(body)))
+                .withRequestBody(matchingJsonPath("$.allowed_mentions.parse", equalToJson("[]"))));
+    }
+
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void givenUnknownReadableSend_whenReconciling_thenAdoptOnlyExactContentAndNeverRepostAConflict(boolean altered) {
+        var claim = readable(IncidentThreadStage.PUBLIC_STARTER);
+        emptyInventory("200");
+        String body = altered ? claim.work().content().replace("Test facts", "Test conflicting facts") : claim.work().content();
+        wm.stubFor(get(urlPathEqualTo("/api/v10/channels/200/messages")).withQueryParam("limit", equalTo("100"))
+                .willReturn(okJson(json(List.of(message("801", "200", body))))));
+        var result = sender.verify(claim, "");
+        if (altered) {
+            assertThat(result.disposition()).isEqualTo(IncidentSendResult.Disposition.REJECTED);
+            assertThat(result.code()).isEqualTo("VERIFICATION_FAILED");
+        } else {
+            assertThat(result.disposition()).isEqualTo(IncidentSendResult.Disposition.SENT);
+            assertThat(result.messageId()).isEqualTo("801");
+        }
+        wm.verify(0, postRequestedFor(anyUrl()));
+    }
+
+    @Test void givenAnotherCanonicalCaseWithTheSameDisplayedReference_whenReconciling_thenRejectAmbiguousTitle() {
+        var claim = readable(IncidentThreadStage.PRIVATE_STARTER); emptyInventory("300");
+        wm.stubFor(get(urlPathEqualTo("/api/v10/channels/300/messages")).withQueryParam("limit", equalTo("100")).willReturn(okJson("[]")));
+        String other = json(Map.of("id", "601", "guild_id", "100", "type", 11, "parent_id", "300", "name", claim.work().title(),
+                "thread_metadata", Map.of("archived", false, "locked", false)));
+        wm.stubFor(get(urlEqualTo("/api/v10/guilds/100/threads/active")).willReturn(okJson("{\"threads\":[" + other + "]}")));
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/601")).willReturn(okJson(other)));
+        wm.stubFor(get(urlEqualTo("/api/v10/channels/300/messages/601")).willReturn(okJson(json(message("601", "300",
+                claim.work().content().replace(claim.work().caseReference(), "INC-bjexviDtSOyclZ0HgSr0Xg"))))));
+        var result = sender.verify(claim, "");
+        assertThat(result.disposition()).isEqualTo(IncidentSendResult.Disposition.REJECTED);
+        assertThat(result.code()).isEqualTo("VERIFICATION_FAILED");
+        wm.verify(0, postRequestedFor(anyUrl()));
+    }
+
     @Test void givenStaffOnlyTextParent_whenSendingDetails_thenCreateANewControlledStarterWithNoMentions() {
         wm.stubFor(post(urlEqualTo("/api/v10/channels/300/messages")).willReturn(okJson(json(message("601","300",content(true,0))))));
         var result=sender.send(claim(IncidentThreadStage.PRIVATE_STARTER,0));assertThat(result.disposition()).isEqualTo(IncidentSendResult.Disposition.SENT);assertThat(result.messageId()).isEqualTo("601");assertThat(result.threadId()).isNull();

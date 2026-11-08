@@ -49,8 +49,8 @@ public class IncidentDisclosureService {
             int leg = ordered.stream().map(Race::getId).toList().indexOf(report.getRace().getId()) + 1;
             if (leg < 1) throw new BusinessRuleException("The frozen report no longer identifies its concrete pairing race");
             var delivery = IncidentDelivery.capture(report, revision, IncidentDeliveryOperation.DISCLOSURE, window.getClosedAt());
-            delivery.freezePublicIdentity(target.home().getShortName() + " vs " + target.away().getShortName(),
-                    "Leg " + leg + " · " + report.getOriginalMatchday().getLabel() + " · Race " + report.getRace().getId());
+            delivery.freezeReadableIdentity(target.home().getShortName() + " vs " + target.away().getShortName(),
+                    "Leg " + leg + " · " + target.season().getName() + " · " + report.getOriginalMatchday().getLabel());
             queued.add(deliveries.save(delivery));
         }
         return List.copyOf(queued);

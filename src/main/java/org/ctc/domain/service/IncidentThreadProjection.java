@@ -3,6 +3,7 @@ package org.ctc.domain.service;
 import java.util.ArrayList;
 import java.util.List;
 import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.domain.incidents.IncidentDisplay;
 import org.ctc.domain.model.IncidentDelivery;
 import org.ctc.domain.model.IncidentPayload;
 import org.ctc.domain.model.IncidentDeliveryOperation;
@@ -20,12 +21,16 @@ public final class IncidentThreadProjection {
                 || report.getFrozenRevisionNumber()!=revision.getRevisionNumber()
                 || !report.getId().equals(revision.getReport().getId()) || operation.getPartyLabel()==null || operation.getPartyLabel().isBlank())throw unavailable();
         var facts=revision.getPayload();if(facts==null)throw unavailable();
-        return render(operation.getCaseReference(),operation.getPartyLabel(),facts,operation.getPairingLabel(),operation.getRaceLabel());
+        return render(operation.getCaseReference(),operation.getPartyLabel(),facts,operation.getPairingLabel(),operation.getRaceLabel(),operation.getPresentationVersion());
     }
     public static Payload render(String caseReference,String partyLabel,IncidentPayload facts) {
         return render(caseReference, partyLabel, facts, null, null);
     }
     public static Payload render(String caseReference,String partyLabel,IncidentPayload facts,String pairingLabel,String raceLabel) {
+        return render(caseReference, partyLabel, facts, pairingLabel, raceLabel, null);
+    }
+    public static Payload render(String caseReference,String partyLabel,IncidentPayload facts,String pairingLabel,String raceLabel,Integer presentationVersion) {
+        if (presentationVersion != null && (presentationVersion != 1 || pairingLabel == null)) throw unavailable();
         if ((pairingLabel == null) != (raceLabel == null)) throw unavailable();
         if (pairingLabel != null && (pairingLabel.isBlank() || raceLabel.isBlank() || pairingLabel.length() > 1000 || raceLabel.length() > 1000)) throw unavailable();
         String identity = pairingLabel == null ? "" : "Pairing: " + escapedLabel(validText(pairingLabel).replace('\r', ' ').replace('\n', ' '))
@@ -36,6 +41,17 @@ public final class IncidentThreadProjection {
         String body=validText("Incident "+caseReference+"\n"+identity+"Reporting party: "+escapedLabel(label)
                 +"\n\nInvolved drivers\n"+facts.getInvolvedDrivers()+"\n\nReplay timestamp\n"+facts.getReplayTimestamp()
                 +"\n\nDescription\n"+facts.getDescription()+"\n\nEvidence references\n"+facts.getEvidenceLinks());
+        if (presentationVersion != null) {
+            String reference = IncidentDisplay.reference(caseReference);
+            String context = validText(pairingLabel + " · " + raceLabel.split(" · ", 2)[0] + " · " + label).replace('\r', ' ').replace('\n', ' ');
+            title = bounded(context, 100 - reference.length() - 3) + " · " + reference;
+            body = validText("**Incident " + escapedLabel(reference) + "**\n"
+                    + "**Pairing:** " + escapedLabel(validText(pairingLabel).replace('\r', ' ').replace('\n', ' '))
+                    + "\n**Race:** " + escapedLabel(validText(raceLabel).replace('\r', ' ').replace('\n', ' '))
+                    + "\n**Reporting party:** " + escapedLabel(label)
+                    + "\n\n**Involved drivers**\n" + facts.getInvolvedDrivers() + "\n\n**Replay timestamp**\n" + facts.getReplayTimestamp()
+                    + "\n\n**Description**\n" + facts.getDescription() + "\n\n**Evidence references**\n" + facts.getEvidenceLinks());
+        }
         var messages=new ArrayList<String>();
         for(int start=0;start<body.length();) {int end=boundary(body,start,1700);messages.add(body.substring(start,end));start=end;}
         return new Payload(title,messages);

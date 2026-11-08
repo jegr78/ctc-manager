@@ -27,7 +27,7 @@ public final class IncidentBackupValidator {
             Map.entry("incident_report_windows", Set.of("id", "context", "version", "state", "plannedStartLocal", "plannedStart", "deadline", "openedAt", "openedBy", "closedAt", "createdAt", "updatedAt")),
             Map.entry("incident_reports", Set.of("id", "window", "race", "originalMatchday", "originalHomeTeam", "originalAwayTeam", "caseReference", "authorId", "party", "state", "version", "latestRevisionNumber", "frozenRevisionNumber", "createdAt", "updatedAt")),
             Map.entry("incident_report_revisions", Set.of("id", "report", "revisionNumber", "reportVersion", "payload", "actorId", "acceptedAt", "requestId", "createdAt", "updatedAt")),
-            Map.entry("incident_deliveries", Set.of("id", "report", "revision", "operation", "operationKey", "guildId", "channelId", "nonce", "caseReference", "partyLabel", "pairingLabel", "raceLabel", "capturedAt", "state", "version", "attempts", "claimToken", "claimGeneration", "leaseUntil", "nextAttemptAt", "completedAt", "messageId", "failureCode", "reconciledBy", "reconciliationReason", "createdAt", "updatedAt")),
+            Map.entry("incident_deliveries", Set.of("id", "report", "revision", "operation", "operationKey", "guildId", "channelId", "nonce", "caseReference", "partyLabel", "pairingLabel", "raceLabel", "presentationVersion", "capturedAt", "state", "version", "attempts", "claimToken", "claimGeneration", "leaseUntil", "nextAttemptAt", "completedAt", "messageId", "failureCode", "reconciledBy", "reconciliationReason", "createdAt", "updatedAt")),
             Map.entry("discord_global_config",Set.of("stewardsChannelId","incidentStaffRoleIds","stewardsForumTagIds")),
             Map.entry("incident_thread_publications",Set.of("id","delivery","stewardsChannelId","staffRoleIds","forumTagIds","messageChunks","privateStarterId","privateThreadId","privateMessageIds","publicStarterId","publicThreadId","publicMessageIds","referenceMessageId","createdAt","updatedAt")),
             Map.entry("incident_report_events", Set.of("id", "window", "report", "eventKey", "kind", "windowVersion", "reportVersion", "revisionNumber", "actorKind", "actorId", "reason", "acceptedAt", "previousDeadline", "deadline", "requestId", "createdAt", "updatedAt")));
@@ -63,7 +63,8 @@ public final class IncidentBackupValidator {
         if (incident) {
             row.fieldNames().forEachRemaining(field -> { if (!FIELDS.get(table).contains(field)) fail("Unexpected incident history field"); });
             for (String field : FIELDS.get(table)) if (!row.has(field)
-                    && !(table.equals("incident_deliveries") && version < 11 && Set.of("pairingLabel", "raceLabel").contains(field))) fail("Missing incident history field " + field);
+                    && !(table.equals("incident_deliveries") && version < 11 && Set.of("pairingLabel", "raceLabel").contains(field))
+                    && !(table.equals("incident_deliveries") && version < 21 && field.equals("presentationVersion"))) fail("Missing incident history field " + field);
             for (String audit : List.of("createdAt", "updatedAt")) if (row.hasNonNull(audit)) local(row, audit);
         }
         var projected = JsonNodeFactory.instance.objectNode();
@@ -301,13 +302,18 @@ public final class IncidentBackupValidator {
     }
 
     private void validateDisclosureIdentity(JsonNode delivery) {
+        var presentation = delivery.get("presentationVersion");
+        boolean readable = presentation != null && !presentation.isNull();
+        if (readable && (version < 21 || !presentation.isIntegralNumber() || !presentation.canConvertToInt()
+                || presentation.intValue() != 1 || !"DISCLOSURE".equals(text(delivery, "operation", 16)))) fail("Invalid incident presentation version");
         String pairing = optionalText(delivery, "pairingLabel", 1000), race = optionalText(delivery, "raceLabel", 1000);
+        if (readable && pairing == null) fail("Readable incident requires its frozen identity");
         if ((pairing == null) != (race == null)) fail("Incomplete frozen disclosure identity");
         if (pairing != null) {
             if (race == null) throw new ValidationException("Missing frozen race identity");
             if (version < 11 || !"DISCLOSURE".equals(text(delivery, "operation", 16)) || pairing.isBlank() || race.isBlank()) fail("Invalid frozen disclosure identity format");
             var report = index("incident_reports").get(reference(delivery, "report", "incident_reports"));
-            if (!race.startsWith("Leg ") || !race.endsWith(" · Race " + uuid(report, "race"))) fail("Frozen disclosure identity belongs to another race");
+            if (!race.startsWith("Leg ") || !readable && !race.endsWith(" · Race " + uuid(report, "race"))) fail("Frozen disclosure identity belongs to another race");
         }
     }
 
@@ -384,7 +390,8 @@ public final class IncidentBackupValidator {
             validateDisclosureIdentity(delivery);
             var projection=IncidentThreadProjection.render(text(delivery,"caseReference",64),text(delivery,"partyLabel",255),
                     new IncidentPayload(text(payload,"involvedDrivers",2000),text(payload,"replayTimestamp",200),text(payload,"description",20000),optionalText(payload,"evidenceLinks",8000)),
-                    optionalText(delivery,"pairingLabel",1000),optionalText(delivery,"raceLabel",1000));
+                    optionalText(delivery,"pairingLabel",1000),optionalText(delivery,"raceLabel",1000),
+                    delivery.hasNonNull("presentationVersion") ? delivery.path("presentationVersion").intValue() : null);
             if(chunks>40 || chunks!=projection.messages().size())fail("Incident thread chunks contradict their frozen source facts");
             String privateStarter=optionalSnowflake(publication,"privateStarterId"),privateThread=optionalSnowflake(publication,"privateThreadId");
             String publicStarter=optionalSnowflake(publication,"publicStarterId"),publicThread=optionalSnowflake(publication,"publicThreadId"),reference=optionalSnowflake(publication,"referenceMessageId");

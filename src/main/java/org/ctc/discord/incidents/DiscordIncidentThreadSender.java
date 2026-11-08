@@ -220,7 +220,7 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
                 var source=discord.fetchBotMessage(parent,id);
                 if (!(source!=null && id.equals(source.id()) && parent.equals(source.channelId()))) throw unavailable();
                 boolean bot=source.author()!=null && prepared.botId().equals(source.author().id());
-                if(bot && source.content()!=null && source.content().endsWith("\n"+work.marker()) && !work.content().equals(source.content()))throw unavailable();
+                if(bot && IncidentDisplay.hasMarker(source.content(),work.marker()) && !work.content().equals(source.content()))throw unavailable();
                 if(bot && work.content().equals(source.content())) {
                     requireThread(claim,thread,id);
                     matches.put(id,sent(id,privateSide(claim)?id:null));
@@ -279,17 +279,19 @@ public class DiscordIncidentThreadSender implements IncidentThreadSender {
     private static void requireInventoryThread(IncidentThreadClaim claim,IncidentChannel thread,String parent,String id) {
         if (!(thread!=null && id.equals(thread.id()) && claim.destination().guildId().equals(thread.guildId()) && parent.equals(thread.parentId()) && Integer.valueOf(11).equals(thread.type()))) throw unavailable();
     }
-    private static boolean hasCaseTitle(IncidentThreadClaim claim,IncidentChannel thread) {return thread.name()!=null && thread.name().contains("Incident "+claim.work().caseReference());}
+    private static boolean hasCaseTitle(IncidentThreadClaim claim,IncidentChannel thread) {
+        return thread.name()!=null && (thread.name().contains("Incident "+claim.work().caseReference())
+                || thread.name().endsWith(" · "+IncidentDisplay.reference(claim.work().caseReference())));
+    }
 
     private static boolean hasCaseMarker(String content,String reference) {
-        int line=content==null?-1:content.lastIndexOf('\n');
-        return line>=0 && content.substring(line+1).startsWith("[CTC "+reference+" ");
+        return IncidentDisplay.hasCaseMarker(content,reference);
     }
     private List<BotMessage> matchingMessages(String channelId,String content,String botId,String marker) throws DiscordApiException {
         var matches=new ArrayList<BotMessage>();
         scanMessages(channelId,message -> {
             if(message.author()!=null && botId.equals(message.author().id())) {
-                require(message.content()==null || !message.content().endsWith("\n"+marker) || content.equals(message.content()));
+                require(!IncidentDisplay.hasMarker(message.content(),marker) || content.equals(message.content()));
                 if(content.equals(message.content()))matches.add(message);
             }
         });
