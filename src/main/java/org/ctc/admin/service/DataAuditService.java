@@ -120,6 +120,7 @@ public class DataAuditService {
         for (var track : trackRepository.findAll()) {
             try {
                 org.ctc.domain.model.TrackEnvironmentValues.from(track);
+                org.ctc.domain.model.TrackEnvironmentProvenance.requireConsistent(track);
                 if (track.getEnvironmentVersion() < 0) throw new org.ctc.domain.exception.BusinessRuleException("Invalid environment version");
             } catch (RuntimeException invalid) {
                 findings.get(Category.TRACK_ENVIRONMENT).add(new DataAuditFinding(Category.TRACK_ENVIRONMENT, UNDETERMINABLE,

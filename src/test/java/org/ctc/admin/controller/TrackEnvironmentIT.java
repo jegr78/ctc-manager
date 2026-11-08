@@ -263,6 +263,7 @@ class TrackEnvironmentIT {
                     for (var row : rows) {
                         var object = (com.fasterxml.jackson.databind.node.ObjectNode) row;
                         if (legacy) object.remove(List.of("timeOfDayOptions", "rainCapability", "environmentVersion"));
+                        if(version<20)object.remove(List.of("environmentSource","environmentImportHash","environmentOverride"));
                         if (malformed && object.path("id").asText().equals(id.toString()))
                             object.putArray("timeOfDayOptions").add("Night").add("Night");
                     }

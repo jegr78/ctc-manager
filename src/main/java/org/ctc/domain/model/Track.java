@@ -39,6 +39,15 @@ public class Track extends BaseEntity {
     @Column(name = "environment_version", nullable = false)
     private long environmentVersion;
 
+    @Column(name = "environment_source", length = 1500)
+    private String environmentSource;
+
+    @Column(name = "environment_import_hash", length = 64)
+    private String environmentImportHash;
+
+    @Column(name = "environment_override", nullable = false)
+    private boolean environmentOverride;
+
 	public Track(String name, String country) {
 		this.name = name;
 		this.country = country;

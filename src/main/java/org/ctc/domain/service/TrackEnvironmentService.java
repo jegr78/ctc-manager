@@ -27,7 +27,7 @@ public class TrackEnvironmentService {
         var track = tracks.findById(id).orElseThrow(() -> new EntityNotFoundException("Track", id));
         var values = TrackEnvironmentValues.from(track);
         return new View(values, String.join("\n", values.timeOfDayOptions()), track.getEnvironmentVersion(), generation,
-                WeatherPreset.available(values.rainCapability()));
+                WeatherPreset.available(values.rainCapability()), TrackEnvironmentProvenance.decode(track.getEnvironmentSource()), track.isEnvironmentOverride());
     }
     public void save(UUID id, String text, TrackRainCapability rain, long version, String generation) {
         var values = TrackEnvironmentValues.fromText(text, rain);
@@ -37,7 +37,7 @@ public class TrackEnvironmentService {
             if (version != track.getEnvironmentVersion()) throw new BusinessRuleException("Track environment changed; reload before saving");
             if (version == Long.MAX_VALUE) throw new BusinessRuleException("Track environment version is exhausted");
             track.setTimeOfDayOptions(values.timeOfDayOptions()); track.setRainCapability(values.rainCapability().name());
-            track.setEnvironmentVersion(version + 1);
+            track.setEnvironmentVersion(version + 1); track.setEnvironmentOverride(true);
             return null;
         });
     }
@@ -58,5 +58,9 @@ public class TrackEnvironmentService {
         return track;
     }
     public record View(TrackEnvironmentValues values, String timeOfDayText, long version, String generation,
-                       List<WeatherPreset> weatherPresets) { }
+                       List<WeatherPreset> weatherPresets, TrackEnvironmentProvenance source, boolean manualOverride) {
+        public View(TrackEnvironmentValues values,String timeOfDayText,long version,String generation,List<WeatherPreset> weatherPresets) {
+            this(values,timeOfDayText,version,generation,weatherPresets,null,false);
+        }
+    }
 }

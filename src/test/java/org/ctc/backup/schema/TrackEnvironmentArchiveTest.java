@@ -11,10 +11,11 @@ class TrackEnvironmentArchiveTest {
     private final ObjectMapper mapper = new ObjectMapper();
     private ObjectNode row() {
         var row = mapper.createObjectNode().put("rainCapability", "RAIN").put("environmentVersion", 3);
-        row.putArray("timeOfDayOptions").add("Night").add("Sunrise"); return row;
+        row.putArray("timeOfDayOptions").add("Night").add("Sunrise");
+        row.putNull("environmentSource"); row.putNull("environmentImportHash"); row.put("environmentOverride",true); return row;
     }
     @Test void givenCurrentMetadata_whenNormalizing_thenPreserveEveryValueAndOriginalInput() {
-        var row = row(); var normalized = TrackEnvironmentArchive.normalize(19, "tracks", row);
+        var row = row(); var normalized = TrackEnvironmentArchive.normalize(20, "tracks", row);
         assertThat(normalized).isEqualTo(row); assertThat(normalized).isNotSameAs(row);
         assertThat(normalized.path("timeOfDayOptions").get(0).textValue()).isEqualTo("Night");
     }
@@ -53,6 +54,38 @@ class TrackEnvironmentArchiveTest {
             case "overflow" -> row.put("environmentVersion", java.math.BigInteger.valueOf(Long.MAX_VALUE).add(java.math.BigInteger.ONE));
             default -> row.put("timeOfDayOptions","Night");
         }
-        assertThatThrownBy(() -> TrackEnvironmentArchive.normalize(19,"tracks",row)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> TrackEnvironmentArchive.normalize(20,"tracks",row)).isInstanceOf(IllegalArgumentException.class);
+    }
+    @Test void givenSchema19Environment_whenUpgrading_thenProtectExistingManualSettingsAndLeavePristineEligible() {
+        var legacy=row();legacy.remove(java.util.List.of("environmentSource","environmentImportHash","environmentOverride"));
+        assertThat(TrackEnvironmentArchive.normalize(19,"tracks",legacy).path("environmentOverride").booleanValue()).isTrue();
+        legacy.putArray("timeOfDayOptions");legacy.put("rainCapability","UNKNOWN");legacy.put("environmentVersion",0);
+        assertThat(TrackEnvironmentArchive.normalize(19,"tracks",legacy).path("environmentOverride").booleanValue()).isFalse();
+        legacy.put("environmentSource","undeclared");
+        assertThatThrownBy(() -> TrackEnvironmentArchive.normalize(19,"tracks",legacy)).isInstanceOf(IllegalArgumentException.class);
+    }
+    @org.junit.jupiter.params.ParameterizedTest @ValueSource(strings={"missing-override","string-override","source-object","source-null-json","hash-only","wrong-hash","coerced-profile"})
+    void givenSchema20MalformedSource_whenPreflighting_thenRejectBeforeAnyRestore(String kind) {
+        var row=row();
+        switch(kind) {
+            case "missing-override" -> row.remove("environmentOverride");
+            case "string-override" -> row.put("environmentOverride","true");
+            case "source-object" -> row.putObject("environmentSource");
+            case "source-null-json" -> row.put("environmentSource","null");
+            case "hash-only" -> row.put("environmentImportHash","a".repeat(64));
+            case "coerced-profile" -> row.put("environmentSource","{\"profile\":123,\"sourceEditedAt\":\"2026-07-08T01:07:32Z\",\"retrievedAt\":\"2026-11-08T12:00:00Z\",\"sourceHash\":\""+"a".repeat(64)+"\"}");
+            default -> {
+                var source=new org.ctc.domain.model.TrackEnvironmentProvenance("Test source","2026-07-08T01:07:32Z","2026-11-08T12:00:00Z","a".repeat(64));
+                row.put("environmentSource",source.encode());row.put("environmentImportHash","b".repeat(64));row.put("environmentOverride",false);
+            }
+        }
+        assertThatThrownBy(() -> TrackEnvironmentArchive.normalize(20,"tracks",row)).isInstanceOf(IllegalArgumentException.class);
+    }
+    @Test void givenImportedSource_whenNormalizing_thenRetainProvenanceAndExactValuesFingerprint() {
+        var row=row();
+        var source=new org.ctc.domain.model.TrackEnvironmentProvenance("Test source","2026-07-08T01:07:32Z","2026-11-08T12:00:00Z","a".repeat(64));
+        var values=new org.ctc.domain.model.TrackEnvironmentValues(java.util.List.of("Night","Sunrise"),org.ctc.domain.model.TrackRainCapability.RAIN);
+        row.put("environmentSource",source.encode());row.put("environmentImportHash",org.ctc.domain.model.TrackEnvironmentProvenance.valuesHash(values));row.put("environmentOverride",false);
+        assertThat(TrackEnvironmentArchive.normalize(20,"tracks",row)).isEqualTo(row);
     }
 }

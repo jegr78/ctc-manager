@@ -35,8 +35,8 @@ import org.springframework.stereotype.Component;
 public class TrackRestorer implements EntityRestorer {
 
     private static final String INSERT_SQL =
-            "INSERT INTO tracks (id, name, country, image_url, created_at, updated_at, time_of_day_options, rain_capability, environment_version) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "INSERT INTO tracks (id, name, country, image_url, created_at, updated_at, time_of_day_options, rain_capability, environment_version, environment_source, environment_import_hash, environment_override) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final int BATCH_SIZE = 500;
 
@@ -63,6 +63,9 @@ public class TrackRestorer implements EntityRestorer {
             ps.setString(7, new org.ctc.domain.model.TrackTimeOptionsConverter().convertToDatabaseColumn(times));
             ps.setString(8, row.path("rainCapability").asText("UNKNOWN"));
             ps.setLong(9, row.path("environmentVersion").asLong(0));
+            nullableString(ps,10,row,"environmentSource");nullableString(ps,11,row,"environmentImportHash");
+            ps.setBoolean(12,row.path("environmentOverride").asBoolean(row.path("environmentVersion").asLong(0)>0
+                    || !times.isEmpty() || !row.path("rainCapability").asText("UNKNOWN").equals("UNKNOWN")));
         });
         log.debug("TrackRestorer: inserted {} track rows", rows.size());
     }
