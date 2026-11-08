@@ -68,6 +68,13 @@ class TrackEnvironmentIT {
     void configure() { var view=environment.view(id); environment.save(id,"Night\nSunrise",TrackRainCapability.RAIN,view.version(),view.generation()); }
     void original() { var t=tracks.findById(id).orElseThrow(); assertThat(t.getTimeOfDayOptions()).isEmpty(); assertThat(t.getRainCapability()).isEqualTo("UNKNOWN"); assertThat(t.getEnvironmentVersion()).isZero(); }
 
+    private TransactionTemplate readCommitted() {
+        // MariaDB 13 snapshot isolation rejects the stale row before Hibernate can exercise these guards.
+        var transaction = new TransactionTemplate(tx.getTransactionManager());
+        transaction.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_READ_COMMITTED);
+        return transaction;
+    }
+
     @Test @WithMockUser("test-manager")
     void givenNewLayout_whenCreatingWithNativeFields_thenPersistOrderedOptionsWithoutChangingExistingRecords() throws Exception {
         var name="Test new environment "+UUID.randomUUID();
@@ -135,7 +142,7 @@ class TrackEnvironmentIT {
     @Test void givenCachedIdentity_whenAnotherTransactionSavesMetadata_thenIdentityUpdateCannotOverwriteEnvironment() {
         var independent = new TransactionTemplate(tx.getTransactionManager());
         independent.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-        tx.executeWithoutResult(status -> {
+        readCommitted().executeWithoutResult(status -> {
             var cached = tracks.findById(id).orElseThrow();
             assertThat(cached.getTimeOfDayOptions()).isEmpty();
             independent.executeWithoutResult(other -> {
@@ -170,7 +177,7 @@ class TrackEnvironmentIT {
     @Test void givenCachedUnknownMetadata_whenAnotherTransactionConfiguresTimes_thenValidateAgainstFreshLockedValues() {
         var independent = new TransactionTemplate(tx.getTransactionManager());
         independent.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-        assertThatThrownBy(() -> tx.executeWithoutResult(status -> {
+        assertThatThrownBy(() -> readCommitted().executeWithoutResult(status -> {
             var cached = tracks.findById(id).orElseThrow(); assertThat(cached.getTimeOfDayOptions()).isEmpty();
             independent.executeWithoutResult(other -> {
                 var current = tracks.findById(id).orElseThrow(); current.setTimeOfDayOptions(List.of("Night")); current.setEnvironmentVersion(1);
