@@ -50,7 +50,7 @@ public class IncidentDisclosureService {
             if (leg < 1) throw new BusinessRuleException("The frozen report no longer identifies its concrete pairing race");
             var delivery = IncidentDelivery.capture(report, revision, IncidentDeliveryOperation.DISCLOSURE, window.getClosedAt());
             delivery.freezeReadableIdentity(target.home().getShortName() + " vs " + target.away().getShortName(),
-                    "Leg " + leg + " · " + target.season().getName() + " · " + report.getOriginalMatchday().getLabel());
+                    "Leg " + leg + " · " + target.season().getDisplayLabel() + " · " + report.getOriginalMatchday().getLabel());
             queued.add(deliveries.save(delivery));
         }
         return List.copyOf(queued);

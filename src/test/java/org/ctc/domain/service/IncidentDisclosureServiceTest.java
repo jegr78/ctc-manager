@@ -17,6 +17,7 @@ class IncidentDisclosureServiceTest {
     final IncidentPayload payload = new IncidentPayload("Test PRIVATE guest", "00:00", "Test PRIVATE final description", "");
     final IncidentReportRevision revision;
     IncidentDisclosureServiceTest() {
+        f.season.setYear(2027); f.season.setNumber(2);
         when(contexts.resolve(any())).thenReturn(f.target());
         f.openWindow(); report.appendRevision();
         revision = IncidentUnitFixture.id(new IncidentReportRevision(report, 1, 1, payload, report.getAuthorId(), IncidentUnitFixture.NOW, UUID.randomUUID()));
@@ -43,10 +44,10 @@ class IncidentDisclosureServiceTest {
         report.freeze(); f.window.close(IncidentUnitFixture.NOW.plusSeconds(3600));
         var queued = disclosure.captureClosedWindow(f.window, List.of(report)).getFirst();
         String body = String.join("", IncidentThreadProjection.capture(queued).messages());
-        assertThat(body).contains("**Pairing:** TIH vs TIA", "**Race:** Leg 1 · Test Incident season · Test Incident round");
+        assertThat(body).contains("**Pairing:** TIH vs TIA", "**Race:** Leg 1 · 2027 \\| \\#2 \\| Test Incident season · Test Incident round");
         assertThat(body).doesNotContain(f.race.getId().toString());
         assertThat(queued.getPresentationVersion()).isEqualTo(1);
-        f.home.setShortName("T-CHANGED"); f.away.setShortName("T-OTHER"); f.day.setSortIndex(99); f.season.setName("Test changed season");
+        f.home.setShortName("T-CHANGED"); f.away.setShortName("T-OTHER"); f.day.setSortIndex(99); f.season.setName("Test changed season"); f.season.setYear(2028); f.season.setNumber(3);
         var earlier = new Race(); earlier.setId(UUID.randomUUID()); earlier.setMatch(f.match); earlier.setMatchday(f.day);
         earlier.setDateTime(java.time.LocalDateTime.of(2030, 1, 1, 0, 0)); f.match.getRaces().addFirst(earlier);
         assertThat(String.join("", IncidentThreadProjection.capture(queued).messages())).isEqualTo(body).doesNotContain("T-CHANGED", "T-OTHER");
@@ -56,7 +57,7 @@ class IncidentDisclosureServiceTest {
         f.race.setDateTime(null); f.race.setTrack(null);
         report.freeze(); f.window.close(IncidentUnitFixture.NOW.plusSeconds(3600));
         var queued = disclosure.captureClosedWindow(f.window, List.of(report)).getFirst();
-        assertThat(queued.getRaceLabel()).isEqualTo("Leg 1 · Test Incident season · Test Incident round");
+        assertThat(queued.getRaceLabel()).isEqualTo("Leg 1 · 2027 | #2 | Test Incident season · Test Incident round");
         assertThat(queued.getPresentationVersion()).isEqualTo(1);
     }
 
