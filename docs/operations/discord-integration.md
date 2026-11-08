@@ -63,6 +63,7 @@ Command registration and the outgoing Gateway connection are separate, explicit 
 |------------|---------|
 | View Channels | Required for every REST call against a guild |
 | Manage Channels | Create per-match channels + archive |
+| Use Application Commands | Let the bot grant this permission to participating team roles when creating match channels |
 | Manage Roles | Grant configured stewards missing access on the incident match channel after cutoff; required only when a grant is necessary |
 | Manage Webhooks | Create the per-channel webhook in a new match channel |
 | Send Messages | Bot-direct posts (when not using a webhook) |
@@ -670,6 +671,7 @@ The bot needs these **server-wide** permissions (set via Discord Server Settings
 |------------|-----|
 | `View Channels` | List + read channels the bot creates. Server-default required so the bot can operate in the configured "Current Match Category". |
 | `Manage Channels` | Create + delete + archive-move match-channels. |
+| `Use Application Commands` | Required at guild level so channel creation can explicitly grant this bit to participating team roles. |
 | `Manage Webhooks` | Create the per-channel `CTC Manager` webhook for match-channel posts. |
 
 **No `Administrator` permission required.** Each match-channel created by the bot includes a 4th permission-overwrite for the bot's own user-ID (member-override, not role-override), granting the bot operational access (`VIEW_CHANNEL`, `MANAGE_CHANNELS`, `MANAGE_WEBHOOKS`, `SEND_MESSAGES`, `EMBED_LINKS`, `ATTACH_FILES`, `READ_MESSAGE_HISTORY`) on only the channels it creates. Other channels in the server are unaffected.
@@ -1251,3 +1253,23 @@ Each generated season has an Incidents & rulings page, also linked from its matc
 Internal review/correction reasons, management and submitter account IDs, drafts, private thread references and all Discord conversations are excluded. Discussion messages are not read for site generation. Saving or publishing a ruling in Discord does not deploy the website. Use Generate Site, inspect the captured preview and explicitly approve that snapshot for GitHub Pages.
 
 On an isolated test installation, set `ctc.site.include-test-seasons=true` (environment `CTC_SITE_INCLUDE_TEST_SEASONS=true`) to include synthetic Test-prefixed seasons in generated previews. The default remains false, preserving their production exclusion. This setting neither activates Pages publication nor supplies publication credentials.
+
+
+### Application commands in new match channels
+
+Manager-created match channels explicitly grant **Use Application Commands** to the participating
+team roles. The same creation path covers regular season, playoffs and placement matches, with
+one overwrite when both teams share a role. A readback must confirm the grant before the Manager
+stores the channel association or emits its creation event. A failed audit uses the existing
+new-channel cleanup.
+
+Everyone visibility denial and the existing management/mention restrictions remain unchanged.
+The bot must itself have every permission it grants at guild level, as required by
+[Discord channel creation](https://docs.discord.com/developers/resources/guild#create-guild-channel).
+The current CTC and Mac test guilds already grant application-command use through everyone.
+
+This changes future Manager-created channels only. Existing manually managed channels, linking
+an existing channel and archive moves preserve their permissions. Registering commands and enabling
+production intake remain explicit operator actions. Integration-level command restrictions still
+apply; test invocation using a normal participant account because an owner or administrator bypasses
+Discord command restrictions. The Manager's participant, creator and context checks still apply.

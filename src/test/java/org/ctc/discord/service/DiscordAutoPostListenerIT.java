@@ -172,8 +172,8 @@ class DiscordAutoPostListenerIT {
 						"{\"id\":\"" + channelId + "\",\"name\":\"x\",\"type\":0,\"parent_id\":\"cat-lst\","
 								+ "\"permission_overwrites\":["
 								+ "{\"id\":\"g-lst\",\"type\":0,\"allow\":\"0\",\"deny\":\"1024\"},"
-								+ "{\"id\":\"r-h\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
-								+ "{\"id\":\"r-a\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"r-h\",\"type\":0,\"allow\":\"2147484672\",\"deny\":\"0\"},"
+								+ "{\"id\":\"r-a\",\"type\":0,\"allow\":\"2147484672\",\"deny\":\"0\"},"
 								+ "{\"id\":\"" + BOT_USER_ID + "\",\"type\":1,\"allow\":\"" + botAllow + "\",\"deny\":\"0\"}"
 								+ "]}")));
 	}

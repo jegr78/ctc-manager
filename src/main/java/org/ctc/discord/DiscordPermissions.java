@@ -23,6 +23,7 @@ public final class DiscordPermissions {
 	public static final long CONNECT = 1L << 20;
 	public static final long SPEAK = 1L << 21;
 	public static final long MANAGE_WEBHOOKS = 1L << 29;
+	public static final long USE_APPLICATION_COMMANDS = 1L << 31;
 	public static final long MANAGE_THREADS = 1L << 34;
 	public static final long USE_EXTERNAL_STICKERS = 1L << 37;
 
@@ -36,7 +37,8 @@ public final class DiscordPermissions {
 					| EMBED_LINKS
 					| READ_MESSAGE_HISTORY
 					| USE_EXTERNAL_EMOJIS
-					| USE_EXTERNAL_STICKERS;
+					| USE_EXTERNAL_STICKERS
+					| USE_APPLICATION_COMMANDS;
 
 	// Text-channel-only deny mask. Voice-related bits (CONNECT, SPEAK) are intentionally
 	// excluded because match channels are text channels — including voice bits has no

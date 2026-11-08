@@ -7,6 +7,7 @@ import static org.ctc.discord.DiscordPermissions.OVERWRITE_TYPE_ROLE;
 import static org.ctc.discord.DiscordPermissions.TEAM_MEMBER_ALLOW_MASK;
 import static org.ctc.discord.DiscordPermissions.TEAM_MEMBER_DENY_MASK;
 import static org.ctc.discord.DiscordPermissions.VIEW_CHANNEL;
+import static org.ctc.discord.DiscordPermissions.USE_APPLICATION_COMMANDS;
 import static org.ctc.util.LogSanitizer.sanitize;
 import static org.springframework.util.StringUtils.hasText;
 
@@ -318,6 +319,12 @@ public class DiscordChannelService {
 		if (!rolesWithView.equals(expectedTeamRoleIds)) {
 			throw new DiscordAuthException(DiscordApiExceptionMapper.AUDIT_FAIL_MESSAGE, null);
 		}
+        boolean missingApplicationCommands = overwrites.stream()
+                .filter(o -> o.type() == OVERWRITE_TYPE_ROLE && expectedTeamRoleIds.contains(o.id()))
+                .anyMatch(o -> (parseAllow(o.allow()) & USE_APPLICATION_COMMANDS) == 0L);
+        if (missingApplicationCommands) {
+            throw new DiscordAuthException(DiscordApiExceptionMapper.AUDIT_FAIL_MESSAGE, null);
+        }
 		Set<String> membersWithView = overwrites.stream()
 				.filter(o -> o.type() == OVERWRITE_TYPE_MEMBER)
 				.filter(o -> (parseAllow(o.allow()) & VIEW_CHANNEL) != 0L)
