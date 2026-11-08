@@ -1234,3 +1234,12 @@ In Season settings → Car pool, use Add pool entry to add a category or One-Mak
 The picks wizard updates its current private response after selections and source-bound form submissions. Its buttons and menus are replaced together with the displayed step. Discord controls the privacy/dismiss footer; the bot cannot hide that footer separately. A new `/picks` invocation starts a separate private dialog. Exceptionally long summaries retain additional private chunks so no saved values are silently truncated.
 
 Public or missing source messages are never edited with confidential picks. Such interactions receive a new private reply. Session ownership, current authorization, deadlines and restore invalidation still apply at every step. Incident reporting and its permanent thread/ruling delivery retain their existing behavior.
+
+
+### Public incident reports and rulings
+
+Each generated season has an Incidents & rulings page, also linked from its matchday pages. A case appears with its frozen report only after its final ruling has a confirmed Discord publication. The page retains the last confirmed ruling while a newer draft or correction is unconfirmed. Reports, descriptions and evidence references are rendered as escaped text, with no footage downloads.
+
+Internal review/correction reasons, management and submitter account IDs, drafts, private thread references and all Discord conversations are excluded. Discussion messages are not read for site generation. Saving or publishing a ruling in Discord does not deploy the website. Use Generate Site, inspect the captured preview and explicitly approve that snapshot for GitHub Pages.
+
+On an isolated test installation, set `ctc.site.include-test-seasons=true` (environment `CTC_SITE_INCLUDE_TEST_SEASONS=true`) to include synthetic Test-prefixed seasons in generated previews. The default remains false, preserving their production exclusion. This setting neither activates Pages publication nor supplies publication credentials.

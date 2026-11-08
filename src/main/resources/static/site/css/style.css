@@ -1203,3 +1203,26 @@ a.season-tag:hover { background: var(--bg-hover); border-color: var(--text-dim);
 }
 
 .pool-entry-label { overflow-wrap: anywhere; min-width: 0; }
+
+.matchday-navigation { display: flex; flex-wrap: wrap; gap: 0 24px; }
+.public-incidents { max-width: 1100px; margin-inline: auto; }
+.public-incidents > .text-dim { margin-block: 20px; }
+.public-incident { margin-block: 24px; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.public-incident-heading { padding: 20px 24px; background: var(--bg-card); border-bottom: 1px solid var(--border); }
+.public-incident-heading h3 { font-size: clamp(20px, 3vw, 28px); margin-bottom: 8px; overflow-wrap: anywhere; }
+.public-incident-reference { margin-top: 8px; color: var(--text-dim); font-size: 12px; overflow-wrap: anywhere; }
+.public-incident-report, .public-incident-ruling { padding: 24px; }
+.public-incident h4 { font-size: 18px; margin-bottom: 16px; }
+.public-incident h5 { font-size: 14px; margin-block: 20px 8px; color: var(--text-dim); }
+.public-incident-meta { display: grid; gap: 12px; }
+.public-incident-meta > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; }
+.public-incident-meta dt { color: var(--text-dim); }
+.public-incident-meta dd { margin: 0; overflow-wrap: anywhere; }
+.incident-public-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; }
+.public-incident-ruling { border-top: 1px solid var(--border); border-left: 3px solid var(--accent); }
+.incident-ruling-version { margin-top: 20px; font-size: 12px; }
+.incident-empty { padding: 28px 0; color: var(--text-dim); }
+@media (max-width: 600px) {
+    .public-incident-heading, .public-incident-report, .public-incident-ruling { padding: 18px; }
+    .public-incident-meta > div { grid-template-columns: 1fr; gap: 4px; }
+}

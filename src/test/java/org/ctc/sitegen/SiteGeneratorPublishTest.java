@@ -9,6 +9,9 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,6 +19,8 @@ import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
+import java.util.UUID;
+import org.ctc.domain.model.Season;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -46,6 +51,8 @@ class SiteGeneratorPublishTest {
 	private final TemplateWriter templateWriter = mock(TemplateWriter.class);
 	private final SiteSlugService siteSlugService = mock(SiteSlugService.class);
 	private SiteGeneratorService service;
+	private final SeasonPhaseService phases = mock(SeasonPhaseService.class);
+	private final IncidentPageGenerator incidents = mock(IncidentPageGenerator.class);
 	private Path site;
 	private final org.ctc.sitegen.publication.SitePublicationService publication = mock(org.ctc.sitegen.publication.SitePublicationService.class);
 
@@ -63,11 +70,28 @@ class SiteGeneratorPublishTest {
 		service = new SiteGeneratorService(seasonRepository, mock(SeasonDriverRepository.class), standingsService,
 				driverRankingService, mock(PlayoffBracketViewService.class), mock(PlayoffRepository.class),
 				mock(SeasonTeamRepository.class), siteProperties, mock(YouTubeScraperService.class),
-				mock(SeasonPhaseService.class), new SiteSlugger(), templateWriter,
+				phases, new SiteSlugger(), templateWriter,
 				mock(StandingsPageGenerator.class), mock(DriverRankingPageGenerator.class),
 				mock(MatchdaysPageGenerator.class), mock(TeamProfilePageGenerator.class),
-				mock(DriverProfilePageGenerator.class), siteSlugService, publication);
+				mock(DriverProfilePageGenerator.class), siteSlugService, publication, incidents);
 	}
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void givenSyntheticSeason_whenGenerating_thenIncludeOnlyWithExplicitTestSetting(boolean include) throws Exception {
+        var season = new Season("Test Public Preview");
+        season.setId(UUID.randomUUID());season.setYear(2027);season.setNumber(1);
+        when(seasonRepository.findAll()).thenReturn(List.of(season));
+        when(siteProperties.isIncludeTestSeasons()).thenReturn(include);
+        when(phases.findByType(season.getId(), org.ctc.domain.model.PhaseType.REGULAR))
+                .thenReturn(Optional.of(mock(org.ctc.domain.model.SeasonPhase.class)));
+        writePagesForReal();
+
+        var result = service.generate();
+
+        assertThat(result.getErrors()).isEmpty();
+        verify(incidents, times(include ? 1 : 0)).generate(any(), any());
+    }
 
 	@Test
 	void givenGeneratedSite_whenSnapshotCaptureFails_thenPreviousOutputStays() throws Exception {

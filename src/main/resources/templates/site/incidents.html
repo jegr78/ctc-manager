@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{site/layout :: layout(${pageTitle}, ~{::section})}">
+<body>
+<section class="public-incidents">
+    <header class="standings-heading brand-stage">
+        <p class="season-brand">COMMUNITY TEAM CUP</p>
+        <h1>Incidents &amp; rulings</h1>
+        <p class="text-dim" th:text="${season.displayLabel}"></p>
+    </header>
+    <p class="text-dim">Published incident reports and final stewards' rulings for this season.</p>
+    <p th:if="${incidentGroups.isEmpty()}" class="incident-empty">No final rulings published.</p>
+    <section th:each="group : ${incidentGroups}" class="incident-matchday section" th:id="${group.anchor}">
+        <h2><a class="entity-link" th:href="${group.href}" th:text="${group.label}"></a></h2>
+        <article th:each="item : ${group.cases}" class="public-incident" th:id="${'incident-' + item.id}">
+            <header class="public-incident-heading">
+                <h3 th:text="${item.pairing}"></h3>
+                <p class="text-dim" th:text="${item.raceLabel}"></p>
+                <p class="public-incident-reference" th:text="${item.reference}"></p>
+            </header>
+            <div class="public-incident-report">
+                <h4>Incident report</h4>
+                <dl class="public-incident-meta">
+                    <div><dt>Reporting team</dt><dd th:text="${item.reportingParty}"></dd></div>
+                    <div><dt>Involved drivers</dt><dd class="incident-public-text" th:text="${item.involvedDrivers}"></dd></div>
+                    <div><dt>Replay timestamp</dt><dd th:text="${item.replayTimestamp}"></dd></div>
+                </dl>
+                <h5>Description</h5><p class="incident-public-text" th:text="${item.description}"></p>
+                <th:block th:if="${!#strings.isEmpty(item.evidenceReferences)}">
+                    <h5>Evidence references</h5><p class="incident-public-text" th:text="${item.evidenceReferences}"></p>
+                </th:block>
+            </div>
+            <div class="public-incident-ruling">
+                <h4>Stewards' ruling</h4>
+                <p class="incident-public-text" th:text="${item.ruling}"></p>
+                <p class="text-dim incident-ruling-version">Published version <span th:text="${item.rulingVersion}"></span>
+                    · <time th:datetime="${item.publishedAt}" th:text="${item.publishedAtLabel}"></time></p>
+            </div>
+        </article>
+    </section>
+</section>
+</body>
+</html>

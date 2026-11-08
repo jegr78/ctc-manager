@@ -60,6 +60,7 @@ public class SiteGeneratorService {
     private final DriverProfilePageGenerator driverProfilePageGenerator;
     private final SiteSlugService siteSlugService;
     private final SitePublicationService publicationService;
+    private final IncidentPageGenerator incidentPageGenerator;
     private static final String STAGING_INFIX = ".generating-";
 
     private final ReentrantLock generationLock = new ReentrantLock();
@@ -183,7 +184,7 @@ public class SiteGeneratorService {
         String activeSeasonName = activeSeason != null ? activeSeason.getDisplayLabel() : "";
         var allSeasons = seasonRepository.findAll();
         var productionSeasons = allSeasons.stream()
-                .filter(s -> !s.getName().contains("Test"))
+                .filter(s -> siteProperties.isIncludeTestSeasons() || !s.getName().contains("Test"))
                 .toList();
 
         // Generate index
@@ -207,6 +208,7 @@ public class SiteGeneratorService {
             driverRankingPageGenerator.generate(ctx, result);
             matchdaysPageGenerator.generateDetails(ctx, result);
             matchdaysPageGenerator.generateIndex(ctx, result);
+            incidentPageGenerator.generate(ctx, result);
             teamProfilePageGenerator.generate(ctx, result);
             driverProfilePageGenerator.generate(ctx, result);
             generatePlayoffBracket(outPath, season, activeSeasonSlug, activeSeasonName, result);

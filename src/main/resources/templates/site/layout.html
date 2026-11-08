@@ -54,6 +54,9 @@
             <a th:href="${rootPath + '/season/' + seasonSlug + '/matchdays.html'}"
                th:class="${currentPage == 'matchdays'} ? 'subnav-link active' : 'subnav-link'"
                th:attr="aria-current=${currentPage == 'matchdays' ? 'page' : null}">Matchdays</a>
+            <a th:href="${rootPath + '/season/' + seasonSlug + '/incidents.html'}"
+               th:class="${currentPage == 'incidents'} ? 'subnav-link active' : 'subnav-link'"
+               th:attr="aria-current=${currentPage == 'incidents' ? 'page' : null}">Incidents &amp; rulings</a>
             <a th:href="${rootPath + '/season/' + seasonSlug + '/driver-ranking.html'}"
                th:class="${currentPage == 'driver-ranking'} ? 'subnav-link active' : 'subnav-link'"
                th:attr="aria-current=${currentPage == 'driver-ranking' ? 'page' : null}">Driver Ranking</a>

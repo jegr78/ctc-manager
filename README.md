@@ -430,3 +430,7 @@ schemas 1–17 restore missing links as empty.
 Private Discord picks reuse their current private message as teams move through selections and submit forms. Discord still displays its privacy footer once on that message; exceptionally long summaries retain additional private chunks. Private Discord picks show deadlines and save times in the viewer's local timezone. Track search covers the available season pool and explains empty results. See the [Discord operations guide](docs/operations/discord-integration.md).
 
 Season car pools can grow after picks have been submitted. Add categories or One-Makes to a frozen pool; existing entries and submissions stay unchanged. New entries must have eligible cars and cannot overlap existing frozen entries.
+
+The generated season website includes an Incidents & rulings page with frozen incident reports and their last confirmed final ruling. Unapproved drafts, internal reasons, management/submitter IDs and Discord discussions are excluded. Corrections retain the last confirmed version until confirmed themselves. Publish through the existing Generate Site, preview and Pages approval workflow.
+
+Isolated test installations can explicitly include Test-prefixed seasons with `CTC_SITE_INCLUDE_TEST_SEASONS=true`; production excludes them by default. This does not enable Pages publishing.

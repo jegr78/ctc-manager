@@ -8,7 +8,8 @@
         <h1 th:text="${matchday.label}"></h1>
         <p class="text-dim" th:text="${season.displayLabel}"></p>
     </header>
-    <a class="matchday-back-link" th:href="${matchdaysIndexHref}">← Matchday overview</a>
+    <nav class="matchday-navigation" aria-label="Matchday links"><a class="matchday-back-link" th:href="${matchdaysIndexHref}">← Matchday overview</a>
+    <a class="matchday-back-link" th:href="${'../incidents.html'}">Incident reports and rulings →</a></nav>
     <div class="section">
         <div class="match-grid race-grid">
             <article class="match-card race-card" th:each="race, i : ${races}">
