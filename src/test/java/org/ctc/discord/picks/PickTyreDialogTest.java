@@ -119,6 +119,7 @@ class PickTyreDialogTest {
         session.fields.putAll(fuel("SS,SM,SH"));
         session.fields.put("family", List.of("SPORTS")); session.fields.put("mandatory", List.of("SM"));
         session.fields.putAll(PickInteractionViewsTest.valid("time"));
+        session.fields.put("weather", List.of("Preset S01"));
         session.fields.put("start", List.of("GRID_FALSE_START")); session.fields.put("slipstream", List.of("REAL"));
         return session;
     }

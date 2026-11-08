@@ -83,6 +83,60 @@ class PickSubmissionServiceTest {
     }
 
     @Test
+    void givenGatewayConfirmation_whenSubmitting_thenValidateCanonicalWeatherAgainstLockedCurrentLayout() {
+        // given
+        gatewayActor(); var payload = withWeather("Custom S01; S01; ?; S02; C01; C06");
+        // when
+        service.submit(race.getId(), 0, request, actor, payload);
+        // then
+        verify(environments).requireWeather(payload.trackId(), PickWeatherSelection.parseCanonical(payload.weather()));
+        verify(revisions).save(any());
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"S01", "Preset ?", "Custom S01; S02", "Preset S01; S02", "rain", "Custom S01; S01; S01; S01; S01; S01; S01; S01; S01"})
+    void givenGatewayConfirmationWithMalformedWeather_whenSubmitting_thenRejectBeforeSaving(String weather) {
+        // given
+        gatewayActor(); var payload = withWeather(weather);
+        // when / then
+        assertThatThrownBy(() -> service.submit(race.getId(), 0, request, actor, payload)).isInstanceOf(BusinessRuleException.class);
+        verify(revisions, never()).save(any()); assertThat(pick.getVersion()).isZero();
+    }
+
+    @Test
+    void givenLayoutRainChangedAfterRendering_whenConfirming_thenRejectBeforeSaving() {
+        // given
+        gatewayActor(); var payload = withWeather("Preset R03");
+        doThrow(new BusinessRuleException("Weather is unavailable for this layout"))
+                .when(environments).requireWeather(payload.trackId(), PickWeatherSelection.parseCanonical(payload.weather()));
+        // when / then
+        assertThatThrownBy(() -> service.submit(race.getId(), 0, request, actor, payload)).isInstanceOf(BusinessRuleException.class);
+        verify(revisions, never()).save(any()); assertThat(pick.getVersion()).isZero();
+    }
+
+    @Test
+    void givenHistoricGatewayReceiptAndChangedCatalog_whenReplaying_thenReturnOriginalRawWeatherWithoutRevalidation() {
+        // given
+        gatewayActor(); pick.submit();
+        var original = new MatchdayPickRevision(pick, 1, payload(), NOW, actor.userId(), request, 1);
+        when(revisions.findByRequestId(request)).thenReturn(Optional.of(original));
+        // when / then
+        assertThat(service.submit(race.getId(), 0, request, actor, payload())).isEqualTo(original.receipt());
+        verifyNoInteractions(environments); verify(revisions, never()).save(any());
+    }
+
+    private void gatewayActor() {
+        actor = new AuthorizedPickActor(race.getId(), season.getId(), team.getId(), "12345",
+                new AuthorizedPickActor.ChannelContext("test-guild", "test-channel", 0));
+        when(targets.lockForTeam(race.getId(), actor)).thenReturn(new PickTargetService.LockedTarget(season, race, pick));
+    }
+    private PickPayload withWeather(String weather) {
+        var p = payload();
+        return new PickPayload(p.trackId(), p.carId(), p.carPoolEntryId(), p.laps(), p.tyreWear(), p.fuelConsumption(),
+                p.refuelingSpeed(), p.initialFuel(), p.requiredPitStops(), p.timeProgressionMode(), p.timeProgressionMultiplier(),
+                weather, p.timeOfDay(), p.availableTyres(), p.mandatoryTyres());
+    }
+
+    @Test
     void givenChangedLayoutTimeOptions_whenConfirmingNewSubmission_thenRejectBeforeSavingARevision() {
         doThrow(new BusinessRuleException("Choose a time of day from current options"))
                 .when(environments).requireTimeOfDay(any(), any());

@@ -19,6 +19,42 @@ import static org.mockito.Mockito.*;
 
 class PickInteractionHandlerTest {
     @Test
+    void givenEightSlotDraft_whenReducingCountThenReusingAnOldMenu_thenKeepSixPositionsAndRejectTheRetiredNonce() {
+        // given
+        complete("equal"); click("Change weather"); selectCode("CUSTOM"); selectCode("8");
+        String retired = response.last().selection().id();
+        for (int slot = 0; slot < 8; slot++) selectCode(slot % 2 == 0 ? "S01" : "?");
+        assertThat(response.last().selection().options()).hasSize(8);
+        // when
+        click("Change weather"); selectCode("CUSTOM"); selectCode("6");
+        for (int slot = 0; slot < 6; slot++) click("Keep selected slot");
+        assertThat(response.last().selection().options()).hasSize(6);
+        String confirm = button("Confirm submission");
+        dispatch(PickGatewayInteraction.Kind.SELECT, retired, fields("selection", "S02"));
+        // then
+        assertThat(response.allText()).contains("unavailable"); verifyNoInteractions(submissions);
+        dispatch(PickGatewayInteraction.Kind.BUTTON, confirm, Map.of());
+        var captured = ArgumentCaptor.forClass(PickPayload.class);
+        verify(submissions).submit(eq(race), eq(0L), any(), eq(actor), captured.capture());
+        assertThat(captured.getValue().weather()).isEqualTo("Custom S01; ?; S01; ?; S01; ?");
+        assertThat(captured.getValue().laps()).isEqualTo(12);
+    }
+
+    @Test
+    void givenCustomDraft_whenSwitchingToPreset_thenKeepOnlyOneCodeAndAllOtherPicks() {
+        // given
+        complete("0"); click("Change weather"); selectCode("CUSTOM"); selectCode("6");
+        for (int slot = 0; slot < 6; slot++) selectCode("S03");
+        // when
+        click("Change weather"); selectCode("PRESET"); click("Keep selected slot"); click("Confirm submission");
+        // then
+        var captured = ArgumentCaptor.forClass(PickPayload.class);
+        verify(submissions).submit(eq(race), eq(0L), any(), eq(actor), captured.capture());
+        assertThat(captured.getValue().weather()).isEqualTo("Preset S03");
+        assertThat(captured.getValue().timeProgressionMultiplier()).isZero();
+    }
+
+    @Test
     void givenSeveralCarsPerSeasonEntry_whenChoosingACar_thenSelectTheEntryBeforeSeeingOnlyItsCars() {
         // given
         UUID category = UUID.randomUUID(), oneMake = UUID.randomUUID(), secondCar = UUID.randomUUID(), otherCar = UUID.randomUUID();
@@ -42,7 +78,7 @@ class PickInteractionHandlerTest {
         // given
         UUID entry = UUID.randomUUID();
         var saved = new PickPayload(track, car, entry, 34, 5, 4, 8, PickInitialFuel.FUEL_60, 2,
-                TimeProgressionMode.MULTIPLIER, 3, "S02; R03", "Evening",
+                TimeProgressionMode.MULTIPLIER, 3, "Custom S02; S02; ?; C01; C02; S01", "Evening",
                 Set.of(PickTyre.RM, PickTyre.RH, PickTyre.I, PickTyre.W), Set.of(PickTyre.RH),
                 LobbyRulesProfile.CTC_2027, RaceStartType.ROLLING, RaceSlipstream.WEAK);
         target = new HomeRaceTarget(race, target.label(), PickState.SUBMITTED, 7, true, "Before the deadline");
@@ -70,7 +106,7 @@ class PickInteractionHandlerTest {
             submitModal(defaults);
             verifyNoInteractions(submissions);
         }
-        click("Confirm submission");
+        click("Keep selected weather"); click("Confirm submission");
         // then
         verify(submissions).submit(eq(race), eq(7L), any(), eq(actor), eq(saved));
     }
@@ -217,9 +253,9 @@ class PickInteractionHandlerTest {
         var selected = new HashMap<>(fuel); selected.put("available", List.of(available.split(",")));
         // when
         submitModal(selected); open("Open mandatory form"); submitModal(fields("mandatory", mandatory)); open("Open time form");
-        submitModal(fields("progression", "0", "weather", "S01", "daytime", "Night", "start", "ROLLING", "slipstream", "WEAK"));
+        submitModal(fields("progression", "0", "daytime", "Night", "start", "ROLLING", "slipstream", "WEAK"));
         verifyNoInteractions(submissions);
-        click("Confirm submission");
+        preset(); click("Confirm submission");
         // then
         var captured = ArgumentCaptor.forClass(PickPayload.class);
         verify(submissions).submit(eq(race), eq(0L), any(), eq(actor), captured.capture());
@@ -253,10 +289,11 @@ class PickInteractionHandlerTest {
         view = new PickTeamView(view.target(), view.payload(), view.receipt(), view.carLabel(), view.trackLabel(), view.deadline(),
                 view.matchdayOpen(), view.manualClosed(), view.returnReason(), view.cars(), view.tracks(), LobbyRulesProfile.CTC_2027);
         enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open race strategy form"); submitModal(fuel); open("Open mandatory form"); submitModal(fields("mandatory", "None")); open("Open time form");
-        assertThat(response.modal.fields()).hasSize(5);
+        assertThat(response.modal.fields()).hasSize(4);
         view = new PickTeamView(view.target(), view.payload(), view.receipt(), view.carLabel(), view.trackLabel(), view.deadline(),
                 view.matchdayOpen(), view.manualClosed(), view.returnReason(), view.cars(), view.tracks(), LobbyRulesProfile.LEGACY);
-        submitModal(fields("progression", "0", "weather", "S01", "daytime", "Night", "start", "ROLLING", "slipstream", "WEAK"));
+        submitModal(fields("progression", "0", "daytime", "Night", "start", "ROLLING", "slipstream", "WEAK"));
+        preset();
         assertThat(response.last().buttons()).extracting(PickGatewayMessage.Button::label).contains("Confirm submission");
         assertThat(response.last().content()).contains("Rolling Start", "Weak");
         when(submissions.submit(eq(race), anyLong(), any(), eq(actor), any())).thenThrow(new BusinessRuleException("Rules changed; reload"));
@@ -278,17 +315,17 @@ class PickInteractionHandlerTest {
         enterCatalogs(); open("Open rules form"); submitModal(rules);
         open("Open race strategy form"); submitModal(fuel);
         open("Open mandatory form"); submitModal(fields("mandatory", "None")); open("Open time form");
-        submitModal(fields("progression", "0", "weather", "S01; R03", "daytime", "Afternoon"));
+        submitModal(fields("progression", "0", "daytime", "Afternoon"));
         assertThat(response.last().content()).contains("Check all required values");
         assertThat(response.last().buttons()).extracting(PickGatewayMessage.Button::label).containsExactly("Open time form");
         verifyNoInteractions(submissions);
         open("Open time form");
-        submitModal(fields("progression", "0", "weather", "S01; R03", "daytime", "Night"));
-        click("Confirm submission");
+        submitModal(fields("progression", "0", "daytime", "Night"));
+        preset(); click("Confirm submission");
         var payload = ArgumentCaptor.forClass(PickPayload.class);
         verify(submissions).submit(eq(race), eq(0L), any(), eq(actor), payload.capture());
         assertThat(payload.getValue().timeOfDay()).isEqualTo("Night");
-        assertThat(payload.getValue().weather()).isEqualTo("S01; R03");
+        assertThat(payload.getValue().weather()).isEqualTo("Preset S01");
     }
 
     final PickAccessService access = mock(PickAccessService.class);
@@ -339,7 +376,7 @@ class PickInteractionHandlerTest {
         var summary = response.last();
         assertThat(summary.content()).contains("Test season 2026", "Matchday 2", "Leg 2", "Track: Test track", "Car: Test car",
                 "Laps: 12", "Tyre wear: 2", "Fuel consumption: 3", "Refuelling speed: 4", "Initial fuel: Default",
-                "Required pit stops: 1", "Weather: S01; R03", "Time of day: Sunset", "Available tyres: RS, RM, I, W", "Mandatory tyres: None");
+                "Required pit stops: 1", "Weather: Preset S01", "Time of day: Sunset", "Available tyres: RS, RM, I, W", "Mandatory tyres: None");
         assertThat(summary.content()).contains(progression.equals("equal") ? "Time progression: Equal Conditions" : "Time progression: " + progression + "x");
         verifyNoInteractions(submissions);
         String confirm = button("Confirm submission");
@@ -355,7 +392,7 @@ class PickInteractionHandlerTest {
         assertThat(payload.trackId()).isEqualTo(track); assertThat(payload.carId()).isEqualTo(car);
         assertThat(payload.mandatoryTyres()).isEmpty(); assertThat(payload.availableTyres()).containsExactlyInAnyOrder(PickTyre.RS, PickTyre.RM, PickTyre.I, PickTyre.W);
         assertThat(payload.timeProgressionMultiplier()).isEqualTo(progression.equals("equal") ? null : Integer.valueOf(progression));
-        assertThat(payload.weather()).isEqualTo("S01; R03");
+        assertThat(payload.weather()).isEqualTo("Preset S01");
     }
 
     @Test
@@ -596,8 +633,11 @@ class PickInteractionHandlerTest {
     void complete(String progression) {
         enterCatalogs(); open("Open rules form"); submitModal(rules); open("Open race strategy form"); submitModal(fuel);
         open("Open mandatory form"); submitModal(fields("mandatory", "None"));
-        open("Open time form"); submitModal(fields("progression", progression, "weather", "S01; R03", "daytime", "Sunset"));
+        open("Open time form"); submitModal(fields("progression", progression, "daytime", "Sunset"));
+        preset();
     }
+    void preset() { selectCode("PRESET"); selectCode("S01"); }
+    void selectCode(String value) { dispatch(PickGatewayInteraction.Kind.SELECT, response.last().selection().id(), fields("selection", value)); }
     void enterCatalogs() {
         command(); choose(); click("Enter picks"); select(track);
         var chosen = view.cars().stream().filter(choice -> choice.id().equals(car)).findFirst().orElseThrow();

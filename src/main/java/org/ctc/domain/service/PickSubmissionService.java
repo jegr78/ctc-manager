@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.ctc.domain.model.PickPayload;
+import org.ctc.domain.model.PickWeatherSelection;
 import org.ctc.domain.model.MatchdayPick;
 import org.ctc.domain.model.MatchdayPickRevision;
 import org.ctc.domain.exception.BusinessRuleException;
@@ -44,6 +45,9 @@ public class PickSubmissionService {
             pick.requireVersion(expectedVersion);
             eligibility.validate(target.race(), payload);
             environments.requireTimeOfDay(payload.trackId(), payload.timeOfDay());
+            if (actor.channel() != null) {
+                environments.requireWeather(payload.trackId(), PickWeatherSelection.parseCanonical(payload.weather()));
+            }
             var acceptedAt = clock.instant();
             var decision = deadlines.assessAt(new PickDeadlinePolicy.Context(pick.getState(),
                     target.season().isPicksCollectionEnabled(), collection.isAvailable(),

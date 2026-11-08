@@ -115,7 +115,6 @@ final class PickInteractionViews {
                 progression.add(new PickGatewayModal.Option("Equal Conditions", "equal"));
                 for (int i = 0; i <= 6; i++) progression.add(new PickGatewayModal.Option(i + "x", Integer.toString(i)));
                 var result = new ArrayList<PickGatewayModal.Field>(List.of(select(defaults, "progression", "Time progression", progression, 1),
-                        new PickGatewayModal.Text("weather", "Weather, keep slot order", true, defaultText(defaults, "weather"), 1, 255, true),
                         timeOfDayOptions.isEmpty() ? text(defaults, "daytime", "Time of day (unverified; enter manually)", 255)
                                 : select(defaults, "daytime", "Time of day", timeOfDayOptions.stream().map(value -> new PickGatewayModal.Option(value, value)).toList(), 1)));
                 if (profile == LobbyRulesProfile.CTC_2027) {
@@ -186,8 +185,8 @@ final class PickInteractionViews {
                     : Set.of("laps", "wear", "consumption", "refuel");
             case "fuel" -> Set.of("initial", "stops", "available");
             case "mandatory" -> Set.of("mandatory");
-            case "time" -> profile == LobbyRulesProfile.CTC_2027 ? Set.of("progression", "weather", "daytime", "start", "slipstream")
-                    : Set.of("progression", "weather", "daytime");
+            case "time" -> profile == LobbyRulesProfile.CTC_2027 ? Set.of("progression", "daytime", "start", "slipstream")
+                    : Set.of("progression", "daytime");
             default -> Set.of("query");
         };
         if (!values.keySet().equals(expected) && !(stage.startsWith("search-") && values.isEmpty())) {
@@ -213,7 +212,7 @@ final class PickInteractionViews {
             case "time" -> {
                 String progression = one(values, "progression");
                 if (!"equal".equals(progression)) number(values, "progression", 0, 6);
-                boundedText(values, "weather", 255); boundedText(values, "daytime", 255);
+                boundedText(values, "daytime", 255);
                 if (profile == LobbyRulesProfile.CTC_2027) {
                     profile.requireChoices(RaceStartType.valueOf(one(values, "start")), RaceSlipstream.valueOf(one(values, "slipstream")));
                 }
@@ -267,6 +266,7 @@ final class PickInteractionViews {
         fields.put("progression", List.of(payload.timeProgressionMode() == TimeProgressionMode.EQUAL_CONDITIONS
                 ? "equal" : payload.timeProgressionMultiplier().toString()));
         fields.put("weather", List.of(payload.weather()));
+        fields.putAll(PickWeatherWizard.defaults(payload.weather()));
         fields.put("daytime", List.of(payload.timeOfDay()));
         fields.put("start", List.of(payload.startType().name()));
         fields.put("slipstream", List.of(payload.slipstream().name()));

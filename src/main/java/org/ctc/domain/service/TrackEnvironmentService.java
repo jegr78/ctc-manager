@@ -48,6 +48,10 @@ public class TrackEnvironmentService {
             throw new BusinessRuleException("Choose a time of day from this layout's current options; refresh the track choices");
         }
     }
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void requireWeather(UUID id, PickWeatherSelection selection) {
+        selection.requireAvailable(TrackEnvironmentValues.from(lock(id)).rainCapability());
+    }
     private Track lock(UUID id) {
         var track = tracks.findByIdForEnvironmentUpdate(id).orElseThrow(() -> new EntityNotFoundException("Track", id));
         entities.refresh(track, LockModeType.PESSIMISTIC_WRITE);

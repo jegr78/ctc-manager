@@ -59,7 +59,11 @@ public class PickTeamReadService {
                 .filter(other -> !raceId.equals(other.raceId()) && actor.teamId().equals(other.teamId()))
                 .forEach(other -> usedTracks.add(other.trackId()));
         var trackChoices = season.getTracks().stream().filter(track -> !usedTracks.contains(track.getId()))
-                .map(track -> new Choice(track.getId(), null, track.getName(), false, null, org.ctc.domain.model.TrackEnvironmentValues.from(track).timeOfDayOptions())).toList();
+                .map(track -> {
+                    var environment = org.ctc.domain.model.TrackEnvironmentValues.from(track);
+                    return new Choice(track.getId(), null, track.getName(), false, null,
+                            environment.timeOfDayOptions(), environment.rainCapability());
+                }).toList();
         String reason = pick == null || pick.getState() != PickState.RETURNED ? null
                 : decisions.findFirstByPickIdAndKindOrderByAggregateVersionDesc(pick.getId(), PickDecisionKind.RETURN)
                         .map(org.ctc.domain.model.MatchdayPickDecision::getReason).orElse(null);

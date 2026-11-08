@@ -20,7 +20,7 @@ class PickInteractionViewsTest {
         assertThat(field.options()).extracting(PickGatewayModal.Option::value).containsExactly("Sunrise", "Night");
         assertThat(field.options().stream().filter(PickGatewayModal.Option::defaultSelected).map(PickGatewayModal.Option::value)).containsExactly("Night");
         assertThat(field.minValues()).isEqualTo(1); assertThat(field.maxValues()).isEqualTo(1);
-        assertThat(modal.fields()).hasSize(5);
+        assertThat(modal.fields()).hasSize(4);
         var other = PickInteractionViews.modal("test", "time", LobbyRulesProfile.CTC_2027, false, defaults, List.of("Afternoon"));
         var changed = (PickGatewayModal.Selection) other.fields().stream().filter(f -> f.id().equals("daytime")).findFirst().orElseThrow();
         assertThat(changed.options()).noneMatch(PickGatewayModal.Option::defaultSelected);
@@ -83,7 +83,7 @@ class PickInteractionViewsTest {
         // given / when
         var modal = PickInteractionViews.modal("test", "time", LobbyRulesProfile.CTC_2027);
         // then
-        assertThat(modal.fields()).hasSize(5);
+        assertThat(modal.fields()).hasSize(4);
         var values = new HashMap<>(valid("time"));
         values.put("start", List.of("ROLLING")); values.put("slipstream", List.of("WEAK"));
         assertThatCode(() -> PickInteractionViews.validateStage("time", values, LobbyRulesProfile.CTC_2027)).doesNotThrowAnyException();
@@ -93,7 +93,7 @@ class PickInteractionViewsTest {
 
     @ParameterizedTest
     @CsvSource({"rules,laps,0", "rules,laps,2147483648", "rules,wear,8", "rules,consumption,7", "rules,refuel,11",
-            "rules,laps,1.5", "fuel,initial,unknown", "fuel,stops,3", "time,progression,7", "time,weather,' '", "time,daytime,' '"})
+            "rules,laps,1.5", "fuel,initial,unknown", "fuel,stops,3", "time,progression,7", "time,daytime,' '"})
     void givenInvalidField_whenValidatingStage_thenRejectBeforeSavingDraft(String stage, String field, String raw) {
         // given
         var values = new HashMap<>(valid(stage)); values.put(field, List.of(raw));
@@ -104,10 +104,10 @@ class PickInteractionViewsTest {
     @Test
     void givenBoundedCompleteTextAndTyres_whenValidating_thenRetainAllRequiredFields() {
         // given
-        var time = new HashMap<>(valid("time")); time.put("weather", List.of("x".repeat(255)));
+        var time = new HashMap<>(valid("time")); time.put("daytime", List.of("x".repeat(255)));
         // when / then
         assertThatCode(() -> PickInteractionViews.validateStage("time", time)).doesNotThrowAnyException();
-        time.put("weather", List.of("x".repeat(256)));
+        time.put("daytime", List.of("x".repeat(256)));
         assertThatThrownBy(() -> PickInteractionViews.validateStage("time", time)).isInstanceOf(IllegalArgumentException.class);
         var tyres = new HashMap<>(valid("fuel")); tyres.put("available", List.of("RS", "RM", "RH"));
         assertThatCode(() -> PickInteractionViews.validateStage("fuel", tyres)).doesNotThrowAnyException();
@@ -157,7 +157,7 @@ class PickInteractionViewsTest {
         return switch (stage) {
             case "rules" -> PickInteractionHandlerTest.fields("laps", "12", "wear", "2", "consumption", "3", "refuel", "4");
             case "fuel" -> PickInteractionHandlerTest.fields("initial", "DEFAULT", "stops", "1", "available", "RM");
-            default -> PickInteractionHandlerTest.fields("progression", "0", "weather", "S01", "daytime", "Sunset");
+            default -> PickInteractionHandlerTest.fields("progression", "0", "daytime", "Sunset");
         };
     }
 }

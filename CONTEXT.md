@@ -37,6 +37,14 @@ _Avoid_: All variants of a circuit, circuit family
 The times of day and rain availability checked for one concrete track layout. Unverified options remain unknown until reviewed.
 _Avoid_: Inferred circuit defaults, unavailable weather
 
+**Preset weather**:
+One existing weather code used throughout the race.
+_Avoid_: Multiple custom positions
+
+**Custom weather**:
+An ordered sequence of 6 to 8 independently selected weather positions. Codes may repeat; `?` is Random. Rain codes require verified rain availability for the chosen layout.
+_Avoid_: Unordered weather set, unique weather codes
+
 **Matchday**:
 A round containing multiple team pairings, with one shared pick opening and an ordinary pick deadline.
 _Avoid_: Match, race

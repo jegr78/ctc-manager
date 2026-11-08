@@ -59,6 +59,10 @@ class DiscordPicksRestoreAdmissionIT extends PickPersistenceIT {
     @BeforeEach
     void bindCurrentChannel() {
         // given
+        payload = new org.ctc.domain.model.PickPayload(payload.trackId(), payload.carId(), payload.carPoolEntryId(),
+                payload.laps(), payload.tyreWear(), payload.fuelConsumption(), payload.refuelingSpeed(), payload.initialFuel(),
+                payload.requiredPitStops(), payload.timeProgressionMode(), payload.timeProgressionMultiplier(), "Preset S01",
+                payload.timeOfDay(), payload.availableTyres(), payload.mandatoryTyres());
         tx.executeWithoutResult(status -> {
             var config = configs.findFirstByOrderByIdAsc();
             createdConfig = config == null;

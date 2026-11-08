@@ -24,8 +24,12 @@ public record PickTeamView(HomeRaceTarget target, PickPayload payload, Submissio
     }
     public PickTeamView { cars = List.copyOf(cars); tracks = List.copyOf(tracks); }
     @Override public String toString() { return "PickTeamView[raceId=" + target.raceId() + "]"; }
-    public record Choice(UUID id, UUID entryId, String label, boolean oneMake, String entryLabel, List<String> timeOfDayOptions) {
-        public Choice { timeOfDayOptions = List.copyOf(timeOfDayOptions); }
+    public record Choice(UUID id, UUID entryId, String label, boolean oneMake, String entryLabel, List<String> timeOfDayOptions,
+                         org.ctc.domain.model.TrackRainCapability rainCapability) {
+        public Choice { timeOfDayOptions = List.copyOf(timeOfDayOptions); java.util.Objects.requireNonNull(rainCapability); }
+        public Choice(UUID id, UUID entryId, String label, boolean oneMake, String entryLabel, List<String> timeOfDayOptions) {
+            this(id, entryId, label, oneMake, entryLabel, timeOfDayOptions, org.ctc.domain.model.TrackRainCapability.UNKNOWN);
+        }
         public Choice(UUID id, UUID entryId, String label, boolean oneMake, String entryLabel) {
             this(id, entryId, label, oneMake, entryLabel, List.of());
         }

@@ -75,6 +75,21 @@ class TrackEnvironmentIT {
         return transaction;
     }
 
+    @Test
+    void givenLayoutRainPolicy_whenCheckingWeatherInsideWriter_thenUseCurrentMetadataAndRejectRainAfterChange() {
+        // given
+        var custom = PickWeatherSelection.parseCanonical("Custom S01; S01; ?; R03; R03; C06");
+        var v = environment.view(id);
+        environment.save(id, "Night", TrackRainCapability.RAIN, v.version(), v.generation());
+        // when / then
+        tx.executeWithoutResult(status -> environment.requireWeather(id, custom));
+        v = environment.view(id);
+        environment.save(id, "Night", TrackRainCapability.DRY_ONLY, v.version(), v.generation());
+        assertThatThrownBy(() -> tx.executeWithoutResult(status -> environment.requireWeather(id, custom)))
+                .isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class).hasMessageContaining("unavailable");
+        tx.executeWithoutResult(status -> environment.requireWeather(id, PickWeatherSelection.parseCanonical("Preset C06")));
+    }
+
     @Test @WithMockUser("test-manager")
     void givenNewLayout_whenCreatingWithNativeFields_thenPersistOrderedOptionsWithoutChangingExistingRecords() throws Exception {
         var name="Test new environment "+UUID.randomUUID();
