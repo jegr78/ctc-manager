@@ -65,7 +65,7 @@ class TrackEnvironmentImportIT {
             var result=mvc.perform(get("/admin/gt7-sync/environment")).andExpect(status().isOk()).andExpect(view().name("admin/track-environment-preview")).andReturn();
             var preview=(TrackEnvironmentImportService.Preview)result.getModelAndView().getModel().get("preview");
             assertThat(preview.entries().stream().filter(e->e.id().equals(id)).findFirst().orElseThrow().selectable()).isTrue();
-            mvc.perform(post("/admin/gt7-sync/environment/apply").with(csrf()).param("previewId",preview.id().toString()).param("selectedTracks",id.toString()))
+            mvc.perform(post("/admin/gt7-sync/environment/apply").with(csrf()).param("previewId",preview.id().toString()).param("selectedTracks",id.toString()).header("Sec-Fetch-Site","same-origin").header("Accept-Encoding","gzip, deflate").header("Referer","http://localhost/admin/gt7-sync/environment"))
                 .andExpect(status().is3xxRedirection()).andExpect(flash().attribute("successMessage","1 layout environments imported"));
             var saved=tracks.findById(id).orElseThrow();assertThat(saved.getTimeOfDayOptions()).hasSize(11);assertThat(saved.getRainCapability()).isEqualTo("RAIN");
             assertThat(saved.getEnvironmentVersion()).isEqualTo(1);assertThat(saved.getEnvironmentSource()).contains(KEY);assertThat(saved.isEnvironmentOverride()).isFalse();
@@ -115,5 +115,28 @@ class TrackEnvironmentImportIT {
         var after=tracks.findById(id).orElseThrow();assertThat(after.getEnvironmentSource()).isEqualTo(before.getEnvironmentSource());assertThat(after.getEnvironmentImportHash()).isEqualTo(before.getEnvironmentImportHash());
         assertThat(after.isEnvironmentOverride()).isFalse();assertThat(after.getTimeOfDayOptions()).containsExactlyElementsOf(before.getTimeOfDayOptions());
         assertThatThrownBy(()->imports.apply(stale.id(),List.of(id),actor)).isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class);
+    }
+    @Test void givenMalformedProvenanceInStaging_whenExecutingRestore_thenRejectBeforeDeletingAnyLiveRow()throws Exception {
+        var out=new java.io.ByteArrayOutputStream();archives.writeZip(out,Instant.now());
+        var rewritten=new java.io.ByteArrayOutputStream();var json=new com.fasterxml.jackson.databind.ObjectMapper();
+        try(var input=new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(out.toByteArray()));var output=new java.util.zip.ZipOutputStream(rewritten)) {
+            java.util.zip.ZipEntry entry;
+            while((entry=input.getNextEntry())!=null) {
+                byte[] bytes=input.readAllBytes();
+                if(entry.getName().equals("data/tracks.json")) {
+                    var rows=json.readTree(bytes);
+                    for(var row:rows)if(row.path("id").asText().equals(id.toString())) {
+                        var object=(com.fasterxml.jackson.databind.node.ObjectNode)row;
+                        object.put("environmentSource","null");object.put("environmentImportHash","a".repeat(64));
+                    }
+                    bytes=json.writeValueAsBytes(rows);
+                }
+                output.putNextEntry(new java.util.zip.ZipEntry(entry.getName()));output.write(bytes);output.closeEntry();
+            }
+        }
+        long count=tracks.count();var staging=UUID.randomUUID();var path=ROOT.resolve("staging/upload-"+staging+".zip");Files.createDirectories(path.getParent());Files.write(path,rewritten.toByteArray());
+        assertThatThrownBy(()->restores.execute(staging)).isInstanceOf(org.ctc.backup.exception.BackupImportException.class)
+            .cause().isInstanceOfSatisfying(org.ctc.backup.exception.BackupArchiveException.class,failure->assertThat(failure.reason()).isEqualTo(org.ctc.backup.exception.BackupArchiveException.Reason.DATA_MISMATCH));
+        assertThat(tracks.count()).isEqualTo(count);assertThat(tracks.findById(id).orElseThrow().getEnvironmentVersion()).isZero();
     }
 }

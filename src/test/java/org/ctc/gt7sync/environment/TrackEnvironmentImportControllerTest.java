@@ -55,6 +55,15 @@ class TrackEnvironmentImportControllerTest {
         var form=form();var errors=new BeanPropertyBindingResult(form,"selection");errors.rejectValue("previewId","invalid");
         controller.apply(form,errors,actor,new RedirectAttributesModelMap());verifyNoInteractions(service);
     }
+    @Test void givenRealBrowserHeaders_whenBindingSelection_thenIgnoreHeadersAndStillRejectForgedParameters() {
+        var form=form();var binder=new org.springframework.web.servlet.support.ExtendedServletRequestDataBinder(form,"selection");controller.fields(binder);
+        var request=new org.springframework.mock.web.MockHttpServletRequest();request.addHeader("Sec-Fetch-Site","same-origin");request.addHeader("Accept-Encoding","gzip");
+        request.addHeader("previewId",UUID.randomUUID().toString());
+        request.addParameter("previewId",form.getPreviewId().toString());request.addParameter("selectedTracks",form.getSelectedTracks().getFirst().toString());
+        binder.bind(request);assertThat(binder.getBindingResult().getSuppressedFields()).isEmpty();assertThat(binder.getBindingResult().hasErrors()).isFalse();
+        request.addParameter("environmentOverride","false");binder.bind(request);
+        assertThat(binder.getBindingResult().getSuppressedFields()).contains("environmentOverride");
+    }
     private TrackEnvironmentImportForm form() {
         var form=new TrackEnvironmentImportForm();form.setPreviewId(UUID.randomUUID());form.setSelectedTracks(List.of(UUID.randomUUID()));return form;
     }

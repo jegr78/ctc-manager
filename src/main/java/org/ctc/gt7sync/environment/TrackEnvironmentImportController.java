@@ -20,6 +20,9 @@ public class TrackEnvironmentImportController {
     @InitBinder("selection") void fields(WebDataBinder binder) {
         binder.setAllowedFields("previewId","selectedTracks","selectedTracks[*]","_csrf");
         binder.setAutoGrowCollectionLimit(256);
+        // Spring also binds HTTP headers by default; this form accepts explicit parameters only.
+        if(binder instanceof org.springframework.web.servlet.support.ExtendedServletRequestDataBinder requestBinder)
+            requestBinder.setHeaderPredicate(name -> false);
     }
     @GetMapping public String preview(Principal principal,Model model,RedirectAttributes redirect) {
         try { return show(imports.bundled(principal),model); }

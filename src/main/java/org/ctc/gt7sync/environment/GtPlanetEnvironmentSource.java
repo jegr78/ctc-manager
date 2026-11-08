@@ -92,7 +92,7 @@ public class GtPlanetEnvironmentSource {
                 profiles.add(new Profile(key,sections.get("Layouts"),sections.getOrDefault("Time of Day",List.of()),weather));
             }
             return new Snapshot(revision,retrieved.toString(),hash(revision,profiles),profiles);
-        } catch (IllegalArgumentException | org.ctc.domain.exception.BusinessRuleException invalid) {
+        } catch (IllegalArgumentException | java.time.DateTimeException | org.ctc.domain.exception.BusinessRuleException invalid) {
             throw new IOException("GTPlanet reference has invalid or incomplete layout data",invalid);
         }
     }

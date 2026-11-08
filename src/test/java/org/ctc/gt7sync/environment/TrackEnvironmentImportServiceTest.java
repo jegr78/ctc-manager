@@ -56,7 +56,7 @@ class TrackEnvironmentImportServiceTest {
         assertThatThrownBy(() -> service.apply(preview.id(),List.of(track.getId()),manager)).isInstanceOf(BusinessRuleException.class);
         assertThat(service.bundled(manager).readyCount()).isZero();
     }
-    @ParameterizedTest @ValueSource(strings={"manual-unknown","legacy-known","manual-imported","tampered-import","unmapped","version-limit"})
+    @ParameterizedTest @ValueSource(strings={"manual-unknown","legacy-known","manual-imported","tampered-import","unmapped","negative-version","version-limit"})
     void givenProtectedOrUnqualifiedLayout_whenPreviewing_thenNeverOfferAnOverwrite(String kind)throws Exception {
         // given
         switch(kind) {
@@ -66,6 +66,7 @@ class TrackEnvironmentImportServiceTest {
                 var first=service.bundled(manager);service.apply(first.id(),List.of(track.getId()),manager);
                 if(kind.equals("manual-imported"))track.setEnvironmentOverride(true);else track.setTimeOfDayOptions(List.of("Night"));
             }
+            case "negative-version" -> track.setEnvironmentVersion(-1);
             case "unmapped" -> track.setName("Nürburgring Endurance II");
             default -> track.setEnvironmentVersion(Long.MAX_VALUE);
         }
@@ -80,7 +81,7 @@ class TrackEnvironmentImportServiceTest {
         // given
         var preview=service.bundled(manager);List<UUID> selected=List.of(track.getId());Principal actor=manager;
         switch(kind) {
-            case "rename" -> doAnswer(call -> {track.setName("Changed layout");return null;}).when(entities).refresh(eq(track),any(LockModeType.class));
+            case "rename" -> doAnswer(call -> {track.setName("24 Heures du Mans Racing Circuit No Chicane");return null;}).when(entities).refresh(eq(track),any(LockModeType.class));
             case "manual" -> track.setEnvironmentOverride(true);
             case "raw-value" -> track.setTimeOfDayOptions(List.of("Night"));
             case "delete" -> when(tracks.findByIdForEnvironmentUpdate(track.getId())).thenReturn(Optional.empty());
@@ -121,5 +122,11 @@ class TrackEnvironmentImportServiceTest {
         // when / then
         assertThat(service.bundled(manager).entries()).allMatch(e -> e.status()==TrackEnvironmentImportService.Status.AMBIGUOUS);
         assertThatThrownBy(() -> service.bundled(null)).isInstanceOf(BusinessRuleException.class);
+    }
+    @Test void givenRestoreGenerationChangesDuringWriterAdmission_whenApplying_thenRejectBeforeRowMutation()throws Exception {
+        var preview=service.bundled(manager);
+        doAnswer(call->{when(epoch.managementGeneration()).thenReturn("process:changed");return ((Supplier<?>)call.getArgument(0)).get();}).when(writes).execute(any());
+        assertThatThrownBy(()->service.apply(preview.id(),List.of(track.getId()),manager)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("restart or restore");
+        assertThat(track.getEnvironmentVersion()).isZero();verify(tracks,never()).findByIdForEnvironmentUpdate(any());
     }
 }

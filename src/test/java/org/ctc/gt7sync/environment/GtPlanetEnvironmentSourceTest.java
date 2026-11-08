@@ -30,7 +30,7 @@ class GtPlanetEnvironmentSourceTest {
         assertThat(GtPlanetEnvironmentSource.parse(html, Instant.parse("2026-11-09T12:00:00Z")).sourceHash()).isEqualTo(snapshot.sourceHash());
     }
 
-    @ParameterizedTest @ValueSource(strings = {"empty", "missing-weather", "partial-rain", "unknown-weather", "duplicate-time", "missing-date", "duplicate-profile", "other-post", "nested-list"})
+    @ParameterizedTest @ValueSource(strings = {"empty", "missing-weather", "partial-rain", "unknown-weather", "duplicate-time", "missing-date", "invalid-date", "duplicate-profile", "other-post", "nested-list"})
     void givenMalformedOrIncompleteReference_whenParsing_thenRejectWithoutInventingOptions(String problem) {
         // given
         String entry = profile("Test", List.of("Dawn", "Night"), false, "");
@@ -41,6 +41,7 @@ class GtPlanetEnvironmentSourceTest {
             case "partial-rain" -> html.replace("</ul></div></div>", "<li>R01 | Light Drizzle</li></ul></div></div>");
             case "unknown-weather" -> html.replace("S01 |", "S99 |");
             case "duplicate-time" -> html.replace("<li>Night</li>", "<li>Dawn</li>");
+            case "invalid-date" -> html.replace("2026-07-08T02:07:32+0100", "invalid-date");
             case "missing-date" -> html.replace("class='message-lastEdit'", "class='other'");
             case "duplicate-profile" -> document(entry + entry);
             case "other-post" -> html.replace("post-14046048", "post-other");
@@ -79,7 +80,7 @@ class GtPlanetEnvironmentSourceTest {
         var response=org.mockito.Mockito.mock(org.jsoup.Connection.Response.class);
         var now=Instant.parse("2026-11-08T12:00:00Z");
         var source=new GtPlanetEnvironmentSource(outbound,java.time.Clock.fixed(now,java.time.ZoneOffset.UTC));
-        try(var jsoup=org.mockito.Mockito.mockStatic(org.jsoup.Jsoup.class)) {
+        try(var jsoup=org.mockito.Mockito.mockStatic(org.jsoup.Jsoup.class,org.mockito.Mockito.CALLS_REAL_METHODS)) {
             jsoup.when(()->org.jsoup.Jsoup.connect(GtPlanetEnvironmentSource.URL)).thenReturn(connection);
             org.mockito.Mockito.when(connection.execute()).thenReturn(response);
             org.mockito.Mockito.when(response.statusCode()).thenReturn(200);
