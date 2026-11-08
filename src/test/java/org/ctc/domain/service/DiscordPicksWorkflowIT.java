@@ -169,7 +169,7 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
         assertThat(current().receipt().revisionNumber()).isEqualTo(1);
         tx.executeWithoutResult(status -> assertThat(revisions.findAll().stream().filter(r -> r.getPick().getRace().getId().equals(fixture.race().getId()))).hasSize(1));
         var member = new Driver("12346"); member.command(); member.select(fixture.race().getId());
-        assertThat(member.response.allText()).contains("revision 1", "12345", "Slot 1: S01; Slot 2: R03", "Equal Conditions");
+        assertThat(member.response.allText()).contains("revision 1", "12345", payload.weather(), "Equal Conditions");
     }
 
     @Test
@@ -279,7 +279,7 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
         // then
         assertThat(member.response.messages).hasSize(1);
         member.select(fixture.race().getId());
-        assertThat(member.response.allText()).contains("revision 1", "Slot 1: S01; Slot 2: R03");
+        assertThat(member.response.allText()).contains("revision 1", payload.weather());
         assertThat(member.response.last().buttons()).extracting(PickGatewayMessage.Button::label).containsExactly("Refresh current submission");
         driver.dispatch(PickGatewayInteraction.Kind.BUTTON, confirm, Map.of());
         assertThat(driver.response.allText()).contains("Saved revision 1");
@@ -288,7 +288,7 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
 
     @Test
     void givenPrivateWizardAndApproval_whenPublishingExplicitly_thenReleaseOnlyTheCapturedOutputWithCollectionStopped() throws Exception {
-        payload = withTime(TimeProgressionMode.EQUAL_CONDITIONS, null, "Test private initial " + UUID.randomUUID());
+        payload = withTime(TimeProgressionMode.EQUAL_CONDITIONS, null, "Custom S13; S13; ?; S07; C06; C04; S03; ?");
         tx.executeWithoutResult(status -> {
             phaseTeams.saveAll(List.of(new PhaseTeam(fixture.matchday().getPhase(), fixture.homeTeam()),
                     new PhaseTeam(fixture.matchday().getPhase(), fixture.awayTeam())));
