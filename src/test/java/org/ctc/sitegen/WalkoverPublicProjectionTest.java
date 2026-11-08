@@ -84,6 +84,7 @@ class WalkoverPublicProjectionTest {
         when(days.findBySeasonIdOrderBySortIndexAsc(season.getId())).thenReturn(List.of(day));
         when(races.findByMatchdayId(day.getId())).thenReturn(List.of(walkover, second));
         when(scoring.calculateRaceTotals(walkover, home.getId())).thenReturn(RacePenaltyTotals.calculate(81, 0, 0, 0));
+        when(scoring.calculateRaceTotals(second, home.getId())).thenReturn(RacePenaltyTotals.calculate(81, 0, 0, 0));
         var generator = new MatchdaysPageGenerator(writer, slugger, days, races, lineups, phases, mock(SeasonPhaseGroupRepository.class), disclosure, scoring);
         generator.generateDetails(context(), new SiteGeneratorService.GenerationResult());
         var rendered = ArgumentCaptor.forClass(Context.class);
