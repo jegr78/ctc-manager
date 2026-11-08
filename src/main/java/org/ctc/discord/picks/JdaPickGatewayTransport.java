@@ -96,7 +96,7 @@ public class JdaPickGatewayTransport implements PickGatewayTransport {
                 var guild = event.getGuild();
                 receiver.accept(new PickGatewayInteraction(event.getId(), guild == null ? null : guild.getId(),
                         event.getChannelId(), event.getUser().getId(), kind, action, values,
-                        event.getTimeCreated().toInstant(), new JdaPickGatewayResponse(event)));
+                        event.getTimeCreated().toInstant(), new JdaPickGatewayResponse(event, action.equals("picks") || action.startsWith("ctc-picks:"))));
             } catch (RuntimeException unavailable) {
                 // Do not pass SDK exceptions containing callback tokens or private input to its event logger.
             }

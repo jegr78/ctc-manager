@@ -2,7 +2,9 @@ package org.ctc.discord.picks;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.List;
+import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
@@ -13,28 +15,60 @@ import net.dv8tion.jda.api.components.selections.SelectOption;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
+import net.dv8tion.jda.api.interactions.callbacks.IMessageEditCallback;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.GenericComponentInteractionCreateEvent;
 import net.dv8tion.jda.api.interactions.callbacks.IModalCallback;
 import net.dv8tion.jda.api.modals.Modal;
 
 @RequiredArgsConstructor
 public class JdaPickGatewayResponse implements PickGatewayResponse {
     private final IReplyCallback callback;
+    private final boolean reusePrivateMessage;
+
+    public JdaPickGatewayResponse(IReplyCallback callback) {
+        this(callback, false);
+    }
+
     @Override
     public CompletionStage<Continuation> deferPrivate() {
         var result = new CompletableFuture<Continuation>();
-        callback.deferReply(true).queue(hook -> {
+        Consumer<InteractionHook> accepted = hook -> {
             hook.setEphemeral(true);
+            var first = new AtomicBoolean(true);
             result.complete(new Continuation() {
                 @Override public void replyPrivate(String message) {
-                    hook.sendMessage(message).setEphemeral(true).setAllowedMentions(List.of()).queue(sent -> { }, failure -> { });
+                    if (reusePrivateMessage && first.getAndSet(false)) {
+                        hook.editOriginal(message).setComponents(List.of()).setAllowedMentions(List.of()).queue(sent -> { }, failure -> { });
+                    } else {
+                        hook.sendMessage(message).setEphemeral(true).setAllowedMentions(List.of()).queue(sent -> { }, failure -> { });
+                    }
                 }
-                @Override public void replyPrivate(PickGatewayMessage message) { sendInteractive(hook, message); }
+                @Override public void replyPrivate(PickGatewayMessage message) {
+                    sendInteractive(hook, message, reusePrivateMessage && first.getAndSet(false));
+                }
             });
-        }, failure -> result.completeExceptionally(new IllegalStateException("Private acknowledgement failed")));
+        };
+        Consumer<Throwable> rejected = failure -> result.completeExceptionally(new IllegalStateException("Private acknowledgement failed"));
+        if (reusePrivateMessage && privateSource() && callback instanceof IMessageEditCallback editable) {
+            editable.deferEdit().queue(accepted, rejected);
+        } else {
+            callback.deferReply(true).queue(accepted, rejected);
+        }
         return result;
     }
 
-    private static void sendInteractive(InteractionHook hook, PickGatewayMessage message) {
+    private boolean privateSource() {
+        Message source = switch (callback) {
+            case GenericComponentInteractionCreateEvent event -> event.getMessage();
+            case ModalInteractionEvent event -> event.getMessage();
+            default -> null;
+        };
+        return source != null && source.isEphemeral();
+    }
+
+    private static void sendInteractive(InteractionHook hook, PickGatewayMessage message, boolean edit) {
         var rows = new java.util.ArrayList<ActionRow>();
         if (message.selection() != null) {
             var select = StringSelectMenu.create(message.selection().id()).setPlaceholder(message.selection().placeholder()).setRequiredRange(1, 1);
@@ -44,7 +78,11 @@ public class JdaPickGatewayResponse implements PickGatewayResponse {
             rows.add(ActionRow.of(select.build()));
         }
         if (!message.buttons().isEmpty()) rows.add(ActionRow.of(message.buttons().stream().map(button -> Button.secondary(button.id(), button.label())).toList()));
-        hook.sendMessage(message.content()).setEphemeral(true).setAllowedMentions(List.of()).setComponents(rows).queue(sent -> { }, failure -> { });
+        if (edit) {
+            hook.editOriginal(message.content()).setComponents(rows).setAllowedMentions(List.of()).queue(sent -> { }, failure -> { });
+        } else {
+            hook.sendMessage(message.content()).setEphemeral(true).setAllowedMentions(List.of()).setComponents(rows).queue(sent -> { }, failure -> { });
+        }
     }
 
     @Override

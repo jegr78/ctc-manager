@@ -1227,3 +1227,10 @@ The matchday workspace always shows **Pick deadline & event window**, including 
 ### Expanding a frozen season car pool
 
 In Season settings → Car pool, use Add pool entry to add a category or One-Make to an already frozen pool. Add and freeze entry stores only the new exact membership. Existing entry identities, membership and saved picks remain unchanged. Empty additions or cars shared with an existing frozen entry are rejected. Existing frozen entries cannot be edited or removed. Reopen unused pool remains available only before races or pick history use the pool. Track selection is configured independently in the season track pool.
+
+
+### Private picks dialog messages
+
+The picks wizard updates its current private response after selections and source-bound form submissions. Its buttons and menus are replaced together with the displayed step. Discord controls the privacy/dismiss footer; the bot cannot hide that footer separately. A new `/picks` invocation starts a separate private dialog. Exceptionally long summaries retain additional private chunks so no saved values are silently truncated.
+
+Public or missing source messages are never edited with confidential picks. Such interactions receive a new private reply. Session ownership, current authorization, deadlines and restore invalidation still apply at every step. Incident reporting and its permanent thread/ruling delivery retain their existing behavior.

@@ -53,7 +53,6 @@ public class PickInteractionHandler implements PickGatewayInteractionHandler {
                     var rows = targets.listHomeRaces(channel);
                     if (rows.isEmpty()) { continuation.replyPrivate("No eligible home races are available in this channel."); return; }
                     var session = sessions.create(event);
-                    continuation.replyPrivate("Choose your home race to view or edit its picks.");
                     targetPage(session, rows, 0, continuation);
                 } else {
                     sessions.withAction(event, (session, action) -> {

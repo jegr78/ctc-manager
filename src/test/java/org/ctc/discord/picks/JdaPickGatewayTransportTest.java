@@ -107,6 +107,37 @@ class JdaPickGatewayTransportTest {
         }
     }
 
+    @ParameterizedTest
+    @CsvSource({"ctc-picks:opaque,true", "ctc-incidents:opaque,false"})
+    void givenPrivateComponent_whenForwarding_thenOnlyPicksReusesItsSource(String action, boolean reuse) {
+        when(builder.build()).thenReturn(jda);
+        try (var factory = mockStatic(JDABuilder.class)) {
+            factory.when(() -> JDABuilder.createLight(anyString(), any(java.util.Collection.class))).thenReturn(builder);
+            transport.connect("test-token", "100", receiver);
+            var listener = ArgumentCaptor.forClass(Object.class);
+            verify(builder).addEventListeners(listener.capture());
+            var event = mock(ButtonInteractionEvent.class);
+            var user = mock(User.class);
+            when(user.getId()).thenReturn("300");
+            when(event.getUser()).thenReturn(user);
+            when(event.getTimeCreated()).thenReturn(OffsetDateTime.ofInstant(PickGatewayReplyTest.NOW, ZoneOffset.UTC));
+            when(event.getComponentId()).thenReturn(action);
+            var message = mock(net.dv8tion.jda.api.entities.Message.class);
+            when(message.isEphemeral()).thenReturn(true);
+            when(event.getMessage()).thenReturn(message);
+            when(event.deferEdit()).thenReturn(mock(net.dv8tion.jda.api.requests.restaction.interactions.MessageEditCallbackAction.class));
+            when(event.deferReply(true)).thenReturn(mock(net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction.class));
+
+            ((ListenerAdapter) listener.getValue()).onButtonInteraction(event);
+            var forwarded = ArgumentCaptor.forClass(PickGatewayInteraction.class);
+            verify(receiver).accept(forwarded.capture());
+            forwarded.getValue().response().deferPrivate();
+
+            verify(event, times(reuse ? 1 : 0)).deferEdit();
+            verify(event, times(reuse ? 0 : 1)).deferReply(true);
+        }
+    }
+
     @Test
     void givenInteractionEvents_whenReceiving_thenMapCommandButtonSelectionAndModalWithoutRawToken() {
         // given
