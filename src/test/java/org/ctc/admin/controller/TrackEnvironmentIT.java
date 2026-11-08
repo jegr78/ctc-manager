@@ -132,6 +132,34 @@ class TrackEnvironmentIT {
         assertThat(t.getRainCapability()).isEqualTo("RAIN"); assertThat(t.getEnvironmentVersion()).isEqualTo(1);
         assertThat(t.getImageUrl()).isEqualTo("/uploads/tracks/test-environment-owner.png");
     }
+    @Test void givenCachedIdentity_whenAnotherTransactionSavesMetadata_thenIdentityUpdateCannotOverwriteEnvironment() {
+        var independent = new TransactionTemplate(tx.getTransactionManager());
+        independent.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        tx.executeWithoutResult(status -> {
+            var cached = tracks.findById(id).orElseThrow();
+            assertThat(cached.getTimeOfDayOptions()).isEmpty();
+            independent.executeWithoutResult(other -> {
+                var current = tracks.findById(id).orElseThrow();
+                current.setTimeOfDayOptions(List.of("Night")); current.setRainCapability("RAIN"); current.setEnvironmentVersion(1);
+            });
+            trackService.save(id, "Test concurrent identity " + id, "Test changed country");
+        });
+        var saved = tracks.findById(id).orElseThrow();
+        assertThat(saved.getTimeOfDayOptions()).containsExactly("Night");
+        assertThat(saved.getRainCapability()).isEqualTo("RAIN");
+        assertThat(saved.getEnvironmentVersion()).isEqualTo(1);
+    }
+
+    @Test void givenExhaustedVersion_whenSaving_thenRejectInsteadOfWrappingTokenAndChangingMetadata() {
+        jdbc.update("UPDATE tracks SET environment_version = ? WHERE id = ?", Long.MAX_VALUE, id);
+        var view = environment.view(id);
+        assertThatThrownBy(() -> environment.save(id, "Night", TrackRainCapability.RAIN, view.version(), view.generation()))
+                .isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class).hasMessageContaining("exhausted");
+        var saved = tracks.findById(id).orElseThrow();
+        assertThat(saved.getEnvironmentVersion()).isEqualTo(Long.MAX_VALUE);
+        assertThat(saved.getTimeOfDayOptions()).isEmpty();
+    }
+
     @Test void givenDifferentLayoutMetadata_whenValidatingNewTime_thenUseCurrentLayoutAndPermitUnknownFallback() {
         tx.executeWithoutResult(s -> environment.requireTimeOfDay(id,"Legacy free text"));
         configure();

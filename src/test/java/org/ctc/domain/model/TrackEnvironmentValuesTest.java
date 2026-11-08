@@ -14,17 +14,24 @@ class TrackEnvironmentValuesTest {
         assertThat(values.rainCapability()).isEqualTo(TrackRainCapability.RAIN);
         assertThat(TrackEnvironmentValues.fromText("", TrackRainCapability.UNKNOWN).timeOfDayOptions()).isEmpty();
     }
-    @ParameterizedTest @ValueSource(strings = {"duplicate", "blank", "long", "many", "control"})
+    @ParameterizedTest @ValueSource(strings = {"duplicate", "blank", "long", "many", "control", "trim", "null"})
     void givenInvalidChoices_whenValidating_thenRejectWithoutInventingOptions(String invalid) {
         var values = switch (invalid) {
             case "duplicate" -> List.of("Sunrise", "Sunrise");
             case "blank" -> List.of(" ");
             case "long" -> List.of("x".repeat(101));
             case "many" -> java.util.stream.IntStream.range(0,26).mapToObj(i -> "Time " + i).toList();
+            case "trim" -> List.of(" Sunrise");
+            case "null" -> java.util.Arrays.asList((String) null);
             default -> List.of("Sunrise\tNight");
         };
         assertThatThrownBy(() -> new TrackEnvironmentValues(values, TrackRainCapability.UNKNOWN))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Time of day");
+    }
+    @Test void givenMissingRainOrOversizedNativeInput_whenParsing_thenRejectInsteadOfDefaultingVerifiedMetadata() {
+        assertThatThrownBy(() -> TrackEnvironmentValues.fromText("Night", null)).isInstanceOf(BusinessRuleException.class);
+        assertThatThrownBy(() -> TrackEnvironmentValues.fromText(" ".repeat(3001), TrackRainCapability.UNKNOWN))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("too long");
     }
     @Test void givenGlobalPresets_whenFilteringRainCapability_thenReturnOrdered24Or32WithoutInventingRainSupport() {
         assertThat(WeatherPreset.available(TrackRainCapability.DRY_ONLY)).hasSize(24);

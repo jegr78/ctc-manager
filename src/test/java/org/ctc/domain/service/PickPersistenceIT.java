@@ -120,6 +120,24 @@ class PickPersistenceIT {
     }
 
     @Test
+    void givenSavedPick_whenLayoutOptionsChange_thenReplayAndApprovalKeepHistoricTimeExactly() {
+        UUID request = UUID.randomUUID();
+        var receipt = submissions.submit(fixture.race().getId(), 0, request, actor, payload);
+        tx.executeWithoutResult(status -> {
+            var layout = tracks.findById(payload.trackId()).orElseThrow();
+            layout.setTimeOfDayOptions(java.util.List.of("Night")); layout.setEnvironmentVersion(1);
+        });
+        assertThat(submissions.submit(fixture.race().getId(), 0, request, actor, payload)).isEqualTo(receipt);
+        reviews.approve(fixture.race().getId(), 1, 1, new ManagementPickActor("test-admin"), "Original revision remains valid");
+        assertThat(submissions.submit(fixture.race().getId(), 0, request, actor, null)).isEqualTo(receipt);
+        tx.executeWithoutResult(status -> {
+            var revision = revisions.findByRequestId(request).orElseThrow();
+            assertThat(revision.getPayload()).isEqualTo(payload);
+            assertThat(revision.getPick().getRace().getSettings().getTimeOfDay()).isEqualTo("Sunset");
+        });
+    }
+
+    @Test
     void givenCompleteConfirmation_whenReloadingAndReplaying_thenPreserveTypedPayloadAndExactOriginalReceipt() {
         // when
         UUID request = UUID.randomUUID();

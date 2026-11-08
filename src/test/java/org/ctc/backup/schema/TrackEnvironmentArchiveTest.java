@@ -28,7 +28,19 @@ class TrackEnvironmentArchiveTest {
         assertThat(legacy.has("rainCapability")).isFalse();
         assertThatThrownBy(() -> TrackEnvironmentArchive.normalize(version,"tracks",row())).isInstanceOf(IllegalArgumentException.class);
     }
-    @ParameterizedTest @ValueSource(strings={"missing", "rain", "version", "fraction", "duplicates", "options"})
+    @ParameterizedTest @ValueSource(strings={"times", "rain", "version"})
+    void givenOneUndeclaredLegacyField_whenNormalizing_thenRejectWithoutSilentlyDiscardingIt(String field) {
+        var row = mapper.createObjectNode().put("rainCapability", "UNKNOWN").put("environmentVersion", 0);
+        row.putArray("timeOfDayOptions");
+        switch (field) {
+            case "times" -> row.putArray("timeOfDayOptions").add("Night");
+            case "rain" -> row.put("rainCapability", "RAIN");
+            default -> row.put("environmentVersion", 1);
+        }
+        assertThatThrownBy(() -> TrackEnvironmentArchive.normalize(18, "tracks", row))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("schema 19");
+    }
+    @ParameterizedTest @ValueSource(strings={"missing", "rain", "version", "fraction", "duplicates", "options", "nontext", "overflow"})
     void givenInvalidCurrentArchive_whenPreflighting_thenRejectTypedMetadata(String change) {
         var row = row();
         switch(change) {
@@ -37,6 +49,8 @@ class TrackEnvironmentArchiveTest {
             case "version" -> row.put("environmentVersion",-1);
             case "fraction" -> row.put("environmentVersion",1.5);
             case "duplicates" -> row.putArray("timeOfDayOptions").add("Night").add("Night");
+            case "nontext" -> row.putArray("timeOfDayOptions").add(8);
+            case "overflow" -> row.put("environmentVersion", java.math.BigInteger.valueOf(Long.MAX_VALUE).add(java.math.BigInteger.ONE));
             default -> row.put("timeOfDayOptions","Night");
         }
         assertThatThrownBy(() -> TrackEnvironmentArchive.normalize(19,"tracks",row)).isInstanceOf(IllegalArgumentException.class);
