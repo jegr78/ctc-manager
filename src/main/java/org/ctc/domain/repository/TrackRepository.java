@@ -13,6 +13,10 @@ import org.springframework.data.jpa.repository.Modifying;
 public interface TrackRepository extends JpaRepository<Track, UUID> {
 	List<Track> findAllByOrderByNameAsc();
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t from Track t where t.id = :id")
+    Optional<Track> findByIdForEnvironmentUpdate(UUID id);
+
 	boolean existsByName(String name);
 
     Optional<Track> findByName(String name);

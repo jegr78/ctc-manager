@@ -82,6 +82,7 @@ public class DataAuditService {
 	private final TeamRepository teamRepository;
 	private final DriverRepository driverRepository;
     private final CarRepository carRepository;
+    private final org.ctc.domain.repository.TrackRepository trackRepository;
 	private final SiteSlugRepository siteSlugRepository;
 	private final ScoringService scoringService;
 	private final SiteSlugger siteSlugger;
@@ -116,6 +117,15 @@ public class DataAuditService {
 		auditPublicUrls(findings.get(PUBLIC_URL));
         auditCarMetadata(findings.get(CAR_METADATA), findings.get(CAR_ELIGIBILITY));
         auditCarPools(races, findings.get(CAR_POOL));
+        for (var track : trackRepository.findAll()) {
+            try {
+                org.ctc.domain.model.TrackEnvironmentValues.from(track);
+                if (track.getEnvironmentVersion() < 0) throw new org.ctc.domain.exception.BusinessRuleException("Invalid environment version");
+            } catch (RuntimeException invalid) {
+                findings.get(Category.TRACK_ENVIRONMENT).add(new DataAuditFinding(Category.TRACK_ENVIRONMENT, UNDETERMINABLE,
+                        "Track " + track.getId(), "Stored environment metadata is invalid.", "Review this concrete layout; do not infer values from another layout."));
+            }
+        }
         pickIntegrity.inspect().forEach(finding -> findings.get(finding.category()).add(finding));
         findings.get(Category.INCIDENT_REPORTS).addAll(incidentIntegrity.inspect());
 

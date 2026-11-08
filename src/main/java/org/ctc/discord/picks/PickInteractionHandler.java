@@ -37,7 +37,8 @@ public class PickInteractionHandler implements PickGatewayInteractionHandler {
                     String stage = action.name().substring(5);
                     session.clearActions();
                     reply.openModal(modal(session.action(stage, MODAL), stage, session.lobbyRulesProfile,
-                            session.car != null && session.car.oneMake(), session.fields));
+                            session.car != null && session.car.oneMake(), session.fields,
+                            session.track == null ? List.of() : session.track.timeOfDayOptions()));
                     return true;
                 });
                 if (opened) return;
@@ -140,6 +141,8 @@ public class PickInteractionHandler implements PickGatewayInteractionHandler {
         boolean oneMake = session.car != null && session.car.oneMake();
         try {
             validateStage(name, event.values(), session.lobbyRulesProfile, oneMake, session.fields);
+            if (name.equals("time") && session.track != null && !session.track.timeOfDayOptions().isEmpty()
+                    && !session.track.timeOfDayOptions().contains(one(event.values(), "daytime"))) throw new IllegalArgumentException("Invalid layout time");
         } catch (IllegalArgumentException invalid) {
             next(session, name, "Check all required values and allowed ranges. Mandatory tyres must be available; choose None on its own.", reply); return;
         }

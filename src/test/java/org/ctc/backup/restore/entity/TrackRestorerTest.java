@@ -50,7 +50,10 @@ class TrackRestorerTest {
                     "country": "Germany",
                     "imageUrl": "http://example.com/nurburgring.png",
                     "createdAt": "2024-01-15T10:30:00",
-                    "updatedAt": "2024-02-20T11:45:00"
+                    "updatedAt": "2024-02-20T11:45:00",
+                    "timeOfDayOptions": ["Night", "Sunrise"],
+                    "rainCapability": "RAIN",
+                    "environmentVersion": 3
                 }
                 """;
         JsonNode row = mapper.readTree(json);
@@ -72,8 +75,8 @@ class TrackRestorerTest {
 
         assertThat(sqlCaptor.getValue())
                 .contains("INSERT INTO tracks")
-                .contains("(id, name, country, image_url, created_at, updated_at)")
-                .contains("VALUES (?, ?, ?, ?, ?, ?)");
+                .contains("(id, name, country, image_url, created_at, updated_at, time_of_day_options, rain_capability, environment_version)")
+                .contains("VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         PreparedStatement ps = mock(PreparedStatement.class);
         setterCaptor.getValue().setValues(ps, row);
@@ -84,6 +87,9 @@ class TrackRestorerTest {
         verify(ps).setString(4, "http://example.com/nurburgring.png");
         verify(ps).setTimestamp(5, Timestamp.valueOf(LocalDateTime.parse("2024-01-15T10:30:00")));
         verify(ps).setTimestamp(6, Timestamp.valueOf(LocalDateTime.parse("2024-02-20T11:45:00")));
+        verify(ps).setString(7, "Night\nSunrise");
+        verify(ps).setString(8, "RAIN");
+        verify(ps).setLong(9, 3L);
     }
 
     @Test

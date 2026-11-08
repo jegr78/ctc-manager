@@ -39,6 +39,11 @@ public class TrackService {
 
 	@Transactional
 	public Track save(UUID id, String name, String country) {
+        return save(id, name, country, null, org.ctc.domain.model.TrackRainCapability.UNKNOWN);
+    }
+
+    @Transactional
+    public Track save(UUID id, String name, String country, String timeOfDayText, org.ctc.domain.model.TrackRainCapability rain) {
 		Track track;
 		if (id != null) {
 			track = trackRepository.findById(id)
@@ -46,7 +51,10 @@ public class TrackService {
 			track.setName(name);
 			track.setCountry(country);
 		} else {
-			track = new Track(name, country);
+			var environment = org.ctc.domain.model.TrackEnvironmentValues.fromText(timeOfDayText, rain);
+            track = new Track(name, country);
+            track.setTimeOfDayOptions(environment.timeOfDayOptions()); track.setRainCapability(environment.rainCapability().name());
+            if (!environment.timeOfDayOptions().isEmpty() || rain != org.ctc.domain.model.TrackRainCapability.UNKNOWN) track.setEnvironmentVersion(1);
 		}
 		try {
 			track = trackRepository.saveAndFlush(track);

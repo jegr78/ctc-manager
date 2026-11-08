@@ -26,6 +26,22 @@ class JdaPickGatewayResponseTest {
     final InteractionHook hook = mock(InteractionHook.class);
     final JdaPickGatewayResponse response = new JdaPickGatewayResponse(event);
 
+    @Test
+    void givenConfiguredLayoutTimes_whenSerializingModal_thenUseRealRequiredSdkSelectAndSavedValue() {
+        var action = mock(ModalCallbackAction.class); when(event.replyModal(any())).thenReturn(action);
+        response.openModal(PickInteractionViews.modal("ctc-picks:opaque", "time", org.ctc.domain.model.LobbyRulesProfile.CTC_2027,
+                false, Map.of("daytime", List.of("Night")), List.of("Sunrise", "Night")));
+        var captured = ArgumentCaptor.forClass(Modal.class); verify(event).replyModal(captured.capture());
+        var fields = captured.getValue().toData().getArray("components"); assertThat(fields.length()).isEqualTo(5);
+        var time = fields.getObject(2).getObject("component");
+        assertThat(time.getString("custom_id")).isEqualTo("daytime"); assertThat(time.getInt("type")).isEqualTo(3);
+        assertThat(time.getInt("min_values")).isEqualTo(1); assertThat(time.getInt("max_values")).isEqualTo(1);
+        var options = time.getArray("options"); assertThat(options.length()).isEqualTo(2);
+        assertThat(options.getObject(0).getString("value")).isEqualTo("Sunrise");
+        assertThat(options.getObject(1).getString("value")).isEqualTo("Night");
+        assertThat(options.getObject(1).getBoolean("default")).isTrue();
+    }
+
     @ParameterizedTest
     @org.junit.jupiter.params.provider.CsvSource({"LEGACY,false", "LEGACY,true", "CTC_2027,false", "CTC_2027,true"})
     void givenSavedRaceRules_whenSerializingProductionModal_thenUseRequiredSingleSelectsAndKeepNumericDefaults(

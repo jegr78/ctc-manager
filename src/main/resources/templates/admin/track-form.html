@@ -4,10 +4,11 @@
 <body>
 <section class="entity-editor">
     <div class="toolbar"><div><a th:href="@{/admin/tracks}" class="back-link">← Back to Tracks</a><h1 th:text="${trackForm.id != null ? 'Edit Track' : 'New Track'}"></h1></div></div>
-    <nav class="entity-section-nav" aria-label="Track editing sections"><a href="#track-identity">Identity</a><a th:if="${trackForm.id != null}" href="#track-image">Image</a></nav>
+    <nav class="entity-section-nav" aria-label="Track editing sections"><a href="#track-identity">Identity</a><a href="#track-environment">Time &amp; weather</a><a th:if="${trackForm.id != null}" href="#track-image">Image</a></nav>
     <div class="card">
         <form class="entity-editor-form" th:action="@{/admin/tracks/save}" th:object="${trackForm}" method="post">
             <input type="hidden" th:field="*{id}">
+            <div th:if="${#fields.hasErrors('*')}" class="field-error" role="alert"><ul><li th:each="error : ${#fields.errors('*')}" th:text="${error}"></li></ul></div>
             <fieldset id="track-identity"><legend>Identity</legend>
             <div class="form-row">
                 <div class="form-group">
@@ -21,11 +22,29 @@
                 </div>
             </div>
             </fieldset>
+            <fieldset th:if="${trackForm.id == null}" id="track-environment"><legend>Time &amp; weather for this layout</legend>
+                <p class="text-dim">Only enter verified options for this concrete layout. Leave the list empty and rain unknown when unverified.</p>
+                <div class="form-group"><label for="timeOfDayText">Time of day, one option per line</label><textarea th:field="*{timeOfDayText}" id="timeOfDayText" rows="6" maxlength="3000"></textarea></div>
+                <div class="form-group"><label for="rainCapability">Rain availability</label><select th:field="*{rainCapability}" id="rainCapability"><option th:each="rain : ${rainCapabilities}" th:value="${rain}" th:text="${rain.label}"></option></select></div>
+            </fieldset>
             <div class="entity-editor-actions"><span class="text-dim">Track details</span><div class="actions">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a th:href="@{/admin/tracks}" class="btn btn-secondary">Cancel</a>
             </div></div>
         </form>
+    </div>
+    <div th:if="${trackForm.id != null}" class="card mt-md" id="track-environment">
+        <h2>Time &amp; weather for this layout</h2>
+        <p class="text-dim">Maintain the available times in game order. At most 25 distinct options, each up to 100 characters. An empty list is unverified and keeps manual entry in Discord. Changes apply to new submissions; saved pick history remains unchanged.</p>
+        <form th:action="@{/admin/tracks/{id}/environment(id=${trackForm.id})}" th:object="${environmentForm}" method="post" class="entity-editor-form">
+            <input type="hidden" th:field="*{expectedVersion}"><input type="hidden" th:field="*{expectedGeneration}">
+            <div th:if="${#fields.hasErrors('*')}" class="field-error" role="alert"><ul><li th:each="error : ${#fields.errors('*')}" th:text="${error}"></li></ul></div>
+            <div class="form-group"><label for="timeOfDayText">Time of day, one option per line</label><textarea th:field="*{timeOfDayText}" id="timeOfDayText" rows="6" maxlength="3000"></textarea></div>
+            <div class="form-group"><label for="rainCapability">Rain availability</label><select th:field="*{rainCapability}" id="rainCapability"><option th:each="rain : ${rainCapabilities}" th:value="${rain}" th:text="${rain.label}"></option></select></div>
+            <div class="actions"><button type="submit" class="btn btn-primary">Save environment</button><a class="btn btn-secondary" th:href="@{/admin/tracks/{id}/edit(id=${trackForm.id})}">Reload current values</a></div>
+        </form>
+        <p th:if="${environment.values.rainCapability.name() == 'UNKNOWN'}" class="text-dim">Rain availability is unverified. The reference shows the 24 presets available on every layout.</p>
+        <details><summary>Weather preset reference</summary><p class="text-dim">S01–S18 and C01–C06 are available on every layout. R01–R08 are additionally available where rain is verified. Keep the order when entering a weather sequence.</p><ul><li th:each="preset : ${environment.weatherPresets}" th:text="${preset.name() + ' · ' + preset.description}"></li></ul></details>
     </div>
     <div th:if="${trackForm.id != null}" class="card mt-md" id="track-image">
         <h2>Image</h2>
