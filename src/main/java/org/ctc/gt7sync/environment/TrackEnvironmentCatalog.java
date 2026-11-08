@@ -10,7 +10,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 @Component
-public class TrackEnvironmentCatalog {
+public final class TrackEnvironmentCatalog {
     private final Map<String,String> aliases;
     public TrackEnvironmentCatalog() throws IOException { this(load()); }
     TrackEnvironmentCatalog(List<Mapping> mappings) {

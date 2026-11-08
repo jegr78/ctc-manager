@@ -12,7 +12,7 @@ import org.ctc.domain.exception.BusinessRuleException;
 import org.springframework.stereotype.Component;
 
 @Component
-public class TrackEnvironmentImportStore {
+public final class TrackEnvironmentImportStore {
     private final Clock clock;
     private final Duration lifetime;
     private final int maximum;

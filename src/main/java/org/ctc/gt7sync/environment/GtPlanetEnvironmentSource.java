@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
@@ -105,7 +106,7 @@ public class GtPlanetEnvironmentSource {
         public Snapshot {
             Instant.parse(sourceEditedAt); Instant.parse(retrievedAt); profiles=List.copyOf(profiles);
             if (profiles.isEmpty() || profiles.size()>128 || profiles.stream().map(Profile::key).distinct().count()!=profiles.size()
-                    || !hash(sourceEditedAt,profiles).equals(sourceHash)) throw new IllegalArgumentException("Invalid layout source snapshot");
+                    || sourceHash==null || !MessageDigest.isEqual(hash(sourceEditedAt,profiles).getBytes(StandardCharsets.US_ASCII),sourceHash.getBytes(StandardCharsets.US_ASCII))) throw new IllegalArgumentException("Invalid layout source snapshot");
         }
     }
     public record Profile(String key,List<String> layouts,List<String> timeOfDay,List<String> weatherCodes) {

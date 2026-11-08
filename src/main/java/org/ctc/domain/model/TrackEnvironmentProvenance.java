@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
@@ -43,7 +44,7 @@ public record TrackEnvironmentProvenance(String profile,String sourceEditedAt,St
         if(track.getEnvironmentVersion()<0)throw invalid();
         var source=decode(track.getEnvironmentSource());String hash=track.getEnvironmentImportHash();
         if(source==null ? hash!=null : hash==null || !hash.matches("[a-f0-9]{64}"))throw invalid();
-        if(source!=null && !track.isEnvironmentOverride() && !valuesHash(TrackEnvironmentValues.from(track)).equals(hash))throw invalid();
+        if(source!=null && !track.isEnvironmentOverride() && !MessageDigest.isEqual(valuesHash(TrackEnvironmentValues.from(track)).getBytes(StandardCharsets.US_ASCII),hash.getBytes(StandardCharsets.US_ASCII)))throw invalid();
     }
     private static BusinessRuleException invalid() { return new BusinessRuleException("Track environment source is invalid; review this layout"); }
 }
