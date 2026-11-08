@@ -48,6 +48,12 @@ class SwissRoundE2ETest extends PlaywrightConfig {
         assertThat(page.locator("[data-swiss-warnings]")).containsText("played before");
         page.getByTestId("swiss-save-round").click();
         assertThat(page.locator(".alert-warning")).containsText("played before");
+        Files.createDirectories(Path.of(".screenshots"));
+        page.screenshot(new Page.ScreenshotOptions().setPath(Path.of(".screenshots/swiss-workspace-desktop.png")).setFullPage(true).setAnimations(ScreenshotAnimations.DISABLED));
+        page.setViewportSize(390,844); page.reload();
+        org.assertj.core.api.Assertions.assertThat((Boolean)page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")).isTrue();
+        page.screenshot(new Page.ScreenshotOptions().setPath(Path.of(".screenshots/swiss-workspace-mobile.png")).setFullPage(true).setAnimations(ScreenshotAnimations.DISABLED));
+        page.setViewportSize(1280,900); page.reload();
         page.getByText("Edit pairings",new Page.GetByTextOptions().setExact(true)).first().click();
         assertThat(page.locator("#swiss-home-0")).not().hasValue("");
         String firstHome=page.locator("#swiss-home-0").inputValue();

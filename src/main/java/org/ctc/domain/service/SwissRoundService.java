@@ -173,7 +173,8 @@ public class SwissRoundService {
         var phaseChoices=phases.findBySeasonIdOrderBySortIndex(season.getId()).stream()
                 .filter(p -> p.getFormat()==SeasonFormat.SWISS && (p.getLayout()==PhaseLayout.LEAGUE || p.getLayout()==PhaseLayout.GROUPS))
                 .map(p -> new Choice(p.getId(),phaseLabel(p),null)).toList();
-        var groupChoices=groups.findByPhaseIdOrderBySortIndex(phase.getId()).stream().map(g -> new Choice(g.getId(),g.getName(),null)).toList();
+        var groupChoices=phase.getLayout()==PhaseLayout.GROUPS
+                ? groups.findByPhaseIdOrderBySortIndex(phase.getId()).stream().map(g -> new Choice(g.getId(),g.getName(),null)).toList() : List.<Choice>of();
         return new Workspace(phase.getId(),season.getId(),season.getDisplayLabel(),phaseLabel(phase),scope.group()==null?null:scope.group().getId(),
                 phaseChoices,groupChoices,choices(scope),List.copyOf(rounds),pending,create,
                 create && automatic.isCurrentRoundComplete(phase.getId(),scope.group()==null?null:scope.group().getId()),
