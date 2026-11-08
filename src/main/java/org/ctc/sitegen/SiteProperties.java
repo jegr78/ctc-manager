@@ -12,6 +12,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class SiteProperties {
 
     private String outputDir;
+    private boolean includeTestSeasons;
     private List<LinkEntry> links = new ArrayList<>();
     private String youtubeChannelUrl = "https://www.youtube.com/@CommunityTeamCup";
     private String youtubeVideoId = "";

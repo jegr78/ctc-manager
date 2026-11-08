@@ -10,6 +10,17 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 
 public interface IncidentRulingPublicationRepository extends JpaRepository<IncidentRulingPublication, UUID> {
+    @EntityGraph(attributePaths = {"revision.ruling.report.window.context.season", "revision.ruling.report.race.matchday.phase.season",
+            "revision.ruling.report.originalMatchday.phase.season", "revision.ruling.report.race.match",
+            "revision.ruling.report.race.playoffMatchup", "revision.ruling.report.window.context.match",
+            "revision.ruling.report.window.context.playoffMatchup", "threadPublication.delivery.revision.report"})
+    @Query("select p from IncidentRulingPublication p where p.revision.ruling.report.window.context.season.id=:seasonId "
+            + "and p.state=org.ctc.domain.model.IncidentDeliveryState.SENT "
+            + "and p.revision.ruling.publishedRevisionNumber=p.revision.revisionNumber "
+            + "and p.revision.ruling.publishedMessageId=p.messageId "
+            + "and p.completedAt<=:now order by p.completedAt desc, p.id")
+    List<IncidentRulingPublication> findConfirmedForSeason(UUID seasonId, Instant now);
+
     Optional<IncidentRulingPublication> findByRevisionId(UUID revisionId);
     List<IncidentRulingPublication> findByRevisionRulingIdOrderByRequestedAtAscIdAsc(UUID rulingId);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
