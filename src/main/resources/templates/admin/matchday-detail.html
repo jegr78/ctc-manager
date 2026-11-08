@@ -66,7 +66,7 @@
             </div>
             <div th:if="${!matchday.matches.isEmpty()}" class="match-list">
                 <div th:each="match : ${matchday.matches}" class="match-row"
-                     th:attr="data-teams=${match.homeTeam.shortName + ' ' + (match.awayTeam != null ? match.awayTeam.shortName : '')},data-result-status=${match.bye ? 'bye' : (match.walkoverTeam != null ? 'walkover' : (match.homeScore != null and match.awayScore != null ? 'scored' : 'open'))}">
+                     th:attr="data-teams=${match.homeTeam.shortName + ' ' + (match.awayTeam != null ? match.awayTeam.shortName : '')},data-result-status=${match.bye ? 'bye' : (match.walkoverTeam != null ? 'walkover' : (match.officialHomeScore != null and match.officialAwayScore != null ? 'scored' : 'open'))}">
                     <div class="match-header"
                          th:styleappend="${match.bye ? 'opacity:0.6;' : ''}"
                          th:classappend="${!match.races.isEmpty() ? '' : ''}">
@@ -74,19 +74,17 @@
                             <span th:text="${match.homeTeam.shortName}"></span>
                             <span th:if="${match.walkoverTeam != null and match.walkoverTeam.id.equals(match.homeTeam.id)}" class="match-wo">w/o</span>
                         </div>
-                        <div th:if="${!match.bye and match.walkoverTeam == null}" class="match-score-area">
-                            <span th:if="${match.homeScore != null}" class="match-score-value"
-                                  th:classappend="${match.awayScore == null ? '' : (match.homeScore > match.awayScore ? 'score-win' : (match.homeScore < match.awayScore ? 'score-loss' : 'score-draw'))}"
-                                  th:text="${match.homeScore}"></span>
-                            <span th:unless="${match.homeScore != null}" class="match-score-value match-score-value--dim">–</span>
+                        <div th:if="${!match.bye}" class="match-score-area">
+                            <span th:if="${match.officialHomeScore != null}" class="match-score-value"
+                                  th:classappend="${match.officialAwayScore == null ? '' : (match.officialHomeScore > match.officialAwayScore ? 'score-win' : (match.officialHomeScore < match.officialAwayScore ? 'score-loss' : 'score-draw'))}"
+                                  th:text="${match.officialHomeScore}"></span>
+                            <span th:unless="${match.officialHomeScore != null}" class="match-score-value match-score-value--dim">–</span>
                             <span class="match-score-separator">:</span>
-                            <span th:if="${match.awayScore != null}" class="match-score-value"
-                                  th:classappend="${match.homeScore == null ? '' : (match.awayScore > match.homeScore ? 'score-win' : (match.awayScore < match.homeScore ? 'score-loss' : 'score-draw'))}"
-                                  th:text="${match.awayScore}"></span>
-                            <span th:unless="${match.awayScore != null}" class="match-score-value match-score-value--dim">–</span>
-                        </div>
-                        <div th:if="${!match.bye and match.walkoverTeam != null}" class="match-score-area">
-                            <span class="match-wo">w/o</span>
+                            <span th:if="${match.officialAwayScore != null}" class="match-score-value"
+                                  th:classappend="${match.officialHomeScore == null ? '' : (match.officialAwayScore > match.officialHomeScore ? 'score-win' : (match.officialAwayScore < match.officialHomeScore ? 'score-loss' : 'score-draw'))}"
+                                  th:text="${match.officialAwayScore}"></span>
+                            <span th:unless="${match.officialAwayScore != null}" class="match-score-value match-score-value--dim">–</span>
+                            <span th:if="${match.walkoverTeam != null}" class="match-wo">w/o</span>
                         </div>
                         <div th:if="${match.bye}" class="match-score-area">
                             <span class="match-bye">Bye</span>
@@ -100,7 +98,7 @@
                             <span th:if="${matchday.phase.legs > 1}" class="badge"
                                   th:classappend="${match.races.size() >= matchday.phase.legs ? 'badge-active' : 'badge-inactive'}"
                                   th:text="${match.races.size() + '/' + matchday.phase.legs + ' Legs'}"></span>
-                            <span th:if="${matchday.phase.legs <= 1 && match.homeScore == null && !match.bye && match.walkoverTeam == null}" class="badge badge-inactive">Open</span>
+                            <span th:if="${matchday.phase.legs <= 1 && match.officialHomeScore == null && !match.bye && match.walkoverTeam == null}" class="badge badge-inactive">Open</span>
                             <a th:href="@{/admin/matches/{id}(id=${match.id})}"
                                class="btn btn-xs btn-secondary"
                                data-testid="match-row-detail-link">&rarr; Detail</a>
@@ -125,7 +123,7 @@
                                 <button type="submit" class="btn btn-secondary btn-sm">+ Add Leg</button>
                             </form>
                         </div>
-                        <div th:if="${match.homeScore != null && !match.bye}" class="leg-download-row">
+                        <div th:if="${match.officialHomeScore != null && !match.bye}" class="leg-download-row">
                             <form th:action="@{/admin/matchdays/{mdId}/matches/{mId}/download-match-results(mdId=${matchday.id}, mId=${match.id})}" method="post" class="form-inline">
                                 <button type="submit" class="btn btn-secondary btn-sm">&#11015; Match Results</button>
                             </form>

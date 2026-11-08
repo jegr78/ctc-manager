@@ -258,10 +258,10 @@ class StandingsServiceTest {
             assertEquals(1, forfeiter.getLosses());
             assertEquals(0, forfeiter.getPoints());
             // winner is credited the full team race score (P1-6 + all quali + FL), forfeiter gets it against
-            assertEquals(89, opponent.getPointsFor());
-            assertEquals(89, opponent.getPointDifference());
-            assertEquals(89, forfeiter.getPointsAgainst());
-            assertEquals(-89, forfeiter.getPointDifference());
+            assertEquals(81, opponent.getPointsFor());
+            assertEquals(81, opponent.getPointDifference());
+            assertEquals(81, forfeiter.getPointsAgainst());
+            assertEquals(-81, forfeiter.getPointDifference());
         }
 
         @Test
@@ -309,9 +309,9 @@ class StandingsServiceTest {
             var forfeiter = findStanding(standings, tnr);
             assertEquals(1, opponent.getWins());
             assertEquals(1, forfeiter.getLosses());
-            // stored 70:50 is ignored; the walkover credits the full team race score (89:0), not the score
-            assertEquals(89, opponent.getPointDifference());
-            assertEquals(-89, forfeiter.getPointDifference());
+            // stored 70:50 is ignored; the walkover credits the full team race score (81:0), not the score
+            assertEquals(81, opponent.getPointDifference());
+            assertEquals(-81, forfeiter.getPointDifference());
         }
 
         @Test
@@ -330,15 +330,15 @@ class StandingsServiceTest {
             // when
             var standings = standingsService.calculateStandings(regularPhase.getId(), null);
 
-            // then — "CTC Standard": P1-6 (20+17+14+12+10+8=81) + all quali (3+2+1=6) + FL (2) = 89
+            // then — "CTC Standard": P1-6 (20+17+14+12+10+8=81); qualifying and FL bonuses are excluded
             var opponent = findStanding(standings, tnr);
             var forfeiter = findStanding(standings, p1r);
-            assertEquals(89, opponent.getPointsFor());
+            assertEquals(81, opponent.getPointsFor());
             assertEquals(0, opponent.getPointsAgainst());
-            assertEquals(89, opponent.getPointDifference());
+            assertEquals(81, opponent.getPointDifference());
             assertEquals(0, forfeiter.getPointsFor());
-            assertEquals(89, forfeiter.getPointsAgainst());
-            assertEquals(-89, forfeiter.getPointDifference());
+            assertEquals(81, forfeiter.getPointsAgainst());
+            assertEquals(-81, forfeiter.getPointDifference());
         }
 
         @Test

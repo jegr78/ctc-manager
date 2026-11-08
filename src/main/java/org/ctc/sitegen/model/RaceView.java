@@ -7,6 +7,8 @@ public record RaceView(String homeTeamShortName, String awayTeamShortName, Strin
                        boolean homeTeamWon, boolean awayTeamWon,
                        List<ResultView> results, String poolEntryLabel, org.ctc.domain.model.RacePenaltyTotals penaltyTotals) {
 
+    public boolean isTeamOnlyResult() { return hasResults && results.isEmpty(); }
+
 	public String getScore() {
 		return homeTotal + " : " + awayTotal;
 	}

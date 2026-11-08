@@ -28,7 +28,7 @@
                                 <span th:if="${matchup.team1Id != null}" th:text="${matchup.team1ShortName}"></span>
                                 <span th:if="${matchup.team1Id == null}">TBD</span>
                             </span>
-                            <span class="bracket-team-score" th:if="${matchup.team1ShortName != null}" th:text="${matchup.team1AggregatePoints}"></span>
+                            <span th:if="${matchup.team1Forfeit}" class="text-dim">w/o</span><span class="bracket-team-score" th:if="${matchup.team1ShortName != null}" th:text="${matchup.team1AggregatePoints}"></span>
                         </div>
                         <div class="bracket-team" th:classappend="${matchup.team2IsWinner ? 'winner' : ''}">
                             <span class="bracket-team-name">
@@ -36,7 +36,7 @@
                                 <span th:if="${matchup.team2Id != null}" th:text="${matchup.team2ShortName}"></span>
                                 <span th:if="${matchup.team2Id == null}">TBD</span>
                             </span>
-                            <span class="bracket-team-score" th:if="${matchup.team2ShortName != null}" th:text="${matchup.team2AggregatePoints}"></span>
+                            <span th:if="${matchup.team2Forfeit}" class="text-dim">w/o</span><span class="bracket-team-score" th:if="${matchup.team2ShortName != null}" th:text="${matchup.team2AggregatePoints}"></span>
                         </div>
                     </a>
                 </div>

@@ -86,4 +86,16 @@ public class PlayoffMatchup extends BaseEntity {
 	public boolean isReady() {
 		return team1 != null && team2 != null;
 	}
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public Integer getOfficialHomeScore() {
+        if (walkoverTeam == null) return homeScore;
+        return WalkoverScoring.score(team1, team2, walkoverTeam, round.getPlayoff().getPhase().getRaceScoring()).home();
+    }
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public Integer getOfficialAwayScore() {
+        if (walkoverTeam == null) return awayScore;
+        return WalkoverScoring.score(team1, team2, walkoverTeam, round.getPlayoff().getPhase().getRaceScoring()).away();
+    }
 }

@@ -11,17 +11,17 @@
                  th:id="${'round-' + round.roundIndex}" th:attr="data-round-index=${round.roundIndex}">
             <summary><h2 class="bracket-round-label" th:text="${round.label}"></h2><span class="round-match-count" th:text="${round.matchups.size() + (round.matchups.size() == 1 ? ' match' : ' matches')}"></span></summary>
             <div class="playoff-round-matches">
-                <article th:each="matchup : ${round.matchups}" class="bracket-matchup" th:with="hasRecordedResults=${!matchup.legs.?[hasResults].isEmpty()}">
+                <article th:each="matchup : ${round.matchups}" class="bracket-matchup" th:with="hasRecordedResults=${matchup.scored}">
                     <p class="matchup-status" th:text="${matchup.complete ? 'Complete' : 'Pending'}"></p>
                     <div class="bracket-team" th:classappend="${matchup.team1IsWinner ? 'winner' : ''}">
                         <span class="bracket-team-name"><span th:if="${matchup.team1Seed != null}" class="bracket-seed" th:text="${'(' + matchup.team1Seed + ')'}"></span><span th:text="${matchup.team1ShortName ?: 'TBD'}"></span><span class="bracket-winner" th:if="${matchup.team1IsWinner}">Winner</span></span>
-                        <span class="bracket-team-score" th:if="${matchup.team1ShortName != null}" th:text="${hasRecordedResults ? matchup.team1AggregatePoints : '-'}"></span>
+                        <span th:if="${matchup.team1Forfeit}" class="text-dim">w/o</span><span class="bracket-team-score" th:if="${matchup.team1ShortName != null}" th:text="${hasRecordedResults ? matchup.team1AggregatePoints : '-'}"></span>
                     </div>
                     <div class="bracket-team" th:classappend="${matchup.team2IsWinner ? 'winner' : ''}">
                         <span class="bracket-team-name"><span th:if="${matchup.team2Seed != null}" class="bracket-seed" th:text="${'(' + matchup.team2Seed + ')'}"></span><span th:text="${matchup.team2ShortName ?: 'TBD'}"></span><span class="bracket-winner" th:if="${matchup.team2IsWinner}">Winner</span></span>
-                        <span class="bracket-team-score" th:if="${matchup.team2ShortName != null}" th:text="${hasRecordedResults ? matchup.team2AggregatePoints : '-'}"></span>
+                        <span th:if="${matchup.team2Forfeit}" class="text-dim">w/o</span><span class="bracket-team-score" th:if="${matchup.team2ShortName != null}" th:text="${hasRecordedResults ? matchup.team2AggregatePoints : '-'}"></span>
                     </div>
-                    <details class="playoff-legs" th:unless="${matchup.legs.isEmpty()}"><summary>Race results</summary>
+                    <details class="playoff-legs" th:unless="${matchup.legs.isEmpty() or matchup.walkover}"><summary>Race results</summary>
                         <table><thead><tr><th scope="col">Race</th><th scope="col" th:text="${matchup.team1ShortName ?: 'TBD'}"></th><th scope="col" th:text="${matchup.team2ShortName ?: 'TBD'}"></th></tr></thead>
                             <tbody><tr th:each="leg : ${matchup.legs}"><th scope="row" th:text="${leg.legNumber}"></th><td th:text="${leg.hasResults ? leg.team1Total : '-'}"></td><td th:text="${leg.hasResults ? leg.team2Total : '-'}"></td></tr></tbody>
                         </table>

@@ -32,7 +32,8 @@
                     <div><dt th:text="${race.awayTeamShortName}"></dt><dd th:text="${race.penaltyTotals.away.summary()}"></dd></div>
                 </dl>
                 <p class="race-empty text-dim" th:unless="${race.hasResults}">No driver results recorded.</p>
-                <details th:if="${race.hasResults}" class="race-driver-results">
+                <p th:if="${race.teamOnlyResult}" class="text-dim">Walkover · team result only.</p>
+                <details th:if="${!race.results.isEmpty()}" class="race-driver-results">
                     <summary><span>Driver results</span><span class="result-count" th:text="${race.results.size() + ' drivers'}"></span></summary>
                     <div class="mobile-race-results">
                         <div class="race-mobile-head" aria-hidden="true"><span>Pos</span><span>Driver</span><span>Pts</span><span></span></div>

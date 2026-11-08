@@ -185,12 +185,12 @@ class StandingsAlltimePlayoffIT {
 		// then
 		var winner = standingOf(alltime, charlie);
 		assertThat(winner.getPoints()).as("playoff win points").isEqualTo(5);
-		assertThat(winner.getPointsFor()).as("top six race points 81 + quali 6 + fastest lap 2, once for three legs")
-				.isEqualTo(89);
+		assertThat(winner.getPointsFor()).as("top six race points only, once for three legs")
+				.isEqualTo(81);
 		var forfeiter = standingOf(alltime, delta);
 		assertThat(forfeiter.getLosses()).as("losses").isEqualTo(1);
 		assertThat(forfeiter.getPoints()).as("no match points for the forfeiting team").isZero();
-		assertThat(forfeiter.getPointsAgainst()).as("walkover score against").isEqualTo(89);
+		assertThat(forfeiter.getPointsAgainst()).as("walkover score against").isEqualTo(81);
 		assertThat(forfeiter.isHasWalkover()).as("walkover marker").isTrue();
 		assertThat(stored(otherSemi).getWinner().getId()).as("the opponent wins").isEqualTo(charlie.getId());
 	}

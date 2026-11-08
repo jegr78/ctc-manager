@@ -648,7 +648,7 @@ public class DiscordPostService {
 		if (contested.isEmpty()) {
 			return false;
 		}
-		return contested.stream().allMatch(m -> m.getHomeScore() != null && m.getAwayScore() != null);
+		return contested.stream().allMatch(m -> m.getWalkoverTeam() != null || m.getHomeScore() != null && m.getAwayScore() != null);
 	}
 
 	private static String slug(String label) {

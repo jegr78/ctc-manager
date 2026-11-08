@@ -100,6 +100,8 @@
         </div>
 
         <div class="results">
+            <p th:if="${homeIsWalkover == true}">w.o. · Team result only</p>
+            <p th:if="${awayIsWalkover == true}">Team result only · w.o.</p>
             <div class="result-row" th:each="row : ${resultRows}">
                 <div class="driver-info home" th:classappend="${row.homeDriver == 'n/a'} ? 'empty-slot' : ''">
                     <span class="driver-name"><span class="driver-identifier" th:text="${row.homeDriver}"></span><span class="disqualification-marker" th:if="${row.homeDisqualified}"> DSQ</span><span class="guest-marker" th:if="${row.homeIsGuest}" aria-label="Guest driver">&#x2605;</span></span>

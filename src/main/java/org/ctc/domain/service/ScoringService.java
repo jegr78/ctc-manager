@@ -210,6 +210,10 @@ public class ScoringService {
     public RaceScoreSnapshot calculateRaceScoreSnapshot(Race race, UUID firstTeamId) {
         var current = raceRepository.findById(race.getId()).orElseThrow(
                 () -> new org.ctc.domain.exception.EntityNotFoundException("Race", race.getId()));
+        if (WalkoverScoring.isWalkover(current)) {
+            var score = WalkoverScoring.score(current, firstTeamId);
+            return new RaceScoreSnapshot(RacePenaltyTotals.calculate(score.home(), score.away(), 0, 0), List.of());
+        }
         var lineups = lineupsOf(current.getId());
         var drivers = new ArrayList<ScoredDriver>();
         int first = 0;

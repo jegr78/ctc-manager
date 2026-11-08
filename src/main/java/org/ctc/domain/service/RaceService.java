@@ -62,7 +62,7 @@ public class RaceService {
 
 		var raceScores = new HashMap<UUID, int[]>();
 		for (var race : races) {
-            if (!race.getResults().isEmpty()) {
+            if (WalkoverScoring.isWalkover(race) || !race.getResults().isEmpty()) {
                 var totals = scoringService.calculateRaceTotals(race, race.getHomeTeam() == null ? null : race.getHomeTeam().getId());
                 raceScores.put(race.getId(), new int[]{totals.home().official(), totals.away().official()});
 			} else if (race.getHomeScore() != null && race.getAwayScore() != null && !hasRecordedLegs(race)) {
@@ -90,7 +90,7 @@ public class RaceService {
 		Map<UUID, String> driverTeamMap = null;
 		Map<UUID, Boolean> guestDriverMap = null;
 
-		if (!race.getResults().isEmpty() && race.getHomeTeam() != null) {
+		if ((WalkoverScoring.isWalkover(race) || !race.getResults().isEmpty()) && race.getHomeTeam() != null) {
             var totals = scoringService.calculateRaceTotals(race, race.getHomeTeam().getId());
             penaltyTotals = totals;
             homeTotal = totals.home().official();
@@ -131,6 +131,7 @@ public class RaceService {
 		boolean provisionalGraphicExists = race.getAttachments().stream()
 				.anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/provisional.png"));
 		boolean hasResults = !race.getResults().isEmpty();
+        boolean teamOnlyResult = WalkoverScoring.isWalkover(race);
 
 		boolean settingsGraphicExists = race.getAttachments().stream()
 				.anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/settings.png"));
@@ -154,8 +155,8 @@ public class RaceService {
 		return new RaceDetailData(race, homeTotal, awayTotal, driverTeamMap, guestDriverMap,
 				hasLineup && hasHomeCard && hasAwayCard && !lineupExists,
 				!hasLineup, !hasHomeCard || !hasAwayCard, lineupExists,
-				hasResults && hasHomeCard && hasAwayCard,
-				!hasResults, resultsGraphicExists,
+				(hasResults || teamOnlyResult) && hasHomeCard && hasAwayCard,
+				!hasResults && !teamOnlyResult, resultsGraphicExists,
 				hasResults && hasHomeCard && hasAwayCard, provisionalGraphicExists,
 				hasAllSettings && hasHomeCard && hasAwayCard && !settingsGraphicExists,
 				!hasAllSettings, settingsGraphicExists,

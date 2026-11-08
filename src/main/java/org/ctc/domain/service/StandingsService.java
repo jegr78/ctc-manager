@@ -32,7 +32,6 @@ public class StandingsService {
 	private final SeasonTeamRepository seasonTeamRepository;
 	private final PlayoffMatchupRepository playoffMatchupRepository;
 
-	private static final int WALKOVER_TEAM_POSITIONS = 6;
 
 	public MatchdayStalenessSnapshot snapshotMatchdayStaleness(Matchday matchday,
 	                                                          DiscordPost matchdayResultsPost,
@@ -474,23 +473,9 @@ public class StandingsService {
 		return successionMap.getOrDefault(teamId, teamId);
 	}
 
-	/**
-	 * Full race score a walkover winner is credited as a team total: the race points for the
-	 * top {@link #WALKOVER_TEAM_POSITIONS} finishing positions its drivers would sweep, plus all
-	 * qualifying points, plus the fastest-lap bonus — never per driver (no driver-ranking impact).
-	 */
-	private int fullTeamRaceScore(RaceScoring raceScoring) {
-		if (raceScoring == null) {
-			return 0;
-		}
-		int[] racePoints = raceScoring.getRacePointsArray();
-		int racePart = 0;
-		for (int i = 0; i < racePoints.length && i < WALKOVER_TEAM_POSITIONS; i++) {
-			racePart += racePoints[i];
-		}
-		int qualiPart = Arrays.stream(raceScoring.getQualiPointsArray()).sum();
-		return racePart + qualiPart + raceScoring.getFastestLapPoints();
-	}
+    private int fullTeamRaceScore(RaceScoring raceScoring) {
+        return WalkoverScoring.points(raceScoring);
+    }
 
 	public static class TeamStanding {
 		private final Team team;

@@ -15,6 +15,7 @@ import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.RaceResult;
+import org.ctc.domain.model.WalkoverScoring;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.service.ScoringService;
 import org.springframework.beans.factory.annotation.Value;
@@ -69,7 +70,7 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 		if (race.getHomeTeam() == null || race.getAwayTeam() == null) {
 			throw new IllegalStateException("Race has no teams assigned");
 		}
-		if (race.getResults().isEmpty()) {
+		if (race.getResults().isEmpty() && !WalkoverScoring.isWalkover(race)) {
 			throw new IllegalStateException("No results for this race");
 		}
 
@@ -107,6 +108,8 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 		ctx.setVariable("homeTotal", homeTotal);
         ctx.setVariable("penaltyTotals", penaltyTotals);
 		ctx.setVariable("awayTotal", awayTotal);
+		ctx.setVariable("homeIsWalkover", race.getMatch() != null ? race.getMatch().isWalkoverFor(homeTeam) : race.getPlayoffMatchup() != null && homeTeam.equals(race.getPlayoffMatchup().getWalkoverTeam()));
+        ctx.setVariable("awayIsWalkover", race.getMatch() != null ? race.getMatch().isWalkoverFor(awayTeam) : race.getPlayoffMatchup() != null && awayTeam.equals(race.getPlayoffMatchup().getWalkoverTeam()));
 		ctx.setVariable("homeIsWinner", homeTotal > awayTotal);
 		ctx.setVariable("awayIsWinner", awayTotal > homeTotal);
 		ctx.setVariable("resultRows", resultRows);
@@ -156,6 +159,7 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 	}
 
 	List<DriverResultRow> buildResultRows(Race race) {
+        if (WalkoverScoring.isWalkover(race)) return List.of();
 		var homeTeamId = race.getHomeTeam().getId();
 		var raceId = race.getId();
 

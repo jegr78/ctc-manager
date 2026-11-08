@@ -39,7 +39,7 @@ public class MatchResultsGraphicService extends AbstractGraphicService implement
 		if (match.getAwayTeam() == null) {
 			throw new IllegalStateException("Match has no away team");
 		}
-		if (match.getRaces().isEmpty()) {
+		if (match.getRaces().isEmpty() && match.getWalkoverTeam() == null) {
 			throw new IllegalStateException("Match has no races");
 		}
 
@@ -90,6 +90,8 @@ public class MatchResultsGraphicService extends AbstractGraphicService implement
 	}
 
 	List<RaceResultRow> buildRaceRows(Match match) {
+
+        if (match.getWalkoverTeam() != null) return List.of(new RaceResultRow("Walkover", match.getOfficialHomeScore(), match.getOfficialAwayScore()));
 		UUID homeTeamId = match.getHomeTeam().getId();
 		var rows = new ArrayList<RaceResultRow>();
 		int raceNumber = 0;

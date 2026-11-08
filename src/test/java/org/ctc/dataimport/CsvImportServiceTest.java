@@ -132,6 +132,28 @@ class CsvImportServiceTest {
 		when(seasonDriverRepository.findBySeasonIdAndDriverId(any(), any())).thenReturn(Optional.empty());
 	}
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void givenWalkoverMatch_whenImportingResults_thenRejectBeforeDeletingHistoryOrCreatingDrivers(boolean noLegs) {
+        var existing = categoryRace(false); existing.getMatch().setWalkoverTeam(standaloneTeam2);
+        setupCategoryOverwrite(existing);
+        if (noLegs) lenient().when(raceRepository.findByMatchId(existing.getMatch().getId())).thenReturn(List.of());
+        assertThatThrownBy(() -> csvImportService.executeMultiRaceImport(List.of(categoryPreview(false)), Map.of(), Set.of(), true))
+                .isInstanceOf(ImportRejectedException.class).hasMessageContaining("team-only result");
+        verify(raceRepository, never()).delete(any()); verify(raceRepository, never()).save(any());
+        verify(driverRepository, never()).save(any()); verify(raceLineupRepository, never()).deleteAll(any());
+        assertThat(existing.getMatch().getWalkoverTeam()).isSameAs(standaloneTeam2);
+    }
+
+    @Test void givenHistoricalWalkoverLeg_whenImportingResults_thenRejectBeforeAnyMutation() {
+        var existing = categoryRace(false); var matchup = new PlayoffMatchup();
+        matchup.setWalkoverTeam(standaloneTeam2); existing.setPlayoffMatchup(matchup);
+        setupCategoryOverwrite(existing);
+        assertThatThrownBy(() -> csvImportService.executeMultiRaceImport(List.of(categoryPreview(false)), Map.of(), Set.of(), true))
+                .isInstanceOf(ImportRejectedException.class).hasMessageContaining("team-only result");
+        verify(raceRepository, never()).deleteAll(any()); verify(raceRepository, never()).save(any());
+    }
+
 	@Test
 	void givenSubTeamAndParentSharingShortName_whenExecuteImport_thenUsesSeasonScopedSubTeam() {
 		// given
@@ -450,7 +472,7 @@ class CsvImportServiceTest {
         when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
         when(matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any()))
                 .thenReturn(Optional.of(old[0].getMatch()));
-        when(raceRepository.findByMatchId(old[0].getMatch().getId())).thenReturn(List.of(old));
+        lenient().when(raceRepository.findByMatchId(old[0].getMatch().getId())).thenReturn(List.of(old));
         lenient().when(raceRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(seasonDriverRepository.findBySeasonIdAndDriverId(any(), any())).thenReturn(Optional.empty());
         lenient().when(raceLineupRepository.findByRaceIdAndDriverId(any(), any())).thenReturn(Optional.empty());

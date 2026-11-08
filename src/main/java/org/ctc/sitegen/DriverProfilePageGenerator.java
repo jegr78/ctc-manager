@@ -110,6 +110,7 @@ public class DriverProfilePageGenerator {
                                     Map<String, RaceLineup> guestLookup,
                                     SiteGeneratorService.GenerationResult result) throws IOException {
         var results = raceResultRepository.findByDriverId(driver.getId()).stream()
+                .filter(org.ctc.domain.model.WalkoverScoring::countsForDriverStatistics)
                 .filter(r -> r.getRace().getMatchday().getSeason().getId().equals(season.getId()))
                 .toList();
 
@@ -120,6 +121,7 @@ public class DriverProfilePageGenerator {
         if (showPhaseBreakdown) {
             Set<PhaseType> participatedPhases = raceLineupRepository
                     .findByDriverIdAndRaceMatchdaySeasonId(driver.getId(), season.getId()).stream()
+                    .filter(rl -> !org.ctc.domain.model.WalkoverScoring.isWalkover(rl.getRace()))
                     .map(rl -> rl.getRace().getMatchday().getPhase().getPhaseType())
                     .collect(Collectors.toCollection(HashSet::new));
             for (PhaseType pt : PHASE_ORDER) {

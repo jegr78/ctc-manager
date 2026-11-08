@@ -96,6 +96,8 @@ for step-by-step recovery from `data/<profile>/import-backups/<ts>/` (containers
 >
 > **Note (v1.12):** Google Sheets / Calendar API errors during driver-import or calendar-event creation now surface a categorized error badge (Transient / Auth / NotFound / Permission) with actionable hardcoded messages. Operator setup, error-category reference, and troubleshooting steps are documented in [`docs/operations/google-integration.md`](docs/operations/google-integration.md). Milestone PR #129.
 
+Walkovers award the phase's race points for positions 1–6 once per match, without qualifying or fastest-lap bonuses. CTC Standard produces 81:0. Drivers receive no individual credit; retained results remain historical evidence and return to ordinary calculations when the walkover is cleared. Admin/public views and graphics share this score. Regeneration and publication remain explicit.
+
 Regular-season walkover backups retain the forfeiting team and saved scores. Imports also accept the historical embedded-team reference, using only its ID. Invalid walkover references are rejected before live data is deleted; the read-only Data Audit reports inconsistent pairing markers.
 
 ### Full Guide

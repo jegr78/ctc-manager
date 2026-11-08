@@ -96,8 +96,8 @@ public abstract class AbstractPlayoffRoundGraphicService extends AbstractGraphic
 				seedMap.getOrDefault(away.getId(), 0),
 				"—",
 				formatScheduledDateTime(matchup),
-				matchup.getHomeScore(),
-				matchup.getAwayScore()
+				matchup.getOfficialHomeScore(),
+				matchup.getOfficialAwayScore()
 		);
 	}
 

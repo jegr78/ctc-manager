@@ -66,6 +66,21 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class DataAuditServiceIT {
     @Test
+    void givenWalkoverWithRetainedDriverResultsAndScores_whenAuditing_thenDiagnoseWithoutChangingEvidence() {
+        var fixture = testHelper.createFullSeasonFixture("TWoa" + id);
+        var driver = testHelper.createDriver("Test_WO_audit_" + id, "Test walkover audit");
+        var result = new org.ctc.domain.model.RaceResult(fixture.race(), driver, 1, 1, true);
+        result.setPointsTotal(25); entityManager.persist(result); fixture.race().getResults().add(result);
+        fixture.match().setWalkoverTeam(fixture.awayTeam()); fixture.match().setHomeScore(25); fixture.match().setAwayScore(0);
+        entityManager.flush(); entityManager.clear();
+        var report = dataAuditService.audit();
+        assertThat(report.findings(Category.RESULT_POINTS)).anySatisfy(f -> assertThat(f.evidence()).contains("Walkover retains driver results"));
+        assertThat(report.findings(STALE_AGGREGATE)).anySatisfy(f -> assertThat(f.evidence()).contains("Walkover has saved numeric scores"));
+        assertThat(entityManager.find(org.ctc.domain.model.RaceResult.class, result.getId()).getPointsTotal()).isEqualTo(25);
+        assertThat(entityManager.find(Match.class, fixture.match().getId()).getHomeScore()).isEqualTo(25);
+    }
+
+    @Test
     void givenHistoricalWetMandatoryTyre_whenAuditing_thenReportSafeLobbyFindingWithoutChangingTheSavedText() {
         // given
         var fixture = testHelper.createFullSeasonFixture("TTYA" + id);

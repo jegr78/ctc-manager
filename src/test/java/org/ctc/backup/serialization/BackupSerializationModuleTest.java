@@ -58,6 +58,22 @@ class BackupSerializationModuleTest {
         // then
         assertThat(row.path("walkoverTeam").isTextual()).isTrue();
         assertThat(row.path("walkoverTeam").asText()).isEqualTo(home.getId().toString());
+        assertThat(row.has("officialHomeScore")).isFalse();
+        assertThat(row.has("officialAwayScore")).isFalse();
+        assertThat(row.path("homeScore").isNull()).isTrue();
+        assertThat(row.path("awayScore").isNull()).isTrue();
+    }
+
+    @Test void givenPlayoffWalkover_whenExporting_thenRetainRawEvidenceWithoutComputedDisplayProperties() {
+        var home = new Team("Test playoff home", "T-WOH"); home.setId(java.util.UUID.randomUUID());
+        var away = new Team("Test playoff away", "T-WOA"); away.setId(java.util.UUID.randomUUID());
+        var round = new PlayoffRound(); round.setId(java.util.UUID.randomUUID());
+        var matchup = new PlayoffMatchup(round, 1); matchup.setId(java.util.UUID.randomUUID());
+        matchup.setTeam1(home); matchup.setTeam2(away); matchup.setWalkoverTeam(away); matchup.setWinner(home);
+        var row = mapper.valueToTree(matchup);
+        assertThat(row.has("officialHomeScore")).isFalse(); assertThat(row.has("officialAwayScore")).isFalse();
+        assertThat(row.path("homeScore").isNull()).isTrue(); assertThat(row.path("awayScore").isNull()).isTrue();
+        assertThat(row.path("walkoverTeam").asText()).isEqualTo(away.getId().toString());
     }
 
     @Test

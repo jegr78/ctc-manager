@@ -50,6 +50,23 @@ class MatchResultsGraphicServiceTest {
 		return race;
 	}
 
+    @Test
+    void givenWalkoverWithTwoEmptyLegs_whenBuildingGraphic_thenOneTeamOnlyScoreWithoutBonuses() {
+        var home = new Team("Test walkover home", "T-WOH"); home.setId(UUID.randomUUID());
+        var away = new Team("Test walkover away", "T-WOA"); away.setId(UUID.randomUUID());
+        var day = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("Test walkover season"), "Test round", 1);
+        day.getPhase().setRaceScoring(new RaceScoring("Test walkover scoring", "20,17,14,12,10,8,7", "3,2,1", 2));
+        var match = new Match(day, home, away); match.setWalkoverTeam(home);
+        for (int leg = 0; leg < 2; leg++) {
+            var race = new Race(); race.setMatch(match); race.setMatchday(day); match.getRaces().add(race);
+        }
+        var rows = createService().buildRaceRows(match);
+        assertThat(rows).singleElement().satisfies(row -> {
+            assertThat(row.homePoints()).isZero(); assertThat(row.awayPoints()).isEqualTo(81);
+        });
+        assertThat(match.getRaces()).allSatisfy(race -> assertThat(race.getResults()).isEmpty());
+    }
+
 	@Test
 	void givenMatchWith2Races_whenBuildRaceRows_thenReturns2RowsWithCorrectLabelsAndPoints() {
 		// given

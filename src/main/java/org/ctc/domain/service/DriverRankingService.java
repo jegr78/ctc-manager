@@ -50,6 +50,7 @@ public class DriverRankingService {
 		// Accumulate per driver
 		Map<UUID, DriverRanking> rankingMap = new LinkedHashMap<>();
 		for (RaceResult result : all) {
+            if (!WalkoverScoring.countsForDriverStatistics(result)) continue;
 			UUID driverId = result.getDriver().getId();
 			DriverRanking ranking = rankingMap.computeIfAbsent(driverId, id -> {
 				Team team = resolveAttributedTeam(result.getDriver(), seasonId, result.getRace().getId());
@@ -139,6 +140,7 @@ public class DriverRankingService {
 		// is actually in `results` keeps the team in the same season set as the points.
 		Map<UUID, UUID> guestRaceByDriver = new LinkedHashMap<>();
 		for (RaceResult result : results) {
+            if (!WalkoverScoring.countsForDriverStatistics(result)) continue;
 			UUID driverId = result.getDriver().getId();
 			if (driverTeamMap.containsKey(driverId)) {
 				continue;
@@ -153,6 +155,7 @@ public class DriverRankingService {
 		Map<UUID, DriverRanking> rankingMap = new LinkedHashMap<>();
 
 		for (RaceResult result : results) {
+            if (!WalkoverScoring.countsForDriverStatistics(result)) continue;
 			UUID driverId = result.getDriver().getId();
 			DriverRanking ranking = rankingMap.computeIfAbsent(driverId,
 					id -> new DriverRanking(result.getDriver(), driverTeamMap.get(id)));

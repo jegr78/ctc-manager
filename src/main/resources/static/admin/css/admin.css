@@ -2224,7 +2224,8 @@ input:not([type='checkbox']):not([type='radio']):not([type='color']), select { b
     .matchday-filters { flex-direction: column; align-items: stretch; }
     .matchday-filters label:first-child { max-width: none; }
     .matchday-workspace .match-header { flex-wrap: wrap; }
-    .matchday-workspace .match-team-name { min-width: 60px; }
+    .matchday-workspace .match-team-name { min-width: 60px; overflow-wrap: anywhere; }
+    .matchday-workspace .match-score-area { flex-shrink: 0; padding: 0 4px; }
 }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition: none !important; }

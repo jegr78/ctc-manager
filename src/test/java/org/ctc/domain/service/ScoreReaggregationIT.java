@@ -50,6 +50,7 @@ class ScoreReaggregationIT {
 	@Autowired private RaceLineupRepository raceLineupRepository;
 	@Autowired private EntityManager entityManager;
 	@Autowired private RaceScoringService raceScoringService;
+    @Autowired private DriverRankingService driverRankings;
 	@Autowired private SeasonPhaseService phaseService;
 
 	private final String id = UUID.randomUUID().toString().substring(0, 8);
@@ -58,6 +59,27 @@ class ScoreReaggregationIT {
 	private Driver homeDriver;
 	private Driver awayDriver;
 	private Match match;
+
+    @Test
+    void givenScoredMatch_whenWalkoverIsSetAndCleared_thenRetainEvidenceButExcludeAndRestoreIndividualCredit() {
+        var leg = createMatchWithLegs(2).getFirst(); score(leg);
+        var original = stored().getHomeScore();
+        var ids = raceRepository.findById(leg.getId()).orElseThrow().getResults().stream().map(org.ctc.domain.model.RaceResult::getId).toList();
+        matchService.updateWalkover(match.getId(), away.getId());
+        var marked = stored();
+        assertThat(marked.getHomeScore()).isNull(); assertThat(marked.getAwayScore()).isNull();
+        assertThat(marked.getOfficialHomeScore()).isEqualTo(81); assertThat(marked.getOfficialAwayScore()).isZero();
+        var phaseId = marked.getMatchday().getPhase().getId();
+        assertThat(driverRankings.calculateRankingForPhase(phaseId)).isEmpty();
+        assertThat(driverRankings.calculateAlltimeRanking(List.of(marked.getMatchday().getSeason().getId()))).isEmpty();
+        assertThatThrownBy(() -> raceService.saveResults(leg.getId(), List.of()))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("team-only result");
+        assertThat(raceRepository.findById(leg.getId()).orElseThrow().getResults()).extracting(org.ctc.domain.model.RaceResult::getId).containsExactlyElementsOf(ids);
+        matchService.updateWalkover(match.getId(), null);
+        assertThat(stored().getHomeScore()).isEqualTo(original);
+        assertThat(driverRankings.calculateRankingForPhase(phaseId)).hasSize(2);
+        assertThat(raceRepository.findById(leg.getId()).orElseThrow().getResults()).extracting(org.ctc.domain.model.RaceResult::getId).containsExactlyElementsOf(ids);
+    }
 
 	@Test
 	void givenTheOnlyScoredLeg_whenDeleted_thenTheMatchIsUnplayedAgain() {

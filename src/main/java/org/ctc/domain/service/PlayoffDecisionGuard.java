@@ -14,6 +14,9 @@ public final class PlayoffDecisionGuard {
 	}
 
 	public static void requireOpen(Race race) {
+
+        if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null)
+            throw new BusinessRuleException("A walkover is a team-only result. Clear the walkover before changing driver results or lineups");
 		requireOpen(race.getPlayoffMatchup());
 	}
 

@@ -185,9 +185,21 @@ public class MatchdaysPageGenerator {
             context.setVariable("season", season);
             context.setVariable("matchday", matchday);
             context.setVariable("matchdaysIndexHref", matchdaysIndexHref(matchday));
+            var walkoverPairings = new java.util.HashSet<java.util.UUID>();
             var raceViews = raceRepository.findByMatchdayId(matchday.getId()).stream()
+                    .filter(r -> !org.ctc.domain.model.WalkoverScoring.isWalkover(r) || walkoverPairings.add(r.getMatch() != null ? r.getMatch().getId() : r.getPlayoffMatchup().getId()))
                     .map(r -> toRaceView(r, season, "../driver/", allLineups, ctx.slugs())).toList();
-            context.setVariable("races", raceViews);
+            var allViews = new java.util.ArrayList<>(raceViews);
+            for (var match : matchday.getMatches()) {
+                if (match.getWalkoverTeam() != null && walkoverPairings.add(match.getId())) {
+                    int home = match.getOfficialHomeScore(), away = match.getOfficialAwayScore();
+                    allViews.add(new RaceView(match.getHomeTeam().getShortName() + (match.isWalkoverFor(match.getHomeTeam()) ? " (w.o.)" : ""),
+                            match.getAwayTeam().getShortName() + (match.isWalkoverFor(match.getAwayTeam()) ? " (w.o.)" : ""),
+                            null, null, home, away, true, home > away, away > home, java.util.List.of(), null,
+                            RacePenaltyTotals.calculate(home, away, 0, 0)));
+                }
+            }
+            context.setVariable("races", allViews);
 
             context.setVariable("currentPage", "matchdays");
             context.setVariable("seasonSlug", siteSlugger.slugify(season.getDisplayLabel()));
@@ -223,6 +235,7 @@ public class MatchdaysPageGenerator {
         String homeShortName = homeTeam != null ? homeTeam.getShortName() : "Bye";
 
         var results = race.getResults().stream()
+                .filter(org.ctc.domain.model.WalkoverScoring::countsForDriverStatistics)
                 .map(r -> {
 
                     var lineupOpt = seasonLineups.stream()
@@ -251,14 +264,20 @@ public class MatchdaysPageGenerator {
 
         String awayShortName = race.getAwayTeam() != null ? race.getAwayTeam().getShortName() : "Bye";
 
-        var totals = race.getResults().isEmpty() ? RacePenaltyTotals.calculate(0, 0, 0, 0)
+        boolean walkover = org.ctc.domain.model.WalkoverScoring.isWalkover(race);
+        if (walkover) {
+            var forfeiter = race.getMatch() != null ? race.getMatch().getWalkoverTeam() : race.getPlayoffMatchup().getWalkoverTeam();
+            if (homeTeam != null && homeTeam.getId().equals(forfeiter.getId())) homeShortName += " (w.o.)";
+            else awayShortName += " (w.o.)";
+        }
+        var totals = race.getResults().isEmpty() && !walkover ? RacePenaltyTotals.calculate(0, 0, 0, 0)
                 : scoring.calculateRaceTotals(race, homeTeam == null ? null : homeTeam.getId());
         int homeTotal = totals.home().official();
         int awayTotal = totals.away().official();
 
         var publicPick = disclosure.forPublic(race.getId());
 
-        boolean hasResults = !race.getResults().isEmpty();
+        boolean hasResults = walkover || !race.getResults().isEmpty();
         boolean homeTeamWon = hasResults && homeTotal > awayTotal;
         boolean awayTeamWon = hasResults && awayTotal > homeTotal;
         return new RaceView(homeShortName, awayShortName,
