@@ -50,6 +50,38 @@ class MatchResultsGraphicServiceTest {
 		return race;
 	}
 
+    @Test
+    void givenWalkoverWithTwoEmptyLegs_whenBuildingGraphic_thenOneTeamOnlyScoreWithoutBonuses() {
+        var home = new Team("Test walkover home", "T-WOH"); home.setId(UUID.randomUUID());
+        var away = new Team("Test walkover away", "T-WOA"); away.setId(UUID.randomUUID());
+        var day = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("Test walkover season"), "Test round", 1);
+        day.getPhase().setRaceScoring(new RaceScoring("Test walkover scoring", "20,17,14,12,10,8,7", "3,2,1", 2));
+        var match = new Match(day, home, away); match.setWalkoverTeam(home);
+        for (int leg = 0; leg < 2; leg++) {
+            var race = new Race(); race.setMatch(match); race.setMatchday(day); match.getRaces().add(race);
+        }
+        var rows = createService().buildRaceRows(match);
+        assertThat(rows).singleElement().satisfies(row -> {
+            assertThat(row.homePoints()).isZero(); assertThat(row.awayPoints()).isEqualTo(81);
+        });
+        assertThat(match.getRaces()).allSatisfy(race -> assertThat(race.getResults()).isEmpty());
+    }
+
+    @Test void givenTwoPlayoffWalkoverLegsWithRegularAnchor_whenBuildingGraphic_thenScoreActualPairingOnce() {
+        var home = new Team("Test home", "TestH"); home.setId(UUID.randomUUID());
+        var away = new Team("Test away", "TestA"); away.setId(UUID.randomUUID());
+        var day = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("Test WO"), "Test round", 1);
+        var match = new Match(day, home, away); match.setId(UUID.randomUUID());
+        var phase = new SeasonPhase(); phase.setRaceScoring(new RaceScoring("Test playoff", "10,9,8,7,6,5", "50", 50));
+        var playoff = new Playoff(); playoff.setPhase(phase);
+        var matchup = new PlayoffMatchup(new PlayoffRound(playoff, "Test final", 1), 0); matchup.setId(UUID.randomUUID());
+        matchup.setTeam1(home); matchup.setTeam2(away); matchup.setWalkoverTeam(home); match.setWalkoverTeam(away);
+        for (int i = 0; i < 2; i++) { var race = new Race(); race.setMatchday(day); race.setMatch(match); race.setPlayoffMatchup(matchup); match.getRaces().add(race); }
+        assertThat(createService().buildRaceRows(match)).singleElement().satisfies(row -> {
+            assertThat(row.homePoints()).isZero(); assertThat(row.awayPoints()).isEqualTo(45);
+        });
+    }
+
 	@Test
 	void givenMatchWith2Races_whenBuildRaceRows_thenReturns2RowsWithCorrectLabelsAndPoints() {
 		// given

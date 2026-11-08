@@ -72,7 +72,7 @@ public class PlayoffBracketViewService {
 			int homeTotal = 0;
 			int awayTotal = 0;
 
-			if (!leg.getResults().isEmpty() && team1Id != null) {
+			if (matchup.getWalkoverTeam() == null && !leg.getResults().isEmpty() && team1Id != null) {
 				int[] totals = scoringService.calculateTeamTotals(leg.getResults(), leg.getId(), team1Id);
 				homeTotal = totals[0];
 				awayTotal = totals[1];
@@ -80,8 +80,12 @@ public class PlayoffBracketViewService {
 				team2Aggregate += awayTotal;
 			}
 
-			legViews.add(new LegView(leg.getId(), i + 1, homeTotal, awayTotal, !leg.getResults().isEmpty()));
+			legViews.add(new LegView(leg.getId(), i + 1, homeTotal, awayTotal, matchup.getWalkoverTeam() == null && !leg.getResults().isEmpty()));
 		}
+
+        if (matchup.getWalkoverTeam() != null) {
+            team1Aggregate = matchup.getOfficialHomeScore(); team2Aggregate = matchup.getOfficialAwayScore();
+        }
 
 		// Boolean fields instead of string comparison in templates
 		boolean team1IsWinner = matchup.getWinner() != null && matchup.getWinner().getId().equals(team1Id);
@@ -106,7 +110,8 @@ public class PlayoffBracketViewService {
 				team1IsWinner,
 				team2IsWinner,
 				matchup.isComplete(),
-				legViews
+				legViews,
+                matchup.getWalkoverTeam() == null ? null : matchup.getWalkoverTeam().getId()
 		);
 	}
 
@@ -119,7 +124,18 @@ public class PlayoffBracketViewService {
 	public record MatchupView(UUID matchupId, int bracketPosition, UUID team1Id, UUID team2Id, String team1ShortName,
 	                          String team2ShortName, String team1LogoUrl, String team2LogoUrl, Integer team1Seed,
 	                          Integer team2Seed, int team1AggregatePoints, int team2AggregatePoints,
-	                          boolean team1IsWinner, boolean team2IsWinner, boolean complete, List<LegView> legs) {
+	                          boolean team1IsWinner, boolean team2IsWinner, boolean complete, List<LegView> legs, UUID forfeitingTeamId) {
+        public MatchupView(UUID matchupId, int bracketPosition, UUID team1Id, UUID team2Id, String team1ShortName,
+                          String team2ShortName, String team1LogoUrl, String team2LogoUrl, Integer team1Seed,
+                          Integer team2Seed, int team1AggregatePoints, int team2AggregatePoints,
+                          boolean team1IsWinner, boolean team2IsWinner, boolean complete, List<LegView> legs) {
+            this(matchupId, bracketPosition, team1Id, team2Id, team1ShortName, team2ShortName, team1LogoUrl, team2LogoUrl,
+                    team1Seed, team2Seed, team1AggregatePoints, team2AggregatePoints, team1IsWinner, team2IsWinner, complete, legs, null);
+        }
+        public boolean isWalkover() { return forfeitingTeamId != null; }
+        public boolean isScored() { return isWalkover() || legs.stream().anyMatch(LegView::hasResults); }
+        public boolean isTeam1Forfeit() { return forfeitingTeamId != null && forfeitingTeamId.equals(team1Id); }
+        public boolean isTeam2Forfeit() { return forfeitingTeamId != null && forfeitingTeamId.equals(team2Id); }
 	}
 
 	public record LegView(UUID raceId, int legNumber, int team1Total, int team2Total, boolean hasResults) {

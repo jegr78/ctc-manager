@@ -109,6 +109,12 @@ public class DataAuditService {
 		auditMatchAggregates(matches, legs, findings.get(STALE_AGGREGATE));
 		auditPlayoffAggregates(matchups, legs, findings.get(STALE_AGGREGATE));
 		auditPairings(matches, findings.get(PAIRING));
+        for (var race : races) {
+            if (race.getPlayoffMatchup() != null && race.getMatch() != null && race.getMatch().getWalkoverTeam() != null)
+                findings.get(PAIRING).add(new DataAuditFinding(PAIRING, AMBIGUOUS, "Race " + race.getId(),
+                        "A playoff race has a walkover on its regular pairing anchor.",
+                        "Review the playoff decision and regular anchor. Preserve historical evidence; do not award both walkovers."));
+        }
 		auditLegs(races, findings);
 		auditPhaseGroups(matches, phaseTeams, findings.get(PHASE_GROUP));
         findings.get(Category.SEASON_CONFIGURATION).addAll(auditActiveSeasons(seasonRepository.findAll()));
@@ -140,6 +146,12 @@ public class DataAuditService {
 
     private void auditResultPoints(List<Race> races, List<DataAuditFinding> findings) {
         for (var race : races) {
+            if (org.ctc.domain.model.WalkoverScoring.isWalkover(race)) {
+                if (!race.getResults().isEmpty()) findings.add(new DataAuditFinding(Category.RESULT_POINTS, AMBIGUOUS,
+                        "Race " + race.getId(), "Walkover retains driver results excluded from official driver statistics.",
+                        "Review the original results and walkover decision. Preserve historical evidence; do not create substitute driver results."));
+                continue;
+            }
             var scoring = race.getMatchday().getPhase().getRaceScoring();
             for (var result : race.getResults()) {
                 var expected = new org.ctc.domain.model.RaceResult(race, result.getDriver(), result.getPosition(),
@@ -289,6 +301,8 @@ public class DataAuditService {
 
 	private void auditMatchAggregates(List<Match> matches, Legs legs, List<DataAuditFinding> out) {
 		for (Match match : matches) {
+            if (match.getWalkoverTeam() != null && (match.getHomeScore() != null || match.getAwayScore() != null))
+                out.add(new DataAuditFinding(STALE_AGGREGATE, AMBIGUOUS, describe(match), "Walkover has saved numeric scores; official scoring uses team-only walkover points.", "Review the original decision and stored scores without rewriting publication evidence."));
 			if (match.isBye() || match.getWalkoverTeam() != null || match.getHomeTeam() == null) {
 				continue;
 			}

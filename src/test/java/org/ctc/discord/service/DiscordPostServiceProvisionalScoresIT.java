@@ -140,11 +140,11 @@ class DiscordPostServiceProvisionalScoresIT {
 	}
 
 	@Test
-	void matchCanRenderResults_returnsFalseForWalkoverEvenWhenAllRacesScored() {
+	void matchCanRenderResults_returnsTrueForWalkoverEvenWhenAllRacesScored() {
 		Match match = seedMatchWith3Races("CR-WO", wm.baseUrl() + "/webhooks/910/tok-hp4", 3);
 		match.setWalkoverTeam(match.getHomeTeam());
 		matchRepository.save(match);
-		assertThat(service.matchCanRenderResults(match)).isFalse();
+		assertThat(service.matchCanRenderResults(match)).isTrue();
 	}
 
 	@Test

@@ -10,6 +10,7 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Race;
+import org.ctc.domain.model.WalkoverScoring;
 import org.ctc.domain.service.ScoringService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -39,7 +40,7 @@ public class MatchResultsGraphicService extends AbstractGraphicService implement
 		if (match.getAwayTeam() == null) {
 			throw new IllegalStateException("Match has no away team");
 		}
-		if (match.getRaces().isEmpty()) {
+		if (match.getRaces().isEmpty() && match.getWalkoverTeam() == null) {
 			throw new IllegalStateException("Match has no races");
 		}
 
@@ -71,8 +72,10 @@ public class MatchResultsGraphicService extends AbstractGraphicService implement
 		ctx.setVariable("awayTotal", awayTotal);
 		ctx.setVariable("homeIsWinner", homeTotal > awayTotal);
 		ctx.setVariable("awayIsWinner", awayTotal > homeTotal);
-		ctx.setVariable("homeIsWalkover", match.isWalkoverFor(homeTeam));
-		ctx.setVariable("awayIsWalkover", match.isWalkoverFor(awayTeam));
+		var forfeiter = match.getRaces().stream().filter(WalkoverScoring::isPlayoffWalkover)
+                .map(WalkoverScoring::forfeitingTeam).findFirst().orElse(match.getWalkoverTeam());
+        ctx.setVariable("homeIsWalkover", forfeiter != null && homeTeam.getId().equals(forfeiter.getId()));
+        ctx.setVariable("awayIsWalkover", forfeiter != null && awayTeam.getId().equals(forfeiter.getId()));
 		ctx.setVariable("raceRows", raceRows);
 		ctx.setVariable("ctcLogoBase64", encodeClasspathResource(CTC_LOGO_CLASSPATH, "image/png"));
 		ctx.setVariable("fontBase64", encodeClasspathResource(FONT_CLASSPATH, "font/woff2"));
@@ -90,11 +93,21 @@ public class MatchResultsGraphicService extends AbstractGraphicService implement
 	}
 
 	List<RaceResultRow> buildRaceRows(Match match) {
+
+        if (match.getWalkoverTeam() != null && match.getRaces().stream().noneMatch(WalkoverScoring::isPlayoffWalkover)) return List.of(new RaceResultRow("Walkover", match.getOfficialHomeScore(), match.getOfficialAwayScore()));
 		UUID homeTeamId = match.getHomeTeam().getId();
 		var rows = new ArrayList<RaceResultRow>();
 		int raceNumber = 0;
+        var walkovers = new java.util.HashSet<UUID>();
 
-		for (Race race : match.getRaces()) {
+        for (Race race : match.getRaces()) {
+            if (WalkoverScoring.isWalkover(race)) {
+                if (walkovers.add(WalkoverScoring.pairingId(race))) {
+                    var score = WalkoverScoring.score(race, homeTeamId);
+                    rows.add(new RaceResultRow("Walkover", score.home(), score.away()));
+                }
+                continue;
+            }
 			if (race.getResults().isEmpty()) {
 				continue;
 			}

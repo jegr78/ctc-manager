@@ -40,6 +40,25 @@ class ResultsGraphicServiceTest {
 		return result;
 	}
 
+    @Test void givenPlayoffWalkoverWithDetachedForfeiter_whenRenderingReversedRace_thenMarkCorrectParticipantWithoutDrivers() throws Exception {
+        var season = new Season("Test playoff graphic"); season.setId(UUID.randomUUID());
+        var phase = new SeasonPhase(season, PhaseType.PLAYOFF, PhaseLayout.BRACKET, 0);
+        var day = new Matchday(phase, "Test final", 1);
+        var home = new Team("Test home", "TestH"); home.setId(UUID.randomUUID());
+        var away = new Team("Test away", "TestA"); away.setId(UUID.randomUUID());
+        var forfeiter = new Team("Test home copy", "TestH"); forfeiter.setId(home.getId());
+        var playoff = new Playoff(); playoff.setName("Test playoff"); playoff.setPhase(phase);
+        var matchup = new PlayoffMatchup(new PlayoffRound(playoff, "Test final", 1), 0);
+        matchup.setTeam1(home); matchup.setTeam2(away); matchup.setWalkoverTeam(forfeiter);
+        var race = new Race(); race.setMatchday(day); race.setPlayoffMatchup(matchup);
+        race.setHomeTeamOverride(away); race.setAwayTeamOverride(home); race.setMatch(new Match(day, home, away));
+        var cards = tempDir.resolve("team-cards").resolve(season.getId().toString()); Files.createDirectories(cards);
+        Files.write(cards.resolve("TestH.png"), new byte[]{1}); Files.write(cards.resolve("TestA.png"), new byte[]{1});
+        Files.writeString(tempDir.resolve("results-template.html"), "<span th:text=\"${homeIsWalkover}\"></span><span th:text=\"${awayIsWalkover}\"></span><span th:text=\"${homeTotal}\"></span><span th:text=\"${awayTotal}\"></span><span th:text=\"${resultRows.size()}\"></span>");
+        when(scoringService.calculateRaceTotals(race, away.getId())).thenReturn(RacePenaltyTotals.calculate(81,0,0,0));
+        assertThat(createService().buildHtml(race)).contains("<span>false</span><span>true</span><span>81</span><span>0</span><span>0</span>");
+    }
+
 	@Test
 	void givenRaceWithEvenTeams_whenBuildResultRows_thenRowsSortedByPointsDescending() {
 		// given

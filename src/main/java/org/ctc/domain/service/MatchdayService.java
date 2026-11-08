@@ -92,7 +92,7 @@ public class MatchdayService {
                 .filter(m -> m.getRaces().stream().anyMatch(r -> r.getDateTime() != null)).count();
         long scheduleMissingCount = nonByeMatches.size() - matchesWithDateTime;
         boolean hasResults = nonByeMatches.stream()
-                .anyMatch(m -> m.getHomeScore() != null && m.getAwayScore() != null);
+                .anyMatch(m -> m.getWalkoverTeam() != null || m.getHomeScore() != null && m.getAwayScore() != null);
         return new MatchdayDetailData(matchday, lineupsByTeam, hasMatches, hasSchedule, scheduleMissingCount, hasResults,
                 RaceCarPresentation.forRaces(matchday.getRaces()));
     }

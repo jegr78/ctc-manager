@@ -30,21 +30,23 @@
                         <th:block th:if="${match.walkoverTeam != null}">
                             <div class="swiss-team">
                                 <span th:text="${match.homeTeam.shortName}"></span>
+                                <span class="swiss-score" th:text="${match.officialHomeScore}"></span>
                                 <span th:if="${match.walkoverTeam.id == match.homeTeam.id}" class="match-wo">w/o</span>
                             </div>
                             <div class="swiss-team">
                                 <span th:text="${match.awayTeam.shortName}"></span>
+                                <span class="swiss-score" th:text="${match.officialAwayScore}"></span>
                                 <span th:if="${match.walkoverTeam.id == match.awayTeam.id}" class="match-wo">w/o</span>
                             </div>
                         </th:block>
-                        <th:block th:if="${match.walkoverTeam == null and match.homeScore != null}">
-                            <div class="swiss-team" th:classappend="${match.homeScore > match.awayScore ? 'winner' : ''}">
+                        <th:block th:if="${match.walkoverTeam == null and match.officialHomeScore != null}">
+                            <div class="swiss-team" th:classappend="${match.officialHomeScore > match.officialAwayScore ? 'winner' : ''}">
                                 <span th:text="${match.homeTeam.shortName}"></span>
-                                <span class="swiss-score" th:text="${match.homeScore}"></span>
+                                <span class="swiss-score" th:text="${match.officialHomeScore}"></span>
                             </div>
-                            <div class="swiss-team" th:classappend="${match.awayScore > match.homeScore ? 'winner' : ''}">
+                            <div class="swiss-team" th:classappend="${match.officialAwayScore > match.officialHomeScore ? 'winner' : ''}">
                                 <span th:text="${match.awayTeam.shortName}"></span>
-                                <span class="swiss-score" th:text="${match.awayScore}"></span>
+                                <span class="swiss-score" th:text="${match.officialAwayScore}"></span>
                             </div>
                         </th:block>
                         <th:block th:if="${pairing.quickScoreRaceId != null}">
@@ -61,11 +63,11 @@
                                 <button type="submit" class="quick-score-btn" th:attr="aria-label=|Save scores for ${match.homeTeam.shortName} vs ${match.awayTeam.shortName}|">Save</button>
                             </form>
                         </th:block>
-                        <th:block th:if="${match.walkoverTeam == null and match.homeScore == null and pairing.quickScoreRaceId == null}">
+                        <th:block th:if="${match.walkoverTeam == null and match.officialHomeScore == null and pairing.quickScoreRaceId == null}">
                             <div class="swiss-team" th:text="${match.homeTeam.shortName}"></div>
                             <div class="swiss-team" th:text="${match.awayTeam.shortName}"></div>
                         </th:block>
-                        <p class="text-dim" th:if="${pairing.resultEntryRequired and match.homeScore == null}">Enter each leg's driver results to retain its team penalty points.</p>
+                        <p class="text-dim" th:if="${pairing.resultEntryRequired and match.officialHomeScore == null}">Enter each leg's driver results to retain its team penalty points.</p>
                         <div th:if="${pairing.dateTime != null}" class="text-dim swiss-pairing-date">
                             <span th:data-london-time="${pairing.dateTime.toString().substring(0, 16)}"
                                   th:text="${#temporals.format(pairing.dateTime, 'dd.MM.yyyy HH:mm')}"></span>

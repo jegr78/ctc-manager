@@ -19,7 +19,7 @@ import org.ctc.domain.model.Team;
  * {@code ready}).
  */
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler",
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "officialHomeScore", "officialAwayScore",
         "races", "complete", "ready"})
 public abstract class PlayoffMatchupMixIn {
 

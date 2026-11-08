@@ -119,6 +119,17 @@ class DiscordPostServiceMatchResultsIT {
 		return matchRepository.save(match);
 	}
 
+    @Test void givenWalkoverWithRetainedDriverResults_whenExplicitlyPosting_thenOnlyPublishTeamOverview() throws Exception {
+        String path = "/webhooks/990/test-walkover";
+        var match = seedMatchWith2RacesAndResults("Test-WO", wm.baseUrl() + path, true);
+        match.setWalkoverTeam(match.getAwayTeam()); matchRepository.save(match);
+        wm.stubFor(post(urlPathEqualTo(path)).willReturn(okJson("{\"id\":\"test-wo-post\",\"channel_id\":\"chan-mr-Test-WO\"}")));
+        assertThat(service.postMatchResults(match).getMessageId()).isEqualTo("test-wo-post");
+        verify(matchResultsGraphicService).generateMatchResults(match);
+        org.mockito.Mockito.verifyNoInteractions(resultsGraphicService);
+        assertThat(match.getRaces()).allSatisfy(leg -> assertThat(leg.getResults()).hasSize(1));
+    }
+
 	@Test
 	void givenAllRacesHaveResults_whenPostMatchResults_thenSinglePngMultipartPost() throws Exception {
 		String webhookPath = "/webhooks/900/tok-mr1";

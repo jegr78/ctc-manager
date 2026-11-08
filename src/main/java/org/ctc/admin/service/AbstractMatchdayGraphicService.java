@@ -105,8 +105,8 @@ public abstract class AbstractMatchdayGraphicService extends AbstractGraphicServ
 				seedMap.getOrDefault(away.getId(), 0),
 				formatRecord(standingMap.get(away.getId())),
 				formatScheduledDateTime(match),
-				match.getHomeScore(),
-				match.getAwayScore()
+				match.getOfficialHomeScore(),
+				match.getOfficialAwayScore()
 		);
 	}
 

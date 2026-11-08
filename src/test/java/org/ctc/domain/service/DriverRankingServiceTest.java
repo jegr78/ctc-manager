@@ -78,6 +78,25 @@ class DriverRankingServiceTest {
 				.thenReturn(List.of());
 	}
 
+    @Test
+    void givenRetainedWalkoverResults_whenRankingPhaseAndAlltime_thenNoIndividualCreditUntilWalkoverIsCleared() {
+        var away = new Team("Test walkover away", "T-WOA"); away.setId(UUID.randomUUID());
+        var day = new Matchday(regularPhase, "Test walkover round", 1);
+        var match = new Match(day, tnr, away); match.setWalkoverTeam(away);
+        var race = new Race(); race.setId(UUID.randomUUID()); race.setMatchday(day); race.setMatch(match);
+        var result = createResult(race, panicpotato, 25, 1);
+        setupSingleRegularPhase(List.of(result));
+        when(raceResultRepository.findAll()).thenReturn(List.of(result));
+        when(seasonDriverRepository.findAll()).thenReturn(List.of(new SeasonDriver(season, panicpotato, tnr)));
+        assertThat(driverRankingService.calculateRankingForPhase(regularPhase.getId())).isEmpty();
+        assertThat(driverRankingService.calculateAlltimeRanking()).isEmpty();
+        match.setWalkoverTeam(null);
+        assertThat(driverRankingService.calculateRankingForPhase(regularPhase.getId())).singleElement().satisfies(row -> {
+            assertThat(row.getTotalPoints()).isEqualTo(25); assertThat(row.getRacesCount()).isEqualTo(1);
+        });
+        assertThat(result.getPointsTotal()).isEqualTo(25);
+    }
+
 	@Test
 	void givenPlayoffOnlyDriver_whenCalculateUnfilteredAlltimeRanking_thenIncludesTheirPoints() {
 		// given

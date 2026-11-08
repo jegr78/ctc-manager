@@ -294,6 +294,8 @@ public class CsvImportService {
                         + (away != null ? away : home).getShortName() + " on " + matchday.getLabel());
                 continue;
             }
+            if (match != null && match.getWalkoverTeam() != null)
+                throw new ImportRejectedException(List.of("A walkover is a team-only result. Clear the walkover before importing driver results"));
             var previous = match == null ? List.<Race>of() : raceRepository.findByMatchId(match.getId());
             if (metadata.isPlayoff()) {
                 var playoffLegs = raceRepository.findByPlayoffMatchupId(metadata.playoffMatchupId());
@@ -315,6 +317,8 @@ public class CsvImportService {
     private boolean protectsHistory(Race race) { return incidentGuard.protects(race) || penaltyGuard.protects(race) || disqualificationGuard.protects(race); }
 
     private void rejectOverwriteTarget(List<Race> previous, ImportMetadata metadata) {
+        if (previous.stream().anyMatch(WalkoverScoring::isWalkover))
+            throw new ImportRejectedException(List.of("A walkover is a team-only result. Clear the walkover before importing driver results"));
         if (previous.stream().anyMatch(race -> protectsHistory(race) && !Objects.equals(
                 race.getPlayoffMatchup() == null ? null : race.getPlayoffMatchup().getId(), metadata.playoffMatchupId()))) {
             throw new ImportRejectedException(List.of("Preserve the race history's original regular/playoff identity"));

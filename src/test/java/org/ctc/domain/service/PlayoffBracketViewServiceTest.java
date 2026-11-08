@@ -67,6 +67,30 @@ class PlayoffBracketViewServiceTest {
 		return result;
 	}
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void givenWalkoverWithOptionalRetainedResults_whenBuildingBracket_thenScoreOnceWithoutDriverCredit(boolean retained) {
+        var playoff = PhaseTestFixtures.playoffForSeason(createSeason("Test walkover"), "Test playoff");
+        playoff.setId(UUID.randomUUID());
+        playoff.getPhase().setRaceScoring(new RaceScoring("Test scoring", "20,17,14,12,10,8", "3,2,1", 2));
+        var round = new PlayoffRound(playoff, "Test final", 0);
+        var match = new PlayoffMatchup(round, 0); match.setId(UUID.randomUUID());
+        var home = createTeam("Test home"); var away = createTeam("Test away");
+        match.setTeam1(home); match.setTeam2(away); match.setWalkoverTeam(home); match.setWinner(away);
+        round.getMatchups().add(match); playoff.getRounds().add(round);
+        var leg = createRace(match);
+        if (retained) leg.getResults().add(createResult(createDriver("Test driver"), 25));
+        when(playoffRepository.findById(playoff.getId())).thenReturn(Optional.of(playoff));
+        when(raceRepository.findByPlayoffMatchupRoundPlayoffId(playoff.getId())).thenReturn(retained ? List.of(leg) : List.of());
+        when(playoffSeedRepository.findByPlayoffId(playoff.getId())).thenReturn(List.of());
+        var view = playoffBracketViewService.getBracketView(playoff.getId()).rounds().getFirst().matchups().getFirst();
+        assertEquals(0, view.team1AggregatePoints()); assertEquals(81, view.team2AggregatePoints());
+        assertTrue(view.isScored()); assertTrue(view.isTeam1Forfeit()); assertFalse(view.isTeam2Forfeit());
+        assertTrue(view.legs().stream().noneMatch(PlayoffBracketViewService.LegView::hasResults));
+        verifyNoInteractions(scoringService);
+        if (retained) assertEquals(25, leg.getResults().getFirst().getPointsTotal());
+    }
+
 	@Nested
 	class GetBracketView {
 

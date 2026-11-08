@@ -65,6 +65,34 @@ import org.springframework.transaction.annotation.Transactional;
 @Tag("integration")
 @Transactional
 class DataAuditServiceIT {
+    @Test void givenPlayoffRaceWithWalkoverOnRegularAnchor_whenAuditing_thenReportWithoutRewritingEitherMarker() {
+        var fixture = testHelper.createFullSeasonFixture("Test_PO_WO_Audit_" + id);
+        var playoff = testHelper.createPlayoffInPhase(fixture.season(), "Test audit final " + id, 2);
+        var matchup = playoff.getRounds().getFirst().getMatchups().getFirst();
+        matchup.setTeam1(fixture.homeTeam()); matchup.setTeam2(fixture.awayTeam());
+        fixture.race().setPlayoffMatchup(matchup); fixture.match().setWalkoverTeam(fixture.homeTeam());
+        entityManager.flush(); entityManager.clear();
+        assertThat(dataAuditService.audit().findings(PAIRING)).anySatisfy(f ->
+                assertThat(f.evidence()).contains("walkover on its regular pairing anchor"));
+        assertThat(entityManager.find(Match.class, fixture.match().getId()).getWalkoverTeam().getId()).isEqualTo(fixture.homeTeam().getId());
+        assertThat(entityManager.find(PlayoffMatchup.class, matchup.getId()).getWalkoverTeam()).isNull();
+    }
+
+    @Test
+    void givenWalkoverWithRetainedDriverResultsAndScores_whenAuditing_thenDiagnoseWithoutChangingEvidence() {
+        var fixture = testHelper.createFullSeasonFixture("TWoa" + id);
+        var driver = testHelper.createDriver("Test_WO_audit_" + id, "Test walkover audit");
+        var result = new org.ctc.domain.model.RaceResult(fixture.race(), driver, 1, 1, true);
+        result.setPointsTotal(25); entityManager.persist(result); fixture.race().getResults().add(result);
+        fixture.match().setWalkoverTeam(fixture.awayTeam()); fixture.match().setHomeScore(25); fixture.match().setAwayScore(0);
+        entityManager.flush(); entityManager.clear();
+        var report = dataAuditService.audit();
+        assertThat(report.findings(Category.RESULT_POINTS)).anySatisfy(f -> assertThat(f.evidence()).contains("Walkover retains driver results"));
+        assertThat(report.findings(STALE_AGGREGATE)).anySatisfy(f -> assertThat(f.evidence()).contains("Walkover has saved numeric scores"));
+        assertThat(entityManager.find(org.ctc.domain.model.RaceResult.class, result.getId()).getPointsTotal()).isEqualTo(25);
+        assertThat(entityManager.find(Match.class, fixture.match().getId()).getHomeScore()).isEqualTo(25);
+    }
+
     @Test
     void givenHistoricalWetMandatoryTyre_whenAuditing_thenReportSafeLobbyFindingWithoutChangingTheSavedText() {
         // given

@@ -170,6 +170,7 @@ public class TeamProfilePageGenerator {
             var driverEntries = driversToShow.stream()
                     .map(driver -> {
                         var driverResults = raceResultRepository.findByDriverId(driver.getId()).stream()
+                .filter(org.ctc.domain.model.WalkoverScoring::countsForDriverStatistics)
                                 .filter(r -> r.getRace().getMatchday().getSeason().getId().equals(season.getId()))
                                 .toList();
                         int totalPoints = driverResults.stream().mapToInt(RaceResult::getPointsTotal).sum();

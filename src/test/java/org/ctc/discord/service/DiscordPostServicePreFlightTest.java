@@ -59,6 +59,11 @@ class DiscordPostServicePreFlightTest {
 				"uploads");
 	}
 
+    @Test void givenWalkoverWithoutLegs_whenCheckingFinalResultPosting_thenAllowTheTeamResult() {
+        var match = new Match(); match.setWalkoverTeam(new org.ctc.domain.model.Team("Test WO", "Test WO"));
+        assertThat(service.matchCanRenderResults(match)).isTrue();
+    }
+
 	private static Race raceWithSettings(boolean hasSettings) {
 		Race race = new Race();
 		race.setId(UUID.randomUUID());
