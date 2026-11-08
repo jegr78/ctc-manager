@@ -128,9 +128,9 @@ class DiscordChannelServicePermissionAuditFailIT {
 						"{\"id\":\"c1\",\"name\":\"md1-rs-h-vs-a\",\"type\":0,\"parent_id\":\"cat1\","
 								+ "\"permission_overwrites\":["
 								+ "{\"id\":\"g1\",\"type\":0,\"allow\":\"0\",\"deny\":\"1024\"},"
-								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
-								+ "{\"id\":\"200\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
-								+ "{\"id\":\"999\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"2147484672\",\"deny\":\"0\"},"
+								+ "{\"id\":\"200\",\"type\":0,\"allow\":\"2147484672\",\"deny\":\"0\"},"
+								+ "{\"id\":\"999\",\"type\":0,\"allow\":\"2147484672\",\"deny\":\"0\"},"
 								+ "{\"id\":\"" + BOT_USER_ID + "\",\"type\":1,\"allow\":\"1024\",\"deny\":\"0\"}"
 								+ "]}")));
 
@@ -154,8 +154,8 @@ class DiscordChannelServicePermissionAuditFailIT {
 						"{\"id\":\"c1\",\"name\":\"md1-rs-h-vs-a\",\"type\":0,\"parent_id\":\"cat1\","
 								+ "\"permission_overwrites\":["
 								+ "{\"id\":\"g1\",\"type\":0,\"allow\":\"0\",\"deny\":\"1024\"},"
-								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
-								+ "{\"id\":\"999\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"2147484672\",\"deny\":\"0\"},"
+								+ "{\"id\":\"999\",\"type\":0,\"allow\":\"2147484672\",\"deny\":\"0\"},"
 								+ "{\"id\":\"" + BOT_USER_ID + "\",\"type\":1,\"allow\":\"1024\",\"deny\":\"0\"}"
 								+ "]}")));
 
@@ -182,8 +182,8 @@ class DiscordChannelServicePermissionAuditFailIT {
 						"{\"id\":\"c1\",\"name\":\"md1-rs-h-vs-a\",\"type\":0,\"parent_id\":\"cat1\","
 								+ "\"permission_overwrites\":["
 								+ "{\"id\":\"g1\",\"type\":0,\"allow\":\"0\",\"deny\":\"1024\"},"
-								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
-								+ "{\"id\":\"200\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"2147484672\",\"deny\":\"0\"},"
+								+ "{\"id\":\"200\",\"type\":0,\"allow\":\"2147484672\",\"deny\":\"0\"},"
 								+ "{\"id\":\"noise\",\"type\":0,\"allow\":\"0\",\"deny\":\"0\"}"
 								+ "]}")));
 
@@ -206,8 +206,8 @@ class DiscordChannelServicePermissionAuditFailIT {
 						"{\"id\":\"c1\",\"name\":\"md1-rs-h-vs-a\",\"type\":0,\"parent_id\":\"cat1\","
 								+ "\"permission_overwrites\":["
 								+ "{\"id\":\"g1\",\"type\":0,\"allow\":\"garbage\",\"deny\":\"1024\"},"
-								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
-								+ "{\"id\":\"200\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"2147484672\",\"deny\":\"0\"},"
+								+ "{\"id\":\"200\",\"type\":0,\"allow\":\"2147484672\",\"deny\":\"0\"},"
 								+ "{\"id\":\"noise\",\"type\":0,\"allow\":\"garbage\",\"deny\":\"0\"}"
 								+ "]}")));
 
@@ -228,8 +228,8 @@ class DiscordChannelServicePermissionAuditFailIT {
 						"{\"id\":\"c1\",\"name\":\"md1-rs-h-vs-a\",\"type\":0,\"parent_id\":\"cat1\","
 								+ "\"permission_overwrites\":["
 								+ "{\"id\":\"g1\",\"type\":0,\"allow\":null,\"deny\":\"1024\"},"
-								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
-								+ "{\"id\":\"200\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"2147484672\",\"deny\":\"0\"},"
+								+ "{\"id\":\"200\",\"type\":0,\"allow\":\"2147484672\",\"deny\":\"0\"},"
 								+ "{\"id\":\"noise\",\"type\":0,\"allow\":null,\"deny\":\"0\"}"
 								+ "]}")));
 
@@ -240,4 +240,26 @@ class DiscordChannelServicePermissionAuditFailIT {
 		wm.verify(deleteRequestedFor(urlPathEqualTo("/api/v10/channels/c1")));
 		assertThat(matchRepository.findById(match.getId()).orElseThrow().getDiscordChannelId()).isNull();
 	}
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"100", "200"})
+    void givenTeamWithoutSavedApplicationCommandGrant_whenCreatingChannel_thenRejectAndCleanUpBeforeLinking(String missingRole) {
+        // given
+        seedConfig(); var match = seedMatch("Test missing commands " + missingRole); stubHappyPathCreate();
+        String home = missingRole.equals("100") ? "1024" : "2147484672";
+        String away = missingRole.equals("200") ? "1024" : "2147484672";
+        wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c1")).willReturn(okJson("""
+                {"id":"c1","type":0,"permission_overwrites":[
+                  {"id":"g1","type":0,"allow":"0","deny":"1024"},
+                  {"id":"100","type":0,"allow":"%s","deny":"0"},
+                  {"id":"200","type":0,"allow":"%s","deny":"0"},
+                  {"id":"%s","type":1,"allow":"1024","deny":"0"}
+                ]}
+                """.formatted(home, away, BOT_USER_ID))));
+        // when / then
+        assertThatThrownBy(() -> service.createMatchChannel(match)).isInstanceOf(DiscordAuthException.class)
+                .hasMessage(DiscordApiExceptionMapper.AUDIT_FAIL_MESSAGE);
+        wm.verify(deleteRequestedFor(urlPathEqualTo("/api/v10/channels/c1")));
+        assertThat(matchRepository.findById(match.getId()).orElseThrow().getDiscordChannelId()).isNull();
+    }
 }

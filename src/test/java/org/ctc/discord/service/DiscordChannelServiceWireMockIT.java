@@ -114,27 +114,31 @@ class DiscordChannelServiceWireMockIT {
 		return helper.createMatch(md, home, away);
 	}
 
-	@Test
-	void givenValidMatchAndConfig_whenCreateMatchChannel_thenDbWriteAnd4OverwritesIncludingBotMember() throws Exception {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(org.ctc.domain.model.PhaseType.class)
+    void givenValidMatchAndConfig_whenCreateMatchChannel_thenDbWriteAnd4OverwritesIncludingBotMember(org.ctc.domain.model.PhaseType phase) throws Exception {
 		// given
 		seedConfig("g1", "cat1");
 		Match match = seedMatch("H", "100", "200");
+        match.getMatchday().getPhase().setPhaseType(phase);
+        String phaseName = switch (phase) { case REGULAR -> "rs"; case PLAYOFF -> "po"; case PLACEMENT -> "pm"; };
+        String channelName = "md1-" + phaseName + "-homeh-vs-awayh";
 		String botAllow = String.valueOf(DiscordPermissions.BOT_ALLOW_MASK);
 
 		wm.stubFor(post(urlPathEqualTo("/api/v10/guilds/g1/channels"))
 				.willReturn(okJson(
-						"{\"id\":\"c1\",\"name\":\"md1-rs-homeh-vs-awayh\",\"type\":0,\"parent_id\":\"cat1\"}")));
+						"{\"id\":\"c1\",\"name\":\"" + channelName + "\",\"type\":0,\"parent_id\":\"cat1\"}")));
 		wm.stubFor(post(urlPathEqualTo("/api/v10/channels/c1/webhooks"))
 				.willReturn(okJson(
 						"{\"id\":\"w1\",\"token\":\"tok-abc\","
 								+ "\"url\":\"https://discord.com/api/webhooks/w1/tok-abc\",\"channel_id\":\"c1\"}")));
 		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c1"))
 				.willReturn(okJson(
-						"{\"id\":\"c1\",\"name\":\"md1-rs-homeh-vs-awayh\",\"type\":0,\"parent_id\":\"cat1\","
+						"{\"id\":\"c1\",\"name\":\"" + channelName + "\",\"type\":0,\"parent_id\":\"cat1\","
 								+ "\"permission_overwrites\":["
 								+ "{\"id\":\"g1\",\"type\":0,\"allow\":\"0\",\"deny\":\"1024\"},"
-								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
-								+ "{\"id\":\"200\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"2147484672\",\"deny\":\"0\"},"
+								+ "{\"id\":\"200\",\"type\":0,\"allow\":\"2147484672\",\"deny\":\"0\"},"
 								+ "{\"id\":\"" + BOT_USER_ID + "\",\"type\":1,\"allow\":\"" + botAllow + "\",\"deny\":\"0\"}"
 								+ "]}")));
 
@@ -149,13 +153,30 @@ class DiscordChannelServiceWireMockIT {
 
 		// and — 4th permission_overwrite shape verified (type=member, bot-user-id, BOT_ALLOW_MASK)
 		wm.verify(postRequestedFor(urlPathEqualTo("/api/v10/guilds/g1/channels"))
-				.withRequestBody(matchingJsonPath("$.name", equalTo("md1-rs-homeh-vs-awayh")))
+				.withRequestBody(matchingJsonPath("$.name", equalTo(channelName)))
 				.withRequestBody(matchingJsonPath("$.permission_overwrites[3].type", equalTo("1")))
 				.withRequestBody(matchingJsonPath("$.permission_overwrites[3].id", equalTo(BOT_USER_ID)))
 				.withRequestBody(matchingJsonPath("$.permission_overwrites[3].allow", equalTo(botAllow))));
 		wm.verify(postRequestedFor(urlPathEqualTo("/api/v10/channels/c1/webhooks")));
 		wm.verify(getRequestedFor(urlPathEqualTo("/api/v10/channels/c1")));
 		wm.verify(exactly(0), deleteRequestedFor(urlPathMatching("/api/v10/channels/.*")));
+        var request = new com.fasterxml.jackson.databind.ObjectMapper().readTree(wm.findAll(postRequestedFor(urlPathEqualTo("/api/v10/guilds/g1/channels"))).getFirst().getBodyAsString());
+        var overwrites = request.get("permission_overwrites");
+        assertThat(overwrites.size()).isEqualTo(4);
+        assertThat(overwrites.get(0).get("allow").asText()).isEqualTo("0");
+        assertThat(overwrites.get(0).get("deny").asText()).isEqualTo("1024");
+        for (int index = 1; index <= 2; index++) {
+            var role = overwrites.get(index);
+            assertThat(role.get("type").asInt()).isZero();
+            assertThat(role.get("id").asText()).isEqualTo(index == 1 ? "100" : "200");
+            assertThat(role.get("allow").isTextual()).isTrue();
+            long allowed = Long.parseLong(role.get("allow").asText());
+            long denied = Long.parseLong(role.get("deny").asText());
+            assertThat(allowed & 2147483648L).isNotZero();
+            assertThat(denied & 2147483648L).isZero();
+            assertThat(allowed & 8L).isZero();
+        }
+
 	}
 
 	@Test
@@ -193,7 +214,7 @@ class DiscordChannelServiceWireMockIT {
 						"{\"id\":\"c1\",\"name\":\"md1-rs-homeit-vs-awayit\",\"type\":0,\"parent_id\":\"cat1\","
 								+ "\"permission_overwrites\":["
 								+ "{\"id\":\"g1\",\"type\":0,\"allow\":\"0\",\"deny\":\"1024\"},"
-								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"2147484672\",\"deny\":\"0\"},"
 								+ "{\"id\":\"" + BOT_USER_ID + "\",\"type\":1,\"allow\":\"" + botAllow + "\",\"deny\":\"0\"}"
 								+ "]}")));
 
@@ -209,6 +230,9 @@ class DiscordChannelServiceWireMockIT {
 				.withRequestBody(matchingJsonPath("$.permission_overwrites[1].id", equalTo("100")))
 				.withRequestBody(matchingJsonPath("$.permission_overwrites[2].type", equalTo("1")))
 				.withRequestBody(matchingJsonPath("$.permission_overwrites[2].id", equalTo(BOT_USER_ID))));
+        var payload = new com.fasterxml.jackson.databind.ObjectMapper().readTree(wm.findAll(postRequestedFor(urlPathEqualTo("/api/v10/guilds/g1/channels"))).getFirst().getBodyAsString());
+        assertThat(payload.get("permission_overwrites").size()).isEqualTo(3);
+        assertThat(Long.parseLong(payload.get("permission_overwrites").get(1).get("allow").asText()) & 2147483648L).isNotZero();
 		wm.verify(exactly(0), deleteRequestedFor(urlPathMatching("/api/v10/channels/.*")));
 	}
 

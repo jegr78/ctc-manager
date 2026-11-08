@@ -19,6 +19,7 @@ import static org.ctc.discord.DiscordPermissions.SEND_MESSAGES;
 import static org.ctc.discord.DiscordPermissions.SPEAK;
 import static org.ctc.discord.DiscordPermissions.TEAM_MEMBER_ALLOW_MASK;
 import static org.ctc.discord.DiscordPermissions.TEAM_MEMBER_DENY_MASK;
+import static org.ctc.discord.DiscordPermissions.USE_APPLICATION_COMMANDS;
 import static org.ctc.discord.DiscordPermissions.USE_EXTERNAL_EMOJIS;
 import static org.ctc.discord.DiscordPermissions.USE_EXTERNAL_STICKERS;
 import static org.ctc.discord.DiscordPermissions.VIEW_CHANNEL;
@@ -41,7 +42,8 @@ class DiscordPermissionsTest {
 				| EMBED_LINKS
 				| READ_MESSAGE_HISTORY
 				| USE_EXTERNAL_EMOJIS
-				| USE_EXTERNAL_STICKERS;
+				| USE_EXTERNAL_STICKERS
+				| USE_APPLICATION_COMMANDS;
 		assertThat(TEAM_MEMBER_ALLOW_MASK).isEqualTo(expected);
 	}
 
@@ -87,4 +89,14 @@ class DiscordPermissionsTest {
 		assertThat(BOT_ALLOW_MASK & MENTION_EVERYONE).isZero();
 		assertThat(BOT_ALLOW_MASK & MANAGE_MESSAGES).isZero();
 	}
+
+    @Test
+    void givenNewMatchTeamPermissions_whenApplicationCommandsAreDisabledAtGuildLevel_thenExplicitRoleGrantEnablesThemWithoutAdmin() {
+        long applicationCommands = 1L << 31;
+        assertThat(TEAM_MEMBER_ALLOW_MASK & applicationCommands).isEqualTo(applicationCommands);
+        assertThat(TEAM_MEMBER_DENY_MASK & applicationCommands).isZero();
+        assertThat(TEAM_MEMBER_ALLOW_MASK & (1L << 3)).isZero();
+        assertThat(EVERYONE_DENY_VIEW_MASK & applicationCommands).isZero();
+        assertThat(Long.parseLong(Long.toString(TEAM_MEMBER_ALLOW_MASK))).isGreaterThan(Integer.MAX_VALUE);
+    }
 }
