@@ -37,3 +37,11 @@ Independent review caught three stale Gateway test assumptions after the weather
 input changed. Two fixed raw-text expectations now compare the actual payload;
 the publication/privacy scenario starts with a distinct canonical eight-slot
 Custom sequence. All secrecy, correction, replay and publication assertions remain.
+
+Focused H2 Gateway verification passed 15 transactional cases plus 116 associated
+unit cases. It exercised exact eight-slot persistence/replay, changed-rain rejection,
+privacy through approval/publication, category selection and both team channels.
+The restore-admission fixture also uses canonical weather so its successful writes
+continue to reach their original commit/interrupt barriers. Added handler scenarios
+cover reducing eight slots to six, switching Custom to Preset and rejected retired
+weather-page nonces. The complete CI remains the final gate.

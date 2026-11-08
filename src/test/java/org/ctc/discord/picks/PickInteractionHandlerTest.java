@@ -19,6 +19,42 @@ import static org.mockito.Mockito.*;
 
 class PickInteractionHandlerTest {
     @Test
+    void givenEightSlotDraft_whenReducingCountThenReusingAnOldMenu_thenKeepSixPositionsAndRejectTheRetiredNonce() {
+        // given
+        complete("equal"); click("Change weather"); selectCode("CUSTOM"); selectCode("8");
+        String retired = response.last().selection().id();
+        for (int slot = 0; slot < 8; slot++) selectCode(slot % 2 == 0 ? "S01" : "?");
+        assertThat(response.last().selection().options()).hasSize(8);
+        // when
+        click("Change weather"); selectCode("CUSTOM"); selectCode("6");
+        for (int slot = 0; slot < 6; slot++) click("Keep selected slot");
+        assertThat(response.last().selection().options()).hasSize(6);
+        String confirm = button("Confirm submission");
+        dispatch(PickGatewayInteraction.Kind.SELECT, retired, fields("selection", "S02"));
+        // then
+        assertThat(response.allText()).contains("unavailable"); verifyNoInteractions(submissions);
+        dispatch(PickGatewayInteraction.Kind.BUTTON, confirm, Map.of());
+        var captured = ArgumentCaptor.forClass(PickPayload.class);
+        verify(submissions).submit(eq(race), eq(0L), any(), eq(actor), captured.capture());
+        assertThat(captured.getValue().weather()).isEqualTo("Custom S01; ?; S01; ?; S01; ?");
+        assertThat(captured.getValue().laps()).isEqualTo(12);
+    }
+
+    @Test
+    void givenCustomDraft_whenSwitchingToPreset_thenKeepOnlyOneCodeAndAllOtherPicks() {
+        // given
+        complete("0"); click("Change weather"); selectCode("CUSTOM"); selectCode("6");
+        for (int slot = 0; slot < 6; slot++) selectCode("S03");
+        // when
+        click("Change weather"); selectCode("PRESET"); click("Keep selected slot"); click("Confirm submission");
+        // then
+        var captured = ArgumentCaptor.forClass(PickPayload.class);
+        verify(submissions).submit(eq(race), eq(0L), any(), eq(actor), captured.capture());
+        assertThat(captured.getValue().weather()).isEqualTo("Preset S03");
+        assertThat(captured.getValue().timeProgressionMultiplier()).isZero();
+    }
+
+    @Test
     void givenSeveralCarsPerSeasonEntry_whenChoosingACar_thenSelectTheEntryBeforeSeeingOnlyItsCars() {
         // given
         UUID category = UUID.randomUUID(), oneMake = UUID.randomUUID(), secondCar = UUID.randomUUID(), otherCar = UUID.randomUUID();
