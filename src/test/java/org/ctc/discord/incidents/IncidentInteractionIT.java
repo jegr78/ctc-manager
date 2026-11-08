@@ -24,11 +24,12 @@ class IncidentInteractionIT extends IncidentIntakeIntegrationFixture {
         var original = tx.execute(status -> revisionRows.findByReportIdOrderByRevisionNumberAsc(id).getFirst().getPayload());
         var client = flow().command().click("My reports").select(id).click("Edit report").click("Enter report");
         var modal = (org.ctc.discord.picks.PickGatewayModal) client.current;
-        var defaults = modal.fields().stream().map(org.ctc.discord.picks.PickGatewayModal.Text.class::cast)
-                .collect(java.util.stream.Collectors.toMap(org.ctc.discord.picks.PickGatewayModal.Text::id,
-                        value -> List.of(value.value() == null ? "" : value.value())));
-        assertThat(defaults).containsEntry("drivers", List.of(original.getInvolvedDrivers()))
-                .containsEntry("replay", List.of(original.getReplayTimestamp()))
+        var defaults = IncidentGatewayTestDriver.defaults(modal);
+        var menu = (org.ctc.discord.picks.PickGatewayModal.Selection) modal.fields().getFirst();
+        assertThat(menu.options()).allMatch(org.ctc.discord.picks.PickGatewayModal.Option::defaultSelected);
+        assertThat(menu.options()).extracting(org.ctc.discord.picks.PickGatewayModal.Option::label)
+                .containsExactly(Arrays.stream(original.getInvolvedDrivers().split("\n")).map(IncidentInteractionViews::option).toArray(String[]::new));
+        assertThat(defaults)                .containsEntry("replay", List.of(original.getReplayTimestamp()))
                 .containsEntry("description", List.of(original.getDescription()))
                 .containsEntry("links", List.of(original.getEvidenceLinks()));
         assertThat(rows().getFirst().getVersion()).isEqualTo(1);
@@ -211,7 +212,7 @@ class IncidentInteractionIT extends IncidentIntakeIntegrationFixture {
             matchup.setTeam1(teams.findById(fixture.homeTeam().getId()).orElseThrow()); matchup.setTeam2(teams.findById(fixture.awayTeam().getId()).orElseThrow());
             playoff.getPhase().setRaceScoring(fixture.matchday().getPhase().getRaceScoring());
             var day = new Matchday(playoff.getPhase(), "Test standalone playoff day", 1); em.persist(day);
-            var race = new Race(); race.setMatchday(day); race.setPlayoffMatchup(matchup); race.setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0)); em.persist(race); em.flush();
+            var race = new Race(); race.setMatchday(day); race.setPlayoffMatchup(matchup); race.setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0)); em.persist(race); em.flush(); lineup(race);
             return List.of(matchup.getId(), race.getId());
         });
         String playoffChannel = "200000000000000099"; UUID context = contexts.bind(IncidentMatchRef.playoff(target.getFirst()), GUILD, playoffChannel, manager);
@@ -276,5 +277,66 @@ class IncidentInteractionIT extends IncidentIntakeIntegrationFixture {
         }
         String currentRole = tx.execute(status -> teams.findById(changedTeam).orElseThrow().getDiscordRoleId());
         assertThat(currentRole).isEqualTo("700000000000000007"); assertThat(rows()).isEmpty(); assertThat(client.text()).contains("unavailable");
+    }
+    @Test
+    void givenMissingLineup_whenStartingReport_thenExplainSetupAndSaveNothing() {
+        tx.executeWithoutResult(status -> lineups.deleteAll(lineups.findByRaceId(fixture.race().getId())));
+        var client = flow().command().click("New report");
+        assertThat(client.text()).contains("No race lineup", "management");
+        assertThat(rows()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void givenReviewedSelection_whenLineupChanges_thenRetainDraftRequireReviewAndStoreCurrentNames(boolean editing) {
+        UUID original = editing ? submit() : null;
+        var client = editing ? flow().edit(original, PRIVATE) : flow().draft(fixture.race().getId(), PRIVATE);
+        tx.executeWithoutResult(status -> lineups.findByRaceId(fixture.race().getId()).getFirst().getDriver().setPsnId("Test renamed guest"));
+        String confirmation = editing ? "Confirm changes" : "Confirm report";
+        client.click(confirmation);
+        assertThat(client.message().content()).contains("lineup changed"); assertThat(rows()).hasSize(editing ? 1 : 0);
+        if (editing) assertThat(rows().getFirst().getVersion()).isEqualTo(1);
+        client.click("Enter report");
+        var modal = (org.ctc.discord.picks.PickGatewayModal) client.current;
+        assertThat(IncidentGatewayTestDriver.defaults(modal)).containsEntry("description", List.of(PRIVATE));
+        var menu = (org.ctc.discord.picks.PickGatewayModal.Selection) modal.fields().getFirst();
+        assertThat(menu.options()).allMatch(org.ctc.discord.picks.PickGatewayModal.Option::defaultSelected);
+        client.fields("00:00", PRIVATE, "").click(confirmation);
+        assertThat(rows()).hasSize(1);
+        var saved = tx.execute(status -> revisionRows.findByReportIdOrderByRevisionNumberAsc(rows().getFirst().getId()).getLast().getPayload());
+        assertThat(saved.getInvolvedDrivers()).contains("Test renamed guest");
+        assertThat(firstRequests()).isEqualTo(1);
+    }
+
+    @Test
+    void givenSavedRequest_whenLineupIsRemovedAndConfirmationReplayed_thenReturnExactReceipt() {
+        var client = flow().draft(fixture.race().getId(), PRIVATE);
+        String confirm = client.button("Confirm report"); client.click("Confirm report"); String saved = client.message().content();
+        tx.executeWithoutResult(status -> lineups.deleteAll(lineups.findByRaceId(fixture.race().getId())));
+        client.send(PickGatewayInteraction.Kind.BUTTON, confirm, Map.of());
+        assertThat(client.message().content()).isEqualTo(saved);
+        assertThat(rows()).hasSize(1); assertThat(firstRequests()).isEqualTo(1);
+    }
+
+    @Test
+    void givenForgedDriverFromOutsideRace_whenSubmittingFields_thenRejectWithoutHistory() {
+        var client = flow().command().click("New report").click("Enter report");
+        var modal = (org.ctc.discord.picks.PickGatewayModal) client.current;
+        client.send(PickGatewayInteraction.Kind.MODAL, modal.id(), Map.of("drivers", List.of(UUID.randomUUID().toString()),
+                "replay", List.of("00:00"), "description", List.of(PRIVATE), "links", List.of("")));
+        assertThat(client.text()).contains("unavailable"); assertThat(rows()).isEmpty();
+    }
+
+    @Test
+    void givenEmptyDriverSelection_whenSubmitting_thenRetainOtherDraftFieldsAndAskForSelection() {
+        var client = flow().command().click("New report").click("Enter report");
+        var modal = (org.ctc.discord.picks.PickGatewayModal) client.current;
+        client.send(PickGatewayInteraction.Kind.MODAL, modal.id(), Map.of("drivers", List.of(),
+                "replay", List.of("00:00"), "description", List.of(PRIVATE), "links", List.of("")));
+        assertThat(client.message().content()).contains("at least one"); assertThat(rows()).isEmpty();
+        client.click("Enter report");
+        assertThat(IncidentGatewayTestDriver.defaults((org.ctc.discord.picks.PickGatewayModal) client.current)).containsEntry("description", List.of(PRIVATE));
+        client.fields("00:00", PRIVATE, "").click("Confirm report");
+        assertThat(rows()).hasSize(1);
     }
 }

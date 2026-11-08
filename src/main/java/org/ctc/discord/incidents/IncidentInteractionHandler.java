@@ -25,6 +25,7 @@ public class IncidentInteractionHandler implements PickGatewayInteractionHandler
     private final IncidentDraftSessionStore sessions;
     private final ImportLockService imports;
     private final PickSessionEpoch epoch;
+    private final IncidentLineupService lineups;
 
     @Override
     public void onInteraction(PickGatewayInteraction event, PickGatewayReply reply) {
@@ -32,10 +33,11 @@ public class IncidentInteractionHandler implements PickGatewayInteractionHandler
             try {
                 var modal = sessions.withAction(event, (session, action) -> {
                     if (!action.name().equals("open-report")) return null;
-                    session.clearActions(); return form(session.action("fields", MODAL), session.payload);
+                    session.clearActions(); return form(session.action("fields", MODAL), session.payload, session.driverChoices, session.selectedDrivers);
                 });
                 if (modal != null) { reply.openModal(modal); return; }
-            } catch (BusinessRuleException unavailable) { reply.replyPrivate(UNAVAILABLE); return; }
+            } catch (IncidentLineupException unavailable) { reply.replyPrivate(unavailable.getMessage()); return; }
+            catch (BusinessRuleException unavailable) { reply.replyPrivate(UNAVAILABLE); return; }
         }
         long generation = epoch.getAsLong();
         reply.deferPrivate(continuation -> {
@@ -50,7 +52,8 @@ public class IncidentInteractionHandler implements PickGatewayInteractionHandler
                     handle(event, session, action, actor, view, prepared); return true;
                 });
                 prepared.forwardTo(continuation);
-            } catch (IncidentAccessDeniedException denied) { continuation.replyPrivate(denied.getMessage()); }
+            } catch (IncidentLineupException unavailable) { continuation.replyPrivate(unavailable.getMessage()); }
+            catch (IncidentAccessDeniedException denied) { continuation.replyPrivate(denied.getMessage()); }
             catch (BusinessRuleException | IllegalArgumentException unavailable) { continuation.replyPrivate(UNAVAILABLE); }
             finally { imports.exitWriter(); }
         });
@@ -89,7 +92,10 @@ public class IncidentInteractionHandler implements PickGatewayInteractionHandler
                 var saved = reads.load(actor, action.ids().getFirst());
                 if (!view.editable() || !saved.summary().editable()) throw unavailable();
                 prepare(session, actor, view, saved.summary().raceId(), saved.summary());
-                if (action.name().equals("edit")) { session.payload = saved.payload(); nextForm(session, reply); }
+                if (action.name().equals("edit")) {
+                    session.payload = saved.payload();session.driverChoices = lineups.load(actor, session.raceId);
+                    session.selectedDrivers = session.driverChoices.savedSelection(session.payload.getInvolvedDrivers());nextForm(session, reply);
+                }
                 else {
                     session.clearActions(); send(reply, "Confirm withdrawal of " + escape(saved.summary().reference()) + ". Earlier revisions remain stored.",
                             List.of(button(session, "confirm-withdraw", "Confirm withdrawal"), button(session, "menu", "Cancel")), null);
@@ -105,7 +111,13 @@ public class IncidentInteractionHandler implements PickGatewayInteractionHandler
             case "fields" -> {
                 requireCandidate(session, actor);
                 if (!view.editable()) throw unavailable();
-                session.payload = payload(event.values(), session.payload); review(session, 0, reply);
+                try {
+                    var submitted = submitted(event.values(), session.payload, session.driverChoices);
+                    session.payload = submitted.payload();session.selectedDrivers = new java.util.HashSet<>(submitted.selected());session.lineupNotice = null;review(session, 0, reply);
+                } catch (IncidentLineupException missingSelection) {
+                    session.payload = retainDraft(event.values(), session.payload);session.selectedDrivers = Set.of();
+                    session.lineupNotice = missingSelection.getMessage();nextForm(session, reply);
+                }
             }
             case "review" -> { requireCandidate(session, actor); review(session, action.page(), reply); }
             case "confirm-submit", "confirm-edit", "confirm-withdraw" -> confirm(session, action.name(), actor, reply);
@@ -160,11 +172,12 @@ public class IncidentInteractionHandler implements PickGatewayInteractionHandler
     }
 
     private void begin(Session session, AuthorizedIncidentActor actor, IncidentReporterView view, UUID race, IncidentReporterView.CaseChoice saved, PickGatewayResponse.Continuation reply) {
-        prepare(session, actor, view, race, saved); nextForm(session, reply);
+        prepare(session, actor, view, race, saved);session.driverChoices = lineups.load(actor, race);nextForm(session, reply);
     }
     private void prepare(Session session, AuthorizedIncidentActor actor, IncidentReporterView view, UUID race, IncidentReporterView.CaseChoice saved) {
         session.raceId = race; session.reportId = saved == null ? null : saved.id(); session.reportVersion = saved == null ? 0 : saved.version();
         session.windowVersion = view.windowVersion(); session.request = UUID.randomUUID(); session.party = actor.party(); session.payload = null;
+        session.driverChoices = null;session.selectedDrivers = java.util.Set.of();session.lineupNotice = null;
         session.label = raceLabel(view, race); session.reportingParty = saved == null ? actor.party().getLabel() : saved.party();
     }
     private void nextForm(Session session, PickGatewayResponse.Continuation reply) {
@@ -172,10 +185,12 @@ public class IncidentInteractionHandler implements PickGatewayInteractionHandler
         var buttons = new ArrayList<PickGatewayMessage.Button>();
         buttons.add(button(session, "open-report", "Enter report"));
         if (hasLongFootage(session.payload)) buttons.add(button(session, "clear-footage", "Clear footage in draft"));
-        String guidance = session.reportId == null ? "Enter the four incident fields, then review before confirming."
+        String guidance = session.reportId == null ? "Choose the involved drivers from this race lineup and enter the report fields, then review before confirming."
                 : hasLongText(session.payload)
                     ? "Saved fields within Discord's limits are prefilled. Longer description or footage fields are blank: leave them blank to keep the saved text, or enter a replacement. Use Clear footage in draft to remove longer saved footage."
                     : "Your saved values are prefilled. Review your changes before confirming.";
+        if (session.lineupNotice != null) guidance = session.lineupNotice + " " + guidance;
+        if (session.reportId != null && session.payload != null && session.selectedDrivers.isEmpty()) guidance += " Previously saved driver text could not be matched to the current lineup. Select the involved drivers again; the stored report remains unchanged until confirmation.";
         send(reply, escape(session.label) + "\n" + guidance + "\nNothing is saved until confirmation. Earlier revisions remain stored.", buttons, null);
     }
     private void review(Session session, int requested, PickGatewayResponse.Continuation reply) {
@@ -193,8 +208,17 @@ public class IncidentInteractionHandler implements PickGatewayInteractionHandler
         if (operation.equals("confirm-withdraw")) receipt = reports.withdraw(session.reportId, session.windowVersion, session.reportVersion, session.request, actor);
         else {
             if (session.payload == null) throw unavailable();
-            receipt = operation.equals("confirm-submit") ? reports.submit(session.windowId, session.raceId, session.windowVersion, session.request, actor, session.payload)
-                    : reports.edit(session.reportId, session.windowVersion, session.reportVersion, session.request, actor, session.payload);
+            var selection = new IncidentDriverSelection(session.raceId, session.driverChoices.fingerprint(), List.copyOf(session.selectedDrivers));
+            try {
+                receipt = operation.equals("confirm-submit") ? reports.submitSelected(session.windowId, session.raceId, session.windowVersion, session.request, actor, session.payload, selection)
+                        : reports.editSelected(session.reportId, session.windowVersion, session.reportVersion, session.request, actor, session.payload, selection);
+            } catch (IncidentLineupException changed) {
+                session.lineupNotice = changed.getMessage();
+                session.driverChoices = lineups.load(actor, session.raceId);
+                session.selectedDrivers = session.selectedDrivers.stream().filter(id -> session.driverChoices.drivers().stream().anyMatch(driver -> driver.id().equals(id)))
+                        .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                nextForm(session, reply);return;
+            }
         }
         String message = receipt.action() == IncidentEventKind.SUBMITTED ? "Stored " + receipt.caseReference() + " revision " + receipt.revisionNumber() + ". Neutral receipt delivery is pending."
                 : receipt.action() == IncidentEventKind.WITHDRAWN ? "Stored withdrawal of " + receipt.caseReference() + ". Its history remains available; it will not be disclosed after the deadline. The original neutral receipt may remain in the channel."

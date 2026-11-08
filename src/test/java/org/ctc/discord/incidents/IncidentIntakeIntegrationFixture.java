@@ -49,6 +49,8 @@ abstract class IncidentIntakeIntegrationFixture {
     @Autowired IncidentWindowService windows;
     @Autowired SeasonRepository seasons;
     @Autowired TeamRepository teams;
+    @Autowired DriverRepository drivers;
+    @Autowired RaceLineupRepository lineups;
     @Autowired MatchRepository matches;
     @Autowired DiscordGlobalConfigRepository configs;
     @Autowired IncidentReportWindowRepository windowRows;
@@ -60,6 +62,7 @@ abstract class IncidentIntakeIntegrationFixture {
     final Set<String> inaccessible = ConcurrentHashMap.newKeySet();
     final List<TestHelper.SeasonFixture> extras = new ArrayList<>();
     final List<UUID> parents = new ArrayList<>();
+    final List<UUID> ownedDrivers = new ArrayList<>();
     TestHelper.SeasonFixture fixture;
     UUID contextId, windowId;
     Long configId;
@@ -74,6 +77,7 @@ abstract class IncidentIntakeIntegrationFixture {
         tx.executeWithoutResult(status -> {
             fixture = helper.createFullSeasonFixture("TIR" + UUID.randomUUID().toString().substring(0, 7));
             fixture.homeTeam().setDiscordRoleId(HOME_ROLE); fixture.awayTeam().setDiscordRoleId(AWAY_ROLE);
+            lineup(fixture.race());
             fixture.race().setDateTime(plannedRaceStart()); fixture.match().setDiscordChannelId(CHANNEL);
             var config = configs.findFirstByOrderByIdAsc(); createdConfig = config == null;
             if (config == null) config = new DiscordGlobalConfig();
@@ -95,6 +99,7 @@ abstract class IncidentIntakeIntegrationFixture {
             if (fixture != null) deleteFixture(fixture);
             for (var extra : extras) deleteFixture(extra);
             for (UUID parent : parents) teams.deleteById(parent);
+            drivers.deleteAllById(ownedDrivers);
             if (configId != null) {
                 if (createdConfig) configs.deleteById(configId);
                 else configs.findById(configId).orElseThrow().setGuildId(originalGuild);
@@ -104,6 +109,13 @@ abstract class IncidentIntakeIntegrationFixture {
     private void deleteFixture(TestHelper.SeasonFixture data) {
         helper.deleteSeasonCascade(seasons.findById(data.season().getId()).orElseThrow()); seasons.flush();
         teams.deleteAllById(List.of(data.homeTeam().getId(), data.awayTeam().getId())); teams.flush();
+    }
+    void lineup(Race race) {
+        for (var team : List.of(race.getHomeTeam(), race.getAwayTeam())) {
+            var driver = helper.createDriver("Test lineup guest " + UUID.randomUUID().toString().substring(0, 8), "Test incident guest");
+            ownedDrivers.add(driver.getId());
+            lineups.saveAndFlush(new RaceLineup(race, driver, team, true));
+        }
     }
     IncidentGatewayTestDriver flow() { return flow(USER, CHANNEL); }
     IncidentGatewayTestDriver flow(String user, String channel) { return new IncidentGatewayTestDriver(dispatcher, clock, GUILD, channel, user); }

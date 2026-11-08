@@ -40,11 +40,24 @@ public class IncidentReportService {
     private final Clock clock;
     private final EntityManager entityManager;
     private final org.springframework.context.ApplicationEventPublisher publisher;
+    private final IncidentLineupService lineups;
 
     public IncidentReportReceipt submit(UUID windowId, UUID raceId, long expectedWindowVersion, UUID requestId,
                                         AuthorizedIncidentActor actor, IncidentPayload payload) {
+        return submit(windowId, raceId, expectedWindowVersion, requestId, actor, payload, null);
+    }
+
+    public IncidentReportReceipt submitSelected(UUID windowId, UUID raceId, long expectedWindowVersion, UUID requestId,
+            AuthorizedIncidentActor actor, IncidentPayload payload, org.ctc.domain.incidents.IncidentDriverSelection selection) {
+        if (selection == null) throw new org.ctc.domain.incidents.IncidentLineupException("Choose the involved drivers from the race lineup.");
+        return submit(windowId, raceId, expectedWindowVersion, requestId, actor, payload, selection);
+    }
+
+    private IncidentReportReceipt submit(UUID windowId, UUID raceId, long expectedWindowVersion, UUID requestId,
+            AuthorizedIncidentActor actor, IncidentPayload payload, org.ctc.domain.incidents.IncidentDriverSelection selection) {
         return writes.execute(() -> {
             preauthorize(actor);
+            if (selection != null) lineups.lockRace(raceId);
             var window = windows.lock(windowId);
             authorize(actor, window.getContext(), null);
             var replay = replay(requestId, IncidentEventKind.SUBMITTED, windowId, raceId, null, actor);
@@ -53,25 +66,44 @@ public class IncidentReportService {
             var race = contexts.resolve(IncidentContextService.reference(window.getContext())).races().stream()
                     .filter(row -> row.getId().equals(raceId)).findFirst()
                     .orElseThrow(() -> new BusinessRuleException("Choose a race from this exact incident context"));
-            validatePayload(payload); validateParty(actor.party(), window.getContext());
+            var acceptedPayload = selection == null ? payload : lineups.resolve(race, payload, selection);
+            validatePayload(acceptedPayload); validateParty(actor.party(), window.getContext());
             var now = clock.instant(); window.requireOpenAt(now);
             var report = new IncidentReport(window, race, actor.userId(), actor.party());
             report.appendRevision(); report = reports.save(report);
-            return append(report, payload, actor, requestId, IncidentEventKind.SUBMITTED, now);
+            return append(report, acceptedPayload, actor, requestId, IncidentEventKind.SUBMITTED, now);
         });
     }
 
     public IncidentReportReceipt edit(UUID reportId, long expectedWindowVersion, long expectedReportVersion, UUID requestId,
                                       AuthorizedIncidentActor actor, IncidentPayload payload) {
+        return edit(reportId, expectedWindowVersion, expectedReportVersion, requestId, actor, payload, null);
+    }
+
+    public IncidentReportReceipt editSelected(UUID reportId, long expectedWindowVersion, long expectedReportVersion, UUID requestId,
+            AuthorizedIncidentActor actor, IncidentPayload payload, org.ctc.domain.incidents.IncidentDriverSelection selection) {
+        if (selection == null) throw new org.ctc.domain.incidents.IncidentLineupException("Choose the involved drivers from the race lineup.");
+        return edit(reportId, expectedWindowVersion, expectedReportVersion, requestId, actor, payload, selection);
+    }
+
+    private IncidentReportReceipt edit(UUID reportId, long expectedWindowVersion, long expectedReportVersion, UUID requestId,
+            AuthorizedIncidentActor actor, IncidentPayload payload, org.ctc.domain.incidents.IncidentDriverSelection selection) {
         return writes.execute(() -> {
+            if (selection != null) {
+                preauthorize(actor);
+                var original = reports.findById(reportId).orElseThrow(() -> new BusinessRuleException("Incident report is unavailable"));
+                if (!original.getWindow().getContext().getId().equals(actor.contextId())) throw new BusinessRuleException("Incident report is unavailable");
+                lineups.lockRace(original.getRace().getId());
+            }
             var report = lockReport(reportId, actor);
             var replay = replay(requestId, IncidentEventKind.EDITED, report.getWindow().getId(), report.getRace().getId(), reportId, actor);
             if (replay != null) return replay;
             report.getWindow().requireVersion(expectedWindowVersion); report.requireVersion(expectedReportVersion);
-            validatePayload(payload);
+            var acceptedPayload = selection == null ? payload : lineups.resolve(report.getRace(), payload, selection);
+            validatePayload(acceptedPayload);
             var now = clock.instant(); report.getWindow().requireOpenAt(now);
             report.appendRevision(); reports.save(report);
-            return append(report, payload, actor, requestId, IncidentEventKind.EDITED, now);
+            return append(report, acceptedPayload, actor, requestId, IncidentEventKind.EDITED, now);
         });
     }
 

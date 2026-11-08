@@ -1045,11 +1045,19 @@ Incident scope comes from the confirmed match context/window and does not requir
 private-picks opt-in or a private team-channel binding.
 
 Use `/incidents` in the bound regular or playoff match channel. Choose **New report**, select
-the concrete leg when needed, then **Enter report**. Supply involved drivers, replay timestamp,
+the concrete leg when needed, then **Enter report**. Select involved drivers from that race's lineup, including guests, and supply replay timestamp,
 description and optional footage/links. `00:00` and free-text replay notation are accepted.
 Review every private summary page before **Confirm report**. Nothing is stored before this
 confirmation. The receipt confirms committed Manager storage and separately says neutral
 receipt delivery is pending.
+
+
+Driver labels include their lineup team. Up to 25 drivers share one multi-select; larger lineups
+use separate home and away menus, with at least one driver required across both. Management must
+configure a missing lineup before intake. Confirmation rechecks the current lineup and asks for
+another review if it changed, retaining the other draft fields. Exact saved driver labels are
+preselected during editing. Older free-text or renamed driver labels require reselection; the
+stored history remains unchanged until confirmation. Driver selection does not alter the lineup.
 
 **My reports** lists only the invoking person's accessible cases. View the full paged text,
 choose **Edit report** to change the prefilled saved values, or explicitly confirm **Withdraw report**.

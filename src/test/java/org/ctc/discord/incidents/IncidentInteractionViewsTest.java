@@ -53,4 +53,34 @@ class IncidentInteractionViewsTest {
         assertThat(changed.getEvidenceLinks()).isEmpty();
         assertThat(saved.getEvidenceLinks()).isEqualTo("Test old footage");
     }
+    @ParameterizedTest
+    @ValueSource(strings = {"unknown", "duplicate", "free-text", "extra-field", "empty"})
+    void givenForgedOrEmptyDriverSelection_whenParsing_thenRejectIt(String kind) {
+        var choices = IncidentJdaModalContractTest.choices("Test driver");
+        var fields = new java.util.HashMap<>(IncidentInteractionHandlerTest.fields(IncidentJdaModalContractTest.DRIVER.toString(), "00:00", "Test description", ""));
+        switch (kind) {
+            case "unknown" -> fields.put("drivers", List.of(java.util.UUID.randomUUID().toString()));
+            case "duplicate" -> fields.put("drivers", List.of(IncidentJdaModalContractTest.DRIVER.toString(), IncidentJdaModalContractTest.DRIVER.toString()));
+            case "free-text" -> fields.put("drivers", List.of("Test driver"));
+            case "extra-field" -> fields.put("team", List.of("Test other"));
+            case "empty" -> fields.put("drivers", List.of());
+            default -> throw new AssertionError();
+        }
+        assertThatThrownBy(() -> IncidentInteractionViews.submitted(fields, null, choices)).isInstanceOf(BusinessRuleException.class);
+    }
+
+    @Test
+    void givenSplitDriverMenus_whenSelectingBothTeams_thenRequireMembershipOfEachMenuAndAtLeastOneDriver() {
+        var drivers = java.util.stream.IntStream.range(0, 26).mapToObj(index ->
+                new org.ctc.domain.incidents.IncidentDriverChoices.DriverChoice(java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), "Test driver " + index, index < 13)).toList();
+        var choices = new org.ctc.domain.incidents.IncidentDriverChoices(java.util.UUID.randomUUID(), "f".repeat(64), drivers);
+        var fields = new java.util.HashMap<String, List<String>>(Map.of("replay", List.of("00:00"), "description", List.of("Test description"),
+                "drivers-home", List.of(drivers.getFirst().id().toString()), "drivers-away", List.of(drivers.getLast().id().toString())));
+        var result = IncidentInteractionViews.submitted(fields, null, choices);
+        assertThat(result.payload().getInvolvedDrivers()).isEqualTo("Test driver 0\nTest driver 25");
+        fields.put("drivers-home", List.of(drivers.getLast().id().toString()));
+        assertThatThrownBy(() -> IncidentInteractionViews.submitted(fields, null, choices)).isInstanceOf(BusinessRuleException.class);
+        fields.put("drivers-home", List.of()); fields.put("drivers-away", List.of());
+        assertThatThrownBy(() -> IncidentInteractionViews.submitted(fields, null, choices)).hasMessageContaining("at least one");
+    }
 }

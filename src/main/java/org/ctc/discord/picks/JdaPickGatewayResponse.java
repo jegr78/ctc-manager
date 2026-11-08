@@ -105,7 +105,8 @@ public class JdaPickGatewayResponse implements PickGatewayResponse {
                     builder.addComponents(Label.of(text.label(), input.build()));
                 }
                 case PickGatewayModal.Selection selection -> {
-                    var input = StringSelectMenu.create(selection.id()).setRequiredRange(selection.minValues(), selection.maxValues());
+                    var input = StringSelectMenu.create(selection.id()).setRequiredRange(selection.minValues(), selection.maxValues())
+                            .setRequired(selection.minValues() > 0);
                     for (var option : selection.options()) {
                         input.addOptions(SelectOption.of(option.label(), option.value()).withDefault(option.defaultSelected()));
                     }
