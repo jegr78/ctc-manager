@@ -675,15 +675,31 @@ class ImageRuntime(FakeRuntime):
                 raise ValueError('container inspection failed')
             return json.dumps([{'Id': ref, 'Image': self.case.container_images[ref]} for ref in arguments[2:]]).encode()
         if arguments[:2] == ['image', 'rm']:
-            identity = arguments[-1]
+            reference = arguments[-1]
+            image = self.case.images.get(reference)
+            identity = image['Id'] if image else reference
             self.case.removal_attempts.append(identity)
             self.case.removal_states.append((self.case.config_now()['outboundPaused'], self.case.phpmyadmin_running))
             if identity in self.case.failed_removals:
                 raise ValueError('image removal failed')
             if identity in self.case.container_images.values():
                 raise ValueError('image used by a container')
-            removed = {identity}
-            if '--no-prune' not in arguments and identity in self.case.parent_images:
+            alias = self.case.alias_before_removal.get(identity)
+            if alias:
+                image = next(v for v in self.case.images.values() if v['Id'] == identity)
+                image['RepoTags'] = [alias]
+                self.case.images[alias] = image
+            removed = set()
+            if reference.startswith('sha256:'):
+                removed.add(identity)
+            else:
+                self.case.images.pop(reference)
+                for value in self.case.images.values():
+                    if value['Id'] == identity:
+                        value['RepoDigests'] = [ref for ref in value['RepoDigests'] if ref != reference]
+                if not any(v['Id'] == identity for v in self.case.images.values()):
+                    removed.add(identity)
+            if '--no-prune' not in arguments and identity in removed and identity in self.case.parent_images:
                 removed.add(self.case.parent_images[identity])
             self.case.images = {k: v for k, v in self.case.images.items() if v['Id'] not in removed}
             return b''
@@ -711,6 +727,7 @@ class ImageRetentionTest(RolloutCase):
         self.image_calls, self.removal_attempts, self.removal_states = [], [], []
         self.failed_removals = set()
         self.parent_images = {}
+        self.alias_before_removal = {}
         self.inventory_failure = False
         self.app = lambda c: 'ghcr.io/jegr78/ctc-manager@sha256:' + c * 64
         for ref in [self.app('a'), DATABASE, 'phpmyadmin@sha256:' + 'f' * 64]:
@@ -888,3 +905,22 @@ class ImageInventorySafetyTest(RolloutCase):
         self.successive_deploys()
         self.assertIn(self.app('a'), self.images)
         self.assertEqual([], self.removal_attempts)
+
+
+    def test_alias_added_between_inventory_and_deletion_survives(self):
+        self.alias_before_removal[self.images[self.app('a')]['Id']] = 'qualification:stable'
+        self.successive_deploys()
+        self.assertIn('qualification:stable', self.images, 'delete only the authorized digest, never a concurrently added tag')
+        self.assertEqual(['qualification:stable'], self.images['qualification:stable']['RepoTags'])
+        self.assertNotIn(self.app('a'), self.images)
+
+
+    def test_multiple_old_verified_digests_for_one_image_are_unlinked(self):
+        self.release('1.49.0', app='d')
+        self.add_image(self.app('d'), self.images[self.app('a')]['Id'])
+        for ref in [self.app('a'), self.app('d')]:
+            self.images[ref]['RepoDigests'] = [self.app('a'), self.app('d')]
+        self.successive_deploys()
+        self.assertNotIn(self.app('a'), self.images)
+        self.assertNotIn(self.app('d'), self.images)
+        self.assertEqual({self.app('b'), self.app('c')}, {ref for ref in self.images if ref.startswith('ghcr.io/')})

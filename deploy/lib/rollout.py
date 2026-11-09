@@ -387,10 +387,12 @@ def cleanup_app_images(runtime, previous):
         # Do not remove another repository's alias, or an unrecorded release sharing this ID.
         if not by_id[identity] <= known:
             continue
-        try:
-            runtime.docker(['image', 'rm', '--no-prune', identity])
-        except Exception as error:
-            print('CTC: app image cleanup could not remove ' + identity + ': ' + str(error), file=sys.stderr)
+        # Unlink only authorized references, preserving aliases added after inspection.
+        for reference in sorted(by_id[identity]):
+            try:
+                runtime.docker(['image', 'rm', '--no-prune', reference])
+            except Exception as error:
+                print('CTC: app image cleanup could not remove ' + reference + ': ' + str(error), file=sys.stderr)
 
 
 def migrated(current, before):
