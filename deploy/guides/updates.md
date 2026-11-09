@@ -8,6 +8,18 @@ A merge to `master` creates a release when the commits since the last tag contai
 
 Run it as `ctc-manager` on the box, for example `ssh cachyos-ctc ~/.local/bin/ctc-manager deploy 1.53.0`. Read the release notes on GitHub first.
 
+## before the first release with the MariaDB exporter
+
+The running release drives the deploy and pulls only the app and database images before it stops the app. Pull the exporter image first as `ctc-manager`, otherwise a registry failure surfaces only at the start and the deploy rolls back:
+
+```sh
+docker pull prom/mysqld-exporter:v0.21.0@sha256:afad0c59a154fea24ca5ea0e6f95f2b0b168601b111266963dc8a347715b5318
+```
+
+The first start recreates the database container once because it gains the socket volume. Actuator health then answers on 127.0.0.1:9190; the app port keeps `/livez` and `/readyz`. Move external health probes before the deploy or silence them for its duration.
+
+A rollback to an earlier release leaves `db-exporter` running as an orphan. It cannot reach the recreated database and reports `mysql_up 0`. Remove it with `docker rm -f ctc-manager-db-exporter-1` after the rollback.
+
 ## steps
 
 The command holds the installation lock and waits up to 16 minutes for a running backup.

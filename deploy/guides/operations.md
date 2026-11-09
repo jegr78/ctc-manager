@@ -15,7 +15,7 @@ Log in as `ctc-manager`, for example `ssh cachyos-ctc`, and use the home launche
 
 It runs `/srv/ctc-manager/current/ctc-manager --directory /srv/ctc-manager`. Use the same login for `systemctl --user`.
 
-Use `status` and `doctor`. Check private HTTPS health and authenticated management access. The app binds only 127.0.0.1:9092 and Tailscale Serve exposes its authenticated HTTPS endpoint on 9443. Do not enable Funnel for CTC, reset Serve, or alter courtside 443 and Mailpit 8443.
+Use `status` and `doctor`. Check private HTTPS readiness (`/readyz`) and authenticated management access. The app binds only 127.0.0.1:9092 and Tailscale Serve exposes its authenticated HTTPS endpoint on 9443. Actuator health and unauthenticated Prometheus metrics live on 127.0.0.1:9190, the MariaDB exporter on 127.0.0.1:9191. The Box monitoring scrapes both; never add them to Serve or Funnel. The exporter reaches MariaDB only through the socket volume, never through the database network, so the writer guard stays unchanged and it keeps running during backups. Do not enable Funnel for CTC, reset Serve, or alter courtside 443 and Mailpit 8443.
 
 The Box also supplies Pi-hole DNS for the home LAN. Application installation, updates and recovery do not require a host reboot. Do not reboot the shared host for a routine CTC test. Coordinate any necessary host restart separately with the owner.
 
