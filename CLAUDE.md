@@ -437,7 +437,7 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 
 * `deploy/ctc-manager --directory PATH deploy|backup|restore|resume-integrations|doctor|status|up|stop|publish-site` operates the dedicated rootless stack. `deploy` installs `~/.local/bin/ctc-manager`, which fixes `--directory /srv/ctc-manager`, plus the systemd and phpMyAdmin units from `deploy/systemd` and `deploy/phpmyadmin`.
 * Keep installation configuration as private JSON, never source it as shell code. The configured socket must belong to the current user inside its private runtime directory, normally `/run/user/<uid>/`; reject links, non-sockets, rootful Docker and missing memory enforcement.
-* `deploy/compose.yaml` uses authenticated prod, pinned image digests, loopback 9092, no SQL host port and persistent data/log/database volumes. Actuator moves to management port 8081 (loopback 9190); only there is `/actuator/prometheus` anonymous. `db-exporter` (loopback 9191) reaches MariaDB through the shared socket volume and never joins the database network; `db-exporter-account` recreates its read-only account from `secrets/db-exporter-password` on every start. A new release must render with the previous release's `compose_spec` environment, because the running release drives the deploy. A networkless helper copies private Google credentials into an app-readable read-only volume.
+* `deploy/compose.yaml` uses authenticated prod, pinned image digests, loopback 9092, no SQL host port and persistent data/log/database volumes. Actuator moves to management port 8081 (loopback 9190); only there is `/actuator/prometheus` anonymous, and the app port keeps anonymous `/livez` and `/readyz`. `db-exporter` (loopback 9191) reaches MariaDB through the shared socket volume and never joins the database network; `db-exporter-account` recreates its read-only account from `secrets/db-exporter-password` on every start. A new release must render with the previous release's `compose_spec` environment, because the running release drives the deploy. A networkless helper copies private Google credentials into an app-readable read-only volume.
 * Deployment mutations share `.ctc-manager.lock`; there is no operation journal. Never remove an ambiguous stale lock or target unrelated projects/ports/volumes.
 * `scripts/ci/deployment-bundle.py` creates and validates release material. Extend its exact inventory when adding deployment runtime files. `DeploymentScriptsTest` runs the behavioral recipe/archive tests through Maven. Include deploy changes in CI path detection.
 
@@ -458,8 +458,8 @@ The reason: subagents do NOT read `MEMORY.md`. Only CLAUDE.md (which they always
 * The nightly `backup` stays local and uses the existing lock and complete recovery proof.
   Keep two daily stands, the first successful stand of the newest Berlin calendar month and the
   three newest `recovery-update-*` units. Use one daily backup service/timer and local journal errors. No off-host requirement, alert hook or
-  Discord delivery belongs to the backup. External Box monitoring only scrapes the loopback
-  metrics (9190) and MariaDB exporter (9191) ports.
+  Discord delivery belongs to the backup. External Box monitoring may only read the loopback
+  health/metrics (9190) and MariaDB exporter (9191) ports.
 
 ### Private Pages publication
 

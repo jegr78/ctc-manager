@@ -71,7 +71,9 @@ class SecurityIntegrationTest {
 			"spring.flyway.locations=classpath:db/migration",
 			"logging.config=classpath:logback-test.xml",
 			"management.server.port=0",
-			"management.endpoints.web.exposure.include=health,prometheus"
+			"management.endpoints.web.exposure.include=health,prometheus",
+			"management.endpoint.health.probes.add-additional-paths=true",
+			"server.forward-headers-strategy=framework"
 	})
 	@ActiveProfiles("prod")
 	class ProdManagementPortSecurityTest {
@@ -94,8 +96,31 @@ class SecurityIntegrationTest {
 
 		@Test
 		void givenManagementPort_whenAccessHealthAnonymously_thenOk() {
-			// when / then
-			assertThat(anonymousGet(managementPort, "/actuator/health").status()).isEqualTo(200);
+			// when
+			var response = anonymousGet(managementPort, "/actuator/health");
+
+			// then
+			assertThat(response.status()).isEqualTo(200);
+		}
+
+		@Test
+		void givenManagementPort_whenProbeReadinessOnApplicationPort_thenOk() {
+			// when
+			var response = anonymousGet(serverPort, "/readyz");
+
+			// then
+			assertThat(response.status()).as("the application port keeps an anonymous readiness probe").isEqualTo(200);
+		}
+
+		@Test
+		void givenSpoofedForwardedPort_whenAccessPrometheusOnApplicationPort_thenUnauthorized() {
+			// when
+			var response = RestClient.create("http://127.0.0.1:" + serverPort).get().uri("/actuator/prometheus")
+					.header("X-Forwarded-Port", String.valueOf(managementPort))
+					.exchange((request, result) -> result.getStatusCode().value());
+
+			// then
+			assertThat(response).as("forwarded headers must not unlock metrics on the application port").isEqualTo(401);
 		}
 
 		@Test
@@ -109,18 +134,48 @@ class SecurityIntegrationTest {
 
 		@Test
 		void givenManagementPort_whenAccessAdminAnonymously_thenUnauthorized() {
-			// when / then
-			assertThat(anonymousGet(serverPort, "/admin/seasons").status()).isEqualTo(401);
-		}
+			// when
+			var response = anonymousGet(serverPort, "/admin/seasons");
 
-		private Response anonymousGet(int port, String path) {
-			return RestClient.create("http://127.0.0.1:" + port).get().uri(path)
-					.exchange((request, response) -> new Response(response.getStatusCode().value(),
-							new String(response.getBody().readAllBytes())));
+			// then
+			assertThat(response.status()).isEqualTo(401);
 		}
+	}
 
-		private record Response(int status, String body) {
+	@Nested
+	@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+			"spring.datasource.url=jdbc:h2:mem:sectestsameport;DB_CLOSE_DELAY=-1",
+			"spring.datasource.driver-class-name=org.h2.Driver",
+			"spring.datasource.username=sa",
+			"spring.datasource.password=",
+			"spring.jpa.hibernate.ddl-auto=validate",
+			"spring.flyway.locations=classpath:db/migration",
+			"logging.config=classpath:logback-test.xml",
+			"management.endpoints.web.exposure.include=health,prometheus"
+	})
+	@ActiveProfiles("prod")
+	class ProdSharedPortSecurityTest {
+
+		@LocalServerPort
+		private int serverPort;
+
+		@Test
+		void givenNoSeparateManagementPort_whenScrapePrometheusAnonymously_thenUnauthorized() {
+			// when
+			var response = anonymousGet(serverPort, "/actuator/prometheus");
+
+			// then
+			assertThat(response.status()).as("metrics stay protected on a shared application port").isEqualTo(401);
 		}
+	}
+
+	private static Response anonymousGet(int port, String path) {
+		return RestClient.create("http://127.0.0.1:" + port).get().uri(path)
+				.exchange((request, response) -> new Response(response.getStatusCode().value(),
+						new String(response.getBody().readAllBytes())));
+	}
+
+	private record Response(int status, String body) {
 	}
 
 	@Nested

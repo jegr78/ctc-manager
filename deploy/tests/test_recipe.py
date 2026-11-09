@@ -345,7 +345,11 @@ else:
                           "GRANT PROCESS, REPLICATION CLIENT ON *.* TO 'exporter'@'localhost'",
                           "GRANT SELECT ON performance_schema.* TO 'exporter'@'localhost'"]:
             self.assertIn(statement, script)
-        self.assertEqual(2, script.count('GRANT '), 'the exporter account gets exactly the two documented grants')
+        grants = [line.strip() for line in script.splitlines() if line.strip().startswith('GRANT ')]
+        self.assertEqual(2, len(grants), 'the exporter account gets exactly the two documented grants')
+        self.assertLess(script.index("REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'exporter'@'localhost'"),
+                        script.index(grants[0]), 'manual extra grants are removed before every grant')
+        self.assertEqual('true', str(services['app']['environment']['MANAGEMENT_ENDPOINT_HEALTH_PROBES_ADD_ADDITIONAL_PATHS']))
         self.assertIn('--no-collect.slave_status', ' '.join(exporter['command']))
 
     def test_symlink_socket_refuses_before_docker(self):

@@ -277,7 +277,8 @@ It preserves courtside 443 and Mailpit 8443.
 
 The versioned production recipe in [deploy/README.md](deploy/README.md) runs an authenticated
 CTC app and MariaDB under a dedicated rootless Docker user. It pins images by digest, binds
-only loopback port 9092 and validates private configuration before operating the stack.
+only loopback ports (app 9092, actuator health and Prometheus metrics 9190, MariaDB exporter 9191)
+and validates private configuration before operating the stack.
 Release assets include a deployment archive and checksum inventory. This recipe is separate
 from the existing local and external-database Compose files. Host provisioning, backups and
 updates use verified release bundles. The Box is authoritative; the retired Mac app stays stopped.

@@ -21,7 +21,7 @@ public class SecurityConfig {
 		http
 				.authorizeHttpRequests(authorize -> authorize
 						.dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
-						.requestMatchers("/actuator/health").permitAll()
+						.requestMatchers("/actuator/health", "/livez", "/readyz").permitAll()
 						.requestMatchers(new AndRequestMatcher(onSeparateManagementPort(environment),
 								PathPatternRequestMatcher.withDefaults().matcher("/actuator/prometheus"))).permitAll()
 						.anyRequest().authenticated()
