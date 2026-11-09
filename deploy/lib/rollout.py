@@ -353,11 +353,16 @@ def cleanup_app_images(runtime, previous):
     images = json.loads(runtime.docker(['image', 'inspect', *sorted(identifiers)]))
     if not isinstance(images, list) or {image['Id'] for image in images} != identifiers or len(images) != len(identifiers):
         raise ValueError('incomplete local image inventory')
-    references, by_id = {}, {}
+    references, by_id, tagged = {}, {}, set()
     for image in images:
         digests = image.get('RepoDigests') or []
         if not isinstance(digests, list) or not all(isinstance(value, str) for value in digests):
             raise ValueError('invalid local image digests')
+        tags = image.get('RepoTags') or []
+        if not isinstance(tags, list) or not all(isinstance(value, str) for value in tags):
+            raise ValueError('invalid local image tags')
+        if tags:
+            tagged.add(image['Id'])
         by_id[image['Id']] = set(digests)
         for reference in digests:
             if reference in references and references[reference] != image['Id']:
@@ -369,7 +374,7 @@ def cleanup_app_images(runtime, previous):
     users = set(runtime.docker(['container', 'ls', '--all', '--quiet', '--no-trunc']).decode().split())
     if not users or any(not re.fullmatch(r'[a-f0-9]{64}', value) for value in users):
         raise ValueError('cannot establish container inventory')
-    containers = json.loads(runtime.docker(['container', 'inspect', *sorted(users)])) if users else []
+    containers = json.loads(runtime.docker(['container', 'inspect', *sorted(users)]))
     if not isinstance(containers, list) or {item['Id'] for item in containers} != users or len(containers) != len(users):
         raise ValueError('incomplete container inventory')
     for container in containers:
@@ -377,13 +382,13 @@ def cleanup_app_images(runtime, previous):
             raise ValueError('invalid container image identity')
         protected.add(container['Image'])
 
-    candidates = {references[ref] for ref in known if ref in references} - protected
+    candidates = {references[ref] for ref in known if ref in references} - protected - tagged
     for identity in sorted(candidates):
         # Do not remove another repository's alias, or an unrecorded release sharing this ID.
         if not by_id[identity] <= known:
             continue
         try:
-            runtime.docker(['image', 'rm', identity])
+            runtime.docker(['image', 'rm', '--no-prune', identity])
         except Exception as error:
             print('CTC: app image cleanup could not remove ' + identity + ': ' + str(error), file=sys.stderr)
 

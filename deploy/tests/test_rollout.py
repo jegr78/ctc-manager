@@ -675,13 +675,17 @@ class ImageRuntime(FakeRuntime):
                 raise ValueError('container inspection failed')
             return json.dumps([{'Id': ref, 'Image': self.case.container_images[ref]} for ref in arguments[2:]]).encode()
         if arguments[:2] == ['image', 'rm']:
-            self.case.removal_attempts.append(arguments[2])
+            identity = arguments[-1]
+            self.case.removal_attempts.append(identity)
             self.case.removal_states.append((self.case.config_now()['outboundPaused'], self.case.phpmyadmin_running))
-            if arguments[2] in self.case.failed_removals:
+            if identity in self.case.failed_removals:
                 raise ValueError('image removal failed')
-            if arguments[2] in self.case.container_images.values():
+            if identity in self.case.container_images.values():
                 raise ValueError('image used by a container')
-            self.case.images = {k: v for k, v in self.case.images.items() if v['Id'] != arguments[2]}
+            removed = {identity}
+            if '--no-prune' not in arguments and identity in self.case.parent_images:
+                removed.add(self.case.parent_images[identity])
+            self.case.images = {k: v for k, v in self.case.images.items() if v['Id'] not in removed}
             return b''
         return super().docker(arguments, **kwargs)
 
@@ -706,6 +710,7 @@ class ImageRetentionTest(RolloutCase):
         self.images, self.container_images = {}, {}
         self.image_calls, self.removal_attempts, self.removal_states = [], [], []
         self.failed_removals = set()
+        self.parent_images = {}
         self.inventory_failure = False
         self.app = lambda c: 'ghcr.io/jegr78/ctc-manager@sha256:' + c * 64
         for ref in [self.app('a'), DATABASE, 'phpmyadmin@sha256:' + 'f' * 64]:
@@ -785,7 +790,7 @@ class ImageRetentionTest(RolloutCase):
         import io
         self.failed_removals.add(self.images[self.app('a')]['Id'])
         self.release('1.52.0', app='b'); self.deploy('1.52.0')
-        self.release('1.49.0', app='d'); self.add_image(self.app('d'))
+        self.release('1.49.0', app='d'); self.add_image(self.app('d'), 'sha256:' + 'f' * 64)
         self.release('1.53.0', app='c')
         with contextlib.redirect_stderr(io.StringIO()) as stderr:
             result = self.deploy('1.53.0')
@@ -867,4 +872,19 @@ class ImageInventorySafetyTest(RolloutCase):
             result = self.deploy('1.52.0')
         self.assertEqual('1.52.0', result['deployed'])
         self.assertIn('app image cleanup incomplete', stderr.getvalue())
+        self.assertEqual([], self.removal_attempts)
+
+
+    def test_unrecorded_untagged_parent_image_is_not_pruned(self):
+        self.add_image('untagged-parent')
+        parent = self.images['untagged-parent']; parent['RepoDigests'] = []
+        self.parent_images[self.images[self.app('a')]['Id']] = parent['Id']
+        self.successive_deploys()
+        self.assertNotIn(self.app('a'), self.images)
+        self.assertIn('untagged-parent', self.images, 'deletion must not cascade beyond the verified app image')
+
+    def test_local_tag_on_known_old_digest_preserves_the_image(self):
+        self.images[self.app('a')]['RepoTags'] = ['qualification:stable']
+        self.successive_deploys()
+        self.assertIn(self.app('a'), self.images)
         self.assertEqual([], self.removal_attempts)
