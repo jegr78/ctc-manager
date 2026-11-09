@@ -39,36 +39,28 @@ services:
     volumes:
       - dbsocket:/run/mysqld
       - ${CTC_DB_ROOT_PASSWORD_FILE:?Missing DB root secret}:/run/secrets/db-root-password:ro
-      - &exporter-secret
-        type: bind
-        source: ./secrets/db-exporter-password
-        target: /run/secrets/db-exporter-password
-        read_only: true
-        bind:
-          create_host_path: false
     entrypoint: [/bin/sh, -ec]
     # Runs on every start because restore replaces the database volume.
+    # unix_socket admits only processes running as the database image's uid 999 (mysql).
     command:
       - |
-        password="$$(cat /run/secrets/db-exporter-password)"
-        case "$$password" in ''|*[!A-Za-z0-9._~-]*) echo 'db-exporter-password must match [A-Za-z0-9._~-]+' >&2; exit 1;; esac
         MYSQL_PWD="$$(cat /run/secrets/db-root-password)" exec mariadb --user=root --socket=/run/mysqld/mysqld.sock <<SQL
-        CREATE USER IF NOT EXISTS 'exporter'@'localhost' IDENTIFIED BY '$$password' WITH MAX_USER_CONNECTIONS 3;
-        ALTER USER 'exporter'@'localhost' IDENTIFIED BY '$$password' WITH MAX_USER_CONNECTIONS 3;
-        REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'exporter'@'localhost';
-        GRANT PROCESS, REPLICATION CLIENT ON *.* TO 'exporter'@'localhost';
-        GRANT SELECT ON performance_schema.* TO 'exporter'@'localhost';
+        CREATE USER IF NOT EXISTS 'mysql'@'localhost' IDENTIFIED VIA unix_socket WITH MAX_USER_CONNECTIONS 3;
+        ALTER USER 'mysql'@'localhost' IDENTIFIED VIA unix_socket WITH MAX_USER_CONNECTIONS 3;
+        REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'mysql'@'localhost';
+        GRANT PROCESS, REPLICATION CLIENT ON *.* TO 'mysql'@'localhost';
+        GRANT SELECT ON performance_schema.* TO 'mysql'@'localhost';
         SQL
     logging: *logging
   db-exporter:
     image: prom/mysqld-exporter:v0.21.0@sha256:afad0c59a154fea24ca5ea0e6f95f2b0b168601b111266963dc8a347715b5318
     restart: unless-stopped
-    user: '0:0'
+    user: '999:999'
     mem_limit: 64m
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
-    tmpfs: ['/run/exporter:size=1m,mode=0700']
+    tmpfs: ['/run/exporter:size=1m,mode=0700,uid=999']
     depends_on:
       db-exporter-account:
         condition: service_completed_successfully
@@ -77,12 +69,10 @@ services:
         source: dbsocket
         target: /run/mysqld
         read_only: true
-      - *exporter-secret
     entrypoint: [/bin/sh, -ec]
     command:
       - |
-        umask 077
-        printf '[client]\nuser=exporter\nsocket=/run/mysqld/mysqld.sock\npassword=%s\n' "$$(cat /run/secrets/db-exporter-password)" > /run/exporter/my.cnf
+        printf '[client]\nuser=mysql\nsocket=/run/mysqld/mysqld.sock\n' > /run/exporter/my.cnf
         exec /bin/mysqld_exporter --config.my-cnf=/run/exporter/my.cnf --no-collect.slave_status
     ports:
       - 127.0.0.1:9191:9104

@@ -10,11 +10,9 @@ Run it as `ctc-manager` on the box, for example `ssh cachyos-ctc ~/.local/bin/ct
 
 ## before the first release with the MariaDB exporter
 
-The running release drives the deploy and cannot check files the new release needs. Prepare them first as `ctc-manager`, otherwise the start fails and the deploy rolls back:
+The running release drives the deploy and pulls only the app and database images before it stops the app. Pull the exporter image first as `ctc-manager`, otherwise a registry failure surfaces only at the start and the deploy rolls back:
 
 ```sh
-cd /srv/ctc-manager
-(umask 077; python3 -c 'import secrets; print(secrets.token_urlsafe(32), end="")' > secrets/db-exporter-password)
 docker pull prom/mysqld-exporter:v0.21.0@sha256:afad0c59a154fea24ca5ea0e6f95f2b0b168601b111266963dc8a347715b5318
 ```
 

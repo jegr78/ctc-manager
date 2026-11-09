@@ -20,11 +20,9 @@ installation in mode-0700 directories. The protected `secrets/app.env` supplies
 never use the example development credentials. The app database password must match
 `secrets/db-password`. Keep `secrets/db-root-password` separate. Mount the actual Google service
 account JSON as `secrets/google.json` without exposing it in logs or a public directory.
-Create `secrets/db-exporter-password` (mode 0600, characters `A-Za-z0-9._~-` only) before the
-first start of a release with the exporter, for example
-`python3 -c 'import secrets; print(secrets.token_urlsafe(32), end="")' > secrets/db-exporter-password`.
-Compose reads it by this fixed path. Every start recreates the read-only `exporter`@`localhost`
-account from it, so it is not part of recovery units and can be replaced at any time.
+The MariaDB exporter needs no secret. Every start recreates its read-only `mysql`@`localhost`
+account with `unix_socket` authentication, which admits only processes running as the database
+image's uid 999 on the shared socket volume.
 
 Run commands as the installation owner:
 

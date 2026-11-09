@@ -330,24 +330,22 @@ else:
         for service in [exporter, account]:
             mounts = {v['target']: v for v in service['volumes']}
             self.assertEqual(socket_volume['source'], mounts['/run/mysqld']['source'])
-            secret = mounts['/run/secrets/db-exporter-password']
-            self.assertEqual(str(self.install / 'secrets/db-exporter-password'), secret['source'])
-            self.assertTrue(secret['read_only'])
-            self.assertFalse(secret['bind']['create_host_path'])
             self.assertTrue(service['read_only'])
             self.assertEqual(['ALL'], service['cap_drop'])
             self.assertNotIn('/var/lib/mysql', mounts)
+        self.assertEqual('999:999', exporter['user'], 'unix_socket maps uid 999 to the mysql account')
+        self.assertNotIn('password', json.dumps(exporter).lower(), 'the exporter needs no password')
         self.assertTrue(next(v for v in exporter['volumes'] if v['target'] == '/run/mysqld')['read_only'])
         self.assertEqual('service_healthy', account['depends_on']['db']['condition'])
         self.assertEqual('service_completed_successfully', exporter['depends_on']['db-exporter-account']['condition'])
         script = ' '.join(account['command'])
-        for statement in ["CREATE USER IF NOT EXISTS 'exporter'@'localhost'", 'MAX_USER_CONNECTIONS 3',
-                          "GRANT PROCESS, REPLICATION CLIENT ON *.* TO 'exporter'@'localhost'",
-                          "GRANT SELECT ON performance_schema.* TO 'exporter'@'localhost'"]:
+        for statement in ["CREATE USER IF NOT EXISTS 'mysql'@'localhost' IDENTIFIED VIA unix_socket", 'MAX_USER_CONNECTIONS 3',
+                          "GRANT PROCESS, REPLICATION CLIENT ON *.* TO 'mysql'@'localhost'",
+                          "GRANT SELECT ON performance_schema.* TO 'mysql'@'localhost'"]:
             self.assertIn(statement, script)
         grants = [line.strip() for line in script.splitlines() if line.strip().startswith('GRANT ')]
         self.assertEqual(2, len(grants), 'the exporter account gets exactly the two documented grants')
-        self.assertLess(script.index("REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'exporter'@'localhost'"),
+        self.assertLess(script.index("REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'mysql'@'localhost'"),
                         script.index(grants[0]), 'manual extra grants are removed before every grant')
         self.assertEqual('true', str(services['app']['environment']['MANAGEMENT_ENDPOINT_HEALTH_PROBES_ADD_ADDITIONAL_PATHS']))
         self.assertIn('--no-collect.slave_status', ' '.join(exporter['command']))
