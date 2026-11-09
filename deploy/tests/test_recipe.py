@@ -300,6 +300,54 @@ else:
         self.assertEqual('service_completed_successfully', services['app']['depends_on']['credentials-init']['condition'])
         self.assertEqual('none', services['credentials-init']['network_mode'])
 
+    def test_compose_metrics_and_exporter_stay_private_with_previous_release_environment(self):
+        environment = {**os.environ,
+            'CTC_APP_IMAGE': self.config['appImage'], 'CTC_DATABASE_IMAGE': self.config['databaseImage'],
+            'CTC_APP_ENV_FILE': self.config['appEnvFile'],
+            'CTC_DB_PASSWORD_FILE': self.config['databasePasswordFile'],
+            'CTC_DB_ROOT_PASSWORD_FILE': self.config['databaseRootPasswordFile'],
+            'CTC_GOOGLE_FILE': self.config['googleCredentialsFile']}
+        result = subprocess.run(['docker', 'compose', '--env-file', '/dev/null', '--project-directory', str(self.install),
+            '-f', str(ROOT / 'deploy/compose.yaml'), 'config', '--format', 'json'],
+            env=environment, text=True, capture_output=True)
+        self.assertEqual(0, result.returncode, 'compose must render with the previous release environment: ' + result.stderr)
+        services = json.loads(result.stdout)['services']
+        published = {}
+        for name, service in services.items():
+            for port in service.get('ports', []):
+                self.assertEqual('127.0.0.1', port['host_ip'], name + ' publishes beyond loopback')
+                published[int(port['published'])] = (name, port['target'])
+        self.assertEqual({9092: ('app', 8080), 9190: ('app', 8081), 9191: ('db-exporter', 9104)}, published)
+        app = services['app']['environment']
+        self.assertEqual('8081', str(app['MANAGEMENT_SERVER_PORT']))
+        self.assertEqual('health,prometheus', app['MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE'])
+        self.assertIn('http://localhost:8081/actuator/health', services['app']['healthcheck']['test'])
+        exporter, account = services['db-exporter'], services['db-exporter-account']
+        self.assertNotIn('database', exporter.get('networks', {}), 'the database writer guard must not see the exporter')
+        self.assertEqual('none', account['network_mode'])
+        self.assertRegex(exporter['image'], r'^prom/mysqld-exporter:v\d+\.\d+\.\d+@sha256:[a-f0-9]{64}$')
+        socket_volume = next(v for v in services['db']['volumes'] if v['target'] == '/run/mysqld')
+        for service in [exporter, account]:
+            mounts = {v['target']: v for v in service['volumes']}
+            self.assertEqual(socket_volume['source'], mounts['/run/mysqld']['source'])
+            secret = mounts['/run/secrets/db-exporter-password']
+            self.assertEqual(str(self.install / 'secrets/db-exporter-password'), secret['source'])
+            self.assertTrue(secret['read_only'])
+            self.assertFalse(secret['bind']['create_host_path'])
+            self.assertTrue(service['read_only'])
+            self.assertEqual(['ALL'], service['cap_drop'])
+            self.assertNotIn('/var/lib/mysql', mounts)
+        self.assertTrue(next(v for v in exporter['volumes'] if v['target'] == '/run/mysqld')['read_only'])
+        self.assertEqual('service_healthy', account['depends_on']['db']['condition'])
+        self.assertEqual('service_completed_successfully', exporter['depends_on']['db-exporter-account']['condition'])
+        script = ' '.join(account['command'])
+        for statement in ["CREATE USER IF NOT EXISTS 'exporter'@'localhost'", 'MAX_USER_CONNECTIONS 3',
+                          "GRANT PROCESS, REPLICATION CLIENT ON *.* TO 'exporter'@'localhost'",
+                          "GRANT SELECT ON performance_schema.* TO 'exporter'@'localhost'"]:
+            self.assertIn(statement, script)
+        self.assertEqual(2, script.count('GRANT '), 'the exporter account gets exactly the two documented grants')
+        self.assertIn('--no-collect.slave_status', ' '.join(exporter['command']))
+
     def test_symlink_socket_refuses_before_docker(self):
         target = self.runtime / 'other.sock'
         self.socket_path.rename(target)

@@ -7,7 +7,8 @@ Compose recipes remain available for local or external-database use.
 The dedicated `ctc-manager` Linux user owns the installation with mode 0700. Its rootless
 Docker socket must be below its private `XDG_RUNTIME_DIR`, normally `/run/user/<uid>/`.
 The launcher rejects links, non-socket endpoints and a foreign socket owner. Do not use the system Docker daemon or join
-the host docker group. CTC publishes only loopback 9092; MariaDB has no published port.
+the host docker group. CTC publishes only loopback ports: the app on 9092, its actuator health and
+Prometheus metrics on 9190, and the MariaDB exporter on 9191. MariaDB itself has no published port.
 Follow [guides/host.md](guides/host.md) for read-only host checks and explicit setup of
 Tailnet-only HTTPS9443 without changing courtside. Run host setup from an operator-owned verified source copy.
 
@@ -19,6 +20,11 @@ installation in mode-0700 directories. The protected `secrets/app.env` supplies
 never use the example development credentials. The app database password must match
 `secrets/db-password`. Keep `secrets/db-root-password` separate. Mount the actual Google service
 account JSON as `secrets/google.json` without exposing it in logs or a public directory.
+Create `secrets/db-exporter-password` (mode 0600, characters `A-Za-z0-9._~-` only) before the
+first start of a release with the exporter, for example
+`python3 -c 'import secrets; print(secrets.token_urlsafe(32), end="")' > secrets/db-exporter-password`.
+Compose reads it by this fixed path. Every start recreates the read-only `exporter`@`localhost`
+account from it, so it is not part of recovery units and can be replaced at any time.
 
 Run commands as the installation owner:
 
