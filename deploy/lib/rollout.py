@@ -323,7 +323,76 @@ def deploy(root, version, allow_database_upgrade=False, drill=False, runtime_for
             remove_legacy(current, root)
         except BaseException as error:
             result['warning'] = 'legacy cleanup incomplete: ' + str(error)
+    try:
+        cleanup_app_images(current, previous)
+    except BaseException as error:
+        print('CTC: app image cleanup incomplete: ' + str(error), file=sys.stderr)
     return result
+
+
+def cleanup_app_images(runtime, previous):
+    """Remove only verified release images, preserving rollback and all container users."""
+    releases = private_path(runtime.root / 'releases', directory=True)
+    retained = [installed_release(private_path(Path(previous), directory=True)), runtime.release]
+    known = {record['appImage'] for record in retained}
+    for path in sorted(releases.iterdir()):
+        if not re.fullmatch(SEMVER, path.name):
+            continue
+        try:
+            record = installed_release(private_path(path, directory=True))
+            if record['version'] != path.name:
+                raise ValueError('release directory and manifest versions differ')
+            known.add(record['appImage'])
+        except Exception as error:
+            print('CTC: app image cleanup skipped release ' + path.name + ': ' + str(error), file=sys.stderr)
+
+    # Resolve immutable release digests to local IDs; tags never authorize a deletion.
+    identifiers = set(runtime.docker(['image', 'ls', '--quiet', '--no-trunc']).decode().split())
+    if not identifiers or any(not re.fullmatch(r'sha256:[a-f0-9]{64}', value) for value in identifiers):
+        raise ValueError('cannot establish local image inventory')
+    images = json.loads(runtime.docker(['image', 'inspect', *sorted(identifiers)]))
+    if not isinstance(images, list) or {image['Id'] for image in images} != identifiers or len(images) != len(identifiers):
+        raise ValueError('incomplete local image inventory')
+    references, by_id, tagged = {}, {}, set()
+    for image in images:
+        digests = image.get('RepoDigests') or []
+        if not isinstance(digests, list) or not all(isinstance(value, str) for value in digests):
+            raise ValueError('invalid local image digests')
+        tags = image.get('RepoTags') or []
+        if not isinstance(tags, list) or not all(isinstance(value, str) for value in tags):
+            raise ValueError('invalid local image tags')
+        if tags:
+            tagged.add(image['Id'])
+        by_id[image['Id']] = set(digests)
+        for reference in digests:
+            if reference in references and references[reference] != image['Id']:
+                raise ValueError('ambiguous local image digest')
+            references[reference] = image['Id']
+    protected = {references[record[field]] for record in retained for field in ['appImage', 'databaseImage']}
+
+    # Inspect all projects and stopped containers too; uncertainty prevents all removals.
+    users = set(runtime.docker(['container', 'ls', '--all', '--quiet', '--no-trunc']).decode().split())
+    if not users or any(not re.fullmatch(r'[a-f0-9]{64}', value) for value in users):
+        raise ValueError('cannot establish container inventory')
+    containers = json.loads(runtime.docker(['container', 'inspect', *sorted(users)]))
+    if not isinstance(containers, list) or {item['Id'] for item in containers} != users or len(containers) != len(users):
+        raise ValueError('incomplete container inventory')
+    for container in containers:
+        if not re.fullmatch(r'sha256:[a-f0-9]{64}', container['Image']):
+            raise ValueError('invalid container image identity')
+        protected.add(container['Image'])
+
+    candidates = {references[ref] for ref in known if ref in references} - protected - tagged
+    for identity in sorted(candidates):
+        # Do not remove another repository's alias, or an unrecorded release sharing this ID.
+        if not by_id[identity] <= known:
+            continue
+        # Unlink only authorized references, preserving aliases added after inspection.
+        for reference in sorted(by_id[identity]):
+            try:
+                runtime.docker(['image', 'rm', '--no-prune', reference])
+            except Exception as error:
+                print('CTC: app image cleanup could not remove ' + reference + ': ' + str(error), file=sys.stderr)
 
 
 def migrated(current, before):

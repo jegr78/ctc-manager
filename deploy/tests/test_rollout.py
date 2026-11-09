@@ -276,7 +276,8 @@ class DeployTest(RolloutCase):
         self.assertEqual('1.52.0', self.current())
         self.assertFalse(self.config_now()['outboundPaused'], 'the previous outbound setting returns after success')
         self.assertIn(('capture', '1.51.0', True), self.log)
-        self.assertEqual(('systemctl', 'start'), self.log[-1], 'phpMyAdmin starts again last')
+        self.assertEqual(('systemctl', 'start'), [entry for entry in self.log if entry[0] == 'systemctl'][-1],
+                         'phpMyAdmin is restored before best-effort image cleanup')
         self.assertTrue(result['unit'].split('/')[-1].startswith('recovery-update-'))
 
     def test_older_or_equal_version_is_refused_without_stopping(self):
@@ -645,3 +646,283 @@ class MainTest(RolloutCase):
                 self.run_main(operation, *arguments)
                 shutil.rmtree(self.root / '.ctc-manager.lock')
                 self.assertIs(rollout.diagnosed, called.call_args.kwargs.get('runtime_for'))
+
+
+class ImageRuntime(FakeRuntime):
+    """Synthetic daemon: no fixture command reaches Docker or owner data."""
+    def docker(self, arguments, **kwargs):
+        self.case.image_calls.append(list(arguments))
+        if arguments[:1] == ['pull']:
+            self.case.add_image(arguments[1])
+        if arguments[:2] == ['image', 'ls']:
+            return ('\n'.join(sorted({v['Id'] for v in self.case.images.values()}))).encode()
+        if arguments[:2] == ['image', 'inspect']:
+            values = []
+            for reference in arguments[2:]:
+                item = self.case.images.get(reference)
+                if item is None:
+                    item = next((v for v in self.case.images.values() if v['Id'] == reference), None)
+                if item is None:
+                    raise ValueError('image missing locally')
+                values.append(item)
+            return json.dumps(values).encode()
+        if arguments[:2] == ['container', 'ls']:
+            if self.case.inventory_failure is True:
+                raise ValueError('container listing failed')
+            return '\n'.join(self.case.container_images).encode()
+        if arguments[:2] == ['container', 'inspect']:
+            if self.case.inventory_failure == 'inspect':
+                raise ValueError('container inspection failed')
+            return json.dumps([{'Id': ref, 'Image': self.case.container_images[ref]} for ref in arguments[2:]]).encode()
+        if arguments[:2] == ['image', 'rm']:
+            reference = arguments[-1]
+            image = self.case.images.get(reference)
+            identity = image['Id'] if image else reference
+            self.case.removal_attempts.append(identity)
+            self.case.removal_states.append((self.case.config_now()['outboundPaused'], self.case.phpmyadmin_running))
+            if identity in self.case.failed_removals:
+                raise ValueError('image removal failed')
+            if identity in self.case.container_images.values():
+                raise ValueError('image used by a container')
+            alias = self.case.alias_before_removal.get(identity)
+            if alias:
+                image = next(v for v in self.case.images.values() if v['Id'] == identity)
+                image['RepoTags'] = [alias]
+                self.case.images[alias] = image
+            removed = set()
+            if reference.startswith('sha256:'):
+                removed.add(identity)
+            else:
+                self.case.images.pop(reference)
+                for value in self.case.images.values():
+                    if value['Id'] == identity:
+                        value['RepoDigests'] = [ref for ref in value['RepoDigests'] if ref != reference]
+                if not any(v['Id'] == identity for v in self.case.images.values()):
+                    removed.add(identity)
+            if '--no-prune' not in arguments and identity in removed and identity in self.case.parent_images:
+                removed.add(self.case.parent_images[identity])
+            self.case.images = {k: v for k, v in self.case.images.items() if v['Id'] not in removed}
+            return b''
+        return super().docker(arguments, **kwargs)
+
+    def compose(self, arguments):
+        result = super().compose(arguments)
+        if arguments[0] == 'up' and (arguments[-1] == 'app' or arguments[-1] == '180'):
+            image = self.config['appImage']
+            if image not in self.case.images:
+                raise ValueError('rollback image was removed')
+            self.case.container_images['1' * 64] = self.case.images[image]['Id']
+        return result
+
+
+class ImageRetentionTest(RolloutCase):
+    capture = DeployTest.capture
+    deploy = DeployTest.deploy
+    systemctl = DeployTest.systemctl
+    current = DeployTest.current
+
+    def setUp(self):
+        RolloutCase.setUp(self)
+        self.images, self.container_images = {}, {}
+        self.image_calls, self.removal_attempts, self.removal_states = [], [], []
+        self.failed_removals = set()
+        self.parent_images = {}
+        self.alias_before_removal = {}
+        self.inventory_failure = False
+        self.app = lambda c: 'ghcr.io/jegr78/ctc-manager@sha256:' + c * 64
+        for ref in [self.app('a'), DATABASE, 'phpmyadmin@sha256:' + 'f' * 64]:
+            self.add_image(ref)
+        self.container_images['1' * 64] = self.images[self.app('a')]['Id']
+        self.container_images['2' * 64] = self.images[DATABASE]['Id']
+
+    def add_image(self, ref, identity=None):
+        if ref not in self.images:
+            identity = identity or 'sha256:' + hashlib.sha256(ref.encode()).hexdigest()
+            self.images[ref] = {'Id': identity, 'RepoDigests': [ref], 'Config': {'User': 'ctc', 'Labels': {
+                'org.ctc.recovery.version': '1', 'org.opencontainers.image.version': '11.8.2'}}}
+
+    def runtime_for(self, root, deploy_root):
+        return ImageRuntime(self, root, deploy_root)
+
+    def successive_deploys(self):
+        for version, letter in [('1.52.0', 'b'), ('1.53.0', 'c')]:
+            self.release(version, app=letter)
+            self.deploy(version)
+
+    def test_three_releases_keep_two_app_images_and_local_rollback(self):
+        self.successive_deploys()
+        self.release('1.54.0', app='d'); self.deploy('1.54.0')
+        self.assertEqual({self.app('c'), self.app('d')}, {r for r in self.images if r.startswith('ghcr.io/')})
+        self.assertEqual([(False, True), (False, True)], self.removal_states,
+                         'cleanup follows resume and phpMyAdmin restoration after each successful deploy')
+        self.image_calls.clear()
+        rollout.rollback(self.root, self.root / 'releases/1.53.0', None, False, None, self.runtime_for, self.systemctl, self.base / 'home')
+        self.assertEqual(self.images[self.app('c')]['Id'], self.container_images['1' * 64])
+        self.assertFalse(any(call[0] == 'pull' for call in self.image_calls), 'rollback must use the local image')
+
+    def test_stopped_container_from_another_project_protects_old_image(self):
+        self.container_images['3' * 64] = self.images[self.app('a')]['Id']
+        self.successive_deploys()
+        self.assertIn(self.app('a'), self.images)
+        self.assertEqual([], self.removal_attempts)
+        self.assertIn(['container', 'ls', '--all', '--quiet', '--no-trunc'], self.image_calls)
+
+    def test_unknown_app_database_and_phpmyadmin_images_survive(self):
+        self.add_image(self.app('d'))
+        self.successive_deploys()
+        self.assertIn(self.app('d'), self.images)
+        self.assertIn(DATABASE, self.images)
+        self.assertIn('phpmyadmin@sha256:' + 'f' * 64, self.images)
+        self.assertTrue(all(call[:2] not in [['system', 'prune'], ['image', 'prune']] and '--force' not in call for call in self.image_calls))
+
+    def assert_shared_image_retained(self, alias):
+        self.add_image(self.app(alias), self.images[self.app('a')]['Id'])
+        refs = [self.app('a'), self.app(alias)]
+        for ref in refs:
+            self.images[ref]['RepoDigests'] = refs
+        self.successive_deploys()
+        self.assertIn(self.app('a'), self.images)
+        self.assertEqual([], self.removal_attempts)
+
+    def test_shared_image_identity_with_current_release_is_retained(self):
+        self.assert_shared_image_retained('c')
+
+    def test_shared_image_identity_with_previous_release_is_retained(self):
+        self.assert_shared_image_retained('b')
+
+    def assert_inventory_failure_retains_images(self, failure):
+        import io
+        self.inventory_failure = failure
+        with contextlib.redirect_stderr(io.StringIO()) as stderr:
+            self.successive_deploys()
+        self.assertEqual([], self.removal_attempts)
+        self.assertIn(self.app('a'), self.images)
+        self.assertIn('app image cleanup', stderr.getvalue())
+
+    def test_failed_container_listing_preserves_every_image(self):
+        self.assert_inventory_failure_retains_images(True)
+
+    def test_failed_container_inspection_preserves_every_image(self):
+        self.assert_inventory_failure_retains_images('inspect')
+
+    def test_removal_failure_warns_but_keeps_success_and_continues(self):
+        import io
+        self.failed_removals.add(self.images[self.app('a')]['Id'])
+        self.release('1.52.0', app='b'); self.deploy('1.52.0')
+        self.release('1.49.0', app='d'); self.add_image(self.app('d'), 'sha256:' + 'f' * 64)
+        self.release('1.53.0', app='c')
+        with contextlib.redirect_stderr(io.StringIO()) as stderr:
+            result = self.deploy('1.53.0')
+        self.assertEqual('1.53.0', result['deployed'])
+        self.assertIn('app image cleanup', stderr.getvalue())
+        self.assertNotIn(self.app('d'), self.images)
+        self.assertIn(self.app('a'), self.images)
+
+    def test_failed_deploy_and_rollback_drill_never_remove_images(self):
+        self.release('1.52.0', app='b')
+        self.failing.add(('compose', '1.52.0'))
+        with self.assertRaises(rollout.DeployFailed):
+            self.deploy('1.52.0')
+        self.failing.clear()
+        with self.assertRaises(rollout.DeployFailed):
+            self.deploy('1.51.0', drill=True)
+        self.assertEqual([], self.removal_attempts)
+
+    def test_invalid_or_symlinked_release_record_does_not_authorize_removal(self):
+        import io
+        invalid = self.release('1.49.0', app='d'); self.add_image(self.app('d'))
+        (invalid / 'compose.yaml').write_text('corrupt')
+        external = self.base / 'external'; shutil.copytree(self.old, external)
+        (self.root / 'releases/1.48.0').symlink_to(external)
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.successive_deploys()
+        self.assertIn(self.app('d'), self.images)
+        self.assertNotIn(self.app('a'), self.images)
+
+
+class ImageInventorySafetyTest(RolloutCase):
+    setUp = ImageRetentionTest.setUp
+    add_image = ImageRetentionTest.add_image
+    runtime_for = ImageRetentionTest.runtime_for
+    successive_deploys = ImageRetentionTest.successive_deploys
+    capture = DeployTest.capture
+    deploy = DeployTest.deploy
+    systemctl = DeployTest.systemctl
+    current = DeployTest.current
+    # Reuse the synthetic daemon setup without repeating its integration scenarios.
+    def assert_bad_inventory(self, command, transform):
+        import io
+        original = ImageRuntime.docker
+        def docker(runtime, arguments, **kwargs):
+            raw = original(runtime, arguments, **kwargs)
+            return transform(raw) if arguments[:2] == command else raw
+        self.release('1.52.0', app='b'); self.deploy('1.52.0')
+        self.release('1.53.0', app='c')
+        with patch.object(ImageRuntime, 'docker', docker), contextlib.redirect_stderr(io.StringIO()) as stderr:
+            result = self.deploy('1.53.0')
+        self.assertEqual('1.53.0', result['deployed'])
+        self.assertEqual([], self.removal_attempts)
+        self.assertIn(self.app('a'), self.images)
+        self.assertIn('app image cleanup', stderr.getvalue())
+
+    def test_empty_container_inventory_is_uncertain_while_app_is_running(self):
+        self.assert_bad_inventory(['container', 'ls'], lambda raw: b'')
+
+    def test_invalid_container_identifier_blocks_cleanup(self):
+        self.assert_bad_inventory(['container', 'ls'], lambda raw: b'--all')
+
+    def test_missing_container_inspection_blocks_cleanup(self):
+        self.assert_bad_inventory(['container', 'inspect'], lambda raw: b'[]')
+
+    def test_missing_image_inspection_blocks_cleanup(self):
+        # Compatibility uses single-image inspection too; change only full inventory responses.
+        self.assert_bad_inventory(['image', 'inspect'], lambda raw: b'[]' if len(json.loads(raw)) > 1 else raw)
+
+    def test_unknown_digest_alias_protects_the_whole_image_id(self):
+        self.images[self.app('a')]['RepoDigests'].append('another-app@sha256:' + 'e' * 64)
+        self.successive_deploys()
+        self.assertIn(self.app('a'), self.images)
+        self.assertEqual([], self.removal_attempts)
+
+    def test_cleanup_interrupt_does_not_turn_a_completed_deploy_into_failure(self):
+        import io
+        self.release('1.52.0', app='b')
+        with patch.object(rollout, 'cleanup_app_images', side_effect=KeyboardInterrupt), contextlib.redirect_stderr(io.StringIO()) as stderr:
+            result = self.deploy('1.52.0')
+        self.assertEqual('1.52.0', result['deployed'])
+        self.assertIn('app image cleanup incomplete', stderr.getvalue())
+        self.assertEqual([], self.removal_attempts)
+
+
+    def test_unrecorded_untagged_parent_image_is_not_pruned(self):
+        self.add_image('untagged-parent')
+        parent = self.images['untagged-parent']; parent['RepoDigests'] = []
+        self.parent_images[self.images[self.app('a')]['Id']] = parent['Id']
+        self.successive_deploys()
+        self.assertNotIn(self.app('a'), self.images)
+        self.assertIn('untagged-parent', self.images, 'deletion must not cascade beyond the verified app image')
+
+    def test_local_tag_on_known_old_digest_preserves_the_image(self):
+        self.images[self.app('a')]['RepoTags'] = ['qualification:stable']
+        self.successive_deploys()
+        self.assertIn(self.app('a'), self.images)
+        self.assertEqual([], self.removal_attempts)
+
+
+    def test_alias_added_between_inventory_and_deletion_survives(self):
+        self.alias_before_removal[self.images[self.app('a')]['Id']] = 'qualification:stable'
+        self.successive_deploys()
+        self.assertIn('qualification:stable', self.images, 'delete only the authorized digest, never a concurrently added tag')
+        self.assertEqual(['qualification:stable'], self.images['qualification:stable']['RepoTags'])
+        self.assertNotIn(self.app('a'), self.images)
+
+
+    def test_multiple_old_verified_digests_for_one_image_are_unlinked(self):
+        self.release('1.49.0', app='d')
+        self.add_image(self.app('d'), self.images[self.app('a')]['Id'])
+        for ref in [self.app('a'), self.app('d')]:
+            self.images[ref]['RepoDigests'] = [self.app('a'), self.app('d')]
+        self.successive_deploys()
+        self.assertNotIn(self.app('a'), self.images)
+        self.assertNotIn(self.app('d'), self.images)
+        self.assertEqual({self.app('b'), self.app('c')}, {ref for ref in self.images if ref.startswith('ghcr.io/')})
