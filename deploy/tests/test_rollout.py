@@ -926,3 +926,23 @@ class ImageInventorySafetyTest(RolloutCase):
         self.assertNotIn(self.app('a'), self.images)
         self.assertNotIn(self.app('d'), self.images)
         self.assertEqual({self.app('b'), self.app('c')}, {ref for ref in self.images if ref.startswith('ghcr.io/')})
+
+
+    def test_digest_reference_repeated_in_repo_tags_does_not_protect_old_image(self):
+        # Docker 29.9.3 on the rootless Box reports this exact digest-only pull shape.
+        self.images[self.app('a')]['RepoTags'] = [self.app('a')]
+        self.successive_deploys()
+        self.assertNotIn(self.app('a'), self.images)
+        self.assertEqual({self.app('b'), self.app('c')}, {ref for ref in self.images if ref.startswith('ghcr.io/')})
+
+    def test_genuine_local_tag_beside_digest_reference_remains_protected(self):
+        self.images[self.app('a')]['RepoTags'] = [self.app('a'), 'qualification:stable']
+        self.successive_deploys()
+        self.assertIn(self.app('a'), self.images)
+        self.assertEqual([], self.removal_attempts)
+
+    def test_unrecognized_digest_shaped_tag_remains_protected(self):
+        self.images[self.app('a')]['RepoTags'] = [self.app('a'), self.app('e')]
+        self.successive_deploys()
+        self.assertIn(self.app('a'), self.images)
+        self.assertEqual([], self.removal_attempts)
