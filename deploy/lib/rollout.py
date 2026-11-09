@@ -361,7 +361,8 @@ def cleanup_app_images(runtime, previous):
         tags = image.get('RepoTags') or []
         if not isinstance(tags, list) or not all(isinstance(value, str) for value in tags):
             raise ValueError('invalid local image tags')
-        if tags:
+        # Some Docker image stores repeat digest references in RepoTags.
+        if set(tags) - set(digests):
             tagged.add(image['Id'])
         by_id[image['Id']] = set(digests)
         for reference in digests:
