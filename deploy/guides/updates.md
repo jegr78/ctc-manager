@@ -18,6 +18,9 @@ The command holds the installation lock and waits up to 16 minutes for a running
 4. It pauses outbound integrations, points `installation.json` and `current` at the new release and starts it. Flyway migrates during startup.
 5. Once Compose reports the stack healthy within 180 seconds, it installs the release's systemd units, the phpMyAdmin unit and `~/.local/bin/ctc-manager`, reloads the user manager and restores the previous `outboundPaused` value.
 6. It starts phpMyAdmin again if it ran before and deletes the state of the generation era.
+7. After success, it removes unused app images identified by immutable digests in verified installed release records. The current app image, the immediately previous release image and every image referenced by any running or stopped container survive. Database images, phpMyAdmin, unrecorded images and shared image aliases are left alone. Inspection uncertainty skips cleanup; a failed removal is logged and does not fail or roll back the deploy. Rollback drills remove no images.
+
+The previous release stays available for an immediate rollback without a registry pull. Restoring an older recovery unit can require pulling its pinned image again. Image cleanup does not remove release records, recovery units, volumes, build cache or unrelated daemon resources.
 
 A failure in steps 1 or 2 changes nothing. From step 3 on the command rolls back by itself. If the Flyway history or the database image changed, it restores the update unit in place, otherwise it starts the previous release on the unchanged database. Host files installed in step 5 return to their previous content. Integrations stay paused after a rollback until `resume-integrations`.
 

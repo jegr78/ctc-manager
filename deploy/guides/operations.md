@@ -41,7 +41,7 @@ A recovered pending Pages request needs fresh owner approval. Its private host P
 
 Inspect the lock owner, running children, selected release and `state/deploy.log`. Do not remove an ambiguous stale lock because its recorded PID no longer exists. A deploy whose rollback failed names the `restore --unit` command to run.
 
-A missing or wrong backup device fails before capture. For disk-full errors, restore space without deleting verified/protected units, inspect any incomplete owned capture/probe, and rerun the complete verification. Never run Docker system prune or remove resources by a broad name prefix.
+A missing or wrong backup device fails before capture. For disk-full errors, restore space without deleting verified/protected units, inspect any incomplete owned capture/probe, and rerun the complete verification. Successful deploys reclaim old app images automatically using verified release digests, while retaining the current release, immediate rollback image and all container references. Failed removals only warn. Never run Docker system prune or remove resources by a broad name prefix.
 
 ## Publisher and keys
 

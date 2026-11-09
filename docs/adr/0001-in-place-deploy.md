@@ -16,6 +16,7 @@ The CLR driver index runs a smaller flow on the same host. This decision ports i
 - The update journal, the operation journal, `update-check`, `update`, `restore-check`, `backup-check`, `prune` and the Mac migration go. One lock remains.
 - The release job builds with the release version and skips the tests that CI already ran on the same commit. Nothing is committed to `master`.
 - Outbound integrations stay paused while a new release starts and after every rollback or restore.
+- After a successful deploy, verified installed release digests identify unused app images for best-effort removal. Retain the current and previous app images and every running or stopped container reference. Inspection uncertainty skips cleanup; removal failures do not enter rollback. Drills remove nothing. Release records and recovery units remain available; an older restore may need a registry pull.
 - A deploy stays a manual operator action. No merge, timer or hook deploys.
 
 ## Consequences
