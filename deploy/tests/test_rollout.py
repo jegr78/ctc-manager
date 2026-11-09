@@ -751,11 +751,13 @@ class ImageRetentionTest(RolloutCase):
 
     def test_three_releases_keep_two_app_images_and_local_rollback(self):
         self.successive_deploys()
-        self.assertEqual({self.app('b'), self.app('c')}, {r for r in self.images if r.startswith('ghcr.io/')})
-        self.assertEqual([(False, True)], self.removal_states, 'cleanup follows resume and phpMyAdmin restoration')
+        self.release('1.54.0', app='d'); self.deploy('1.54.0')
+        self.assertEqual({self.app('c'), self.app('d')}, {r for r in self.images if r.startswith('ghcr.io/')})
+        self.assertEqual([(False, True), (False, True)], self.removal_states,
+                         'cleanup follows resume and phpMyAdmin restoration after each successful deploy')
         self.image_calls.clear()
-        rollout.rollback(self.root, self.root / 'releases/1.52.0', None, False, None, self.runtime_for, self.systemctl, self.base / 'home')
-        self.assertEqual(self.images[self.app('b')]['Id'], self.container_images['1' * 64])
+        rollout.rollback(self.root, self.root / 'releases/1.53.0', None, False, None, self.runtime_for, self.systemctl, self.base / 'home')
+        self.assertEqual(self.images[self.app('c')]['Id'], self.container_images['1' * 64])
         self.assertFalse(any(call[0] == 'pull' for call in self.image_calls), 'rollback must use the local image')
 
     def test_stopped_container_from_another_project_protects_old_image(self):
