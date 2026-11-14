@@ -3,12 +3,18 @@ package org.ctc.domain.model;
 public final class PickTargetRules {
     private PickTargetRules() { }
 
-    /** A race whose result or pairing decision is recorded; its setup is no longer confidential. */
+    /**
+     * A leg whose own result or pairing decision is recorded; its setup is no longer confidential. A match score
+     * counts only as a whole-match quick score, because aggregated scores already exist after the first leg.
+     */
     public static boolean isFinished(Race race) {
-        return !race.getResults().isEmpty()
-                || race.getMatch() != null && (race.getMatch().getWalkoverTeam() != null
-                        || race.getMatch().getHomeScore() != null || race.getMatch().getAwayScore() != null)
-                || race.getPlayoffMatchup() != null && race.getPlayoffMatchup().isComplete();
+        if (!race.getResults().isEmpty()) return true;
+        if (race.getPlayoffMatchup() != null) return race.getPlayoffMatchup().isComplete();
+        var match = race.getMatch();
+        if (match == null) return false;
+        boolean scored = match.getHomeScore() != null || match.getAwayScore() != null;
+        return match.getWalkoverTeam() != null
+                || scored && match.getRaces().stream().allMatch(leg -> leg.getResults().isEmpty());
     }
 
     public static boolean isUnfinishedTarget(Race race) {

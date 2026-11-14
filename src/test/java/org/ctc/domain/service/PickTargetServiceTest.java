@@ -120,7 +120,7 @@ class PickTargetServiceTest {
     }
 
     @Test
-    void givenManagedHomeRaceWithoutADate_whenAssessing_thenAllowPicksBeforeTeamsAgreeASchedule() {
+    void givenHomeRaceWithoutADate_whenAssessing_thenAllowPicksBeforeTeamsAgreeASchedule() {
         race.setDateTime(null);
         assertThat(service.isEligible(race)).isTrue();
         assertThat(race.getDateTime()).isNull();

@@ -100,9 +100,6 @@ class DiscordPicksBackupRoundTripIT {
             trackIds = List.of(track1.getId(), track2.getId());
         });
         legacy = export();
-        tx.executeWithoutResult(status -> {
-            var season = seasons.findById(fixture.season().getId()).orElseThrow();
-        });
         bindingId = tx.execute(status -> bindings.saveAndFlush(new TeamPickChannelBinding(
                 seasons.findById(fixture.season().getId()).orElseThrow(), teams.findById(fixture.homeTeam().getId()).orElseThrow(),
                 "100000000000000001", "200000000000000002")).getId());
@@ -227,7 +224,7 @@ class DiscordPicksBackupRoundTripIT {
 
     @ParameterizedTest
     @ValueSource(ints = {1, 2, 3, 4, 5, 6})
-    void givenSupportedOldBackup_whenRestoring_thenDefaultNewFlagsOffAndLeaveHistoryEmpty(int version) throws Exception {
+    void givenSupportedOldBackup_whenRestoring_thenLeaveHistoryEmpty(int version) throws Exception {
         // given
         var files = unzip(legacy);
         var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
@@ -260,7 +257,7 @@ class DiscordPicksBackupRoundTripIT {
     }
 
     @Test
-    void givenSchemaFiveHistoryWithoutBindings_whenRestoring_thenPreserveReceiptsAndGrantNoChannel() throws Exception {
+    void givenSchemaFiveHistoryWithActivationFlagsAndWithoutBindings_whenRestoring_thenPreserveReceiptsAndGrantNoChannel() throws Exception {
         // given
         var files = unzip(export());
         var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
@@ -272,13 +269,18 @@ class DiscordPicksBackupRoundTripIT {
         }
         ((ObjectNode) manifest.get("table_counts")).remove("team_pick_channel_bindings");
         files.remove("data/team-pick-channel-bindings.json");
+        for (String table : List.of("seasons", "races")) {
+            var rows = (ArrayNode) JSON.readTree(files.get("data/" + table + ".json"));
+            for (var row : rows) ((ObjectNode) row).put(table.equals("seasons") ? "picksCollectionEnabled" : "picksManaged", true);
+            files.put("data/" + table + ".json", JSON.writeValueAsBytes(rows));
+        }
         files.put("manifest.json", JSON.writeValueAsBytes(manifest));
         // when
         var preview = imports.stage(upload(zip(files)));
         imports.execute(preview.stagingId());
         // then
         tx.executeWithoutResult(status -> {
-            assertThat(bindings.findById(bindingId)).isEmpty();
+            assertThat(bindings.findById(bindingId)).as("the removed activation flags are accepted and ignored").isEmpty();
             assertThat(revisions.findByRequestId(original.requestId()).orElseThrow().receipt()).isEqualTo(original);
         });
     }

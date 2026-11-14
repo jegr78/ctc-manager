@@ -2910,7 +2910,6 @@ body:has(.archive-dialog[open]) { overflow: hidden; }
 
 .pick-review-workspace .pick-check-option { display: flex; align-items: center; gap: 10px; min-height: 44px; }
 .pick-review-workspace .pick-check-option input[type="checkbox"] { width: 18px; height: 18px; min-height: 18px; flex: 0 0 18px; margin: 0; padding: 0; accent-color: var(--accent); }
-.pick-review-workspace .pick-tyre-options { display: flex; flex-wrap: wrap; gap: 20px; }
 .pick-review-workspace .table-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .pick-review-workspace .entity-editor-actions { position: static; }
 

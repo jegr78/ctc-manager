@@ -1,5 +1,9 @@
 # Confidential picks model verification
 
+> Superseded in part by #425: V44/schema 22 removes the season and race activation flags, the activation
+> review, the confidentiality readiness gate and new management corrections. Approval no longer locks the team,
+> and publication sends the stored setup. The evidence below describes the state before that change.
+
 Issue #281, parent #279. Depends on delivered #280; category integration reuses delivered #276.
 Selected from the live tracker after #278 and parent #273 closed. No open PR, competing checkout,
 related active remote branch, assignee or inherited milestone occupies this work. The local GSD

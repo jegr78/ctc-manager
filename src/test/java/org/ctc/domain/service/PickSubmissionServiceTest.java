@@ -197,6 +197,24 @@ class PickSubmissionServiceTest {
         verify(revisions, never()).save(any());
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void givenApprovedPick_whenResubmittingBeforeOrAfterCutoff_thenAcceptOnlyBeforeTheDeadline(boolean expired) {
+        // given
+        pick.submit(); pick.approve(1);
+        race.getMatchday().setPickDeadline(expired ? LocalDateTime.of(2026, 11, 2, 18, 59) : LocalDateTime.of(2026, 11, 2, 21, 0));
+        // when / then
+        if (expired) {
+            assertThatThrownBy(() -> service.submit(race.getId(), 2, request, actor, payload())).isInstanceOf(BusinessRuleException.class)
+                    .hasMessageContaining("deadline");
+            assertThat(pick.getState()).isEqualTo(PickState.APPROVED);
+        } else {
+            assertThat(service.submit(race.getId(), 2, request, actor, payload()).revisionNumber()).isEqualTo(2);
+            assertThat(pick.getState()).isEqualTo(PickState.SUBMITTED);
+            assertThat(pick.getApprovedRevisionNumber()).isEqualTo(1);
+        }
+    }
+
     @Test
     void givenReturnedPickInOpenMatchdayWithoutCutoff_whenReplacing_thenKeepImmutableOldRevision() {
         // given / when / then

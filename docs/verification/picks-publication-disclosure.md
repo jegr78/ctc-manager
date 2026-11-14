@@ -1,5 +1,9 @@
 # Confidential pick publication
 
+> Superseded in part by #425: V44/schema 22 removes the season and race activation flags, the activation
+> review, the confidentiality readiness gate and new management corrections. Approval no longer locks the team,
+> and publication sends the stored setup. The evidence below describes the state before that change.
+
 Issue #285 preserves the existing management publishing controls. Persistent race enrollment and
 confirmed immutable content govern public reads, including when collection or the Gateway is off.
 Unenrolled legacy races retain their display rules. Final consumer/readiness activation remains #286.

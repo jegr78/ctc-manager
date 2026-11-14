@@ -40,7 +40,7 @@ class DiscordPicksGatewayTest {
     }
 
     @Test
-    void givenReadyOptIn_whenStartingTwice_thenConnectOneSessionWithExistingIdentity() {
+    void givenEnabledGateway_whenStartingTwice_thenConnectOneSessionWithExistingIdentity() {
         // given
         settings.setEnabled(true);
         // when

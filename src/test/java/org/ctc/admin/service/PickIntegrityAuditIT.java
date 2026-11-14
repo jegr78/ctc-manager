@@ -232,7 +232,7 @@ class PickIntegrityAuditIT {
     }
 
     @Test
-    void givenManagedTargetWithoutDeadline_whenAuditing_thenDoNotInventACutoffOrAnOpening() {
+    void givenOpenTargetWithoutDeadline_whenAuditing_thenDoNotInventACutoffOrAnOpening() {
         fixture.matchday().setPickDeadline(null);
         em.flush();
 

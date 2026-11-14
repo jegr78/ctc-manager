@@ -52,9 +52,9 @@ public class MatchdayPickAdminService {
         var candidates = seasonId == null ? races.findAll() : races.findByMatchdaySeasonId(seasonId);
         var rows = candidates.stream().filter(race -> race.getMatchday() != null && race.getHomeTeam() != null)
                 .filter(race -> matchdayId == null || matchdayId.equals(race.getMatchday().getId()))
-                .map(race -> new Object[] {race, picks.findSnapshotByRaceId(race.getId()).orElse(null)})
-                .filter(pair -> pair[1] != null || ((Race) pair[0]).getMatchday().isPicksOpen() && targets.isEligible((Race) pair[0]))
-                .map(pair -> row((Race) pair[0], candidates, (MatchdayPick) pair[1]))
+                .map(race -> new Listed(race, picks.findSnapshotByRaceId(race.getId()).orElse(null)))
+                .filter(listed -> listed.pick() != null || listed.race().getMatchday().isPicksOpen() && targets.isEligible(listed.race()))
+                .map(listed -> row(listed.race(), candidates, listed.pick()))
                 .filter(row -> state == null || row.state() == state).sorted(Comparator.comparing(Row::label).thenComparing(Row::raceId)).toList();
         return new Overview(seasonId, matchdayId, state, seasonChoices, dayChoices, rows);
     }
@@ -86,7 +86,8 @@ public class MatchdayPickAdminService {
             comparison.add(new Comparison(current.label(), current.value(), submitted == null ? "No submission" : submitted.value(), changed));
         }
         var returnReason = stateReturnReason(pick, decisionHistory);
-        return new Detail(row, existing.fingerprint(), proposed != null && existing.configured() && !existing.matches(proposed), returnReason, comparison,
+        boolean replacement = proposed != null && existing.configured() && !existing.matches(proposed) && !reviews.holdsApproved(pick, existing);
+        return new Detail(row, existing.fingerprint(), replacement, returnReason, comparison,
                 history.stream().map(revision -> new Revision(revision.getRevisionNumber(), revision.getReceiptVersion(), revision.getSubmitterId(),
                         revision.getConfirmedAt(), values(revision.getPayload()))).toList(),
                 decisionHistory.stream().map(decision -> new Decision(decision.getKind(), decision.getAggregateVersion(), decision.getActorId(),
@@ -191,9 +192,6 @@ public class MatchdayPickAdminService {
         return history.stream().filter(decision -> decision.getKind() == PickDecisionKind.RETURN).findFirst()
                 .orElseThrow(() -> new BusinessRuleException("Return history is incomplete")).getReason();
     }
-    private static Set<PickTyre> tyres(String value) {
-        if (value == null || value.isBlank() || value.equals("None")) return Set.of();
-        return Arrays.stream(value.split(",\\s*")).map(PickTyre::valueOf).collect(java.util.stream.Collectors.toSet());
-    }
     private static BusinessRuleException unavailable() { return new BusinessRuleException("Pick review target or filter is unavailable"); }
+    private record Listed(Race race, MatchdayPick pick) { }
 }

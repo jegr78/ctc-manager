@@ -107,7 +107,10 @@ public class PickTargetService {
         if (target.race().getHomeTeam() == null || !actor.teamId().equals(target.race().getHomeTeam().getId())) {
             throw unavailable();
         }
-        if (actor.channel() != null) access.recheck(actor);
+        if (actor.channel() != null) {
+            access.recheck(actor);
+            if (!PickAccessService.servesHome(actor.channel().bindingTeamId(), target.race())) throw unavailable();
+        }
         return target;
     }
 

@@ -62,9 +62,22 @@ class PickDisclosureServiceTest {
     }
 
     @Test
-    void givenRaceWhosePairingHasAScore_whenProjectingPublicly_thenShowItsStoredSetup() {
+    void givenSecondLegWhileFirstLegResultsAlreadyScoreTheMatch_whenProjectingPublicly_thenWithholdTheSecondLeg() {
         // given
-        var race = race(false); race.getMatch().setHomeScore(10); race.getMatch().setAwayScore(8);
+        var race = race(false); var first = new Race(); first.getResults().add(new RaceResult());
+        race.getMatch().getRaces().addAll(java.util.List.of(first, race));
+        race.getMatch().setHomeScore(20); race.getMatch().setAwayScore(12);
+        when(races.findById(race.getId())).thenReturn(Optional.of(race));
+        // when
+        var projection = assertDoesNotThrow(() -> service.forPublic(race.getId()));
+        // then
+        assertThat(projection.trackName()).as("an aggregated score from another leg does not finish this leg").isNull();
+    }
+
+    @Test
+    void givenRaceWhosePairingHasAQuickScore_whenProjectingPublicly_thenShowItsStoredSetup() {
+        // given
+        var race = race(false); race.getMatch().getRaces().add(race); race.getMatch().setHomeScore(10); race.getMatch().setAwayScore(8);
         when(races.findById(race.getId())).thenReturn(Optional.of(race));
         // when
         var projection = assertDoesNotThrow(() -> service.forPublic(race.getId()));
@@ -207,7 +220,8 @@ class PickDisclosureServiceTest {
     PickPublicationSnapshot confirmed(Race race, long version, Set<PickDisclosureField> fields, int seconds, long sourceVersion) {
         var at = Instant.parse("2026-11-03T00:00:00Z");
         var attempt = new PickPublicationAttempt(new PickPublicationAttempt.Capture(UUID.randomUUID(), race, version, sourceVersion,
-                sourceVersion == 0 ? PickPublicationOrigin.LEGACY : PickPublicationOrigin.APPROVAL, PickPublicationOutput.SETTINGS,
+                sourceVersion == 0 ? PickPublicationOrigin.LEGACY : PickPublicationOrigin.APPROVAL,
+                fields.contains(PickDisclosureField.CAR) ? PickPublicationOutput.SETTINGS : PickPublicationOutput.LOBBY_SETTINGS,
                 PickPublicationContent.from(race), fields, "test-manager", "test-channel", "test-webhook", null,
                 "0".repeat(64), "{}", "00000000-0000-0000-0000-000000000000:0", at));
         attempt.confirm("test-message-" + seconds, at.plusSeconds(seconds));

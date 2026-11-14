@@ -57,13 +57,20 @@ public class PickReviewService {
             if (expectedSettingsFingerprint != null && !existing.fingerprint().equals(expectedSettingsFingerprint)) {
                 throw new BusinessRuleException("Internal settings changed; reload before approving");
             }
-            if (existing.configured() && !existing.matches(revision.getPayload()) && !replaceExisting) {
+            if (existing.configured() && !existing.matches(revision.getPayload()) && !replaceExisting && !holdsApproved(pick, existing)) {
                 throw new BusinessRuleException("Explicit replace consent is required for differing internal settings");
             }
             eligibility.validate(target.race(), revision.getPayload());
             settings.apply(target.race(), revision.getPayload());
             pick.approve(revisionNumber);
         });
+    }
+
+    /** The race still carries the previously approved revision, so replacing it needs no extra consent. */
+    public boolean holdsApproved(MatchdayPick pick, PickSetupSnapshot existing) {
+        return pick != null && pick.getApprovedRevisionNumber() != null
+                && revisions.findByPickIdAndRevisionNumber(pick.getId(), pick.getApprovedRevisionNumber())
+                        .map(approved -> existing.matches(approved.getPayload())).orElse(false);
     }
 
     private void decide(UUID raceId, long expectedVersion, ManagementPickActor actor, String reason,

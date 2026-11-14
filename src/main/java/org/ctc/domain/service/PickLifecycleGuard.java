@@ -17,7 +17,7 @@ public class PickLifecycleGuard {
     private final MatchdayPickRepository picks;
     public void requireNoHistory(Collection<Race> races) {
         for (var race : races.stream().filter(row -> row.getId() != null).sorted(Comparator.comparing(Race::getId)).toList()) {
-            if (hasHistory(race)) throw new BusinessRuleException("Cannot delete a race with confidential pick history");
+            if (protects(race)) throw new BusinessRuleException("Cannot delete a race with confidential pick history");
         }
     }
 
@@ -29,14 +29,10 @@ public class PickLifecycleGuard {
     public String identityRejection(Race race, UUID matchdayId, Team home, Team away) {
         boolean changed = !Objects.equals(race.getMatchday() == null ? null : race.getMatchday().getId(), matchdayId)
                 || !Objects.equals(id(race.getHomeTeam()), id(home)) || !Objects.equals(id(race.getAwayTeam()), id(away));
-        return changed && hasHistory(race) ? "Cannot reassign a race with confidential pick history" : null;
+        return changed && protects(race) ? "Cannot reassign a race with confidential pick history" : null;
     }
 
     public boolean protects(Race race) {
-        return hasHistory(race);
-    }
-
-    private boolean hasHistory(Race race) {
         return race.getId() != null && picks.findByRaceId(race.getId()).isPresent();
     }
 

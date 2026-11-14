@@ -164,7 +164,7 @@ class DiscordPostServiceMatchPreviewAutoEditIT {
 	}
 
     @Test
-    void givenManagedUnpublishedChoicesWithCollectionDisabled_whenAutoEditing_thenReplaceOnlySafeAttachments() throws Exception {
+    void givenUnpublishedChoices_whenAutoEditing_thenReplaceOnlySafeAttachments() throws Exception {
         // given
         String webhookPath = "/api/v10/webhooks/123456789012345678/Test_preview-token";
         setAnnouncementWebhook(wm.baseUrl() + webhookPath);
@@ -187,7 +187,30 @@ class DiscordPostServiceMatchPreviewAutoEditIT {
     }
 
     @Test
-    void givenStaleUnenrolledCallerAfterPersistentEnrollment_whenAutoEditing_thenUseTheCurrentManagedMarker() throws Exception {
+    void givenWholeMatchQuickScore_whenAutoEditing_thenAttachTheNoLongerConfidentialSettings() throws Exception {
+        // given
+        String webhookPath = "/api/v10/webhooks/123456789012345677/Test_finished-preview-token";
+        setAnnouncementWebhook(wm.baseUrl() + webhookPath);
+        Match match = seedMatchWithRace("Done", "Test finished teaser", null);
+        match.setHomeScore(10); match.setAwayScore(8); match = matchRepository.save(match);
+        seedExistingPreviewPost(match, "123456789012345677", "234567890123456778");
+        Path finishedGraphic = Path.of(uploadDir, "preview-finished-test.png").toAbsolutePath().normalize();
+        Files.writeString(finishedGraphic, "TEST-FINISHED-SETTINGS-5b2e");
+        when(settingsGraphicService.generateSettings(any(Race.class))).thenReturn("/uploads/preview-finished-test.png");
+        wm.stubFor(patch(urlPathEqualTo(webhookPath + "/messages/234567890123456778"))
+                .willReturn(okJson("{\"id\":\"234567890123456778\",\"channel_id\":\"123456789012345677\"}")));
+        String request;
+        // when
+        try {
+            service.autoEditMatchPreviewIfNeeded(match);
+            request = wm.getAllServeEvents().getFirst().getRequest().getBodyAsString();
+        } finally { Files.deleteIfExists(finishedGraphic); }
+        // then
+        assertThat(request).as("a decided match no longer withholds its setup").contains("settings-md1.png", "lineups-md1.png");
+    }
+
+    @Test
+    void givenStaleCallerWithUnpublishedChoices_whenAutoEditing_thenReadCurrentPublicationEvidence() throws Exception {
         // given
         String webhookPath = "/api/v10/webhooks/123456789012345679/Test_stale-preview-token";
         setAnnouncementWebhook(wm.baseUrl() + webhookPath);

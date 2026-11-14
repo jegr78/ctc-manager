@@ -16,7 +16,7 @@
             <a th:if="${race.homeTeam != null and race.awayTeam != null}" th:href="@{/admin/races/{id}/penalties(id=${race.id})}" class="btn btn-secondary">Team penalty points</a>
             <a th:href="@{/admin/races/{id}/lineup(id=${race.id})}" class="btn btn-secondary">Lineup</a>
             <a th:href="@{/admin/races/{id}/edit(id=${race.id})}" class="btn btn-secondary">Edit</a>
-            <a th:href="@{/admin/matchday-picks/{id}(id=${race.id})}" class="btn btn-secondary">Review team picks</a>
+            <a th:if="${race.homeTeam != null and race.awayTeam != null}" th:href="@{/admin/matchday-picks/{id}(id=${race.id})}" class="btn btn-secondary">Review team picks</a>
 
         </div>
     </div>

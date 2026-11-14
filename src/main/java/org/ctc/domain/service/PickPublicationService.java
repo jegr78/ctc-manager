@@ -195,29 +195,26 @@ public class PickPublicationService {
     }
 
     /**
-     * Public view of a race setup: a finished leg shows its stored setup, an unfinished leg only the fields and
-     * content of its latest confirmed publication.
+     * Public view of a race setup. A finished leg shows its stored setup. An unfinished leg shows the content of its
+     * latest confirmed publication: a lobby graphic releases everything except the car, every other output all fields.
      */
     public PublicPickProjection publicProjection(Race race) {
-        if (PickTargetRules.isFinished(race)) {
-            return PickPublicationContent.from(race).project(race.getId(), java.util.EnumSet.allOf(PickDisclosureField.class));
-        }
-        var confirmed = snapshots.findByAttemptRaceIdOrderByAttemptContentVersionDescConfirmedAtDesc(race.getId()).stream()
-                .map(PickPublicationSnapshot::getAttempt)
-                .filter(attempt -> attempt.getState() == PickPublicationState.SUCCEEDED && attempt.matchesTarget(race)).toList();
+        if (PickTargetRules.isFinished(race)) return PickPublicationContent.from(race).project(race.getId(), PickDisclosureField.all());
+        var confirmed = confirmed(race);
         long version = confirmed.stream().mapToLong(PickPublicationAttempt::getContentVersion).max().orElse(0);
         var latest = confirmed.stream().filter(attempt -> attempt.getContentVersion() == version).toList();
         if (latest.isEmpty()) return new PublicPickProjection(race.getId(), null, null, null, null);
         var first = latest.getFirst();
-        var fields = java.util.EnumSet.noneOf(PickDisclosureField.class);
         for (var attempt : latest) {
             if (!first.getContentHash().equals(attempt.getContentHash())
                     || first.getOrigin() != attempt.getOrigin() || first.getSourceVersion() != attempt.getSourceVersion()
                     || !attempt.getContentHash().equals(attempt.getContent().fingerprint())) {
                 throw new BusinessRuleException("Published pick content has inconsistent confirmation evidence");
             }
-            fields.addAll(attempt.fields());
         }
+        var fields = java.util.EnumSet.noneOf(PickDisclosureField.class);
+        confirmed.stream().filter(attempt -> attempt.getContentHash().equals(first.getContentHash()))
+                .forEach(attempt -> fields.addAll(released(attempt.getOutput())));
         return first.getContent().project(race.getId(), fields);
     }
 
@@ -225,10 +222,18 @@ public class PickPublicationService {
     public boolean settingsReleased(Race race) {
         if (PickTargetRules.isFinished(race)) return true;
         var current = PickPublicationContent.from(race).fingerprint();
+        return confirmed(race).stream().anyMatch(attempt -> attempt.getContentHash().equals(current)
+                && released(attempt.getOutput()).containsAll(PickDisclosureField.all()));
+    }
+
+    private List<PickPublicationAttempt> confirmed(Race race) {
         return snapshots.findByAttemptRaceIdOrderByAttemptContentVersionDescConfirmedAtDesc(race.getId()).stream()
                 .map(PickPublicationSnapshot::getAttempt)
-                .anyMatch(attempt -> attempt.getState() == PickPublicationState.SUCCEEDED && attempt.matchesTarget(race)
-                        && attempt.getContentHash().equals(current) && attempt.fields().containsAll(java.util.EnumSet.allOf(PickDisclosureField.class)));
+                .filter(attempt -> attempt.getState() == PickPublicationState.SUCCEEDED && attempt.matchesTarget(race)).toList();
+    }
+
+    private static Set<PickDisclosureField> released(PickPublicationOutput output) {
+        return output == PickPublicationOutput.LOBBY_SETTINGS ? PickDisclosureField.lobby() : PickDisclosureField.all();
     }
 
     private static String fingerprint(List<PickPublicationAttempt> rows) {

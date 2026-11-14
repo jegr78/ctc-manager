@@ -1,5 +1,9 @@
 # Private picks Gateway and channel access verification
 
+> Superseded in part by #425: V44/schema 22 removes the season and race activation flags, the activation
+> review, the confidentiality readiness gate and new management corrections. Approval no longer locks the team,
+> and publication sends the stored setup. The evidence below describes the state before that change.
+
 Issue #282, parent #279. Delivered #281 supplies the actor/target contracts, private model and
 writer admission. Live selection found no competing PR, active related branch, other checkout,
 assignee or inherited milestone. The shipped GSD milestone imposes no active release boundary.

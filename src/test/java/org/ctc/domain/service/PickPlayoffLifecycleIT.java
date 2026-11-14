@@ -101,9 +101,9 @@ class PickPlayoffLifecycleIT {
     }
 
     @Test
-    void givenEnabledSeason_whenNativePlayoffLegIsScheduled_thenEnrollAndAllowCompleteHomeSubmission() {
+    void givenScheduledPlayoffLeg_whenSubmitting_thenAllowCompleteHomeSubmission() {
         // when / then
-        assertEnrolled(race);
+        assertTarget(race);
         var receipt = submissions.submit(race, 0, UUID.randomUUID(), actor(race, teamIds.getFirst()), payload);
         assertThat(receipt.revisionNumber()).isEqualTo(1);
     }
@@ -147,7 +147,7 @@ class PickPlayoffLifecycleIT {
         // when
         seeding.seedTeam(second, teamIds.get(3), 2);
         // then
-        assertEnrolled(incomplete);
+        assertTarget(incomplete);
         assertThat(submissions.submit(incomplete, 0, UUID.randomUUID(), actor(incomplete, teamIds.get(2)), payload).revisionNumber()).isEqualTo(1);
     }
 
@@ -161,10 +161,12 @@ class PickPlayoffLifecycleIT {
         assertParticipantsAndHistory();
     }
 
-    private void assertEnrolled(UUID raceId) {
+    private void assertTarget(UUID raceId) {
+        tx.executeWithoutResult(status -> assertThat(org.ctc.domain.model.PickTargetRules.isUnfinishedTarget(races.findById(raceId).orElseThrow()))
+                .as("a seeded unfinished playoff leg is a pick target").isTrue());
     }
     private void submitInitial() {
-        assertEnrolled(race);
+        assertTarget(race);
         submissions.submit(race, 0, UUID.randomUUID(), actor(race, teamIds.getFirst()), payload);
     }
     private AuthorizedPickActor actor(UUID raceId, UUID home) { return new AuthorizedPickActor(raceId, fixture.season().getId(), home, "12345"); }

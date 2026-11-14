@@ -14,7 +14,7 @@
             <dt>Saved guild</dt>
             <dd th:text="${#strings.isEmpty(setup.guildId) ? 'Not configured' : setup.guildId}"></dd>
         </dl>
-        <p class="text-dim">The outgoing connection is disabled by default. Enable the Gateway and opt in each season explicitly to start collection.</p>
+        <p class="text-dim">The outgoing connection is disabled by default. Enable the Gateway and open a matchday to start collection.</p>
     </div>
     <form th:action="@{/admin/discord-config/picks/bindings/save}" method="post" th:object="${form}" class="card entity-editor-form">
         <fieldset>

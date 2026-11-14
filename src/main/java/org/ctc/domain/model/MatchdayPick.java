@@ -128,7 +128,7 @@ public class MatchdayPick extends BaseEntity {
     }
 
     public boolean hasSubmissionAfterApproval() {
-        return state == PickState.SUBMITTED && approvedRevisionNumber != null;
+        return state != PickState.APPROVED && approvedRevisionNumber != null;
     }
 
     /** Replays a historical management correction; new corrections edit the race directly. */

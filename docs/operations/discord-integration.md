@@ -808,7 +808,7 @@ After a lost reply, use `/picks` to check that saved state before starting anoth
 Repeated delivery of the same confirmation returns its original durable receipt.
 
 Tests exercise this flow offline. Live test-guild UAT needs separate operator authorization and
-synthetic fixtures. Do not enable production collection before confidentiality and rollout checks.
+synthetic fixtures. Do not enable production collection before the rollout checks.
 
 
 ### Management review
@@ -939,7 +939,7 @@ A central manual opening without a configured cutoff allows intake until managem
 matchday or all its matches complete. When configured, the match's exception takes precedence over
 the matchday deadline, and the exact cutoff applies even to returned picks. A spring clock gap or
 an autumn repeated time is rejected for new settings. The read-only data audit reports ambiguous
-effective deadlines without choosing an offset or changing data. Approval immediately locks team edits.
+effective deadlines without choosing an offset or changing data. Approval leaves team edits open until the cutoff.
 
 V39/schema 17 preserves existing immutable histories and adds typed window fields. Older archives
 restore matchdays closed with no pairing exceptions. After updating, explicitly open the intended
@@ -978,14 +978,13 @@ live guild registration, messages, production changes and test-guild UAT need se
   opponent, wrong channel or revoked member cannot. An old open dialog must not bypass a revocation.
 - [ ] Exercise fixed and enabled category choices, Equal Conditions and 0x, replacement/conflict,
   exact deadline closure, central opening/closure, match exceptions and return. Check receipt recovery and
-  approval lock. Generate the existing team cards before testing settings graphics. Approval must remain private until explicit publication; lobby-only output must
+  resubmission after approval. Generate the existing team cards before testing settings graphics. Approval must remain private until explicit publication; lobby-only output must
   still withhold the omitted car.
 - [ ] Qualify backup/recovery using the existing isolated recovery procedure. Check IDs, immutable
   history, old public masks, newer private corrections and unresolved delivery. Old dialogs must
   be invalidated and recovery must not resend messages.
-- [ ] Classify preconfigured unfinished races using actual publication evidence. Enable only the
-  intended future seasons and the one configured Gateway consumer. Verify its health and access
-  before accepting real submissions.
+- [ ] Open only the intended matchdays and enable the one configured Gateway consumer. Verify its
+  health and access before accepting real submissions.
 - [ ] Keep the existing Google Forms available until the operator deliberately retires them.
   Do not delete Forms or migrate old responses automatically.
 
@@ -1029,8 +1028,8 @@ with a record locator; it does not repair records or show report payload text in
 
 The existing outgoing Gateway serves both `/picks` and `/incidents`; do not start a second bot
 consumer. Its legacy configuration key remains `app.discord.picks.enabled`, default false.
-Incident scope comes from the confirmed match context/window and does not require a season's
-private-picks opt-in or a private team-channel binding.
+Incident scope comes from the confirmed match context/window and does not require an open picks matchday
+or a private team-channel binding.
 
 Use `/incidents` in the bound regular or playoff match channel. Choose **New report**, select
 the concrete leg when needed, then **Enter report**. Select involved drivers from that race's lineup, including guests, and supply replay timestamp,
