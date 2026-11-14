@@ -257,6 +257,19 @@ class PickTargetServiceTest {
         order.verify(access).recheck(channelActor);
     }
 
+    @Test
+    void givenSubTeamMovedToAnotherOrganisationAfterSelection_whenLockingTarget_thenRejectTheOldOrganisationBinding() {
+        // given
+        var former = new Team("Test former organisation", "T-OLD"); former.setId(UUID.randomUUID());
+        var channelActor = new AuthorizedPickActor(race.getId(), season.getId(), home.getId(), "12345",
+                new AuthorizedPickActor.ChannelContext("123", "456", 0, former.getId()));
+        home.setParentTeam(new Team("Test new organisation", "T-NEW"));
+        // when / then
+        assertThatThrownBy(() -> service.lockForTeam(race.getId(), channelActor)).isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Pick target is unavailable");
+        verify(access).recheck(channelActor);
+    }
+
     private ChannelPickActor channel() {
         return new ChannelPickActor("123", "456", "12345", Set.of(new ChannelPickActor.Binding(season.getId(), home.getId())));
     }
