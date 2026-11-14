@@ -2,7 +2,6 @@ package org.ctc.discord.picks;
 
 import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.discord.repository.DiscordGlobalConfigRepository;
-import org.ctc.domain.service.PickCollectionStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -14,7 +13,6 @@ import static org.mockito.Mockito.*;
 
 class DiscordPicksGatewayTest {
     final PickGatewaySettings settings = new PickGatewaySettings();
-    final PickCollectionStatus collection = mock(PickCollectionStatus.class);
     final DiscordGlobalConfigRepository configs = mock(DiscordGlobalConfigRepository.class);
     final PickGatewayTransport transport = mock(PickGatewayTransport.class);
     final PickGatewayTransport.Session session = mock(PickGatewayTransport.Session.class);
@@ -26,10 +24,9 @@ class DiscordPicksGatewayTest {
         // given
         var config = new DiscordGlobalConfig(); config.setGuildId("100000000000000001");
         when(configs.findFirstByOrderByIdAsc()).thenReturn(config);
-        when(collection.isConfidentialityReady()).thenReturn(true);
         when(transport.connect(anyString(), anyString(), any())).thenReturn(session);
         when(session.state()).thenReturn(PickGatewayTransport.ConnectionState.CONNECTED);
-        gateway = new DiscordPicksGateway(settings, collection, configs, transport, "test-gateway-token", dispatcher);
+        gateway = new DiscordPicksGateway(settings, configs, transport, "test-gateway-token", dispatcher);
     }
 
     @Test
@@ -39,18 +36,6 @@ class DiscordPicksGatewayTest {
         // then
         assertThat(gateway.isRunning()).isFalse();
         assertThat(gateway.health()).isEqualTo(DiscordPicksGateway.Health.DISABLED);
-        verifyNoInteractions(transport, configs);
-    }
-
-    @Test
-    void givenExplicitOptInBeforePrivacyAcceptance_whenStarting_thenKeepConsumerUnavailable() {
-        // given
-        settings.setEnabled(true); when(collection.isConfidentialityReady()).thenReturn(false);
-        // when
-        gateway.start();
-        // then
-        assertThat(gateway.isRunning()).isFalse();
-        assertThat(gateway.health()).isEqualTo(DiscordPicksGateway.Health.WAITING_FOR_CONFIDENTIALITY);
         verifyNoInteractions(transport, configs);
     }
 
@@ -71,7 +56,7 @@ class DiscordPicksGatewayTest {
     void givenIncompleteIdentity_whenStarting_thenRefuseConnectionWithoutExposingToken(String cause) {
         // given
         settings.setEnabled(true);
-        if (cause.equals("missing-token")) gateway = new DiscordPicksGateway(settings, collection, configs, transport, " ", dispatcher);
+        if (cause.equals("missing-token")) gateway = new DiscordPicksGateway(settings, configs, transport, " ", dispatcher);
         if (cause.equals("missing-config")) when(configs.findFirstByOrderByIdAsc()).thenReturn(null);
         if (cause.equals("invalid-guild")) { var config = new DiscordGlobalConfig(); config.setGuildId("spoofed"); when(configs.findFirstByOrderByIdAsc()).thenReturn(config); }
         // when

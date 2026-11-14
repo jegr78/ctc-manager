@@ -5,13 +5,11 @@ import java.util.List;
 import java.util.UUID;
 import org.ctc.admin.dto.MatchdayPickView.*;
 import org.ctc.admin.dto.PickReviewForm;
-import org.ctc.admin.dto.PickCorrectionForm;
 import org.ctc.admin.service.MatchdayPickAdminService;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.PickState;
 import org.junit.jupiter.api.Test;
 import org.springframework.ui.ConcurrentModel;
-import org.springframework.ui.ExtendedModelMap;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 
@@ -69,19 +67,6 @@ class MatchdayPickControllerTest {
         // when / then
         assertThat(controller.decide(race, form, result, principal, model, new RedirectAttributesModelMap())).isEqualTo("admin/matchday-pick-review");
         assertThat(model.getAttribute("form")).isSameAs(form); verify(service, never()).decide(any(), any(), any());
-    }
-
-    @Test
-    void givenNullExistingCorrectionForm_whenOpeningCorrection_thenPrepareFreshTypedForm() {
-        // given
-        var fresh = new PickCorrectionForm(); var model = new ExtendedModelMap(); model.addAttribute("form", null);
-        when(service.correctionForm(race)).thenReturn(fresh); when(service.detail(race)).thenReturn(detail());
-        when(service.correctionChoices(race, fresh)).thenReturn(new org.ctc.domain.service.RaceService.RaceFormData(
-                null, List.of(), List.of(), List.of(), List.of(), java.util.Set.of(), java.util.Set.of(), null, null));
-        // when / then
-        assertThat(controller.correction(race, model)).isEqualTo("admin/matchday-pick-correction");
-        assertThat(model.getAttribute("form")).isSameAs(fresh);
-        verify(service).correctionChoices(race, fresh);
     }
 
     PickReviewForm form() {

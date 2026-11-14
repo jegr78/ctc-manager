@@ -275,7 +275,7 @@ class MatchdayPickWindowManagementIT extends PickPersistenceIT {
             if (bridge != null) entityManager.persist(bridge);
             for (int leg = 0; leg < 2; leg++) {
                 var race = new Race(); race.setMatchday(day); race.setMatch(bridge); race.setPlayoffMatchup(pairing);
-                race.setDateTime(LocalDateTime.of(2035, 1, 1, 20, leg)); race.setPicksManaged(true);
+                race.setDateTime(LocalDateTime.of(2035, 1, 1, 20, leg)); 
                 race.setHomeTeamOverride(leg == 0 ? pairing.getTeam1() : pairing.getTeam2());
                 race.setAwayTeamOverride(leg == 0 ? pairing.getTeam2() : pairing.getTeam1()); entityManager.persist(race);
             }

@@ -12,10 +12,8 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.when;
 
 @CtcDevSpringBootContext
 @Tag("integration")
@@ -35,7 +33,6 @@ class PickPlayoffLifecycleIT {
     @Autowired MatchdayPickRepository picks;
     @Autowired PlayoffService playoffService;
     @Autowired PlayoffSeedingService seeding;
-    @MockitoBean PickCollectionStatus collection;
     TestHelper.SeasonFixture fixture;
     final List<UUID> teamIds = new ArrayList<>();
     UUID car;
@@ -58,7 +55,7 @@ class PickPlayoffLifecycleIT {
                 fixture.season().addTeam(team);
                 teamIds.add(team.getId());
             }
-            fixture.season().setPicksCollectionEnabled(true);
+            
             var selectedCar = cars.save(new Car("Test pick playoff", UUID.randomUUID().toString()));
             var selectedTrack = tracks.save(new Track("Test pick playoff " + UUID.randomUUID()));
             fixture.season().getCars().add(selectedCar);
@@ -81,7 +78,6 @@ class PickPlayoffLifecycleIT {
         });
         payload = new PickPayload(track, car, null, 12, 2, 3, 4, PickInitialFuel.DEFAULT, 1,
                 TimeProgressionMode.MULTIPLIER, 0, "S01", "Sunset", Set.of(PickTyre.RS), Set.of());
-        when(collection.isAvailable()).thenReturn(true);
     }
 
     @AfterEach
@@ -149,7 +145,6 @@ class PickPlayoffLifecycleIT {
             target.setDateTime(LocalDateTime.of(2035, 1, 2, 20, 0));
             return races.save(target).getId();
         });
-        tx.executeWithoutResult(status -> assertThat(races.findById(incomplete).orElseThrow().isPicksManaged()).isFalse());
         // when
         seeding.seedTeam(second, teamIds.get(3), 2);
         // then
@@ -168,7 +163,6 @@ class PickPlayoffLifecycleIT {
     }
 
     private void assertEnrolled(UUID raceId) {
-        tx.executeWithoutResult(status -> assertThat(races.findById(raceId).orElseThrow().isPicksManaged()).isTrue());
     }
     private void submitInitial() {
         assertEnrolled(race);

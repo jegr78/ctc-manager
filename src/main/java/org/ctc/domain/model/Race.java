@@ -19,9 +19,6 @@ import lombok.*;
 @ToString(exclude = {"matchday", "match", "track", "car", "settings", "results", "playoffMatchup", "attachments", "penaltyRevisions", "homeTeamOverride", "awayTeamOverride"})
 public class Race extends BaseEntity {
 
-    @Column(nullable = false)
-    private boolean picksManaged;
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
 	private UUID id;
@@ -147,13 +144,6 @@ public class Race extends BaseEntity {
 		}
 		return null;
 	}
-
-    public void enrolForPicksIfEnabled() {
-        if (!picksManaged && matchday != null && matchday.getSeason() != null
-                && matchday.getSeason().isPicksCollectionEnabled() && PickTargetRules.isUnfinishedTarget(this)) {
-            picksManaged = true;
-        }
-    }
 
 	public boolean hasAllSettings() {
 		return settings != null && settings.isComplete();

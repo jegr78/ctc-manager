@@ -34,7 +34,6 @@ public class PickTargetService {
     private final MatchdayPickRepository picks;
     private final EntityManager entityManager;
     private final PickDeadlinePolicy deadlines;
-    private final PickCollectionStatus collection;
     private final PickAccessService access;
     private final PickSessionEpoch epoch;
 
@@ -63,14 +62,14 @@ public class PickTargetService {
             var rows = races.findByMatchdaySeasonId(season.getId());
             for (var race : rows) {
                 if (!includeClosed && !race.getMatchday().isPicksOpen()) continue;
-                if (!race.isPicksManaged() || race.getHomeTeam() == null || !binding.teamId().equals(race.getHomeTeam().getId())) continue;
+                if (!PickAccessService.servesHome(binding.teamId(), race)) continue;
                 var pick = picks.findSnapshotByRaceId(race.getId()).orElse(null);
                 if (pick != null && !pick.matchesTarget(race)) throw unavailable();
                 boolean eligible = isEligible(race);
                 if (!eligible && (pick == null || pick.getLatestRevisionNumber() == null)) continue;
                 var state = pick == null ? PickState.MISSING : pick.getState();
-                var decision = deadlines.assess(new PickDeadlinePolicy.Context(state, season.isPicksCollectionEnabled(), collection.isAvailable(),
-                        eligible, race.getMatchday().isPicksOpen(), pick != null && pick.isManualClosed(), org.ctc.domain.model.MatchdayPickWindowRules.deadline(race)));
+                var decision = deadlines.assess(new PickDeadlinePolicy.Context(eligible, race.getMatchday().isPicksOpen(),
+                        pick != null && pick.isManualClosed(), org.ctc.domain.model.MatchdayPickWindowRules.deadline(race)));
                 result.putIfAbsent(race.getId(), new HomeRaceTarget(race.getId(), label(season, race, rows), state,
                         pick == null ? 0 : pick.getVersion(), decision.editable(), decision.reason()));
             }
@@ -85,7 +84,7 @@ public class PickTargetService {
         parts.add(phase.getLabel() == null || phase.getLabel().isBlank() ? phase.getPhaseType().name() : phase.getLabel());
         if (race.getMatchday().getGroup() != null) parts.add(race.getMatchday().getGroup().getName());
         parts.add(race.getMatchday().getLabel());
-        parts.add("vs " + (race.getAwayTeam() == null ? "Bye" : race.getAwayTeam().getShortName()));
+        parts.add(race.getHomeTeam().getShortName() + " vs " + (race.getAwayTeam() == null ? "Bye" : race.getAwayTeam().getShortName()));
         var legs = rows.stream().filter(other -> Objects.equals(pairingId(other), pairingId(race)))
                 .sorted(Comparator.comparingInt((Race other) -> other.getMatchday().getSortIndex())
                         .thenComparing(Race::getDateTime, Comparator.nullsLast(Comparator.naturalOrder())).thenComparing(Race::getId)).toList();
@@ -129,7 +128,6 @@ public class PickTargetService {
         var season = seasons.findByIdForUpdate(seasonId).orElseThrow(PickTargetService::unavailable);
         var race = races.findBySeasonForSelectionUpdate(seasonId).stream()
                 .filter(row -> raceId.equals(row.getId())).findFirst().orElseThrow(PickTargetService::unavailable);
-        if (!race.isPicksManaged()) throw unavailable();
         entityManager.refresh(race.getMatchday(), LockModeType.PESSIMISTIC_WRITE);
         entityManager.refresh(race.getMatchday().getPhase(), LockModeType.PESSIMISTIC_WRITE);
         if (!seasonId.equals(race.getMatchday().getSeason().getId())) throw unavailable();
@@ -142,7 +140,7 @@ public class PickTargetService {
     }
 
     public boolean isEligible(Race race) {
-        return race.isPicksManaged() && PickTargetRules.isUnfinishedTarget(race);
+        return PickTargetRules.isUnfinishedTarget(race);
     }
 
     private static BusinessRuleException unavailable() {

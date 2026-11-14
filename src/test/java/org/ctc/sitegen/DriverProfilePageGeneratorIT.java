@@ -77,13 +77,13 @@ class DriverProfilePageGeneratorIT {
     void givenManagedResultsWithCollectionDisabled_whenGeneratingHistory_thenWithholdThePrivateTrackInBothLayouts() throws IOException {
         // given
         var season = seasonRepository.findByYearAndNumber(2026, 99).getFirst();
-        season.setPicksCollectionEnabled(false);
+        
         var guest = driverRepository.findByPsnId("Test_Guest_1").orElseThrow();
         var results = raceResults.findByDriverId(guest.getId()).stream()
                 .filter(row -> row.getRace().getMatchday().getSeason().getId().equals(season.getId())).toList();
         assertThat(results).isNotEmpty();
         var track = tracks.save(new org.ctc.domain.model.Track("TEST-PRIVATE-HISTORY-TRACK-81bf"));
-        results.forEach(row -> { row.getRace().setPicksManaged(true); row.getRace().setTrack(track); });
+        results.forEach(row -> {  row.getRace().setTrack(track); });
         var output = SitegenTestDir.create("private-driver-history");
         var slug = siteSlugger.slugify(season.getDisplayLabel());
         var context = new GenerationContext(output, season, slug, season.getName(), false, null, siteSlugService.allocate());

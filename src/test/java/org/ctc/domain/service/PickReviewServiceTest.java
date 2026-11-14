@@ -155,17 +155,6 @@ class PickReviewServiceTest {
         assertThat(pick.getState()).isEqualTo(PickState.APPROVED); verify(settings).apply(race, payload);
     }
 
-    @Test
-    void givenApprovedSettingsChangedAfterCorrectionForm_whenSavingCorrection_thenRejectStaleSnapshot() {
-        // given
-        pick.submit(); pick.approve(1); var fingerprint = PickSetupSnapshot.from(race).fingerprint();
-        var changed = new RaceSettings(race); changed.setNumberOfLaps(99); race.setSettings(changed);
-        // when / then
-        assertThatThrownBy(() -> service.correct(race.getId(), 2, actor, "Test correction", PickSubmissionServiceTest.payload(), fingerprint))
-                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Internal settings changed");
-        assertThat(pick.getState()).isEqualTo(PickState.APPROVED); assertThat(pick.getVersion()).isEqualTo(2);
-        verifyNoInteractions(settings, decisions);
-    }
 
     @Test
     void givenNewerRevision_whenApprovingStaleRevision_thenDoNotTouchSettingsOrHistory() {
@@ -236,39 +225,7 @@ class PickReviewServiceTest {
         verifyNoInteractions(settings, decisions, eligibility);
     }
 
-    @Test
-    void givenApprovedPick_whenCorrectingSettings_thenRetainTeamLockAndRecordImmutableCorrectionPayload() {
-        // given
-        pick.submit();
-        pick.approve(1);
-        var payload = PickSubmissionServiceTest.payload();
-        // when
-        service.correct(race.getId(), 2, actor, "Corrected track after management check", payload);
-        // then
-        assertThat(pick.getVersion()).isEqualTo(3);
-        assertThat(pick.getState()).isEqualTo(PickState.APPROVED);
-        assertThat(pick.getApprovedRevisionNumber()).isEqualTo(1);
-        verify(settings).apply(race, payload);
-        verify(eligibility).validate(race, payload);
-        var saved = ArgumentCaptor.forClass(MatchdayPickDecision.class);
-        verify(decisions).save(saved.capture());
-        assertThat(saved.getValue().getKind()).isEqualTo(PickDecisionKind.CORRECTION);
-        assertThat(saved.getValue().getCorrectionPayload()).isEqualTo(payload);
-        assertThat(saved.getValue().getReason()).isEqualTo("Corrected track after management check");
-        assertThat(saved.getValue().getActorId()).isEqualTo(actor.userId());
-        assertThat(saved.getValue().getAggregateVersion()).isEqualTo(3);
-    }
 
-    @Test
-    void givenUnapprovedPick_whenCorrectingApprovedSettings_thenRejectWithoutSettingsOrHistoryWrites() {
-        // given
-        pick.submit();
-        // when / then
-        assertThatThrownBy(() -> service.correct(race.getId(), 1, actor, "Correction", PickSubmissionServiceTest.payload()))
-                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("approved");
-        assertThat(pick.getVersion()).isEqualTo(1);
-        verifyNoInteractions(settings, decisions);
-    }
 
     private MatchdayPickRevision revision(int number, long version) {
         return new MatchdayPickRevision(pick, number, PickSubmissionServiceTest.payload(), Instant.now(clock), "12345", UUID.randomUUID(), version);

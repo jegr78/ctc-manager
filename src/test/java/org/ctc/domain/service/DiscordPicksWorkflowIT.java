@@ -249,7 +249,7 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
             var track = tracks.save(new Track("Test category second track " + UUID.randomUUID()));
             extraTrack = track.getId(); season.getTracks().add(track);
             var race = helper.createRace(fixture.matchday(), matches.findById(fixture.match().getId()).orElseThrow());
-            race.setDateTime(LocalDateTime.of(2035, 1, 1, 21, 0)); race.setPicksManaged(true);
+            race.setDateTime(LocalDateTime.of(2035, 1, 1, 21, 0)); 
             return race.getId();
         });
         var duplicate = new PickPayload(extraTrack, saved.carId(), entry, saved.laps(), saved.tyreWear(), saved.fuelConsumption(),
@@ -304,8 +304,6 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
         var teammate = new Driver("12346"); teammate.command(); teammate.select(fixture.race().getId());
         assertThat(teammate.response.allText()).contains("APPROVED", payload.weather());
         assertThat(teammate.response.last().buttons()).extracting(PickGatewayMessage.Button::label).doesNotContain("Enter picks", "Replace picks");
-        when(collection.isAvailable()).thenReturn(false);
-        tx.executeWithoutResult(status -> seasons.findById(fixture.season().getId()).orElseThrow().setPicksCollectionEnabled(false));
         assertThat(generateSiteText()).doesNotContain(carName, trackName, payload.weather());
         assertThat(wm.getAllServeEvents()).isEmpty();
 
@@ -315,7 +313,7 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
         assertThat(disclosure.forPublic(fixture.race().getId()).settings().weather()).isEqualTo(payload.weather());
         assertThat(disclosure.forPublic(fixture.race().getId()).settings().timeProgressionMode()).isEqualTo(TimeProgressionMode.EQUAL_CONDITIONS);
         var correction = withTime(TimeProgressionMode.MULTIPLIER, 0, "Test private zero correction " + UUID.randomUUID());
-        reviews.correct(fixture.race().getId(), 2, new ManagementPickActor("test-admin"), "Test unpublished correction", correction);
+        corrections.record(fixture.race().getId(), 2, new ManagementPickActor("test-admin"), "Test unpublished correction", correction);
         assertThat(generateSiteText()).doesNotContain(carName, correction.weather());
         assertThat(disclosure.forPublic(fixture.race().getId()).settings().weather()).isEqualTo(payload.weather());
         assertThat(disclosure.forPublic(fixture.race().getId()).settings().timeProgressionMode()).isEqualTo(TimeProgressionMode.EQUAL_CONDITIONS);
@@ -338,7 +336,7 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
             var match = matches.findById(fixture.match().getId()).orElseThrow();
             match.getMatchday().getPhase().setLegs(2);
             var race = planningMatches.addLeg(match.getId()).getRaces().getLast();
-            assertThat(race.isPicksManaged()).isTrue(); assertThat(race.getDateTime()).isNull();
+            assertThat(race.getDateTime()).isNull();
             match.getMatchday().setPickDeadline(LocalDateTime.of(2020, 1, 1, 12, 0));
             bindings.save(new TeamPickChannelBinding(match.getMatchday().getSeason(), match.getAwayTeam(), GUILD, awayChannel));
             return race.getId();

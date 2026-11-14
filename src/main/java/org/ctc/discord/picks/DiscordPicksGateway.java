@@ -2,13 +2,11 @@ package org.ctc.discord.picks;
 
 import lombok.RequiredArgsConstructor;
 import org.ctc.discord.repository.DiscordGlobalConfigRepository;
-import org.ctc.domain.service.PickCollectionStatus;
 import org.springframework.context.SmartLifecycle;
 
 @RequiredArgsConstructor
 public class DiscordPicksGateway implements SmartLifecycle {
     private final PickGatewaySettings settings;
-    private final PickCollectionStatus collection;
     private final DiscordGlobalConfigRepository configs;
     private final PickGatewayTransport transport;
     private final String botToken;
@@ -20,7 +18,6 @@ public class DiscordPicksGateway implements SmartLifecycle {
     public synchronized void start() {
         if (session != null) return;
         if (!settings.isEnabled()) { status = Health.DISABLED; return; }
-        if (!collection.isConfidentialityReady()) { status = Health.WAITING_FOR_CONFIDENTIALITY; return; }
         try {
             var config = configs.findFirstByOrderByIdAsc();
             if (botToken == null || botToken.isBlank() || config == null || config.getGuildId() == null
@@ -67,5 +64,5 @@ public class DiscordPicksGateway implements SmartLifecycle {
         };
     }
 
-    public enum Health { DISABLED, WAITING_FOR_CONFIDENTIALITY, MISCONFIGURED, CONNECTING, CONNECTED, RECONNECTING, STOPPED, FAILED }
+    public enum Health { DISABLED, MISCONFIGURED, CONNECTING, CONNECTED, RECONNECTING, STOPPED, FAILED }
 }

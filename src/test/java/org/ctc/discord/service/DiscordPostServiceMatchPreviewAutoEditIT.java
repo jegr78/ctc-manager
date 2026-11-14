@@ -169,8 +169,7 @@ class DiscordPostServiceMatchPreviewAutoEditIT {
         String webhookPath = "/api/v10/webhooks/123456789012345678/Test_preview-token";
         setAnnouncementWebhook(wm.baseUrl() + webhookPath);
         Match match = seedMatchWithRace("Priv", "Test changed teaser", null);
-        match.getMatchday().getSeason().setPicksCollectionEnabled(false);
-        match.getRaces().forEach(race -> race.setPicksManaged(true));
+        
         seedExistingPreviewPost(match, "123456789012345678", "234567890123456789");
         Path privateGraphic = Path.of(uploadDir, "preview-private-test.png").toAbsolutePath().normalize();
         Files.writeString(privateGraphic, "TEST-PRIVATE-CAR-TRACK-WEATHER-7ca1");
@@ -194,7 +193,7 @@ class DiscordPostServiceMatchPreviewAutoEditIT {
         String webhookPath = "/api/v10/webhooks/123456789012345679/Test_stale-preview-token";
         setAnnouncementWebhook(wm.baseUrl() + webhookPath);
         Match current = seedMatchWithRace("Stal", "Test stale caller teaser", null);
-        current.getRaces().forEach(race -> { race.setPicksManaged(true); raceRepository.saveAndFlush(race); });
+        current.getRaces().forEach(race -> {  raceRepository.saveAndFlush(race); });
         seedExistingPreviewPost(current, "123456789012345679", "234567890123456780");
         var stale = new Match(current.getMatchday(), current.getHomeTeam(), current.getAwayTeam());
         stale.setId(current.getId()); stale.setDiscordTeaser(current.getDiscordTeaser());

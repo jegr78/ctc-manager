@@ -22,7 +22,6 @@ public class PickSubmissionService {
     private final PickTargetService targets;
     private final PickEligibilityService eligibility;
     private final PickDeadlinePolicy deadlines;
-    private final PickCollectionStatus collection;
     private final PickWriteExecutor writes;
     private final Clock clock;
     private final TrackEnvironmentService environments;
@@ -49,9 +48,8 @@ public class PickSubmissionService {
                 environments.requireWeather(payload.trackId(), PickWeatherSelection.parseCanonical(payload.weather()));
             }
             var acceptedAt = clock.instant();
-            var decision = deadlines.assessAt(new PickDeadlinePolicy.Context(pick.getState(),
-                    target.season().isPicksCollectionEnabled(), collection.isAvailable(),
-                    target.race().isPicksManaged() && targets.isEligible(target.race()), target.race().getMatchday().isPicksOpen(),
+            var decision = deadlines.assessAt(new PickDeadlinePolicy.Context(
+                    targets.isEligible(target.race()), target.race().getMatchday().isPicksOpen(),
                     pick.isManualClosed(), org.ctc.domain.model.MatchdayPickWindowRules.deadline(target.race())), acceptedAt);
             if (!decision.editable()) throw new BusinessRuleException(decision.reason());
             int number = pick.submit();

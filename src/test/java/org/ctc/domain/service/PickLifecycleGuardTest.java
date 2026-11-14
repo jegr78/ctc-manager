@@ -27,7 +27,7 @@ class PickLifecycleGuardTest {
         away.setId(UUID.randomUUID());
         race.setMatchday(day);
         race.setMatch(new Match(day, home, away));
-        race.setPicksManaged(true);
+        
         when(picks.findByRaceId(race.getId())).thenReturn(Optional.of(new MatchdayPick(race, new Season(), home)));
     }
 
@@ -55,29 +55,5 @@ class PickLifecycleGuardTest {
         // when / then
         assertThatCode(() -> guard.requireIdentity(race, UUID.randomUUID(), away, home)).doesNotThrowAnyException();
         assertThatCode(() -> guard.requireNoHistory(List.of(race))).doesNotThrowAnyException();
-    }
-
-    @Test
-    void givenManagedRace_whenNativeEditorChangesSetup_thenRequireReviewButAllowUnchangedMetadataSave() {
-        // given
-        var payload = PickSubmissionServiceTest.payload();
-        var values = RaceSettingsValues.from(payload);
-        var settings = new RaceSettings(race);
-        values.applyTo(settings);
-        race.setSettings(settings);
-        var car = new Car();
-        car.setId(payload.carId());
-        var track = new Track();
-        track.setId(payload.trackId());
-        race.setCar(car);
-        race.setTrack(track);
-        // when / then
-        assertThatCode(() -> guard.requireSetupUnchanged(race, payload.trackId(), payload.carId(), null, values)).doesNotThrowAnyException();
-        assertThatThrownBy(() -> guard.requireSetupUnchanged(race, UUID.randomUUID(), payload.carId(), null, values))
-                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("pick review");
-        assertThatThrownBy(() -> guard.requireSetupUnchanged(race, payload.trackId(), null, null, values))
-                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("pick review");
-        race.setPicksManaged(false);
-        assertThatCode(() -> guard.requireSetupUnchanged(race, null, null, null, values)).doesNotThrowAnyException();
     }
 }

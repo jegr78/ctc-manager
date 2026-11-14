@@ -22,11 +22,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
-import static org.mockito.Mockito.when;
 
 @Tag("e2e")
 @TestPropertySource(properties = "ctc.outbound.enabled=false")
@@ -44,7 +42,6 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
     @Autowired MatchdayPickAdminService admin;
     @Autowired SeasonCarPoolService pools;
     @Autowired org.ctc.admin.service.LobbySettingsGraphicService lobbyGraphics;
-    @MockitoBean PickCollectionStatus collection;
     TestHelper.SeasonFixture fixture;
     PickPayload payload;
     final List<UUID> carIds = new ArrayList<>();
@@ -55,7 +52,6 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
             int width, int height, String viewport, boolean javascript) throws Exception {
         // given
         if (javascript) { context.close(); context = browser.newContext(); page = context.newPage(); }
-        when(collection.isConfidentialityReady()).thenReturn(true);
         tx.executeWithoutResult(status -> seasons.findById(fixture.season().getId()).orElseThrow().setLobbyRulesProfile(LobbyRulesProfile.CTC_2027));
         pools.changeMode(fixture.season().getId(), CarPoolMode.CATEGORY_POOL);
         var entry = pools.saveOneMakeEntry(fixture.season().getId(), null, "Test explicit tyre One-Make", payload.carId());
@@ -65,7 +61,7 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
                 payload.weather(), payload.timeOfDay(), payload.availableTyres(), payload.mandatoryTyres(), LobbyRulesProfile.CTC_2027,
                 RaceStartType.GRID_FALSE_START, RaceSlipstream.REAL);
         tx.executeWithoutResult(status -> {
-            var race = races.findById(fixture.race().getId()).orElseThrow(); race.setPicksManaged(false);
+            var race = races.findById(fixture.race().getId()).orElseThrow(); 
             race.setCar(cars.findById(payload.carId()).orElseThrow()); race.setCarPoolEntry(entries.findById(entry).orElseThrow());
             race.setTrack(tracks.findById(payload.trackId()).orElseThrow());
             var settings = new RaceSettings(race); RaceSettingsValues.from(payload).applyTo(settings); race.setSettings(settings);
@@ -85,7 +81,6 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
         page.navigate(url("/admin/races/" + fixture.race().getId() + "/edit"));
         assertThat(page.locator("#availableTyres")).hasValues(new String[] {"SS", "SM", "SH"});
         assertThat(page.locator("#mandatoryTyres")).hasValues(new String[] {"SM"});
-        tx.executeWithoutResult(status -> races.findById(fixture.race().getId()).orElseThrow().setPicksManaged(true));
         preconfigureAndSubmit(); approve(); page.navigate(url(path() + "/correction"));
         assertThat(page.locator("#correct-mandatory-I, #correct-mandatory-W")).hasCount(0);
         for (var checkbox : page.locator("input[name=availableTyres]").all()) checkbox.uncheck();
@@ -184,10 +179,9 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
     void createSyntheticFixtureAndNativeBrowser() {
         // given
         context = browser.newContext(new Browser.NewContextOptions().setJavaScriptEnabled(false)); page = context.newPage();
-        when(collection.isAvailable()).thenReturn(true);
         tx.executeWithoutResult(status -> {
             fixture = helper.createFullSeasonFixture("TPM" + UUID.randomUUID().toString().substring(0, 7));
-            fixture.season().setPicksCollectionEnabled(true); fixture.race().setPicksManaged(true);
+             
             fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0)); fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0)); fixture.matchday().setPicksOpen(true);
             var car = cars.save(new Car("Test review", "Choice " + UUID.randomUUID())); carIds.add(car.getId());
             var track = tracks.save(new Track("Test review track " + UUID.randomUUID()));

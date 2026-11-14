@@ -21,7 +21,6 @@ class TeamPickBindingBackupValidatorTest {
         // when / then
         assertThat(PickBackupValidator.supports("team_pick_channel_bindings")).isTrue();
         assertThatCode(validator::validate).doesNotThrowAnyException();
-        assertThat(validator.hasConfidentialContent()).isFalse();
     }
 
     @ParameterizedTest

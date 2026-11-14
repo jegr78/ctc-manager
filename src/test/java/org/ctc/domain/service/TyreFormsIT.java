@@ -71,7 +71,6 @@ class TyreFormsIT extends TyrePersistenceIT {
     @Test
     void givenOnlyRacingHardSelected_whenSavingNativeInput_thenPersistAutomaticWetTyresAndLimitMandatoryChoices() throws Exception {
         // given
-        tx.executeWithoutResult(status -> entityManager.find(Race.class, fixture.race().getId()).setPicksManaged(false));
         // when
         mvc.perform(save(new String[]{"RH"}, "RH")).andExpect(status().is3xxRedirection())
                 .andExpect(flash().attributeExists("successMessage"));
@@ -101,7 +100,6 @@ class TyreFormsIT extends TyrePersistenceIT {
     @Test
     void givenRepeatedNativeFormValues_whenSavingSports_thenBindEveryCompoundAndReloadItsSelection() throws Exception {
         // given
-        tx.executeWithoutResult(status -> entityManager.find(Race.class, fixture.race().getId()).setPicksManaged(false));
         // when
         mvc.perform(save(new String[]{"SS", "SM", "SH"}, "SM"))
                 .andExpect(status().is3xxRedirection())

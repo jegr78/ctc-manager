@@ -210,10 +210,9 @@ class PickBackupValidatorTest {
         var rows = publicationFixture(); rows.remove("matchday_picks"); rows.remove("matchday_pick_revisions");
         rows.get("seasons").getFirst().put("picksCollectionEnabled", false); rows.get("races").getFirst().put("picksManaged", false);
         var validator = new PickBackupValidator(7);
-        // when
-        rows.forEach((table, values) -> values.forEach(row -> validator.accept(table, row))); validator.validate();
-        // then
-        assertThat(validator.hasConfidentialContent()).isFalse();
+        // when / then
+        assertThatCode(() -> { rows.forEach((table, values) -> values.forEach(row -> validator.accept(table, row))); validator.validate(); })
+                .doesNotThrowAnyException();
     }
 
     @Test

@@ -44,7 +44,7 @@ class PickAccessServiceTest {
         var day = new Matchday(phase, "Test authorization target", 1);
         day.setId(UUID.randomUUID());
         race.setId(UUID.randomUUID()); race.setMatchday(day); race.setMatch(new Match(day, home, away));
-        race.setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0)); race.setPicksManaged(true);
+        race.setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0)); 
         binding = new TeamPickChannelBinding(season, home, GUILD, CHANNEL);
         var config = new DiscordGlobalConfig(); config.setGuildId(GUILD);
         when(configs.findFirstByOrderByIdAsc()).thenReturn(config);
@@ -113,16 +113,15 @@ class PickAccessServiceTest {
         assertThat(result.get().seasonId()).isEqualTo(season.getId());
         assertThat(result.get().teamId()).isEqualTo(home.getId());
         assertThat(result.get().userId()).isEqualTo(USER);
-        assertThat(result.get().channel()).isEqualTo(new AuthorizedPickActor.ChannelContext(GUILD, CHANNEL, epoch.getAsLong()));
+        assertThat(result.get().channel()).isEqualTo(new AuthorizedPickActor.ChannelContext(GUILD, CHANNEL, epoch.getAsLong(), home.getId()));
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"wrong-home", "wrong-season", "unmanaged", "missing-race", "binding-revoked", "permission-revoked", "changed-opponent"})
+    @ValueSource(strings = {"wrong-home", "wrong-season", "missing-race", "binding-revoked", "permission-revoked", "changed-opponent"})
     void givenStaleOrForeignTarget_whenSelecting_thenDenyAccessToPrivatePick(String cause) {
         // given
         if (cause.equals("wrong-home")) { race.setHomeTeamOverride(away); race.setAwayTeamOverride(home); }
         if (cause.equals("wrong-season")) { var other = new Season("Test foreign season"); other.setId(UUID.randomUUID()); race.getMatchday().getPhase().setSeason(other); }
-        if (cause.equals("unmanaged")) race.setPicksManaged(false);
         if (cause.equals("missing-race")) when(races.findById(race.getId())).thenReturn(Optional.empty());
         if (cause.equals("binding-revoked")) when(bindings.findByGuildIdAndChannelId(GUILD, CHANNEL)).thenReturn(List.of());
         if (cause.equals("permission-revoked")) when(permissions.hasCurrentPrivateAccess(GUILD, CHANNEL, USER)).thenReturn(false);
@@ -158,7 +157,7 @@ class PickAccessServiceTest {
     void givenAuthorizedContext_whenRecheckingUnderWriteLock_thenReadCurrentBindingAndPermissionsAgain() {
         // given
         var actor = new AuthorizedPickActor(race.getId(), season.getId(), home.getId(), USER,
-                new AuthorizedPickActor.ChannelContext(GUILD, CHANNEL, epoch.getAsLong()));
+                new AuthorizedPickActor.ChannelContext(GUILD, CHANNEL, epoch.getAsLong(), home.getId()));
         when(bindings.findCurrentForUpdate(season.getId(), home.getId(), GUILD, CHANNEL)).thenReturn(Optional.of(binding));
         // when
         service.recheck(actor);
@@ -172,7 +171,7 @@ class PickAccessServiceTest {
     void givenRevocationAfterTargetSelection_whenConfirming_thenRejectOldAuthority(String invalid) {
         // given
         var actor = new AuthorizedPickActor(race.getId(), season.getId(), home.getId(), USER,
-                new AuthorizedPickActor.ChannelContext(GUILD, CHANNEL, epoch.getAsLong()));
+                new AuthorizedPickActor.ChannelContext(GUILD, CHANNEL, epoch.getAsLong(), home.getId()));
         when(bindings.findCurrentForUpdate(season.getId(), home.getId(), GUILD, CHANNEL)).thenReturn(Optional.of(binding));
         if (invalid.equals("removed-binding")) when(bindings.findCurrentForUpdate(season.getId(), home.getId(), GUILD, CHANNEL)).thenReturn(Optional.empty());
         if (invalid.equals("revoked-permission")) when(permissions.hasCurrentPrivateAccess(GUILD, CHANNEL, USER)).thenReturn(false);

@@ -17,7 +17,6 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.support.TransactionTemplate;
 import static org.assertj.core.api.Assertions.*;
@@ -39,7 +38,6 @@ class PickCsvImportIT {
     @Autowired CsvImportService imports;
     @MockitoSpyBean RaceRepository races;
     @MockitoSpyBean DriverRepository drivers;
-    @MockitoBean PickCollectionStatus collection;
     TestHelper.SeasonFixture fixture;
     List<UUID> carIds;
     List<UUID> trackIds;
@@ -57,8 +55,8 @@ class PickCsvImportIT {
             String suffix = UUID.randomUUID().toString().substring(0, 7);
             fixture = helper.createFullSeasonFixture("TPCSV" + suffix);
             teamIds.addAll(List.of(fixture.homeTeam().getId(), fixture.awayTeam().getId()));
-            fixture.season().setPicksCollectionEnabled(true);
-            fixture.race().setPicksManaged(true);
+            
+            
             fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0));
             fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0));
             fixture.matchday().setPicksOpen(true);
@@ -74,7 +72,6 @@ class PickCsvImportIT {
             secondDriver = helper.createDriver("Test_pick_csv_" + suffix + "_b", "Test pick CSV B");
             driverIds.addAll(List.of(firstDriver.getId(), secondDriver.getId()));
         });
-        when(collection.isAvailable()).thenReturn(true);
         payload = payload(0);
         receipt = submissions.submit(fixture.race().getId(), 0, UUID.randomUUID(), actor(fixture.race().getId()), payload);
     }
@@ -104,7 +101,6 @@ class PickCsvImportIT {
             var race = races.findById(fixture.race().getId()).orElseThrow();
             assertThat(race.getResults()).hasSize(2);
             assertThat(race.getHomeTeam().getId()).isEqualTo(fixture.homeTeam().getId());
-            assertThat(race.isPicksManaged()).isTrue();
             var pick = picks.findByRaceId(race.getId()).orElseThrow();
             assertThat(pick.getVersion()).isEqualTo(approved ? 2 : 1);
             assertThat(pick.getState()).isEqualTo(approved ? PickState.APPROVED : PickState.SUBMITTED);
@@ -124,7 +120,7 @@ class PickCsvImportIT {
             var original = races.findById(fixture.race().getId()).orElseThrow();
             var race = helper.createRace(original.getMatchday(), original.getMatch());
             race.setDateTime(original.getDateTime().plusHours(1));
-            race.setPicksManaged(true);
+            
             return race.getId();
         });
         submissions.submit(secondRace, 0, UUID.randomUUID(), actor(secondRace), payload(1));

@@ -16,7 +16,6 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.when;
 
 @TestPropertySource(properties = "spring.datasource.url=jdbc:h2:mem:ctc_tyre_workflow;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
 @Tag("integration")
@@ -47,7 +46,6 @@ class TyrePersistenceIT extends PickPersistenceIT {
                 payload.timeProgressionMode(), payload.timeProgressionMultiplier(), payload.weather(), payload.timeOfDay(),
                 payload.availableTyres(), payload.mandatoryTyres(), LobbyRulesProfile.CTC_2027,
                 RaceStartType.GRID_FALSE_START, RaceSlipstream.REAL);
-        when(collection.isConfidentialityReady()).thenReturn(true);
     }
 
     @Test
@@ -179,7 +177,7 @@ class TyrePersistenceIT extends PickPersistenceIT {
         submissions.submit(fixture.race().getId(), 0, request, actor, payload);
         reviews.approve(fixture.race().getId(), 1, 1, manager, "Test original Racing setup checked");
         String fingerprint = tx.execute(status -> PickSetupSnapshot.from(entityManager.find(Race.class, fixture.race().getId())).fingerprint());
-        reviews.correct(fixture.race().getId(), 2, manager, "Test corrected tyre strategy", choice, fingerprint);
+        corrections.record(fixture.race().getId(), 2, manager, "Test corrected tyre strategy", choice);
         tx.executeWithoutResult(status -> {
             assertThat(revisions.findByRequestId(request).orElseThrow().getPayload()).isEqualTo(payload);
             var pick = picks.findByRaceId(fixture.race().getId()).orElseThrow();

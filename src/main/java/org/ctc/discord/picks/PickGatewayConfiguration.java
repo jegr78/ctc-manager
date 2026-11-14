@@ -4,7 +4,6 @@ import java.time.Clock;
 import org.ctc.discord.incidents.IncidentInteractionHandler;
 import org.ctc.backup.lock.ImportLockService;
 import org.ctc.discord.repository.DiscordGlobalConfigRepository;
-import org.ctc.domain.service.PickCollectionStatus;
 import org.ctc.domain.service.PickSessionEpoch;
 import org.ctc.integration.OutboundPolicy;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,9 +34,9 @@ public class PickGatewayConfiguration {
     }
 
     @Bean
-    public DiscordPicksGateway discordPicksGateway(PickGatewaySettings settings, PickCollectionStatus collection,
+    public DiscordPicksGateway discordPicksGateway(PickGatewaySettings settings,
                                                   DiscordGlobalConfigRepository configs, PickGatewayTransport transport,
                                                   @Value("${app.discord.bot-token:}") String token, PickGatewayDispatcher dispatcher) {
-        return new DiscordPicksGateway(settings, collection, configs, transport, token, dispatcher);
+        return new DiscordPicksGateway(settings, configs, transport, token, dispatcher);
     }
 }

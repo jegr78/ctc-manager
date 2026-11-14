@@ -10,8 +10,6 @@ import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Playoff;
 import org.ctc.domain.model.PlayoffMatchup;
 import org.ctc.domain.model.Team;
-import org.ctc.domain.model.Race;
-import org.ctc.domain.model.PickTargetRules;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.springframework.stereotype.Service;
@@ -51,7 +49,6 @@ public class PlayoffCarSelectionService {
             seasons.findByIdForUpdate(seasonId).orElseThrow();
             var rows = races.findBySeasonForSelectionUpdate(seasonId);
             var assignments = new ArrayList<RaceCarSelectionService.Assignment>();
-            var newlyEligible = new ArrayList<Race>();
             for (var change : changes) {
                 incidentGuard.requirePlayoffIdentity(change.matchup(), change.team1(), change.team2());
                 penaltyGuard.requirePlayoffIdentity(change.matchup(), change.team1(), change.team2());
@@ -64,7 +61,6 @@ public class PlayoffCarSelectionService {
                     incidentGuard.requireIdentity(race, race.getMatchday().getId(), home, away);
                     penaltyGuard.requireIdentity(race, race.getMatchday().getId(), home, away);
                     disqualificationGuard.requireIdentity(race, race.getMatchday().getId(), home, away);
-                    if (!PickTargetRules.isUnfinishedTarget(race) && PickTargetRules.isUnfinishedTarget(race, home, away)) newlyEligible.add(race);
                     var previousHome = race.getHomeTeam();
                     if (Objects.equals(previousHome == null ? null : previousHome.getId(), home == null ? null : home.getId())) continue;
                     assignments.add(new RaceCarSelectionService.Assignment(race.getId(), home == null ? null : home.getId(),
@@ -75,7 +71,6 @@ public class PlayoffCarSelectionService {
             }
             var result = selections.validateAssignments(seasonId, assignments);
             if (!result.valid()) throw new BusinessRuleException(result.message());
-            if (playoff.getSeason().isPicksCollectionEnabled()) newlyEligible.forEach(race -> race.setPicksManaged(true));
         } catch (RuntimeException ex) {
             throw RaceSelectionConcurrency.translate(ex);
         }

@@ -337,7 +337,7 @@ class PickInteractionHandlerTest {
     final PickInteractionHandler handler = new PickInteractionHandler(access, targets, reads, submissions, new PickDraftSessionStore(clock, epoch, 512));
     final UUID race = UUID.randomUUID(), season = UUID.randomUUID(), team = UUID.randomUUID(), car = UUID.randomUUID(), track = UUID.randomUUID();
     final ChannelPickActor channel = new ChannelPickActor("100", "200", "300", Set.of(new ChannelPickActor.Binding(season, team)));
-    final AuthorizedPickActor actor = new AuthorizedPickActor(race, season, team, "300", new AuthorizedPickActor.ChannelContext("100", "200", 0));
+    final AuthorizedPickActor actor = new AuthorizedPickActor(race, season, team, "300", new AuthorizedPickActor.ChannelContext("100", "200", 0, team));
     HomeRaceTarget target = new HomeRaceTarget(race, "Test season 2026 | League | Matchday 2 | vs T-AWAY | Leg 2", PickState.MISSING, 0, true, "Before the deadline");
     PickTeamView view;
     Response response;
@@ -465,7 +465,7 @@ class PickInteractionHandlerTest {
         complete("equal"); String confirm = button("Confirm submission");
         when(reads.load(channel, race)).thenAnswer(call -> { epoch.afterRestore(null); return view; });
         when(access.authorizeTarget(channel, race)).thenAnswer(call -> new AuthorizedPickActor(race, season, team, "300",
-                new AuthorizedPickActor.ChannelContext("100", "200", epoch.getAsLong())));
+                new AuthorizedPickActor.ChannelContext("100", "200", epoch.getAsLong(), team)));
         // when
         dispatch(PickGatewayInteraction.Kind.BUTTON, confirm, Map.of());
         // then

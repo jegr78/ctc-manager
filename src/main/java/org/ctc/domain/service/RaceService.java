@@ -280,8 +280,7 @@ public class RaceService {
             var submittedSettings = new RaceSettingsValues(numberOfLaps, tyreWearMultiplier, fuelConsumptionMultiplier,
                     refuelingSpeed, initialFuel, numberOfRequiredPitStops, timeProgressionMode, timeProgressionMultiplier,
                     weather, timeOfDay, tyreInputs.available(), tyreInputs.mandatory(), startType, slipstream);
-            rejection = pickGuard.setupRejection(race, trackId, carId, carPoolEntryId, submittedSettings);
-            if (rejection == null) rejection = validatePlannedTracks(lockedSeason, planned);
+            rejection = validatePlannedTracks(lockedSeason, planned);
             if (rejection != null) return new SaveResult(false, rejection, id, matchdayId);
             var selectedEntry = carPoolEntryId == null ? null : lockedSeason.getCarPoolEntries().stream()
                     .filter(entry -> carPoolEntryId.equals(entry.getId())).findFirst().orElseThrow();
@@ -292,10 +291,8 @@ public class RaceService {
                 applyPairing(race, matchday, homeTeam, awayTeam);
             }
 
-            boolean firstSchedule = race.getDateTime() == null && dateTime != null;
             boolean dateTimeChanged = id != null && !Objects.equals(race.getDateTime(), dateTime);
             race.setDateTime(dateTime);
-            if (id == null || firstSchedule) race.enrolForPicksIfEnabled();
 
             settingsApplication.apply(race, track, car, selectedEntry, submittedSettings);
 

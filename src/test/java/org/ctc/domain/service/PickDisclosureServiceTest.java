@@ -11,8 +11,6 @@ import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.PickPublicationSnapshotRepository;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -21,12 +19,16 @@ import static org.mockito.Mockito.*;
 class PickDisclosureServiceTest {
     final RaceRepository races = mock(RaceRepository.class);
     final PickPublicationSnapshotRepository snapshots = mock(PickPublicationSnapshotRepository.class);
-    final PickDisclosureService service = new PickDisclosureService(races, snapshots);
+    final PickPublicationService publications = new PickPublicationService(mock(org.ctc.backup.lock.ImportLockService.class),
+            mock(org.springframework.transaction.PlatformTransactionManager.class), mock(org.ctc.domain.repository.SeasonRepository.class), races,
+            mock(org.ctc.domain.repository.PickPublicationAttemptRepository.class), snapshots, new PickSessionEpoch(),
+            mock(jakarta.persistence.EntityManager.class), java.time.Clock.systemUTC());
+    final PickDisclosureService service = new PickDisclosureService(races, publications);
 
     @Test
-    void givenUnenrolledLegacyRace_whenProjectingPublicly_thenKeepItsExistingDisplayValues() {
+    void givenFinishedRace_whenProjectingPublicly_thenShowItsStoredSetup() {
         // given
-        var race = race(false); when(races.findById(race.getId())).thenReturn(Optional.of(race));
+        var race = race(true); when(races.findById(race.getId())).thenReturn(Optional.of(race));
         // when
         var projection = assertDoesNotThrow(() -> service.forPublic(race.getId()));
         // then
@@ -35,11 +37,10 @@ class PickDisclosureServiceTest {
         assertThat(projection.settings().weather()).isEqualTo("Test private weather");
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void givenManagedUnpublishedRace_whenCollectionIsEitherEnabledOrDisabled_thenWithholdEveryChoice(boolean collectionEnabled) {
+    @Test
+    void givenUnfinishedUnpublishedRace_whenProjectingPublicly_thenWithholdEveryChoice() {
         // given
-        var race = race(true); race.getMatchday().getSeason().setPicksCollectionEnabled(collectionEnabled);
+        var race = race(false);
         when(races.findById(race.getId())).thenReturn(Optional.of(race));
         // when
         var projection = assertDoesNotThrow(() -> service.forPublic(race.getId()));
@@ -57,7 +58,7 @@ class PickDisclosureServiceTest {
     @Test
     void givenConfirmedContentAndLaterPrivateCorrection_whenReadingPublicly_thenKeepOnlyTheOriginalFrozenVersion() {
         // given
-        var race = race(true); var original = confirmed(race, 1, PickDisclosureField.all(), 1, 0);
+        var race = race(false); var original = confirmed(race, 1, PickDisclosureField.all(), 1, 0);
         race.getCar().setName("Test later private car"); race.getTrack().setName("Test later private track");
         race.getSettings().setWeather("Test later private weather");
         when(races.findById(race.getId())).thenReturn(Optional.of(race));
@@ -72,7 +73,7 @@ class PickDisclosureServiceTest {
     @Test
     void givenOlderFullAndNewerLobbyPublication_whenReading_thenNeverMixContentVersionsEvenIfOlderConfirmationIsLater() {
         // given
-        var race = race(true); var old = confirmed(race, 1, PickDisclosureField.all(), 4, 0);
+        var race = race(false); var old = confirmed(race, 1, PickDisclosureField.all(), 4, 0);
         race.getTrack().setName("Test newer public track"); race.getSettings().setWeather("Test newer public weather");
         var latest = confirmed(race, 2, PickDisclosureField.lobby(), 2, 0);
         when(races.findById(race.getId())).thenReturn(Optional.of(race));
@@ -87,7 +88,7 @@ class PickDisclosureServiceTest {
     @Test
     void givenTwoDisclosuresOfOneExactVersion_whenReading_thenUnionOnlyTheirConfirmedFields() {
         // given
-        var race = race(true); var lobby = confirmed(race, 1, PickDisclosureField.lobby(), 1, 0);
+        var race = race(false); var lobby = confirmed(race, 1, PickDisclosureField.lobby(), 1, 0);
         var car = confirmed(race, 1, Set.of(PickDisclosureField.CAR), 2, 0);
         when(races.findById(race.getId())).thenReturn(Optional.of(race));
         when(snapshots.findByAttemptRaceIdOrderByAttemptContentVersionDescConfirmedAtDesc(race.getId())).thenReturn(List.of(car, lobby));
@@ -101,7 +102,7 @@ class PickDisclosureServiceTest {
     @Test
     void givenConflictingHashesWithinOneVersion_whenReading_thenRejectInsteadOfUnioningDifferentChoices() {
         // given
-        var race = race(true); var first = confirmed(race, 1, Set.of(PickDisclosureField.TRACK), 1, 0);
+        var race = race(false); var first = confirmed(race, 1, Set.of(PickDisclosureField.TRACK), 1, 0);
         race.getSettings().setWeather("Test conflicting private weather");
         var conflicting = confirmed(race, 1, Set.of(PickDisclosureField.CAR), 2, 0);
         when(races.findById(race.getId())).thenReturn(Optional.of(race));
@@ -113,7 +114,7 @@ class PickDisclosureServiceTest {
     @Test
     void givenConflictingProvenanceVersionsWithinOneContentVersion_whenReading_thenRejectInsteadOfMixingRevisions() {
         // given
-        var race = race(true); var first = confirmed(race, 1, Set.of(PickDisclosureField.TRACK), 1, 2);
+        var race = race(false); var first = confirmed(race, 1, Set.of(PickDisclosureField.TRACK), 1, 2);
         var conflicting = confirmed(race, 1, Set.of(PickDisclosureField.CAR), 2, 3);
         when(races.findById(race.getId())).thenReturn(Optional.of(race));
         when(snapshots.findByAttemptRaceIdOrderByAttemptContentVersionDescConfirmedAtDesc(race.getId())).thenReturn(List.of(first, conflicting));
@@ -124,7 +125,7 @@ class PickDisclosureServiceTest {
     @Test
     void givenAReassignedTargetWithOldLegacyEvidence_whenReading_thenKeepItsCurrentChoicesWithheld() {
         // given
-        var race = race(true); var previous = confirmed(race, 1, PickDisclosureField.all(), 1, 0);
+        var race = race(false); var previous = confirmed(race, 1, PickDisclosureField.all(), 1, 0);
         var away = new Team("Test new opponent", "T-NEW"); away.setId(UUID.randomUUID()); race.setAwayTeamOverride(away);
         when(races.findById(race.getId())).thenReturn(Optional.of(race));
         when(snapshots.findByAttemptRaceIdOrderByAttemptContentVersionDescConfirmedAtDesc(race.getId())).thenReturn(List.of(previous));
@@ -136,7 +137,7 @@ class PickDisclosureServiceTest {
     @Test
     void givenUnconfirmedStoredAttempt_whenReading_thenKeepItWhollyWithheld() {
         // given
-        var race = race(true); var attempt = mock(PickPublicationAttempt.class); var row = mock(PickPublicationSnapshot.class);
+        var race = race(false); var attempt = mock(PickPublicationAttempt.class); var row = mock(PickPublicationSnapshot.class);
         when(row.getAttempt()).thenReturn(attempt); when(attempt.getState()).thenReturn(PickPublicationState.UNCERTAIN);
         when(attempt.matchesTarget(race)).thenReturn(true); when(attempt.getContentVersion()).thenReturn(1L);
         when(attempt.getContent()).thenReturn(PickPublicationContent.from(race));
@@ -152,7 +153,7 @@ class PickDisclosureServiceTest {
     @Test
     void givenStoredHashThatDoesNotMatchCapturedContent_whenReading_thenRejectUnverifiedChoices() {
         // given
-        var race = race(true); var attempt = mock(PickPublicationAttempt.class); var row = mock(PickPublicationSnapshot.class);
+        var race = race(false); var attempt = mock(PickPublicationAttempt.class); var row = mock(PickPublicationSnapshot.class);
         when(row.getAttempt()).thenReturn(attempt); when(attempt.getState()).thenReturn(PickPublicationState.SUCCEEDED);
         when(attempt.matchesTarget(race)).thenReturn(true); when(attempt.getContentVersion()).thenReturn(1L);
         when(attempt.getContent()).thenReturn(PickPublicationContent.from(race)); when(attempt.getContentHash()).thenReturn("0".repeat(64));
@@ -166,7 +167,7 @@ class PickDisclosureServiceTest {
     @Test
     void givenMixedApprovalAndCorrectionOriginsAtOneSourceVersion_whenReading_thenRejectTheirUnion() {
         // given
-        var race = race(true); var approved = confirmed(race, 1, Set.of(PickDisclosureField.TRACK), 1, 2);
+        var race = race(false); var approved = confirmed(race, 1, Set.of(PickDisclosureField.TRACK), 1, 2);
         var source = approved.getAttempt();
         var attempt = new PickPublicationAttempt(new PickPublicationAttempt.Capture(UUID.randomUUID(), race, 1, 2,
                 PickPublicationOrigin.CORRECTION, PickPublicationOutput.SETTINGS, source.getContent(), Set.of(PickDisclosureField.CAR),
@@ -190,12 +191,14 @@ class PickDisclosureServiceTest {
         return new PickPublicationSnapshot(attempt);
     }
 
-    Race race(boolean managed) {
+    Race race(boolean finished) {
         var season = new Season("Test disclosure"); season.setId(UUID.randomUUID());
         var day = PhaseTestFixtures.matchdayInRegularPhase(season, "Test disclosure day", 0); day.setId(UUID.randomUUID());
-        var race = new Race(); race.setId(UUID.randomUUID()); race.setMatchday(day); race.setPicksManaged(managed);
+        var race = new Race(); race.setId(UUID.randomUUID()); race.setMatchday(day); 
         var home = new Team("Test home", "T-DHOME"); home.setId(UUID.randomUUID()); race.setHomeTeamOverride(home);
         var away = new Team("Test away", "T-DAWAY"); away.setId(UUID.randomUUID()); race.setAwayTeamOverride(away);
+        race.setMatch(new Match(day, home, away));
+        if (finished) race.getResults().add(new RaceResult());
         race.setCar(new Car("Test public legacy", "Test private car")); race.setTrack(new Track("Test private track"));
         var entry = new SeasonCarPoolEntry(); entry.setLabel("Test private entry"); race.setCarPoolEntry(entry);
         var settings = new RaceSettings(race); race.setSettings(settings);

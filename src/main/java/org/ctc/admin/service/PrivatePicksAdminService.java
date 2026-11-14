@@ -19,7 +19,6 @@ import org.ctc.domain.repository.TeamPickChannelBindingRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
 import org.ctc.domain.repository.MatchRepository;
-import org.ctc.domain.service.PickCollectionStatus;
 
 @Service
 @RequiredArgsConstructor
@@ -32,7 +31,6 @@ public class PrivatePicksAdminService {
     private final DiscordRestClient discord;
     private final PickChannelPermissionSource permissions;
     private final DiscordPicksGateway gateway;
-    private final PickCollectionStatus collection;
 
     @Transactional(readOnly = true)
     public Overview overview() {
@@ -44,7 +42,7 @@ public class PrivatePicksAdminService {
                 row.getSeason().getDisplayLabel(), row.getTeam().getShortName() + " - " + row.getTeam().getName(),
                 row.getGuildId(), row.getChannelId())).toList();
         return new Overview(config == null ? "" : config.getGuildId(), healthLabel(gateway.health()),
-                collection.isConfidentialityReady() && config != null && snowflake(config.getGuildId()) && snowflake(config.getBotApplicationId()),
+                config != null && snowflake(config.getGuildId()) && snowflake(config.getBotApplicationId()),
                 seasonChoices, teamChoices, rows);
     }
 
@@ -86,7 +84,6 @@ public class PrivatePicksAdminService {
     }
 
     public void registerCommand() {
-        if (!collection.isConfidentialityReady()) throw new BusinessRuleException("Command registration is unavailable until confidentiality acceptance is complete.");
         var config = configured();
         if (!snowflake(config.getBotApplicationId()) || !config.getBotApplicationId().equals(currentBot().id())) {
             throw new BusinessRuleException("Configure the application ID for the existing bot identity.");
@@ -119,7 +116,6 @@ public class PrivatePicksAdminService {
     private static String healthLabel(DiscordPicksGateway.Health health) {
         return switch (health) {
             case DISABLED -> "Disabled";
-            case WAITING_FOR_CONFIDENTIALITY -> "Waiting for confidentiality acceptance";
             case MISCONFIGURED -> "Bot or server configuration is incomplete";
             case CONNECTING -> "Connecting";
             case CONNECTED -> "Connected";

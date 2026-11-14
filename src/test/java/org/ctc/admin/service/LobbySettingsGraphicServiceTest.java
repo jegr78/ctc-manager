@@ -115,7 +115,7 @@ class LobbySettingsGraphicServiceTest {
         // given
         var service = spy(new LobbySettingsGraphicService(mock(TemplateEngine.class), directory.toString()));
         var race = readyRace();
-        race.setPicksManaged(true);
+        
         race.setCar(new Car("Test private lobby car", "Must stay omitted"));
         race.getSettings().setTimeProgressionMode(equal ? TimeProgressionMode.EQUAL_CONDITIONS : TimeProgressionMode.MULTIPLIER);
         race.getSettings().setTimeProgressionMultiplier(equal ? null : 0);
@@ -150,7 +150,7 @@ class LobbySettingsGraphicServiceTest {
         // given
         var service = spy(new LobbySettingsGraphicService(mock(TemplateEngine.class), directory.toString()));
         var race = readyRace();
-        race.setPicksManaged(true); service.saveTemplate("<html><p th:text='${v.weather}'></p></html>");
+         service.saveTemplate("<html><p th:text='${v.weather}'></p></html>");
         doAnswer(call -> { java.nio.file.Files.writeString(call.getArgument(1), call.getArgument(0)); return null; })
                 .when(service).renderScreenshot(anyString(), any(Path.class));
         // when / then

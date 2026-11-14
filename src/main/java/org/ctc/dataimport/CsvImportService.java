@@ -46,6 +46,7 @@ public class CsvImportService {
     private final org.ctc.domain.service.IncidentLifecycleGuard incidentGuard;
     private final org.ctc.domain.service.RacePenaltyLifecycleGuard penaltyGuard;
     private final org.ctc.domain.service.RaceDisqualificationLifecycleGuard disqualificationGuard;
+    private final org.ctc.domain.service.PickLifecycleGuard pickGuard;
 
 	/**
 	 * Returns all seasons for the import form.
@@ -336,7 +337,7 @@ public class CsvImportService {
                                                         Map<Integer, List<ImportRow>> incoming) {
         boolean configured = previous.stream().anyMatch(race -> race.getCarPoolEntry() != null
                 || season.getCarPoolMode() == CarPoolMode.CATEGORY_POOL && race.getCar() != null);
-        boolean managed = previous.stream().anyMatch(Race::isPicksManaged);
+        boolean managed = previous.stream().anyMatch(pickGuard::protects);
         if (!configured && !managed && previous.stream().noneMatch(this::protectsHistory)) return Map.of();
         if (configured && (season.getCarPoolMode() != CarPoolMode.CATEGORY_POOL || previous.stream()
                 .anyMatch(race -> (race.getCar() == null) != (race.getCarPoolEntry() == null)))) {

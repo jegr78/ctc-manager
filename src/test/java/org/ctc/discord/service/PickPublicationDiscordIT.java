@@ -72,6 +72,7 @@ class PickPublicationDiscordIT {
     @Autowired RaceRepository races;
     @Autowired PickSubmissionService submissions;
     @Autowired PickReviewService reviews;
+    @Autowired org.ctc.HistoricalPickCorrections corrections;
     @Autowired PickDisclosureService disclosure;
     @Autowired PickPublicationAttemptRepository attempts;
     @Autowired PickPublicationSnapshotRepository snapshots;
@@ -82,7 +83,6 @@ class PickPublicationDiscordIT {
     @Autowired DiscordGlobalConfigService globalConfig;
     @MockitoSpyBean DiscordPostRepository postRecords;
     @MockitoSpyBean DiscordWebhookClient webhooks;
-    @MockitoBean PickCollectionStatus collection;
     @MockitoBean SettingsGraphicService settingsGraphics;
     @MockitoBean LobbySettingsGraphicService lobbyGraphics;
     @MockitoBean LineupGraphicService lineupGraphics;
@@ -97,8 +97,8 @@ class PickPublicationDiscordIT {
         wm.resetAll(); Files.createDirectories(ROOT);
         tx.executeWithoutResult(status -> {
             fixture = helper.createFullSeasonFixture("TPD" + UUID.randomUUID().toString().substring(0, 7));
-            fixture.season().setPicksCollectionEnabled(true);
-            fixture.race().setPicksManaged(true); fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0));
+            
+             fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0));
             fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0));
             fixture.matchday().setPicksOpen(true);
             fixture.match().setDiscordChannelId(CHANNEL); fixture.match().setDiscordChannelWebhookUrl(wm.baseUrl() + WEBHOOK);
@@ -114,7 +114,6 @@ class PickPublicationDiscordIT {
             var lineup = new RaceLineup(); lineup.setRace(fixture.race()); lineup.setDriver(driver); lineup.setTeam(fixture.homeTeam()); lineups.save(lineup);
             previousAnnouncement = globalConfig.getOrInitialize().getAnnouncementWebhookUrl();
         });
-        when(collection.isAvailable()).thenReturn(true);
         Files.writeString(ROOT.resolve("test-settings.png"), "Test initially private graphic");
         Files.writeString(ROOT.resolve("test-lineup.png"), "Test safe lineup graphic");
         when(settingsGraphics.generateSettings(any(Race.class))).thenReturn("/uploads/test-settings.png");
@@ -187,7 +186,6 @@ class PickPublicationDiscordIT {
     void givenApprovedSettingsWithCollectionDisabled_whenPosting_thenSendFrozenBytesOutsideSqlAndConfirmTheirPublicVersion() {
         // given
         approve(); outsideNetwork();
-        tx.executeWithoutResult(status -> seasons.findById(fixture.season().getId()).orElseThrow().setPicksCollectionEnabled(false));
         // when
         var result = assertDoesNotThrow(() -> posts.postSettings(match()));
         // then
@@ -249,7 +247,7 @@ class PickPublicationDiscordIT {
             var day = races.findById(fixture.race().getId()).orElseThrow().getMatchday();
             var secondMatch = helper.createMatch(day, teams.findById(fixture.awayTeam().getId()).orElseThrow(), teams.findById(fixture.homeTeam().getId()).orElseThrow());
             secondMatch.setDiscordChannelId(CHANNEL); secondMatch.setDiscordChannelWebhookUrl(wm.baseUrl() + WEBHOOK);
-            var second = helper.createRace(day, secondMatch); second.setDateTime(LocalDateTime.of(2035, 1, 1, 21, 0)); second.setPicksManaged(true);
+            var second = helper.createRace(day, secondMatch); second.setDateTime(LocalDateTime.of(2035, 1, 1, 21, 0)); 
             return second.getId();
         });
         submissions.submit(secondRaceId, 0, UUID.randomUUID(), new AuthorizedPickActor(secondRaceId, fixture.season().getId(), fixture.awayTeam().getId(), "12345"), payload);
@@ -279,7 +277,7 @@ class PickPublicationDiscordIT {
         approve();
         doAnswer(call -> {
             assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
-            reviews.correct(fixture.race().getId(), 2, new ManagementPickActor("test-admin"), "Test correction while sending", corrected());
+            corrections.record(fixture.race().getId(), 2, new ManagementPickActor("test-admin"), "Test correction while sending", corrected());
             return call.callRealMethod();
         }).when(webhooks).executeMultipart(anyString(), any(WebhookPayload.class), anyList(), isNull());
         // when
@@ -312,7 +310,7 @@ class PickPublicationDiscordIT {
         assertThatThrownBy(() -> posts.postSettings(match())).isInstanceOf(BusinessRuleException.class).hasMessageContaining("reconciliation");
         reset(postRecords);
         UUID batch = tx.execute(status -> attempts.findByActiveRaceId(fixture.race().getId()).orElseThrow().getBatchId());
-        reviews.correct(fixture.race().getId(), 2, new ManagementPickActor("test-admin"), "Test newer setup remains private during reconciliation", corrected());
+        corrections.record(fixture.race().getId(), 2, new ManagementPickActor("test-admin"), "Test newer setup remains private during reconciliation", corrected());
         String path = "/attachments/" + CHANNEL + "/456789012345678901/settings-race-1.png";
         String imageUrl = wm.baseUrl() + path + "?ex=abc&hm=Test_verification-signature";
         wm.stubFor(get(urlPathEqualTo(WEBHOOK + "/messages/" + MESSAGE)).willReturn(okJson("""
@@ -344,7 +342,7 @@ class PickPublicationDiscordIT {
     void givenUncertainEditOfAnOlderPublicMessage_whenRetiringAndPublishingAgain_thenClearItsEditMappingAndSendAFreshMessage() throws Exception {
         // given
         approve(); posts.postSettings(match()); var previous = disclosure.forPublic(fixture.race().getId());
-        reviews.correct(fixture.race().getId(), 2, new ManagementPickActor("test-admin"), "Test new internal setup", corrected());
+        corrections.record(fixture.race().getId(), 2, new ManagementPickActor("test-admin"), "Test new internal setup", corrected());
         wm.stubFor(patch(urlPathEqualTo(WEBHOOK + "/messages/" + MESSAGE)).willReturn(aResponse().withStatus(503)));
         assertThatThrownBy(() -> posts.postSettings(match())).isInstanceOf(DiscordTransientException.class).hasMessageContaining("reconcile");
         UUID batch = tx.execute(status -> attempts.findByActiveRaceId(fixture.race().getId()).orElseThrow().getBatchId());
@@ -367,7 +365,7 @@ class PickPublicationDiscordIT {
         // given
         approve(); assertDoesNotThrow(() -> posts.postSettings(match()));
         var original = disclosure.forPublic(fixture.race().getId()); assertThat(original.settings()).isNotNull();
-        reviews.correct(fixture.race().getId(), 2, new ManagementPickActor("test-admin"), "Test unpublished correction", corrected());
+        corrections.record(fixture.race().getId(), 2, new ManagementPickActor("test-admin"), "Test unpublished correction", corrected());
         wm.stubFor(patch(urlPathEqualTo(WEBHOOK + "/messages/" + MESSAGE)).willReturn(aResponse().withStatus(401)
                 .withHeader("Content-Type", "application/json").withBody("{\"message\":\"Unauthorized\",\"code\":0}")));
         // when / then

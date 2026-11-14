@@ -29,7 +29,6 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.support.TransactionTemplate;
 import static org.assertj.core.api.Assertions.*;
@@ -62,6 +61,7 @@ class DiscordPicksBackupRoundTripIT {
     @Autowired TeamPickChannelBindingRepository bindings;
     @Autowired PickSubmissionService submissions;
     @Autowired PickReviewService reviews;
+    @Autowired org.ctc.HistoricalPickCorrections corrections;
     @Autowired PickReservationService reservations;
     @Autowired PickSessionEpoch epoch;
     @Autowired PickPublicationService publications;
@@ -71,7 +71,6 @@ class DiscordPicksBackupRoundTripIT {
     @Autowired BackupArchiveService archives;
     @MockitoSpyBean BackupImportService imports;
     @Autowired PickWindowService windows;
-    @MockitoBean PickCollectionStatus collection;
     final ManagementPickActor manager = new ManagementPickActor("test-admin");
     TestHelper.SeasonFixture fixture;
     List<UUID> carIds;
@@ -101,12 +100,10 @@ class DiscordPicksBackupRoundTripIT {
             trackIds = List.of(track1.getId(), track2.getId());
         });
         legacy = export();
-        when(collection.isAvailable()).thenReturn(true);
-        when(collection.isConfidentialityReady()).thenReturn(true);
         tx.executeWithoutResult(status -> {
             var season = seasons.findById(fixture.season().getId()).orElseThrow();
-            season.setPicksCollectionEnabled(true);
-            races.findById(fixture.race().getId()).orElseThrow().setPicksManaged(true);
+            
+            
         });
         bindingId = tx.execute(status -> bindings.saveAndFlush(new TeamPickChannelBinding(
                 seasons.findById(fixture.season().getId()).orElseThrow(), teams.findById(fixture.homeTeam().getId()).orElseThrow(),
@@ -116,7 +113,7 @@ class DiscordPicksBackupRoundTripIT {
         submissions.submit(fixture.race().getId(), 2, UUID.randomUUID(), actor(fixture.race().getId()), payload(0, "S01, R03, S02"));
         reviews.approve(fixture.race().getId(), 3, 2, manager, "Checked revision two");
         corrected = payload(1, "S02, R04, S03");
-        reviews.correct(fixture.race().getId(), 4, manager, "Management track correction", corrected);
+        corrections.record(fixture.race().getId(), 4, manager, "Management track correction", corrected);
         pendingRace = tx.execute(status -> {
             var season = seasons.findById(fixture.season().getId()).orElseThrow();
             var day = helper.createMatchday(season, "Test pending target", 2);
@@ -124,7 +121,7 @@ class DiscordPicksBackupRoundTripIT {
             day.setPicksOpen(true);
             var match = helper.createMatch(day, teams.findById(fixture.homeTeam().getId()).orElseThrow(), teams.findById(fixture.awayTeam().getId()).orElseThrow());
             var race = helper.createRace(day, match);
-            race.setPicksManaged(true);
+            
             race.setDateTime(LocalDateTime.of(2035, 1, 2, 20, 0));
             return race.getId();
         });
@@ -154,15 +151,14 @@ class DiscordPicksBackupRoundTripIT {
             var match = helper.createMatch(day, teams.findById(fixture.homeTeam().getId()).orElseThrow(), teams.findById(fixture.awayTeam().getId()).orElseThrow());
             var race = helper.createRace(day, match);
             race.setDateTime(LocalDateTime.of(2035, 1, 3, 20, 0));
-            race.setPicksManaged(true);
+            
             return race.getId();
         });
         reviews.openMissing(missingRace, 0, manager, "Test missing submission explicitly opened without another deadline");
         byte[] archive = export();
         long generation = epoch.getAsLong();
-        reviews.correct(fixture.race().getId(), 5, manager, "After export", payload(1, "Changed after export"));
+        corrections.record(fixture.race().getId(), 5, manager, "After export", payload(1, "Changed after export"));
         reviews.returnForCorrection(pendingRace, 3, manager, "After export opening");
-        when(collection.isAvailable()).thenReturn(false);
         // when
         var preview = imports.stage(upload(archive));
         imports.execute(preview.stagingId());
@@ -195,8 +191,6 @@ class DiscordPicksBackupRoundTripIT {
             assertThat(opened.isManualOpen()).isTrue();
             assertThat(opened.isManualClosed()).isFalse();
             assertThat(opened.getRace().getMatchday().getPickDeadline()).isEqualTo(LocalDateTime.of(2020, 1, 1, 12, 0));
-            assertThat(approved.getSeason().isPicksCollectionEnabled()).isTrue();
-            assertThat(pending.getRace().isPicksManaged()).isTrue();
             assertThat(revisions.findByRequestId(original.requestId()).orElseThrow().receipt()).isEqualTo(original);
             assertThat(reservations.pending(fixture.season().getId(), true)).containsExactly(
                     new PickReservationService.Reservation(pendingRace, fixture.homeTeam().getId(), carIds.getFirst(), null, trackIds.getFirst()));
@@ -205,31 +199,6 @@ class DiscordPicksBackupRoundTripIT {
             assertThat(history.stream().filter(decision -> decision.getKind() == PickDecisionKind.CORRECTION).findFirst().orElseThrow().getCorrectionPayload()).isEqualTo(corrected);
         });
         assertThat(submissions.submit(fixture.race().getId(), 0, original.requestId(), actor(fixture.race().getId()), payload(0, "S01"))).isEqualTo(original);
-    }
-
-    @Test
-    void givenPrivateArchiveBeforeConfidentialityRelease_whenStagingOrExecuting_thenRejectBeforeAnyWipe() throws Exception {
-        // given
-        byte[] archive = export();
-        when(collection.isConfidentialityReady()).thenReturn(false);
-        // when / then
-        assertThatThrownBy(() -> imports.stage(upload(archive))).isInstanceOfSatisfying(BackupArchiveException.class, failure -> {
-            assertThat(failure.reason()).isEqualTo(BackupArchiveException.Reason.SCHEMA_MISMATCH);
-            assertThat(failure.getMessage()).contains("confidentiality");
-        });
-        verify(imports, never()).wipeAllTables(anyMap());
-        when(collection.isConfidentialityReady()).thenReturn(true);
-        var preview = imports.stage(upload(archive));
-        when(collection.isConfidentialityReady()).thenReturn(false);
-        clearInvocations(imports);
-        assertThatThrownBy(() -> imports.execute(preview.stagingId())).isInstanceOf(BackupImportException.class).cause()
-                .isInstanceOfSatisfying(BackupArchiveException.class, failure -> {
-                    assertThat(failure.reason()).isEqualTo(BackupArchiveException.Reason.SCHEMA_MISMATCH);
-                    assertThat(failure.getMessage()).contains("confidentiality");
-                });
-        verify(imports, never()).wipeAllTables(anyMap());
-        tx.executeWithoutResult(status -> assertThat(picks.findByRaceId(fixture.race().getId()).orElseThrow().getVersion()).isEqualTo(5));
-        imports.deleteStagingFile(preview.stagingId());
     }
 
     @ParameterizedTest
@@ -289,8 +258,6 @@ class DiscordPicksBackupRoundTripIT {
         imports.execute(preview.stagingId());
         // then
         tx.executeWithoutResult(status -> {
-            assertThat(seasons.findById(fixture.season().getId()).orElseThrow().isPicksCollectionEnabled()).isFalse();
-            assertThat(races.findById(fixture.race().getId()).orElseThrow().isPicksManaged()).isFalse();
             assertThat(picks.findBySeasonId(fixture.season().getId())).isEmpty();
             assertThat(bindings.findById(bindingId)).isEmpty();
         });
@@ -327,7 +294,7 @@ class DiscordPicksBackupRoundTripIT {
                 new org.ctc.domain.picks.PreparedPickPublication<>("123456789012345678", "234567890123456789", null,
                         "a".repeat(64), "{}", Map.of(fixture.race().getId(), PickDisclosureField.lobby()),
                         () -> "test-lobby-message", message -> message));
-        reviews.correct(fixture.race().getId(), 5, manager, "Later internal unpublished correction", payload(1, "Test private after lobby", TimeProgressionMode.MULTIPLIER, 0));
+        corrections.record(fixture.race().getId(), 5, manager, "Later internal unpublished correction", payload(1, "Test private after lobby", TimeProgressionMode.MULTIPLIER, 0));
         tx.executeWithoutResult(status -> races.findById(fixture.race().getId()).orElseThrow().getMatchday().setPickDeadline(LocalDateTime.of(2026, 10, 25, 2, 30)));
         assertThatThrownBy(() -> publications.publish(List.of(fixture.race().getId()), PickPublicationOutput.SETTINGS, manager, rows ->
                 new org.ctc.domain.picks.PreparedPickPublication<>("123456789012345678", "234567890123456789", null,

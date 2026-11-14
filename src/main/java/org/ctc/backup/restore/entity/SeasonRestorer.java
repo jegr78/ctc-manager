@@ -17,8 +17,8 @@ public class SeasonRestorer implements EntityRestorer {
     private static final String INSERT_SQL =
             "INSERT INTO seasons (id, name, season_year, season_number, description, active, "
                     + "created_at, updated_at, discord_race_results_thread_id, "
-                    + "discord_standings_thread_id, car_pool_mode, car_pool_state, picks_collection_enabled, lobby_rules_profile, rulebook_url, racing_etiquette_url) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    + "discord_standings_thread_id, car_pool_mode, car_pool_state, lobby_rules_profile, rulebook_url, racing_etiquette_url) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     @Override
     public String tableName() {
@@ -41,10 +41,9 @@ public class SeasonRestorer implements EntityRestorer {
                     ps.setString(10, nullableString(row, "discordStandingsThreadId"));
                     ps.setString(11, row.path("carPoolMode").asText("FIXED_CARS"));
                     ps.setString(12, row.path("carPoolState").asText("DRAFT"));
-                    ps.setBoolean(13, row.path("picksCollectionEnabled").asBoolean(false));
-                    ps.setString(14, org.ctc.backup.schema.LobbyRulesArchive.profile(row).name());
-                    ps.setString(15, org.ctc.domain.model.SeasonDocumentLinks.normalize(nullableString(row, "rulebookUrl")));
-                    ps.setString(16, org.ctc.domain.model.SeasonDocumentLinks.normalize(nullableString(row, "racingEtiquetteUrl")));
+                    ps.setString(13, org.ctc.backup.schema.LobbyRulesArchive.profile(row).name());
+                    ps.setString(14, org.ctc.domain.model.SeasonDocumentLinks.normalize(nullableString(row, "rulebookUrl")));
+                    ps.setString(15, org.ctc.domain.model.SeasonDocumentLinks.normalize(nullableString(row, "racingEtiquetteUrl")));
                 });
         for (var row : rows) {
             restorePool(row, "cars", true, jdbcTemplate);

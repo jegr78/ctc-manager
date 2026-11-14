@@ -58,7 +58,7 @@ class TyreArchiveIT extends TyrePersistenceIT {
         var before = disclosure.forPublic(fixture.race().getId());
         assertThat(before.settings().availableTyres()).isEqualTo(RaceSettingsValues.from(choice).availableTyres());
         assertThat(before.settings().mandatoryTyres()).isNull(); assertThat(before.carName()).isNull();
-        reviews.correct(fixture.race().getId(), 2, manager, "Test unpublished Racing correction", payload);
+        corrections.record(fixture.race().getId(), 2, manager, "Test unpublished Racing correction", payload);
         byte[] archive = export(); long generation = epoch.getAsLong();
         // when
         var preview = imports.stage(upload(archive)); imports.execute(preview.stagingId());

@@ -56,29 +56,38 @@ public class PickAccessService {
         long generation = epoch.getAsLong();
         var current = authorizeChannel(channel.guildId(), channel.channelId(), channel.userId());
         var race = races.findById(raceId).orElseThrow(PickAccessService::unavailable);
-        if (!race.isPicksManaged() || race.getMatchday() == null || race.getMatchday().getSeason() == null
+        if (race.getMatchday() == null || race.getMatchday().getSeason() == null
                 || race.getHomeTeam() == null || race.getAwayTeam() == null) throw unavailable();
         var seasonId = race.getMatchday().getSeason().getId();
         var teamId = race.getHomeTeam().getId();
-        if (teamId == null || teamId.equals(race.getAwayTeam().getId())
-                || !current.bindings().contains(new ChannelPickActor.Binding(seasonId, teamId))) throw unavailable();
+        if (teamId == null || teamId.equals(race.getAwayTeam().getId())) throw unavailable();
+        var binding = current.bindings().stream()
+                .filter(row -> seasonId.equals(row.seasonId()) && servesHome(row.teamId(), race)).findFirst()
+                .orElseThrow(PickAccessService::unavailable);
         var pick = picks.findSnapshotByRaceId(raceId).orElse(null);
         if (pick != null && !pick.matchesTarget(race)) throw unavailable();
         if (generation != epoch.getAsLong()) throw unavailable();
         return new AuthorizedPickActor(raceId, seasonId, teamId, current.userId(),
-                new AuthorizedPickActor.ChannelContext(current.guildId(), current.channelId(), generation));
+                new AuthorizedPickActor.ChannelContext(current.guildId(), current.channelId(), generation, binding.teamId()));
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void recheck(AuthorizedPickActor actor) {
         var channel = actor.channel();
         if (channel == null || channel.generation() != epoch.getAsLong()
-                || bindings.findCurrentForUpdate(actor.seasonId(), actor.teamId(), channel.guildId(), channel.channelId()).isEmpty()) {
+                || bindings.findCurrentForUpdate(actor.seasonId(), channel.bindingTeamId(), channel.guildId(), channel.channelId()).isEmpty()) {
             throw unavailable();
         }
         var current = authorizeChannel(channel.guildId(), channel.channelId(), actor.userId());
-        if (!current.bindings().contains(new ChannelPickActor.Binding(actor.seasonId(), actor.teamId()))
+        if (!current.bindings().contains(new ChannelPickActor.Binding(actor.seasonId(), channel.bindingTeamId()))
                 || channel.generation() != epoch.getAsLong()) throw unavailable();
+    }
+
+    /** A channel bound to an organisation serves its own home legs and those of its sub-teams. */
+    public static boolean servesHome(UUID boundTeamId, org.ctc.domain.model.Race race) {
+        var home = race.getHomeTeam();
+        return boundTeamId != null && home != null
+                && (boundTeamId.equals(home.getId()) || boundTeamId.equals(home.getParentOrSelf().getId()));
     }
 
     private static boolean snowflake(String value) { return value != null && value.matches("[0-9]{1,32}"); }

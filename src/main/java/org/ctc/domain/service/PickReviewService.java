@@ -8,7 +8,6 @@ import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.MatchdayPick;
 import org.ctc.domain.model.MatchdayPickDecision;
 import org.ctc.domain.model.PickDecisionKind;
-import org.ctc.domain.model.PickPayload;
 import org.ctc.domain.model.PickState;
 import org.ctc.domain.model.PickSetupSnapshot;
 import org.ctc.domain.picks.ManagementPickActor;
@@ -67,51 +66,25 @@ public class PickReviewService {
         });
     }
 
-    public void correct(UUID raceId, long expectedVersion, ManagementPickActor actor, String reason,
-                        PickPayload payload) {
-        correct(raceId, expectedVersion, actor, reason, payload, null);
-    }
-
-    public void correct(UUID raceId, long expectedVersion, ManagementPickActor actor, String reason,
-                        PickPayload payload, String expectedSettingsFingerprint) {
-        if (payload == null) throw new BusinessRuleException("A complete correction payload is required");
-        decide(raceId, expectedVersion, actor, reason, PickDecisionKind.CORRECTION, payload, target -> {
-            if (target.pick().getState() != PickState.APPROVED) {
-                throw new BusinessRuleException("Only approved settings can be corrected");
-            }
-            if (expectedSettingsFingerprint != null && !PickSetupSnapshot.from(target.race()).fingerprint().equals(expectedSettingsFingerprint)) {
-                throw new BusinessRuleException("Internal settings changed; reload before correcting");
-            }
-            eligibility.validate(target.race(), payload);
-            settings.apply(target.race(), payload);
-            target.pick().correct();
-        });
-    }
-
     private void decide(UUID raceId, long expectedVersion, ManagementPickActor actor, String reason,
                         PickDecisionKind kind, Consumer<PickTargetService.LockedTarget> action) {
-        decide(raceId, expectedVersion, actor, reason, kind, null, action);
-    }
-
-    private void decide(UUID raceId, long expectedVersion, ManagementPickActor actor, String reason,
-                        PickDecisionKind kind, PickPayload correctionPayload, Consumer<PickTargetService.LockedTarget> action) {
         writes.execute(() -> {
             if (reason == null || reason.isBlank() || reason.length() > 1000) {
                 throw new BusinessRuleException("A decision reason of at most 1000 characters is required");
             }
             var target = targets.lockForManagement(raceId, actor);
-            if (kind != PickDecisionKind.CORRECTION && !targets.isEligible(target.race())) {
+            if (!targets.isEligible(target.race())) {
                 throw new BusinessRuleException("This race is not an eligible pick target");
             }
             var pick = target.pick() != null ? target.pick()
                     : new MatchdayPick(target.race(), target.season(), target.race().getHomeTeam());
             pick.requireVersion(expectedVersion);
-            if (kind != PickDecisionKind.CORRECTION && pick.getState() == PickState.APPROVED) {
+            if (pick.getState() == PickState.APPROVED) {
                 throw new BusinessRuleException("Approved picks are locked");
             }
             action.accept(new PickTargetService.LockedTarget(target.season(), target.race(), pick));
             picks.save(pick);
-            decisions.save(new MatchdayPickDecision(pick, kind, pick.getVersion(), actor.userId(), reason, clock.instant(), correctionPayload));
+            decisions.save(new MatchdayPickDecision(pick, kind, pick.getVersion(), actor.userId(), reason, clock.instant(), null));
             return null;
         });
     }
