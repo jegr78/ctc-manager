@@ -26,7 +26,7 @@ FROM eclipse-temurin:25.0.5_8-jre-noble AS browser-runtime
 
 LABEL org.ctc.recovery.version="1"
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
+RUN apt-get update && apt-get install -y --no-install-recommends curl libatomic1 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -r ctc && useradd -r -g ctc ctc

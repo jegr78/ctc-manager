@@ -17,7 +17,7 @@
 		<java.version>25</java.version>
 		<!-- Complete verification retains two forks; local focused feedback requests one. -->
 		<ctc.test.forks>2</ctc.test.forks>
-		<playwright.version>1.64.0</playwright.version>
+		<playwright.version>1.65.0</playwright.version>
 		<jda.version>6.7.0</jda.version>
 		<lombok.version>1.18.48</lombok.version>
 		<!-- Track connector security updates independently of the Spring Boot BOM. -->
