@@ -96,7 +96,7 @@ class SeasonRestorerTest {
         verify(preparedStatement).setInt(4, 1);
         verify(preparedStatement).setString(5, "Round Robin — two groups");
         verify(preparedStatement).setBoolean(6, true);
-        verify(preparedStatement).setString(14, "LEGACY");
+        verify(preparedStatement).setString(13, "LEGACY");
         verify(preparedStatement).setTimestamp(7,
                 Timestamp.valueOf(LocalDateTime.parse("2024-01-01T00:00:00")));
         verify(preparedStatement).setTimestamp(8,
@@ -133,6 +133,6 @@ class SeasonRestorerTest {
 
         verify(preparedStatement).setString(5, null);
         verify(preparedStatement).setBoolean(6, false);
-        verify(preparedStatement).setString(14, "LEGACY");
+        verify(preparedStatement).setString(13, "LEGACY");
     }
 }
