@@ -115,7 +115,6 @@ class LobbySettingsGraphicServiceTest {
         // given
         var service = spy(new LobbySettingsGraphicService(mock(TemplateEngine.class), directory.toString()));
         var race = readyRace();
-        
         race.setCar(new Car("Test private lobby car", "Must stay omitted"));
         race.getSettings().setTimeProgressionMode(equal ? TimeProgressionMode.EQUAL_CONDITIONS : TimeProgressionMode.MULTIPLIER);
         race.getSettings().setTimeProgressionMultiplier(equal ? null : 0);

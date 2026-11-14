@@ -300,7 +300,7 @@ class MatchdaysPageGeneratorTest {
 
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
-    void givenFixedOrCategoryRace_whenGeneratingDetail_thenPrepareBothNamesWithoutAnEmptyPoolPlaceholder(boolean category) throws Exception {
+    void givenFinishedFixedOrCategoryRace_whenGeneratingDetail_thenPrepareBothNamesWithoutAnEmptyPoolPlaceholder(boolean category) throws Exception {
         // given
         var season = new Season("Test presentation", 2031, 99);
         season.setId(UUID.randomUUID());
@@ -312,6 +312,8 @@ class MatchdaysPageGeneratorTest {
         race.setHomeTeamOverride(new org.ctc.domain.model.Team("Test home", "T-DHOME"));
         race.setAwayTeamOverride(new org.ctc.domain.model.Team("Test away", "T-DAWAY"));
         race.setCar(new org.ctc.domain.model.Car("Test Honda", "NSX Gr.3 MR"));
+        var played = new org.ctc.domain.model.Match(matchday, race.getHomeTeam(), race.getAwayTeam());
+        played.setHomeScore(10); played.setAwayScore(8); race.setMatch(played);
         if (category) {
             var entry = new org.ctc.domain.model.SeasonCarPoolEntry();
             entry.setLabel("Gr.3 MR + Gr.3 RR");
@@ -349,13 +351,12 @@ class MatchdaysPageGeneratorTest {
 
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
-    void givenManagedUnpublishedRaceWithCollectionDisabled_whenGeneratingDetails_thenWithholdLiveCarTrackAndPoolLabel(boolean category) throws Exception {
+    void givenUnfinishedUnpublishedRace_whenGeneratingDetails_thenWithholdLiveCarTrackAndPoolLabel(boolean category) throws Exception {
         // given
         var season = new Season("Test private publication", 2032, 99); season.setId(UUID.randomUUID());
-        
         var day = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Test private choices", 0);
         day.setId(UUID.randomUUID());
-        var race = new org.ctc.domain.model.Race(); race.setId(UUID.randomUUID()); race.setMatchday(day); 
+        var race = new org.ctc.domain.model.Race(); race.setId(UUID.randomUUID()); race.setMatchday(day);
         race.setHomeTeamOverride(new org.ctc.domain.model.Team("Test home", "T-PHOME"));
         race.setAwayTeamOverride(new org.ctc.domain.model.Team("Test away", "T-PAWAY"));
         race.setCar(new org.ctc.domain.model.Car("PRIVATE-MANUFACTURER", "PRIVATE-CAR-7d3a"));

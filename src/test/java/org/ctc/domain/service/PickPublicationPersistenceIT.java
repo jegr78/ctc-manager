@@ -53,7 +53,6 @@ class PickPublicationPersistenceIT {
         // given
         tx.executeWithoutResult(status -> {
             fixture = helper.createFullSeasonFixture("TPB" + UUID.randomUUID().toString().substring(0, 7));
-            
             var track = new Track(); track.setName("Test private original " + UUID.randomUUID());
             track = tracks.save(track); trackId = track.getId(); fixture.race().setTrack(track);
             entityManager.flush();

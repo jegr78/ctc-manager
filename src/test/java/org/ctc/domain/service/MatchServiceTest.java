@@ -155,7 +155,6 @@ class MatchServiceTest {
 		var awayTeamId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
-        
 		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
 		// legs lives on the phase. Configure two legs for this scenario.
@@ -349,7 +348,6 @@ class MatchServiceTest {
 		// given
 		var matchId = UUID.randomUUID();
 		var season = new Season("Test Season");
-        
 		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(UUID.randomUUID());
 		// legs lives on the phase. Allow more legs for addLeg tests.

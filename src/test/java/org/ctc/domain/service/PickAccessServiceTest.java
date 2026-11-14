@@ -44,7 +44,7 @@ class PickAccessServiceTest {
         var day = new Matchday(phase, "Test authorization target", 1);
         day.setId(UUID.randomUUID());
         race.setId(UUID.randomUUID()); race.setMatchday(day); race.setMatch(new Match(day, home, away));
-        race.setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0)); 
+        race.setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0));
         binding = new TeamPickChannelBinding(season, home, GUILD, CHANNEL);
         var config = new DiscordGlobalConfig(); config.setGuildId(GUILD);
         when(configs.findFirstByOrderByIdAsc()).thenReturn(config);
@@ -114,6 +114,34 @@ class PickAccessServiceTest {
         assertThat(result.get().teamId()).isEqualTo(home.getId());
         assertThat(result.get().userId()).isEqualTo(USER);
         assertThat(result.get().channel()).isEqualTo(new AuthorizedPickActor.ChannelContext(GUILD, CHANNEL, epoch.getAsLong(), home.getId()));
+    }
+
+    @Test
+    void givenChannelBoundToParentOrganisation_whenSelectingSubTeamHomeRace_thenAuthorizeConcreteHomeAndRecheckOrganisationBinding() {
+        // given
+        var organisation = new Team("Test organisation", "T-ORG"); organisation.setId(UUID.randomUUID());
+        home.setParentTeam(organisation);
+        var parentBinding = new TeamPickChannelBinding(season, organisation, GUILD, CHANNEL);
+        when(bindings.findByGuildIdAndChannelId(GUILD, CHANNEL)).thenReturn(List.of(parentBinding));
+        when(bindings.findCurrentForUpdate(season.getId(), organisation.getId(), GUILD, CHANNEL)).thenReturn(Optional.of(parentBinding));
+        // when
+        var actor = service.authorizeTarget(new ChannelPickActor(GUILD, CHANNEL, USER,
+                java.util.Set.of(new ChannelPickActor.Binding(season.getId(), organisation.getId()))), race.getId());
+        // then
+        assertThat(actor.teamId()).as("the pick belongs to the fielding sub-team").isEqualTo(home.getId());
+        assertThat(actor.channel().bindingTeamId()).isEqualTo(organisation.getId());
+        assertThatCode(() -> service.recheck(actor)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void givenChannelBoundToAnotherOrganisation_whenSelectingHomeRace_thenDenyAccess() {
+        // given
+        var foreign = new Team("Test foreign organisation", "T-FOREIGN"); foreign.setId(UUID.randomUUID());
+        when(bindings.findByGuildIdAndChannelId(GUILD, CHANNEL)).thenReturn(List.of(new TeamPickChannelBinding(season, foreign, GUILD, CHANNEL)));
+        // when / then
+        assertThatThrownBy(() -> service.authorizeTarget(new ChannelPickActor(GUILD, CHANNEL, USER,
+                java.util.Set.of(new ChannelPickActor.Binding(season.getId(), foreign.getId()))), race.getId()))
+                .isInstanceOf(BusinessRuleException.class).hasMessage("Private channel access is unavailable");
     }
 
     @ParameterizedTest

@@ -62,7 +62,6 @@ class PickPublicationAssetsIT {
         // given
         tx.executeWithoutResult(status -> {
             fixture = helper.createFullSeasonFixture("T-AS" + UUID.randomUUID().toString().substring(0, 6));
-            
             phaseTeams.saveAll(List.of(new PhaseTeam(fixture.matchday().getPhase(), fixture.homeTeam()),
                     new PhaseTeam(fixture.matchday().getPhase(), fixture.awayTeam())));
             var previous = helper.createMatchday(fixture.season(), "T-AS previous round", 0);
@@ -87,7 +86,7 @@ class PickPublicationAssetsIT {
             var race = races.findById(fixture.race().getId()).orElseThrow(); var season = race.getMatchday().getSeason();
             var car = cars.save(new Car("Test_Private_Car_" + UUID.randomUUID(), "Unpublished")); privateCar = car.getId();
             var track = tracks.save(new Track("Test_Private_Track_" + UUID.randomUUID())); privateTrack = track.getId();
-            season.getCars().add(car); season.getTracks().add(track); 
+            season.getCars().add(car); season.getTracks().add(track);
             race.getMatchday().setPicksOpen(true);
             race.setDateTime(java.time.LocalDateTime.of(2035, 1, 1, 20, 0)); race.getMatchday().setPickDeadline(java.time.LocalDateTime.of(2035, 1, 1, 12, 0));
             return new PickPayload(track.getId(), car.getId(), null, 12, 2, 3, 4, PickInitialFuel.DEFAULT, 1,

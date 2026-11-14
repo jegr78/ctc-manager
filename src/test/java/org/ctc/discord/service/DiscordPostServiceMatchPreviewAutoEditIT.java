@@ -169,7 +169,6 @@ class DiscordPostServiceMatchPreviewAutoEditIT {
         String webhookPath = "/api/v10/webhooks/123456789012345678/Test_preview-token";
         setAnnouncementWebhook(wm.baseUrl() + webhookPath);
         Match match = seedMatchWithRace("Priv", "Test changed teaser", null);
-        
         seedExistingPreviewPost(match, "123456789012345678", "234567890123456789");
         Path privateGraphic = Path.of(uploadDir, "preview-private-test.png").toAbsolutePath().normalize();
         Files.writeString(privateGraphic, "TEST-PRIVATE-CAR-TRACK-WEATHER-7ca1");

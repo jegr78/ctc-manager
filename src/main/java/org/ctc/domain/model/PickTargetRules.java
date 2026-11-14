@@ -3,6 +3,14 @@ package org.ctc.domain.model;
 public final class PickTargetRules {
     private PickTargetRules() { }
 
+    /** A race whose result or pairing decision is recorded; its setup is no longer confidential. */
+    public static boolean isFinished(Race race) {
+        return !race.getResults().isEmpty()
+                || race.getMatch() != null && (race.getMatch().getWalkoverTeam() != null
+                        || race.getMatch().getHomeScore() != null || race.getMatch().getAwayScore() != null)
+                || race.getPlayoffMatchup() != null && race.getPlayoffMatchup().isComplete();
+    }
+
     public static boolean isUnfinishedTarget(Race race) {
         return isUnfinishedTarget(race, race.getHomeTeam(), race.getAwayTeam());
     }

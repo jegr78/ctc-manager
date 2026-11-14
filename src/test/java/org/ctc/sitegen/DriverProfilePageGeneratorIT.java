@@ -77,7 +77,6 @@ class DriverProfilePageGeneratorIT {
     void givenManagedResultsWithCollectionDisabled_whenGeneratingHistory_thenWithholdThePrivateTrackInBothLayouts() throws IOException {
         // given
         var season = seasonRepository.findByYearAndNumber(2026, 99).getFirst();
-        
         var guest = driverRepository.findByPsnId("Test_Guest_1").orElseThrow();
         var results = raceResults.findByDriverId(guest.getId()).stream()
                 .filter(row -> row.getRace().getMatchday().getSeason().getId().equals(season.getId())).toList();

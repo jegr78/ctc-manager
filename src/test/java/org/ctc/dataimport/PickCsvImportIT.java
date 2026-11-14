@@ -55,8 +55,6 @@ class PickCsvImportIT {
             String suffix = UUID.randomUUID().toString().substring(0, 7);
             fixture = helper.createFullSeasonFixture("TPCSV" + suffix);
             teamIds.addAll(List.of(fixture.homeTeam().getId(), fixture.awayTeam().getId()));
-            
-            
             fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0));
             fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0));
             fixture.matchday().setPicksOpen(true);
@@ -120,7 +118,6 @@ class PickCsvImportIT {
             var original = races.findById(fixture.race().getId()).orElseThrow();
             var race = helper.createRace(original.getMatchday(), original.getMatch());
             race.setDateTime(original.getDateTime().plusHours(1));
-            
             return race.getId();
         });
         submissions.submit(secondRace, 0, UUID.randomUUID(), actor(secondRace), payload(1));

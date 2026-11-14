@@ -46,7 +46,6 @@ class PickConcurrencyIT extends PickPersistenceIT {
             var original = races.findById(fixture.race().getId()).orElseThrow();
             var other = helper.createRace(original.getMatchday(), original.getMatch());
             other.setDateTime(original.getDateTime().plusDays(1));
-            
             otherRaceId = other.getId();
             var car = cars.save(new Car("Test private concurrency", UUID.randomUUID().toString()));
             var track = new Track();

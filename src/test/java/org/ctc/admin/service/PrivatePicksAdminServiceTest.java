@@ -136,7 +136,7 @@ class PrivatePicksAdminServiceTest {
         // then
         assertThat(view).isNotNull();
         assertThat(view.health()).isEqualTo("Disabled");
-        assertThat(view.registrationReady()).isFalse();
+        assertThat(view.registrationReady()).as("registration needs only the configured bot identity").isTrue();
         assertThat(view.seasons()).extracting(PrivatePicksAdminService.Choice::id).containsExactly(season.getId());
         assertThat(view.teams()).extracting(PrivatePicksAdminService.Choice::id).containsExactly(team.getId());
         verifyNoInteractions(discord, permissions);

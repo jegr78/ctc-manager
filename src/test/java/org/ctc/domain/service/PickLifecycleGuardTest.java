@@ -27,7 +27,6 @@ class PickLifecycleGuardTest {
         away.setId(UUID.randomUUID());
         race.setMatchday(day);
         race.setMatch(new Match(day, home, away));
-        
         when(picks.findByRaceId(race.getId())).thenReturn(Optional.of(new MatchdayPick(race, new Season(), home)));
     }
 

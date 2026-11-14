@@ -102,8 +102,6 @@ class DiscordPicksBackupRoundTripIT {
         legacy = export();
         tx.executeWithoutResult(status -> {
             var season = seasons.findById(fixture.season().getId()).orElseThrow();
-            
-            
         });
         bindingId = tx.execute(status -> bindings.saveAndFlush(new TeamPickChannelBinding(
                 seasons.findById(fixture.season().getId()).orElseThrow(), teams.findById(fixture.homeTeam().getId()).orElseThrow(),
@@ -121,7 +119,6 @@ class DiscordPicksBackupRoundTripIT {
             day.setPicksOpen(true);
             var match = helper.createMatch(day, teams.findById(fixture.homeTeam().getId()).orElseThrow(), teams.findById(fixture.awayTeam().getId()).orElseThrow());
             var race = helper.createRace(day, match);
-            
             race.setDateTime(LocalDateTime.of(2035, 1, 2, 20, 0));
             return race.getId();
         });
@@ -151,7 +148,6 @@ class DiscordPicksBackupRoundTripIT {
             var match = helper.createMatch(day, teams.findById(fixture.homeTeam().getId()).orElseThrow(), teams.findById(fixture.awayTeam().getId()).orElseThrow());
             var race = helper.createRace(day, match);
             race.setDateTime(LocalDateTime.of(2035, 1, 3, 20, 0));
-            
             return race.getId();
         });
         reviews.openMissing(missingRace, 0, manager, "Test missing submission explicitly opened without another deadline");

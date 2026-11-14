@@ -52,8 +52,6 @@ class PickSubmissionServiceTest {
         day.setPickDeadline(LocalDateTime.of(2026, 11, 2, 20, 0));
         day.setPicksOpen(true);
         race.setMatchday(day);
-        
-        
         pick = new MatchdayPick(race, season, team);
         actor = new AuthorizedPickActor(race.getId(), season.getId(), team.getId(), "12345");
         when(targets.lockForTeam(race.getId(), actor)).thenReturn(new PickTargetService.LockedTarget(season, race, pick));

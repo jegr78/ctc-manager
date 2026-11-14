@@ -46,8 +46,6 @@ class PickPersistenceIT {
         // given
         tx.executeWithoutResult(status -> {
             fixture = helper.createFullSeasonFixture("TPK" + UUID.randomUUID().toString().substring(0, 7));
-            
-            
             fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0));
             fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0));
             fixture.matchday().setPicksOpen(true);

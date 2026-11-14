@@ -59,7 +59,6 @@ class SettingsGraphicServiceTest {
         service = spy(service);
         var race = createReadyRace(false);
         when(standingsService.calculateStandings(any(), any())).thenReturn(List.of());
-        
         race.getSettings().setTimeProgressionMode(equal ? TimeProgressionMode.EQUAL_CONDITIONS : TimeProgressionMode.MULTIPLIER);
         race.getSettings().setTimeProgressionMultiplier(equal ? null : 0);
         var renderedPath = new java.util.concurrent.atomic.AtomicReference<Path>();

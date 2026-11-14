@@ -50,6 +50,29 @@ class PickDisclosureServiceTest {
     }
 
     @Test
+    void givenPlayoffLegWithoutKnownOpponent_whenProjectingPublicly_thenWithholdItsStoredSetup() {
+        // given
+        var race = race(false); race.setAwayTeamOverride(null); race.getMatch().setAwayTeam(null);
+        when(races.findById(race.getId())).thenReturn(Optional.of(race));
+        // when
+        var projection = assertDoesNotThrow(() -> service.forPublic(race.getId()));
+        // then
+        assertThat(projection.trackName()).as("an undecided pairing is not finished").isNull();
+        assertThat(projection.carName()).isNull();
+    }
+
+    @Test
+    void givenRaceWhosePairingHasAScore_whenProjectingPublicly_thenShowItsStoredSetup() {
+        // given
+        var race = race(false); race.getMatch().setHomeScore(10); race.getMatch().setAwayScore(8);
+        when(races.findById(race.getId())).thenReturn(Optional.of(race));
+        // when
+        var projection = assertDoesNotThrow(() -> service.forPublic(race.getId()));
+        // then
+        assertThat(projection.trackName()).isEqualTo("Test private track");
+    }
+
+    @Test
     void givenMissingRace_whenProjectingPublicly_thenRejectWithoutAnInventedFallback() {
         // given / when / then
         assertThatThrownBy(() -> service.forPublic(UUID.randomUUID())).isInstanceOf(EntityNotFoundException.class);
@@ -194,7 +217,7 @@ class PickDisclosureServiceTest {
     Race race(boolean finished) {
         var season = new Season("Test disclosure"); season.setId(UUID.randomUUID());
         var day = PhaseTestFixtures.matchdayInRegularPhase(season, "Test disclosure day", 0); day.setId(UUID.randomUUID());
-        var race = new Race(); race.setId(UUID.randomUUID()); race.setMatchday(day); 
+        var race = new Race(); race.setId(UUID.randomUUID()); race.setMatchday(day);
         var home = new Team("Test home", "T-DHOME"); home.setId(UUID.randomUUID()); race.setHomeTeamOverride(home);
         var away = new Team("Test away", "T-DAWAY"); away.setId(UUID.randomUUID()); race.setAwayTeamOverride(away);
         race.setMatch(new Match(day, home, away));

@@ -55,7 +55,6 @@ class PickPlayoffLifecycleIT {
                 fixture.season().addTeam(team);
                 teamIds.add(team.getId());
             }
-            
             var selectedCar = cars.save(new Car("Test pick playoff", UUID.randomUUID().toString()));
             var selectedTrack = tracks.save(new Track("Test pick playoff " + UUID.randomUUID()));
             fixture.season().getCars().add(selectedCar);

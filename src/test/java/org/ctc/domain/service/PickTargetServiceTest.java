@@ -6,6 +6,7 @@ import java.time.Clock;
 import java.time.ZoneOffset;
 import java.util.Set;
 import org.ctc.domain.picks.ChannelPickActor;
+import org.ctc.domain.picks.HomeRaceTarget;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -61,8 +62,6 @@ class PickTargetServiceTest {
         race.setMatchday(day);
         race.setMatch(match);
         race.setDateTime(LocalDateTime.of(2026, 11, 10, 20, 0));
-        
-        
         actor = new AuthorizedPickActor(race.getId(), season.getId(), home.getId(), "12345");
         when(seasons.findByIdForUpdate(season.getId())).thenReturn(Optional.of(season));
         when(races.findById(race.getId())).thenReturn(Optional.of(race));
@@ -164,7 +163,6 @@ class PickTargetServiceTest {
         foreign.setHomeTeamOverride(away);
         foreign.setAwayTeamOverride(home);
         foreign.setDateTime(race.getDateTime().plusHours(1));
-        
         when(seasons.findById(season.getId())).thenReturn(Optional.of(season));
         when(races.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(foreign, race));
         // when
@@ -179,7 +177,23 @@ class PickTargetServiceTest {
     }
 
     @Test
-    void givenApprovedOrOpenWithoutDeadlineTarget_whenListing_thenKeepServerEditingReason() {
+    void givenChannelBoundToParentOrganisation_whenListing_thenOfferSubTeamHomeLegNamingBothTeams() {
+        // given
+        var organisation = new Team("Test organisation", "T-ORG"); organisation.setId(UUID.randomUUID());
+        home.setParentTeam(organisation);
+        var parentChannel = new ChannelPickActor("123", "456", "12345", Set.of(new ChannelPickActor.Binding(season.getId(), organisation.getId())));
+        when(access.authorizeChannel("123", "456", "12345")).thenReturn(parentChannel);
+        when(seasons.findById(season.getId())).thenReturn(Optional.of(season));
+        when(races.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(race));
+        // when
+        var targets = service.listHomeRaces(parentChannel);
+        // then
+        assertThat(targets).extracting(HomeRaceTarget::raceId).containsExactly(race.getId());
+        assertThat(targets.getFirst().label()).contains("T-HOME vs T-AWAY", "Leg 1");
+    }
+
+    @Test
+    void givenApprovedOrOpenWithoutDeadlineTarget_whenListing_thenKeepTeamEditingOpen() {
         // given
         when(seasons.findById(season.getId())).thenReturn(Optional.of(season));
         when(races.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(race));
@@ -195,8 +209,8 @@ class PickTargetServiceTest {
         when(picks.findSnapshotByRaceId(race.getId())).thenReturn(Optional.of(pick));
         var approved = service.listHomeRaces(channel());
         assertThat(approved).hasSize(1);
-        assertThat(approved.getFirst().editable()).isFalse();
-        assertThat(approved.getFirst().reason()).contains("Approved");
+        assertThat(approved.getFirst().editable()).as("approval no longer locks the team").isTrue();
+        assertThat(approved.getFirst().state()).isEqualTo(PickState.APPROVED);
         assertThat(approved.getFirst().version()).isEqualTo(2);
     }
 
@@ -250,14 +264,14 @@ class PickTargetServiceTest {
     @Test
     void givenTwoSeasonBindingsAndReturnLeg_whenListing_thenRetainBothSeasonContextsAndExactLegOwnership() {
         // given
-        var second = new Season("Test second season"); second.setId(UUID.randomUUID()); 
+        var second = new Season("Test second season"); second.setId(UUID.randomUUID());
         var phase = new SeasonPhase(); phase.setId(UUID.randomUUID()); phase.setSeason(second); phase.setPhaseType(PhaseType.REGULAR); phase.setLabel("Second league");
         var day = new Matchday(phase, "Second matchday", 2); day.setId(UUID.randomUUID()); day.setPickDeadline(race.getMatchday().getPickDeadline()); day.setPicksOpen(true);
         var match = new Match(day, away, home); match.setId(UUID.randomUUID());
         var outbound = new Race(); outbound.setId(UUID.randomUUID()); outbound.setMatchday(day); outbound.setMatch(match);
-        outbound.setDateTime(race.getDateTime()); 
+        outbound.setDateTime(race.getDateTime());
         var returning = new Race(); returning.setId(UUID.randomUUID()); returning.setMatchday(day); returning.setMatch(match);
-        returning.setDateTime(race.getDateTime().plusDays(1)); returning.setHomeTeamOverride(home); returning.setAwayTeamOverride(away); 
+        returning.setDateTime(race.getDateTime().plusDays(1)); returning.setHomeTeamOverride(home); returning.setAwayTeamOverride(away);
         var both = new ChannelPickActor("123", "456", "12345", Set.of(new ChannelPickActor.Binding(season.getId(), home.getId()),
                 new ChannelPickActor.Binding(second.getId(), home.getId())));
         when(access.authorizeChannel("123", "456", "12345")).thenReturn(both);

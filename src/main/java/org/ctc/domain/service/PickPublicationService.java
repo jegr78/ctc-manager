@@ -199,7 +199,7 @@ public class PickPublicationService {
      * content of its latest confirmed publication.
      */
     public PublicPickProjection publicProjection(Race race) {
-        if (!PickTargetRules.isUnfinishedTarget(race)) {
+        if (PickTargetRules.isFinished(race)) {
             return PickPublicationContent.from(race).project(race.getId(), java.util.EnumSet.allOf(PickDisclosureField.class));
         }
         var confirmed = snapshots.findByAttemptRaceIdOrderByAttemptContentVersionDescConfirmedAtDesc(race.getId()).stream()
@@ -223,7 +223,7 @@ public class PickPublicationService {
 
     /** Whether automatic edits may attach the complete settings graphic without disclosing unpublished choices. */
     public boolean settingsReleased(Race race) {
-        if (!PickTargetRules.isUnfinishedTarget(race)) return true;
+        if (PickTargetRules.isFinished(race)) return true;
         var current = PickPublicationContent.from(race).fingerprint();
         return snapshots.findByAttemptRaceIdOrderByAttemptContentVersionDescConfirmedAtDesc(race.getId()).stream()
                 .map(PickPublicationSnapshot::getAttempt)

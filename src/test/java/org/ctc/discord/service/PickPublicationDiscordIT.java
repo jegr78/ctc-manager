@@ -97,7 +97,6 @@ class PickPublicationDiscordIT {
         wm.resetAll(); Files.createDirectories(ROOT);
         tx.executeWithoutResult(status -> {
             fixture = helper.createFullSeasonFixture("TPD" + UUID.randomUUID().toString().substring(0, 7));
-            
              fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0));
             fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0));
             fixture.matchday().setPicksOpen(true);
@@ -247,7 +246,7 @@ class PickPublicationDiscordIT {
             var day = races.findById(fixture.race().getId()).orElseThrow().getMatchday();
             var secondMatch = helper.createMatch(day, teams.findById(fixture.awayTeam().getId()).orElseThrow(), teams.findById(fixture.homeTeam().getId()).orElseThrow());
             secondMatch.setDiscordChannelId(CHANNEL); secondMatch.setDiscordChannelWebhookUrl(wm.baseUrl() + WEBHOOK);
-            var second = helper.createRace(day, secondMatch); second.setDateTime(LocalDateTime.of(2035, 1, 1, 21, 0)); 
+            var second = helper.createRace(day, secondMatch); second.setDateTime(LocalDateTime.of(2035, 1, 1, 21, 0));
             return second.getId();
         });
         submissions.submit(secondRaceId, 0, UUID.randomUUID(), new AuthorizedPickActor(secondRaceId, fixture.season().getId(), fixture.awayTeam().getId(), "12345"), payload);

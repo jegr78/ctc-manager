@@ -61,7 +61,7 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
                 payload.weather(), payload.timeOfDay(), payload.availableTyres(), payload.mandatoryTyres(), LobbyRulesProfile.CTC_2027,
                 RaceStartType.GRID_FALSE_START, RaceSlipstream.REAL);
         tx.executeWithoutResult(status -> {
-            var race = races.findById(fixture.race().getId()).orElseThrow(); 
+            var race = races.findById(fixture.race().getId()).orElseThrow();
             race.setCar(cars.findById(payload.carId()).orElseThrow()); race.setCarPoolEntry(entries.findById(entry).orElseThrow());
             race.setTrack(tracks.findById(payload.trackId()).orElseThrow());
             var settings = new RaceSettings(race); RaceSettingsValues.from(payload).applyTo(settings); race.setSettings(settings);
@@ -181,7 +181,6 @@ class MatchdayPicksE2ETest extends PlaywrightConfig {
         context = browser.newContext(new Browser.NewContextOptions().setJavaScriptEnabled(false)); page = context.newPage();
         tx.executeWithoutResult(status -> {
             fixture = helper.createFullSeasonFixture("TPM" + UUID.randomUUID().toString().substring(0, 7));
-             
             fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0)); fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0)); fixture.matchday().setPicksOpen(true);
             var car = cars.save(new Car("Test review", "Choice " + UUID.randomUUID())); carIds.add(car.getId());
             var track = tracks.save(new Track("Test review track " + UUID.randomUUID()));

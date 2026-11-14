@@ -79,8 +79,6 @@ class PickLifecycleIT {
             thirdTeam = helper.createTeam("Test successor " + UUID.randomUUID(), "TL" + UUID.randomUUID().toString().substring(0, 7)).getId();
         });
         tx.executeWithoutResult(status -> {
-            
-            
         });
         payload = new PickPayload(trackIds.getFirst(), carIds.getFirst(), null, 12, 2, 3, 4, PickInitialFuel.DEFAULT, 1,
                 TimeProgressionMode.MULTIPLIER, 0, "S01", "Sunset", Set.of(PickTyre.RS), Set.of());
@@ -103,7 +101,6 @@ class PickLifecycleIT {
     void givenCachedPausedSeason_whenCollectionIsEnabledBeforePlanning_thenUseTheLockedCurrentEnrollmentFlag(String creation) {
         tx.executeWithoutResult(status -> {
             var season = seasons.findById(fixture.season().getId()).orElseThrow();
-            
             races.findById(fixture.race().getId()).orElseThrow().getMatchday().getPhase().setLegs(2);
         });
         var separate = new TransactionTemplate(tx.getTransactionManager());
@@ -225,7 +222,6 @@ class PickLifecycleIT {
         // then
         assertThat(result.success()).isTrue();
         tx.executeWithoutResult(status -> {
-            
         });
         tx.executeWithoutResult(status -> {
             assertThat(picks.findByRaceId(fixture.race().getId()).orElseThrow().getVersion()).isEqualTo(1);

@@ -249,7 +249,7 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
             var track = tracks.save(new Track("Test category second track " + UUID.randomUUID()));
             extraTrack = track.getId(); season.getTracks().add(track);
             var race = helper.createRace(fixture.matchday(), matches.findById(fixture.match().getId()).orElseThrow());
-            race.setDateTime(LocalDateTime.of(2035, 1, 1, 21, 0)); 
+            race.setDateTime(LocalDateTime.of(2035, 1, 1, 21, 0));
             return race.getId();
         });
         var duplicate = new PickPayload(extraTrack, saved.carId(), entry, saved.laps(), saved.tyreWear(), saved.fuelConsumption(),
