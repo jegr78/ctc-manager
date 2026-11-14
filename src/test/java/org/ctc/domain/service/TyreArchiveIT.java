@@ -48,7 +48,7 @@ class TyreArchiveIT extends TyrePersistenceIT {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
-    void givenApprovedTyresAndFrozenPublication_whenRestoring_thenKeepExactPayloadReceiptHashesAndPartialDisclosure(boolean sports) throws Exception {
+    void givenApprovedTyresAndFrozenPublication_whenRestoring_thenKeepExactPayloadReceiptHashesAndDisclosure(boolean sports) throws Exception {
         // given
         var choice = choice(sports); UUID request = UUID.randomUUID();
         var receipt = submissions.submit(fixture.race().getId(), 0, request, actor, choice);
@@ -57,7 +57,8 @@ class TyreArchiveIT extends TyrePersistenceIT {
         var frozen = tx.execute(status -> attempts.findAll().stream().filter(a -> a.getSeasonId().equals(fixture.season().getId())).findFirst().orElseThrow());
         var before = disclosure.forPublic(fixture.race().getId());
         assertThat(before.settings().availableTyres()).isEqualTo(RaceSettingsValues.from(choice).availableTyres());
-        assertThat(before.settings().mandatoryTyres()).isNull(); assertThat(before.carName()).isNull();
+        assertThat(before.settings().mandatoryTyres()).isEqualTo(RaceSettingsValues.from(choice).mandatoryTyres());
+        assertThat(before.carName()).as("a settings output releases every field").isNotNull();
         corrections.record(fixture.race().getId(), 2, manager, "Test unpublished Racing correction", payload);
         byte[] archive = export(); long generation = epoch.getAsLong();
         // when

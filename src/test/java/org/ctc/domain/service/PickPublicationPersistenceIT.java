@@ -103,19 +103,20 @@ class PickPublicationPersistenceIT {
     }
 
     @Test
-    void givenNewPartialVersion_whenReloading_thenNeverBorrowTrackFromOlderCompleteVersion() {
+    void givenNewerLobbyVersionWithChangedContent_whenReloading_thenNeverBorrowCarFromOlderCompleteVersion() {
         // given
         tx.executeWithoutResult(status -> {
             var first = prepare(1, PickDisclosureField.all()); first.confirm("test-first", captured.plusSeconds(1));
             attempts.flush(); snapshots.saveAndFlush(new PickPublicationSnapshot(first));
-            var second = prepare(2, Set.of(PickDisclosureField.LAPS)); second.confirm("test-second", captured.plusSeconds(2));
+            races.findById(fixture.race().getId()).orElseThrow().getTrack().setName("Test changed public track");
+            var second = prepare(2, PickDisclosureField.lobby()); second.confirm("test-second", captured.plusSeconds(2));
             attempts.flush(); snapshots.saveAndFlush(new PickPublicationSnapshot(second));
         });
         // when
         var projection = disclosure.forPublic(fixture.race().getId());
         // then
-        assertThat(projection.trackName()).isNull(); assertThat(projection.carName()).isNull();
-        assertThat(projection.settings()).isNotNull(); assertThat(projection.settings().weather()).isNull();
+        assertThat(projection.trackName()).isEqualTo("Test changed public track");
+        assertThat(projection.carName()).as("the newer lobby version withholds the car").isNull();
     }
 
     @Test
@@ -371,7 +372,9 @@ class PickPublicationPersistenceIT {
     private PickPublicationAttempt prepare(long version, Set<PickDisclosureField> fields) {
         var race = races.findById(fixture.race().getId()).orElseThrow();
         return attempts.saveAndFlush(new PickPublicationAttempt(new PickPublicationAttempt.Capture(UUID.randomUUID(), race,
-                version, 0, PickPublicationOrigin.LEGACY, PickPublicationOutput.SETTINGS, PickPublicationContent.from(race), fields,
+                version, 0, PickPublicationOrigin.LEGACY,
+                fields.contains(PickDisclosureField.CAR) ? PickPublicationOutput.SETTINGS : PickPublicationOutput.LOBBY_SETTINGS,
+                PickPublicationContent.from(race), fields,
                 "test-admin", "123456789012345678", "234567890123456789", null, "a".repeat(64), "{}",
                 "12345678-1234-1234-1234-123456789abc:0", captured)));
     }

@@ -69,7 +69,7 @@ public class PickReviewService {
     /** The race still carries the previously approved revision, so replacing it needs no extra consent. */
     public boolean holdsApproved(MatchdayPick pick, PickSetupSnapshot existing) {
         return pick != null && pick.getApprovedRevisionNumber() != null
-                && revisions.findByPickIdAndRevisionNumber(pick.getId(), pick.getApprovedRevisionNumber())
+                && revisions.findSnapshotByPickIdAndRevisionNumber(pick.getId(), pick.getApprovedRevisionNumber())
                         .map(approved -> existing.matches(approved.getPayload())).orElse(false);
     }
 

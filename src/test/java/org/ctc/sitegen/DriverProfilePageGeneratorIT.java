@@ -74,14 +74,14 @@ class DriverProfilePageGeneratorIT {
 
     @Test
     @Transactional
-    void givenManagedResultsWithCollectionDisabled_whenGeneratingHistory_thenWithholdThePrivateTrackInBothLayouts() throws IOException {
+    void givenFinishedResults_whenGeneratingHistory_thenShowTheTrackOfTheFinishedRace() throws IOException {
         // given
         var season = seasonRepository.findByYearAndNumber(2026, 99).getFirst();
         var guest = driverRepository.findByPsnId("Test_Guest_1").orElseThrow();
         var results = raceResults.findByDriverId(guest.getId()).stream()
                 .filter(row -> row.getRace().getMatchday().getSeason().getId().equals(season.getId())).toList();
         assertThat(results).isNotEmpty();
-        var track = tracks.save(new org.ctc.domain.model.Track("TEST-PRIVATE-HISTORY-TRACK-81bf"));
+        var track = tracks.save(new org.ctc.domain.model.Track("TEST-FINISHED-HISTORY-TRACK-81bf"));
         results.forEach(row -> {  row.getRace().setTrack(track); });
         var output = SitegenTestDir.create("private-driver-history");
         var slug = siteSlugger.slugify(season.getDisplayLabel());
@@ -93,7 +93,8 @@ class DriverProfilePageGeneratorIT {
                 .resolve(siteSlugger.slugify(guest.getPsnId()) + ".html");
         var document = Jsoup.parse(Files.readString(profile));
         assertThat(document.select(".history-track")).isNotEmpty();
-        assertThat(document.text()).contains(guest.getPsnId()).doesNotContain("TEST-PRIVATE-HISTORY-TRACK-81bf");
+        assertThat(document.text()).as("a finished race no longer withholds its setup")
+                .contains(guest.getPsnId(), "TEST-FINISHED-HISTORY-TRACK-81bf");
     }
 
     @MockitoBean private YouTubeScraperService youTubeScraperService;

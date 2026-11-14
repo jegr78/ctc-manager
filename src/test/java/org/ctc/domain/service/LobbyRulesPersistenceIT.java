@@ -222,7 +222,7 @@ class LobbyRulesPersistenceIT extends PickPersistenceIT {
                         Map.of(fixture.race().getId(), Set.of(PickDisclosureField.START_TYPE)), () -> "test-frozen-message", message -> message));
         var publicBefore = disclosure.forPublic(fixture.race().getId());
         assertThat(publicBefore.settings().startType()).isEqualTo(RaceStartType.GRID_FALSE_START);
-        assertThat(publicBefore.settings().slipstream()).isNull();
+        assertThat(publicBefore.settings().slipstream()).as("a settings output releases every field").isEqualTo(RaceSlipstream.REAL);
         var captured = tx.execute(status -> attempts.findAll().stream().filter(a -> a.getSeasonId().equals(fixture.season().getId())).findFirst().orElseThrow());
         var archive = export();
         corrections.record(fixture.race().getId(), 3, manager, "Test later unpublished choices", payload);
