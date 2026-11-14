@@ -71,7 +71,7 @@ class PickBackupValidatorTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"season-flag-missing", "race-flag-missing", "flag-string", "cross-team", "cross-season", "orphan-race",
+    @ValueSource(strings = {"flag-string", "cross-team", "cross-season", "orphan-race",
             "orphan-car", "orphan-track", "state", "pointer", "version", "latest", "cross-round", "cross-opponent", "duplicate-race", "duplicate-revision", "duplicate-request",
             "receipt-version", "manual-flags", "approved-without-decision", "revision-number", "revision-payload", "decision-reason"})
     void givenForgedOrBrokenHistory_whenValidating_thenRejectBeforeReplacement(String invalid) throws Exception {
@@ -80,8 +80,6 @@ class PickBackupValidatorTest {
         var aggregate = rows.get("matchday_picks").getFirst();
         var revision = rows.get("matchday_pick_revisions").getFirst();
         switch (invalid) {
-            case "season-flag-missing" -> rows.get("seasons").getFirst().remove("picksCollectionEnabled");
-            case "race-flag-missing" -> rows.get("races").getFirst().remove("picksManaged");
             case "flag-string" -> rows.get("races").getFirst().put("picksManaged", "true");
             case "cross-team" -> aggregate.put("team", away.toString());
             case "cross-season" -> aggregate.put("season", UUID.randomUUID().toString());

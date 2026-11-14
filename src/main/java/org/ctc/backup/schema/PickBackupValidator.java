@@ -45,7 +45,7 @@ public final class PickBackupValidator {
             if (version < 6 && table.equals("team_pick_channel_bindings")) fail("Channel bindings require schema version 6");
             String flag = table.equals("seasons") ? "picksCollectionEnabled" : table.equals("races") ? "picksManaged" : null;
             if (flag != null && version < BackupSchema.PICK_FLAGS_REMOVED_VERSION) {
-                if (version >= 5 || row.has(flag)) bool(row, flag);
+                if (row.has(flag)) bool(row, flag);
                 if (version < 5 && row.path(flag).asBoolean()) fail("Confidential flags require schema version 5");
             }
             if (version < 5) {

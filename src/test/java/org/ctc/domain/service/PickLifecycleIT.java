@@ -160,14 +160,14 @@ class PickLifecycleIT {
     }
 
     @Test
-    void givenManagedPendingRace_whenChangingSetupThroughNativeEditor_thenRequireReviewAndKeepSubmission() {
+    void givenPendingPick_whenChangingSetupThroughNativeEditor_thenSaveSetupAndKeepSubmission() {
         // when
         var result = save(fixture.race().getId(), fixture.matchday().getId(), fixture.homeTeam().getId(), fixture.awayTeam().getId(),
                 payload.trackId(), payload.carId(), payload, LocalDateTime.of(2035, 1, 1, 20, 0));
         // then
-        assertThat(result.success()).isFalse();
-        assertThat(result.message()).contains("pick review");
-        tx.executeWithoutResult(status -> assertThat(races.findById(fixture.race().getId()).orElseThrow().getSettings()).isNull());
+        assertThat(result.success()).as(result.message()).isTrue();
+        tx.executeWithoutResult(status -> assertThat(races.findById(fixture.race().getId()).orElseThrow().getSettings().getWeather())
+                .isEqualTo(payload.weather()));
         assertOriginal();
     }
 

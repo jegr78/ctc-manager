@@ -155,7 +155,7 @@ public class MatchdayPickAdminService {
                 state, pick == null ? 0 : pick.getVersion(), pick == null ? null : pick.getLatestRevisionNumber(),
                 pick == null ? null : pick.getApprovedRevisionNumber(), deadline, deadlineState,
                 day.isPicksOpen(), pick != null && pick.isManualClosed(), identity ? decision.reason() : "Target identity changed; resolve before review",
-                identity, actions, pick != null && pick.isSubmittedAfterApproval(),
+                identity, actions, pick != null && pick.hasSubmissionAfterApproval(),
                 race.getPlayoffMatchup() != null ? "/admin/pick-windows/playoffs/" + race.getPlayoffMatchup().getId()
                         : race.getMatch() != null ? "/admin/pick-windows/matches/" + race.getMatch().getId() : null);
     }

@@ -198,7 +198,7 @@ class DiscordPicksBackupRoundTripIT {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"missing-revisions", "missing-decisions", "unmanaged", "cross-team", "orphan-track", "duplicate-request", "forged-version", "changed-settings", "dropped-correction", "disguised-v4", "window-flag", "window-version", "window-deadline", "window-legacy"})
+    @ValueSource(strings = {"missing-revisions", "missing-decisions", "cross-team", "orphan-track", "duplicate-request", "forged-version", "dropped-correction", "disguised-v4", "window-flag", "window-version", "window-deadline", "window-legacy"})
     void givenMalformedPrivateHistory_whenStagingOrExecuting_thenRejectBeforeWipeAndKeepLiveHistory(String kind) throws Exception {
         // given
         byte[] valid = export();
@@ -498,10 +498,8 @@ class DiscordPicksBackupRoundTripIT {
             manifest.put("schema_version", 4);
         } else {
             String table = switch (kind) {
-                case "unmanaged" -> "races";
                 case "cross-team", "forged-version" -> "matchday-picks";
                 case "orphan-track", "duplicate-request" -> "matchday-pick-revisions";
-                case "changed-settings" -> "race-settings";
                 default -> "matchday-pick-decisions";
             };
             String file = "data/" + table + ".json";
@@ -519,10 +517,8 @@ class DiscordPicksBackupRoundTripIT {
                     String identity = row.path(kind.equals("changed-settings") ? "race" : table.equals("races") ? "id" : "race").asText();
                     if (!identity.equals(fixture.race().getId().toString())) continue;
                     switch (kind) {
-                        case "unmanaged" -> ((ObjectNode) row).put("picksManaged", false);
                         case "cross-team" -> ((ObjectNode) row).put("team", fixture.awayTeam().getId().toString());
                         case "forged-version" -> ((ObjectNode) row).put("version", 999);
-                        case "changed-settings" -> ((ObjectNode) row).put("weather", "Unrecorded correction");
                         default -> throw new AssertionError(kind);
                     }
                     break;

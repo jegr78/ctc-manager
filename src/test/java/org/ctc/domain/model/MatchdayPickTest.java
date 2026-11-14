@@ -94,10 +94,10 @@ class MatchdayPickTest {
         assertThat(revision).isEqualTo(2);
         assertThat(pick.getState()).isEqualTo(PickState.SUBMITTED);
         assertThat(pick.getApprovedRevisionNumber()).as("the applied revision stays recorded").isEqualTo(1);
-        assertThat(pick.isSubmittedAfterApproval()).isTrue();
+        assertThat(pick.hasSubmissionAfterApproval()).isTrue();
         pick.approve(2);
         assertThat(pick.getApprovedRevisionNumber()).isEqualTo(2);
-        assertThat(pick.isSubmittedAfterApproval()).isFalse();
+        assertThat(pick.hasSubmissionAfterApproval()).isFalse();
         assertThat(pick.getVersion()).isEqualTo(4);
     }
 

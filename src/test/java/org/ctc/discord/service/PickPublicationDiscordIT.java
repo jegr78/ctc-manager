@@ -72,6 +72,7 @@ class PickPublicationDiscordIT {
     @Autowired RaceRepository races;
     @Autowired PickSubmissionService submissions;
     @Autowired PickReviewService reviews;
+    @Autowired org.ctc.domain.service.RaceSettingsApplicationService raceSettings;
     @Autowired org.ctc.HistoricalPickCorrections corrections;
     @Autowired PickDisclosureService disclosure;
     @Autowired PickPublicationAttemptRepository attempts;
@@ -139,10 +140,19 @@ class PickPublicationDiscordIT {
     }
 
     @Test
-    void givenManagedSettingsWithoutApproval_whenPosting_thenRejectBeforeWebhookDelivery() {
-        // when / then
-        assertThatThrownBy(() -> posts.postSettings(match())).isInstanceOf(BusinessRuleException.class).hasMessageContaining("approved");
-        wm.verify(0, postRequestedFor(urlPathEqualTo(WEBHOOK)));
+    void givenStoredSetupAndUnapprovedTeamPick_whenPosting_thenPublishTheStoredSetupWithoutApproval() {
+        // given
+        submissions.submit(fixture.race().getId(), 0, UUID.randomUUID(), new AuthorizedPickActor(fixture.race().getId(), fixture.season().getId(),
+                fixture.homeTeam().getId(), "12345"), payload);
+        tx.executeWithoutResult(status -> raceSettings.apply(races.findById(fixture.race().getId()).orElseThrow(), payload));
+        outsideNetwork();
+        // when
+        var result = assertDoesNotThrow(() -> posts.postSettings(match()));
+        // then
+        assertThat(result.getMessageId()).isEqualTo(MESSAGE);
+        assertThat(disclosure.forPublic(fixture.race().getId()).settings().weather()).isEqualTo(payload.weather());
+        tx.executeWithoutResult(status -> assertThat(attempts.findAll()).singleElement()
+                .satisfies(attempt -> assertThat(attempt.getOrigin()).isEqualTo(org.ctc.domain.model.PickPublicationOrigin.LEGACY)));
     }
 
     @org.junit.jupiter.params.ParameterizedTest

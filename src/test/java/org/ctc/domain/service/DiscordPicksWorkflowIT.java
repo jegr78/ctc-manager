@@ -287,7 +287,7 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
     }
 
     @Test
-    void givenPrivateWizardAndApproval_whenPublishingExplicitly_thenReleaseOnlyTheCapturedOutputWithCollectionStopped() throws Exception {
+    void givenPrivateWizardAndApproval_whenPublishingExplicitly_thenReleaseOnlyTheCapturedOutput() throws Exception {
         payload = withTime(TimeProgressionMode.EQUAL_CONDITIONS, null, "Custom S13; S13; ?; S07; C06; C04; S03; ?");
         tx.executeWithoutResult(status -> {
             phaseTeams.saveAll(List.of(new PhaseTeam(fixture.matchday().getPhase(), fixture.homeTeam()),
@@ -303,7 +303,8 @@ class DiscordPicksWorkflowIT extends PickPersistenceIT {
         reviews.approve(fixture.race().getId(), 1, 1, new ManagementPickActor("test-admin"), "Test full workflow approval");
         var teammate = new Driver("12346"); teammate.command(); teammate.select(fixture.race().getId());
         assertThat(teammate.response.allText()).contains("APPROVED", payload.weather());
-        assertThat(teammate.response.last().buttons()).extracting(PickGatewayMessage.Button::label).doesNotContain("Enter picks", "Replace picks");
+        assertThat(teammate.response.last().buttons()).extracting(PickGatewayMessage.Button::label)
+                .as("approval keeps the team able to resubmit before the cutoff").contains("Replace picks");
         assertThat(generateSiteText()).doesNotContain(carName, trackName, payload.weather());
         assertThat(wm.getAllServeEvents()).isEmpty();
 

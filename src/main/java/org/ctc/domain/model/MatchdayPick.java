@@ -127,7 +127,7 @@ public class MatchdayPick extends BaseEntity {
         version++;
     }
 
-    public boolean isSubmittedAfterApproval() {
+    public boolean hasSubmissionAfterApproval() {
         return state == PickState.SUBMITTED && approvedRevisionNumber != null;
     }
 

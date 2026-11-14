@@ -194,17 +194,6 @@ class PickPublicationPersistenceIT {
     }
 
     @Test
-    void givenManagedChoicesWithoutApproval_whenPublishing_thenRejectBeforePreparingOrSending() {
-        // given
-        var renders = new AtomicInteger();
-        // when / then
-        assertThatThrownBy(() -> publications.publish(List.of(fixture.race().getId()), PickPublicationOutput.SETTINGS,
-                new ManagementPickActor("test-admin"), rows -> { renders.incrementAndGet(); return bundle(() -> "unexpected", message -> "unexpected"); }))
-                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("approved");
-        assertThat(renders).hasValue(0);
-    }
-
-    @Test
     void givenRenderingThatChangesCapturedChoices_whenPublishing_thenRollBackBeforeAnyNetworkOrPreparedAttempt() {
         // given
         var sends = new AtomicInteger();

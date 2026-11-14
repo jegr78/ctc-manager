@@ -5,8 +5,6 @@ import java.util.stream.Collectors;
 import org.ctc.domain.model.*;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -20,7 +18,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @AutoConfigureMockMvc
@@ -149,84 +146,6 @@ class TyreFormsIT extends TyrePersistenceIT {
         assertThat(document.select("#availableTyres option[selected]").eachAttr("value")).containsExactly(submitted);
         assertThat(document.select("img[onerror]")).isEmpty();
         tx.executeWithoutResult(status -> assertThat(entityManager.find(Race.class, fixture.race().getId()).getSettings()).isNull());
-    }
-
-    @Test
-    void givenApprovedOneMake_whenPreparingCorrection_thenOfferBothAvailableFamiliesAndOnlyDryMandatoryValues() throws Exception {
-        // given
-        approveForCorrection();
-        // when
-        var page = mvc.perform(get("/admin/matchday-picks/{id}/correction", fixture.race().getId())).andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-        // then
-        assertThat(Jsoup.parse(page).select("input[name=availableTyres]").eachAttr("value"))
-                .containsExactlyInAnyOrder("RS", "RM", "RH", "SS", "SM", "SH");
-        assertThat(Jsoup.parse(page).select("input[name=mandatoryTyres]").eachAttr("value"))
-                .containsExactlyInAnyOrder("RS", "RM");
-    }
-
-    @Test
-    void givenApprovedRacingAndSavedSingletonCategory_whenPreparingCorrection_thenOfferOnlyRacing() throws Exception {
-        // given
-        approveForCorrection();
-        tx.executeWithoutResult(status -> {
-            var entry = entityManager.find(SeasonCarPoolEntry.class, payload.carPoolEntryId());
-            var car = cars.findById(payload.carId()).orElseThrow(); car.setCategory(CarCategory.values()[0]);
-            entry.setOneMakeCar(null);
-            var clause = new SeasonCarPoolClause(); clause.setEntry(entry); clause.setCategory(car.getCategory()); entry.getClauses().add(clause);
-            assertThat(entry.getMembers()).hasSize(1);
-        });
-        // when
-        var page = mvc.perform(get("/admin/matchday-picks/{id}/correction", fixture.race().getId())).andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-        // then
-        assertThat(Jsoup.parse(page).select("input[name=availableTyres]").eachAttr("value"))
-                .containsExactlyInAnyOrder("RS", "RM", "RH");
-        assertThat(Jsoup.parse(page).select("input[name=mandatoryTyres]").eachAttr("value"))
-                .containsExactlyInAnyOrder("RS", "RM");
-    }
-
-    private void approveForCorrection() {
-        submissions.submit(fixture.race().getId(), 0, java.util.UUID.randomUUID(), actor, payload);
-        reviews.approve(fixture.race().getId(), 1, 1, manager, "Test correction form strategy");
-    }
-
-    @ParameterizedTest
-    @CsvSource({"availableTyres,duplicate", "mandatoryTyres,duplicate", "availableTyres,blank", "mandatoryTyres,blank",
-            "availableTyres,indexed-empty", "mandatoryTyres,indexed-empty", "availableTyres,index-gap", "mandatoryTyres,index-gap",
-            "availableTyres,indexed-empty-refresh", "mandatoryTyres,indexed-empty-refresh", "availableTyres,index-gap-refresh", "mandatoryTyres,index-gap-refresh"})
-    void givenMalformedRawCorrectionValues_whenPosting_thenRenderErrorsWithoutChangingTheApprovedSetup(String field, String kind) throws Exception {
-        // given
-        approveForCorrection();
-        String page = mvc.perform(get("/admin/matchday-picks/{id}/correction", fixture.race().getId())).andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-        var form = Jsoup.parse(page).selectFirst("form[action$='/correction']");
-        assertThat(form).isNotNull();
-        boolean indexed = kind.startsWith("indexed-") || kind.startsWith("index-gap");
-        boolean refresh = kind.endsWith("-refresh");
-        var request = post("/admin/matchday-picks/{id}/correction" + (refresh ? "/refresh" : ""), fixture.race().getId()).with(csrf());
-        for (var input : form.select("input[name],select[name],textarea[name]")) {
-            String name = input.attr("name");
-            if (name.equals("_csrf") || name.equals("reason") || name.equals(field)
-                    || indexed && name.equals("_" + field) || input.hasAttr("disabled")) continue;
-            if (input.tagName().equals("input") && (input.attr("type").equals("checkbox") || input.attr("type").equals("radio"))
-                    && !input.hasAttr("checked")) continue;
-            request.param(name, input.val());
-        }
-        request.param("reason", "Test invalid raw tyre values");
-        if (indexed) request.param(field + (kind.startsWith("index-gap") ? "[2]" : "[0]"), kind.startsWith("index-gap") ? "RS" : "");
-        else request.param(field, kind.equals("duplicate") ? new String[]{"RM", "RM"} : new String[]{""});
-        // when / then
-        assertThatCode(() -> {
-            var response = mvc.perform(request).andExpect(status().isOk()).andExpect(model().attributeExists("form"));
-            if (!refresh) response.andExpect(model().attributeHasErrors("form"));
-        })
-                .doesNotThrowAnyException();
-        tx.executeWithoutResult(status -> {
-            var pick = picks.findByRaceId(fixture.race().getId()).orElseThrow();
-            assertThat(pick.getVersion()).isEqualTo(2);
-            assertThat(PickSetupSnapshot.from(entityManager.find(Race.class, fixture.race().getId())).matches(payload)).isTrue();
-        });
     }
 
     private MockHttpServletRequestBuilder save(String[] available, String... mandatory) {

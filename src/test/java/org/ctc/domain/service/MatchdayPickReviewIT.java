@@ -303,8 +303,9 @@ class MatchdayPickReviewIT extends PickPersistenceIT {
     }
 
     @Test
-    void givenEnrolledMissingTargetChangedToBye_whenLoadingReview_thenKeepOverviewReadableWithoutOfferingDecisions() {
+    void givenSubmittedTargetChangedToBye_whenLoadingReview_thenKeepOverviewReadableWithoutOfferingDecisions() {
         // given
+        submit();
         tx.executeWithoutResult(status -> {
             var race = entityManager.find(Race.class, fixture.race().getId()); race.getMatch().setBye(true); race.getMatch().setAwayTeam(null);
         });
