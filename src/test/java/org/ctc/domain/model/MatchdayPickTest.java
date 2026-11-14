@@ -65,7 +65,7 @@ class MatchdayPickTest {
     }
 
     @Test
-    void givenLatestRevision_whenApproving_thenRetainExactPointerAndDenyAllTeamTransitions() {
+    void givenLatestRevision_whenApproving_thenRetainExactPointerAndDenyManagementTransitions() {
         // given / when / then
         var pick = pick();
         pick.submit();
@@ -76,10 +76,28 @@ class MatchdayPickTest {
         assertThat(pick.getApprovedRevisionNumber()).isEqualTo(2);
         assertThat(pick.getVersion()).isEqualTo(4);
         assertThat(pick.isManualOpen()).isFalse();
-        assertThatThrownBy(pick::submit).isInstanceOf(BusinessRuleException.class);
         assertThatThrownBy(pick::returnForCorrection).isInstanceOf(BusinessRuleException.class);
         assertThatThrownBy(pick::openMissing).isInstanceOf(BusinessRuleException.class);
         assertThatThrownBy(pick::close).isInstanceOf(BusinessRuleException.class);
+        assertThat(pick.getVersion()).isEqualTo(4);
+    }
+
+    @Test
+    void givenApprovedPick_whenTeamResubmits_thenStartNewRevisionAndKeepApprovedPointer() {
+        // given
+        var pick = pick();
+        pick.submit();
+        pick.approve(1);
+        // when
+        int revision = pick.submit();
+        // then
+        assertThat(revision).isEqualTo(2);
+        assertThat(pick.getState()).isEqualTo(PickState.SUBMITTED);
+        assertThat(pick.getApprovedRevisionNumber()).as("the applied revision stays recorded").isEqualTo(1);
+        assertThat(pick.hasSubmissionAfterApproval()).isTrue();
+        pick.approve(2);
+        assertThat(pick.getApprovedRevisionNumber()).isEqualTo(2);
+        assertThat(pick.hasSubmissionAfterApproval()).isFalse();
         assertThat(pick.getVersion()).isEqualTo(4);
     }
 
@@ -109,7 +127,7 @@ class MatchdayPickTest {
     }
 
     @Test
-    void givenApprovedHistory_whenRecordingCorrection_thenAdvanceVersionAndPreserveApprovedPointerAndTeamLock() {
+    void givenApprovedHistory_whenReplayingCorrection_thenAdvanceVersionAndPreserveApprovedPointer() {
         // given
         var pick = pick();
         assertThatThrownBy(pick::correct).isInstanceOf(BusinessRuleException.class).hasMessageContaining("approved");
@@ -122,7 +140,6 @@ class MatchdayPickTest {
         assertThat(pick.getState()).isEqualTo(PickState.APPROVED);
         assertThat(pick.getApprovedRevisionNumber()).isEqualTo(1);
         assertThat(pick.isManualOpen()).isFalse();
-        assertThatThrownBy(pick::submit).isInstanceOf(BusinessRuleException.class);
     }
 
     private MatchdayPick pick() {

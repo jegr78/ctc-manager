@@ -51,8 +51,8 @@ class PickPublicationAssetsIT {
     @Autowired TrackRepository tracks;
     @Autowired PickSubmissionService submissions;
     @Autowired PickReviewService reviews;
+    @Autowired org.ctc.HistoricalPickCorrections corrections;
     @Autowired PickPublicationService publications;
-    @MockitoBean PickCollectionStatus collection;
     @MockitoBean YouTubeScraperService youtube;
     TestHelper.SeasonFixture fixture;
     UUID privateCar, privateTrack;
@@ -62,7 +62,6 @@ class PickPublicationAssetsIT {
         // given
         tx.executeWithoutResult(status -> {
             fixture = helper.createFullSeasonFixture("T-AS" + UUID.randomUUID().toString().substring(0, 6));
-            fixture.race().setPicksManaged(true);
             phaseTeams.saveAll(List.of(new PhaseTeam(fixture.matchday().getPhase(), fixture.homeTeam()),
                     new PhaseTeam(fixture.matchday().getPhase(), fixture.awayTeam())));
             var previous = helper.createMatchday(fixture.season(), "T-AS previous round", 0);
@@ -83,12 +82,11 @@ class PickPublicationAssetsIT {
     @org.junit.jupiter.api.Test
     void givenSubmittedApprovedAndPrivatelyCorrectedChoices_whenExportingWithCollectionAndGatewayOff_thenWithholdUntilTheExactExplicitOutputSucceeds() throws Exception {
         // given
-        org.mockito.Mockito.when(collection.isAvailable()).thenReturn(true);
         PickPayload payload = tx.execute(status -> {
             var race = races.findById(fixture.race().getId()).orElseThrow(); var season = race.getMatchday().getSeason();
             var car = cars.save(new Car("Test_Private_Car_" + UUID.randomUUID(), "Unpublished")); privateCar = car.getId();
             var track = tracks.save(new Track("Test_Private_Track_" + UUID.randomUUID())); privateTrack = track.getId();
-            season.getCars().add(car); season.getTracks().add(track); season.setPicksCollectionEnabled(true);
+            season.getCars().add(car); season.getTracks().add(track);
             race.getMatchday().setPicksOpen(true);
             race.setDateTime(java.time.LocalDateTime.of(2035, 1, 1, 20, 0)); race.getMatchday().setPickDeadline(java.time.LocalDateTime.of(2035, 1, 1, 12, 0));
             return new PickPayload(track.getId(), car.getId(), null, 12, 2, 3, 4, PickInitialFuel.DEFAULT, 1,
@@ -100,13 +98,11 @@ class PickPublicationAssetsIT {
         submissions.submit(fixture.race().getId(), 0, UUID.randomUUID(), new AuthorizedPickActor(fixture.race().getId(), fixture.season().getId(), fixture.homeTeam().getId(), "12345"), payload);
         assertSiteWithholds(carName, trackName, payload.weather());
         reviews.approve(fixture.race().getId(), 1, 1, new ManagementPickActor("test-admin"), "Test approved without publication");
-        tx.executeWithoutResult(status -> seasons.findById(fixture.season().getId()).orElseThrow().setPicksCollectionEnabled(false));
-        org.mockito.Mockito.when(collection.isAvailable()).thenReturn(false);
         assertSiteWithholds(carName, trackName, payload.weather());
         var correction = new PickPayload(payload.trackId(), payload.carId(), null, payload.laps(), payload.tyreWear(), payload.fuelConsumption(),
                 payload.refuelingSpeed(), payload.initialFuel(), payload.requiredPitStops(), payload.timeProgressionMode(), payload.timeProgressionMultiplier(),
                 "Test_Private_Weather_Correction", payload.timeOfDay(), payload.availableTyres(), payload.mandatoryTyres());
-        reviews.correct(fixture.race().getId(), 2, new ManagementPickActor("test-admin"), "Test internal correction before first output", correction);
+        corrections.record(fixture.race().getId(), 2, new ManagementPickActor("test-admin"), "Test internal correction before first output", correction);
         assertSiteWithholds(carName, trackName, payload.weather(), correction.weather());
         publications.publish(List.of(fixture.race().getId()), PickPublicationOutput.LOBBY_SETTINGS, new ManagementPickActor("test-admin"), rows ->
                 new PreparedPickPublication<>("123456789012345678", "234567890123456789", null, "a".repeat(64), "{}",

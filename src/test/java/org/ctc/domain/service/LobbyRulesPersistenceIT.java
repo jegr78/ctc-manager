@@ -68,7 +68,6 @@ class LobbyRulesPersistenceIT extends PickPersistenceIT {
         super.setUp();
         rules.changeProfile(fixture.season().getId(), LobbyRulesProfile.LEGACY, LobbyRulesProfile.CTC_2027);
         payload = choices(payload, RaceStartType.ROLLING, RaceSlipstream.WEAK);
-        when(collection.isConfidentialityReady()).thenReturn(true);
     }
 
     @Test
@@ -217,16 +216,16 @@ class LobbyRulesPersistenceIT extends PickPersistenceIT {
         var receipt = submissions.submit(fixture.race().getId(), 0, request, actor, payload);
         reviews.approve(fixture.race().getId(), 1, 1, manager, "Test checked 2027 setup");
         var corrected = choices(payload, RaceStartType.GRID_FALSE_START, RaceSlipstream.REAL);
-        reviews.correct(fixture.race().getId(), 2, manager, "Test corrected start and slipstream", corrected);
+        corrections.record(fixture.race().getId(), 2, manager, "Test corrected start and slipstream", corrected);
         publications.publish(List.of(fixture.race().getId()), PickPublicationOutput.SETTINGS, manager, rows ->
                 new PreparedPickPublication<>("123456789012345678", "234567890123456789", null, "a".repeat(64), "{}",
                         Map.of(fixture.race().getId(), Set.of(PickDisclosureField.START_TYPE)), () -> "test-frozen-message", message -> message));
         var publicBefore = disclosure.forPublic(fixture.race().getId());
         assertThat(publicBefore.settings().startType()).isEqualTo(RaceStartType.GRID_FALSE_START);
-        assertThat(publicBefore.settings().slipstream()).isNull();
+        assertThat(publicBefore.settings().slipstream()).as("a settings output releases every field").isEqualTo(RaceSlipstream.REAL);
         var captured = tx.execute(status -> attempts.findAll().stream().filter(a -> a.getSeasonId().equals(fixture.season().getId())).findFirst().orElseThrow());
         var archive = export();
-        reviews.correct(fixture.race().getId(), 3, manager, "Test later unpublished choices", payload);
+        corrections.record(fixture.race().getId(), 3, manager, "Test later unpublished choices", payload);
         clearInvocations(imports);
         // when
         var preview = imports.stage(upload(archive));

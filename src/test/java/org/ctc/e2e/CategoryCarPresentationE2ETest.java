@@ -96,6 +96,7 @@ class CategoryCarPresentationE2ETest extends PlaywrightConfig {
             draft.setMatchday(configured.getMatchday());
             draft.setMatch(configured.getMatch());
             raceRepository.saveAndFlush(draft);
+            configured.getMatch().setHomeScore(10); configured.getMatch().setAwayScore(8);
         });
         copyAssets();
         tx.executeWithoutResult(status -> {

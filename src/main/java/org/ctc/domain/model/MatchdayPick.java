@@ -71,7 +71,6 @@ public class MatchdayPick extends BaseEntity {
     }
 
     public int submit() {
-        requireUnapproved();
         if (manualClosed) throw new BusinessRuleException("Pick collection is manually closed");
         latestRevisionNumber = latestRevisionNumber == null ? 1 : latestRevisionNumber + 1;
         state = PickState.SUBMITTED;
@@ -128,6 +127,11 @@ public class MatchdayPick extends BaseEntity {
         version++;
     }
 
+    public boolean hasSubmissionAfterApproval() {
+        return state != PickState.APPROVED && approvedRevisionNumber != null;
+    }
+
+    /** Replays a historical management correction; new corrections edit the race directly. */
     public void correct() {
         if (state != PickState.APPROVED) throw new BusinessRuleException("Only approved settings can be corrected");
         version++;

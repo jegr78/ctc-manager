@@ -53,7 +53,6 @@ class PickPublicationControllerIT {
     @BeforeEach void setUp() {
         tx.executeWithoutResult(status -> {
             fixture = helper.createFullSeasonFixture("TPU" + UUID.randomUUID().toString().substring(0, 7));
-            fixture.race().setPicksManaged(true);
             var track = tracks.save(new Track("Test unpublished verification " + UUID.randomUUID())); trackId = track.getId(); fixture.race().setTrack(track);
             fixture.match().setDiscordChannelId("123456789012345678");
             fixture.match().setDiscordChannelWebhookUrl("https://discord.com/api/v10/webhooks/234567890123456789/Test_private-token");

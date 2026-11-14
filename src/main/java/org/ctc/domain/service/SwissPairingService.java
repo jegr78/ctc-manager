@@ -308,7 +308,6 @@ public class SwissPairingService {
 				race.setHomeTeamOverride(awayTeam);
 				race.setAwayTeamOverride(homeTeam);
 			}
-			race.enrolForPicksIfEnabled();
 			races.add(race);
 		}
 		return races;

@@ -308,7 +308,6 @@ public class DiscordPostService {
 			throw new BusinessRuleException("Cannot post Match Preview: " + pre.disabledReason());
 		}
         if (!TransactionSynchronizationManager.isActualTransactionActive()) return publishPickBundle(match, PickPublicationOutput.MATCH_PREVIEW, principal);
-        requireLegacyTransaction(match);
 		String webhookUrl = config.getAnnouncementWebhookUrl();
 		String channelId = parseWebhookUrl(webhookUrl).id();
 		LocalDateTime firstRaceTime = firstRaceTime(match).orElseThrow();
@@ -667,7 +666,7 @@ public class DiscordPostService {
 			for (int i = 0; i < races.size(); i++) {
 				Race race = races.get(i);
 				int n = i + 1;
-                if (explicit || !race.isPicksManaged()) {
+                if (explicit || pickPublications.settingsReleased(race)) {
                     attachments.add(new NamedAttachment("settings-md" + n + ".png", readPng(settingsGraphicService.generateSettings(race))));
                 }
 				attachments.add(new NamedAttachment(
@@ -776,7 +775,6 @@ public class DiscordPostService {
 			throw new BusinessRuleException("Configure settings for all races first");
 		}
         if (!TransactionSynchronizationManager.isActualTransactionActive()) return publishPickBundle(match, PickPublicationOutput.SETTINGS, principal);
-        requireLegacyTransaction(match);
 		return postRaceBundle(match, DiscordPostType.SETTINGS, "settings-race-",
 				race -> readRaceGraphic(settingsGraphicService.generateSettings(race)));
 	}
@@ -793,16 +791,9 @@ public class DiscordPostService {
 			throw new BusinessRuleException("Configure a track for all races first");
 		}
         if (!TransactionSynchronizationManager.isActualTransactionActive()) return publishPickBundle(match, PickPublicationOutput.LOBBY_SETTINGS, principal);
-        requireLegacyTransaction(match);
 		return postRaceBundle(match, DiscordPostType.LOBBY_SETTINGS, "lobby-settings-race-",
 				race -> readRaceGraphic(lobbySettingsGraphicService.generateLobbySettings(race)));
 	}
-
-    private void requireLegacyTransaction(Match match) {
-        if (pickPublications.lockForAutomatic(match.getId()).stream().anyMatch(Race::isPicksManaged)) {
-            throw new BusinessRuleException("Managed publication must start outside an existing transaction");
-        }
-    }
 
     private DiscordPost publishPickBundle(Match match, PickPublicationOutput output, Principal principal) throws DiscordApiException {
         String name = principal == null ? null : principal.getName();

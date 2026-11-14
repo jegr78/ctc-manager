@@ -1,5 +1,9 @@
 # Discord picks acceptance and rollout
 
+> Superseded in part by #425: V44/schema 22 removes the season and race activation flags, the activation
+> review, the confidentiality readiness gate and new management corrections. Approval no longer locks the team,
+> and publication sends the stored setup. The evidence below describes the state before that change.
+
 Issue #286 completes the acceptance contract of #279. The baseline is the merged publication
 feature in #329. Automated checks use synthetic data and offline Discord transports. Live guild
 registration, messages and production activation remain separate operator actions.

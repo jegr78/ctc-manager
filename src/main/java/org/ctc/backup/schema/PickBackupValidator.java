@@ -13,13 +13,13 @@ import org.ctc.domain.model.*;
 public final class PickBackupValidator {
     private static final int MAX_VALUES = 100_000;
     private static final Map<String, Set<String>> FIELDS = Map.ofEntries(
-            Map.entry("seasons", Set.of("id", "picksCollectionEnabled", "lobbyRulesProfile", "carPoolMode", "carPoolState", "cars", "tracks")),
+            Map.entry("seasons", Set.of("id", "lobbyRulesProfile", "carPoolMode", "carPoolState", "cars", "tracks")),
             Map.entry("teams", Set.of("id")), Map.entry("cars", Set.of("id")), Map.entry("tracks", Set.of("id")),
             Map.entry("season_phases", Set.of("id", "season")), Map.entry("matchdays", Set.of("id", "phase")),
             Map.entry("matches", Set.of("id", "homeTeam", "awayTeam", "bye", "discordChannelId")),
             Map.entry("team_pick_channel_bindings", Set.of("id", "season", "team", "guildId", "channelId", "createdAt", "updatedAt")),
             Map.entry("playoff_matchups", Set.of("id", "team1", "team2", "bye")),
-            Map.entry("races", Set.of("id", "matchday", "match", "playoffMatchup", "homeTeamOverride", "awayTeamOverride", "car", "track", "carPoolEntry", "picksManaged")),
+            Map.entry("races", Set.of("id", "matchday", "match", "playoffMatchup", "homeTeamOverride", "awayTeamOverride", "car", "track", "carPoolEntry")),
             Map.entry("season_car_pool_entries", Set.of("id", "season", "oneMakeCar")), Map.entry("season_car_pool_members", Set.of("id", "entry", "car")),
             Map.entry("race_settings", Set.of("id", "race", "numberOfLaps", "tyreWearMultiplier", "fuelConsumptionMultiplier", "refuelingSpeed", "initialFuel", "numberOfRequiredPitStops", "timeProgressionMode", "timeProgressionMultiplier", "weather", "timeOfDay", "availableTyres", "mandatoryTyres", "startType", "slipstream")),
             Map.entry("matchday_picks", Set.of("id", "race", "season", "team", "originalMatchday", "originalAwayTeam", "version", "state", "latestRevisionNumber", "approvedRevisionNumber", "manualOpen", "manualClosed", "createdAt", "updatedAt")),
@@ -33,7 +33,6 @@ public final class PickBackupValidator {
     private final int version;
     private final Map<String, Map<String, JsonNode>> rows = new HashMap<>();
     private int retainedValues;
-    private boolean confidentialContent;
 
     public PickBackupValidator(int version) { this.version = version; }
 
@@ -45,10 +44,9 @@ public final class PickBackupValidator {
             if (publication && version < 7) fail("Publication evidence requires schema version 7");
             if (version < 6 && table.equals("team_pick_channel_bindings")) fail("Channel bindings require schema version 6");
             String flag = table.equals("seasons") ? "picksCollectionEnabled" : table.equals("races") ? "picksManaged" : null;
-            if (flag != null) {
-                if (version >= 5 || row.has(flag)) bool(row, flag);
+            if (flag != null && version < BackupSchema.PICK_FLAGS_REMOVED_VERSION) {
+                if (row.has(flag)) bool(row, flag);
                 if (version < 5 && row.path(flag).asBoolean()) fail("Confidential flags require schema version 5");
-                confidentialContent |= row.path(flag).asBoolean();
             }
             if (version < 5) {
                 if (table.startsWith("matchday_pick")) fail("History requires schema version 5");
@@ -96,8 +94,6 @@ public final class PickBackupValidator {
 
     public static boolean supports(String table) { return FIELDS.containsKey(table); }
 
-    public boolean hasConfidentialContent() { return confidentialContent; }
-
     public void validate() {
         if (version < 5) return;
         try {
@@ -139,9 +135,9 @@ public final class PickBackupValidator {
                 String originalDay = reference(row, "originalMatchday", "matchdays");
                 String originalAway = reference(row, "originalAwayTeam", "teams");
                 var race = index("races").get(raceId);
-                if (!raceIds.add(raceId) || !bool(race, "picksManaged") || !seasonId.equals(seasonOf(race)) || !teamId.equals(home(race))
+                if (!raceIds.add(raceId) || race == null || !seasonId.equals(seasonOf(race)) || !teamId.equals(home(race))
                         || teamId.equals(originalAway) || !originalDay.equals(uuid(race, "matchday")) || !originalAway.equals(away(race))) {
-                    fail("Aggregate identity disagrees with its managed home race " + raceId);
+                    fail("Aggregate identity disagrees with its home race " + raceId);
                 }
                 var replay = new MatchdayPick(new Race(), new Season(), new Team());
                 PickPayload latestPayload = null;
@@ -172,9 +168,8 @@ public final class PickBackupValidator {
                         || replay.isManualOpen() != bool(row, "manualOpen") || replay.isManualClosed() != bool(row, "manualClosed")) {
                     fail("Aggregate state does not match immutable history for race " + raceId);
                 }
-                if (latestPayload != null) {
-                    if (replay.getState() == PickState.APPROVED) validateApproved(raceId, race, latestPayload);
-                    else pending.add(new Pending(raceId, seasonId, teamId, latestPayload));
+                if (latestPayload != null && replay.getState() != PickState.APPROVED) {
+                    pending.add(new Pending(raceId, seasonId, teamId, latestPayload));
                 }
             }
             validateReservations(pending);
@@ -312,22 +307,6 @@ public final class PickBackupValidator {
         org.ctc.domain.service.RaceTyrePolicy.require(LobbyRulesArchive.profile(season), oneMake, available, mandatory);
     }
 
-    private void validateApproved(String raceId, JsonNode race, PickPayload payload) {
-        if (!payload.carId().toString().equals(nullableUuid(race, "car")) || !payload.trackId().toString().equals(nullableUuid(race, "track"))
-                || !Objects.equals(payload.carPoolEntryId() == null ? null : payload.carPoolEntryId().toString(), nullableUuid(race, "carPoolEntry"))) fail("Approved race selection differs from its history");
-        var settings = index("race_settings").values().stream().filter(row -> raceId.equals(uuid(row, "race"))).toList();
-        if (settings.size() != 1) fail("Approved race needs exactly one settings row");
-        var value = RaceSettingsValues.from(payload);
-        var row = settings.getFirst();
-        equal(row, "numberOfLaps", value.laps()); equal(row, "tyreWearMultiplier", value.tyreWear());
-        equal(row, "fuelConsumptionMultiplier", value.fuelConsumption()); equal(row, "refuelingSpeed", value.refuelingSpeed());
-        equal(row, "initialFuel", value.initialFuel()); equal(row, "numberOfRequiredPitStops", value.requiredPitStops());
-        equal(row, "timeProgressionMode", value.timeProgressionMode().name()); equal(row, "timeProgressionMultiplier", value.timeProgressionMultiplier());
-        equal(row, "weather", value.weather()); equal(row, "timeOfDay", value.timeOfDay());
-        equal(row, "availableTyres", value.availableTyres()); equal(row, "mandatoryTyres", value.mandatoryTyres());
-        equal(row, "startType", value.startType().name()); equal(row, "slipstream", value.slipstream().name());
-    }
-
     private void validateReservations(List<Pending> pending) {
         var cars = new HashSet<String>();
         var tracks = new HashSet<String>();
@@ -448,13 +427,6 @@ public final class PickBackupValidator {
         validYear(LocalDateTime.ofInstant(value, ZoneOffset.UTC));
     }
     private static void validYear(LocalDateTime value) { if (value.getYear() < 1000 || value.getYear() > 9999) fail("Timestamp is outside the database range"); }
-    private static void equal(JsonNode row, String field, Object expected) {
-        var value = row.get(field);
-        boolean valid = value != null && (expected == null ? value.isNull() : expected instanceof Integer number
-                ? value.isIntegralNumber() && value.canConvertToInt() && value.intValue() == number
-                : value.isTextual() && value.textValue().equals(expected));
-        if (!valid) fail("Approved settings differ from immutable history");
-    }
     private static ValidationException wrapped(RuntimeException exception) {
         return exception instanceof ValidationException validation ? validation : new ValidationException("Invalid pick data: " + exception.getMessage());
     }

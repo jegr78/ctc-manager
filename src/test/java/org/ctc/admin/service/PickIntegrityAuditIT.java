@@ -40,7 +40,6 @@ class PickIntegrityAuditIT {
     void setUp() {
         // given
         fixture = helper.createFullSeasonFixture("TPA" + UUID.randomUUID().toString().substring(0, 7));
-        fixture.race().setPicksManaged(true);
         fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0));
         fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0));
             fixture.matchday().setPicksOpen(true);
@@ -98,7 +97,6 @@ class PickIntegrityAuditIT {
         other.setMatchday(fixture.matchday());
         other.setMatch(fixture.match());
         other.setDateTime(fixture.race().getDateTime().plusHours(1));
-        other.setPicksManaged(true);
         other = races.save(other);
         persistHistory(other);
         em.flush();
@@ -234,7 +232,7 @@ class PickIntegrityAuditIT {
     }
 
     @Test
-    void givenManagedTargetWithoutDeadline_whenAuditing_thenDoNotInventACutoffOrAnOpening() {
+    void givenOpenTargetWithoutDeadline_whenAuditing_thenDoNotInventACutoffOrAnOpening() {
         fixture.matchday().setPickDeadline(null);
         em.flush();
 

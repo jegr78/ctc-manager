@@ -30,7 +30,7 @@
         <p th:if="${review.publication.version != null}" th:text="${'Confirmed content version: ' + review.publication.version}"></p>
         <ul th:unless="${review.publication.fields.isEmpty()}"><li th:each="field : ${review.publication.fields}" th:text="${field}"></li></ul>
         <a th:if="${review.publication.batchId != null}" th:href="@{/admin/pick-publications/{id}(id=${review.publication.batchId})}">Review publication record</a>
-        <p>Use the existing publishing tools in the pairing workspace to disclose the current approved setup. Approval and internal corrections do not publish it.</p>
+        <p>Use the existing publishing tools in the pairing workspace to disclose the current race setup. Approval does not publish it.</p>
     </div>
     <div class="card" id="pick-comparison">
         <h2>Settings comparison</h2><p class="text-dim mb-md">Approval applies the exact selected revision to internal race settings. It never publishes them.</p>
@@ -45,6 +45,7 @@
     <div class="card" id="pick-decision" th:object="${form}">
         <h2>Review decision</h2>
         <div th:if="${#fields.hasErrors('*')}" class="field-error" role="alert"><p>The decision was not saved. Review the errors and reload if the saved version changed.</p><ul><li th:each="error : ${#fields.errors('*')}" th:text="${error}"></li></ul></div>
+        <p th:if="${review.row.submittedAfterApproval}" class="alert alert-warning">The team submitted a new revision after approval. The race keeps the approved revision until you approve again.</p>
         <p th:unless="${review.row.targetValid}" class="field-error">The target identity changed. Resolve it before applying a review decision.</p>
         <form th:if="${!review.row.actions.isEmpty()}" th:action="@{/admin/matchday-picks/{id}/decision(id=${review.row.raceId})}" method="post" class="entity-editor-form">
             <input type="hidden" th:field="*{expectedVersion}"><input type="hidden" th:field="*{expectedGeneration}"><input type="hidden" th:field="*{settingsFingerprint}">
@@ -57,7 +58,7 @@
         </form>
         <p th:if="${review.row.actions.isEmpty()}" class="text-dim">Team review actions are unavailable for this saved state or target.</p>
         <p th:if="${review.row.actions.isEmpty() and !#strings.isEmpty(form.reason)}">Unapplied request reason: <span th:text="${form.reason}"></span></p>
-        <div class="actions mt-md"><a class="btn btn-secondary" th:href="@{/admin/matchday-picks/{id}(id=${review.row.raceId})}">Reload current version</a><a th:if="${review.row.correctable}" class="btn btn-secondary" th:href="@{/admin/matchday-picks/{id}/correction(id=${review.row.raceId})}">Correct approved settings</a></div>
+        <div class="actions mt-md"><a class="btn btn-secondary" th:href="@{/admin/matchday-picks/{id}(id=${review.row.raceId})}">Reload current version</a><a class="btn btn-secondary" th:href="@{/admin/races/{id}/edit(id=${review.row.raceId})}">Edit race settings</a></div>
     </div>
     <div class="card" id="pick-revisions">
         <h2>Submitted revisions</h2><p th:if="${review.revisions.isEmpty()}" class="text-dim">No confirmed submission exists.</p>

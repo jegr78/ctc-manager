@@ -155,7 +155,6 @@ class MatchServiceTest {
 		var awayTeamId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
-        season.setPicksCollectionEnabled(collectionEnabled);
 		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
 		// legs lives on the phase. Configure two legs for this scenario.
@@ -194,7 +193,6 @@ class MatchServiceTest {
 		assertThat(result.getAwayTeam()).isEqualTo(awayTeam);
 
 		assertThat(saved).allSatisfy(race -> {
-            assertThat(race.isPicksManaged()).isEqualTo(collectionEnabled);
             assertThat(race.getDateTime()).isNull();
         });
 
@@ -350,7 +348,6 @@ class MatchServiceTest {
 		// given
 		var matchId = UUID.randomUUID();
 		var season = new Season("Test Season");
-        season.setPicksCollectionEnabled(collectionEnabled);
 		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(UUID.randomUUID());
 		// legs lives on the phase. Allow more legs for addLeg tests.
@@ -378,7 +375,6 @@ class MatchServiceTest {
 
 		// then
 		var savedRace = match.getRaces().get(1);
-        assertThat(savedRace.isPicksManaged()).isEqualTo(collectionEnabled);
         assertThat(savedRace.getDateTime()).isNull();
 		assertThat(savedRace.getHomeTeam()).isEqualTo(awayTeam);
 		assertThat(savedRace.getAwayTeam()).isEqualTo(homeTeam);

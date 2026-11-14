@@ -71,7 +71,7 @@ class PickBackupValidatorTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"season-flag-missing", "race-flag-missing", "flag-string", "unmanaged", "cross-team", "cross-season", "orphan-race",
+    @ValueSource(strings = {"flag-string", "cross-team", "cross-season", "orphan-race",
             "orphan-car", "orphan-track", "state", "pointer", "version", "latest", "cross-round", "cross-opponent", "duplicate-race", "duplicate-revision", "duplicate-request",
             "receipt-version", "manual-flags", "approved-without-decision", "revision-number", "revision-payload", "decision-reason"})
     void givenForgedOrBrokenHistory_whenValidating_thenRejectBeforeReplacement(String invalid) throws Exception {
@@ -80,10 +80,7 @@ class PickBackupValidatorTest {
         var aggregate = rows.get("matchday_picks").getFirst();
         var revision = rows.get("matchday_pick_revisions").getFirst();
         switch (invalid) {
-            case "season-flag-missing" -> rows.get("seasons").getFirst().remove("picksCollectionEnabled");
-            case "race-flag-missing" -> rows.get("races").getFirst().remove("picksManaged");
             case "flag-string" -> rows.get("races").getFirst().put("picksManaged", "true");
-            case "unmanaged" -> rows.get("races").getFirst().put("picksManaged", false);
             case "cross-team" -> aggregate.put("team", away.toString());
             case "cross-season" -> aggregate.put("season", UUID.randomUUID().toString());
             case "orphan-race" -> aggregate.put("race", UUID.randomUUID().toString());
@@ -117,6 +114,32 @@ class PickBackupValidatorTest {
         }
         // when / then
         assertThatThrownBy(() -> validate(5, rows)).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("pick");
+    }
+
+    @Test
+    void givenCurrentArchiveWithoutActivationFlags_whenValidatingHistory_thenAcceptHistoryOnAnyRace() throws Exception {
+        // given
+        var rows = withLegacyLobbyRules(fixture());
+        rows.get("seasons").getFirst().remove("picksCollectionEnabled");
+        rows.get("races").getFirst().remove("picksManaged");
+        // when / then
+        assertThatCode(() -> validate(BackupSchema.PICK_FLAGS_REMOVED_VERSION, rows)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void givenSchemaTwentyOneHistoryOnUnmanagedRace_whenValidating_thenAcceptItBecauseManagementNoLongerGatesHistory() throws Exception {
+        // given
+        var rows = withLegacyLobbyRules(fixture());
+        rows.get("races").getFirst().put("picksManaged", false);
+        // when / then
+        assertThatCode(() -> validate(21, rows)).doesNotThrowAnyException();
+    }
+
+    private Map<String, List<ObjectNode>> withLegacyLobbyRules(Map<String, List<ObjectNode>> rows) {
+        rows.get("seasons").getFirst().put("lobbyRulesProfile", "LEGACY");
+        ((ObjectNode) rows.get("matchday_pick_revisions").getFirst().get("payload")).put("lobbyRulesProfile", "LEGACY")
+                .put("startType", "GRID_FALSE_START").put("slipstream", "REAL");
+        return rows;
     }
 
     @ParameterizedTest
@@ -210,10 +233,9 @@ class PickBackupValidatorTest {
         var rows = publicationFixture(); rows.remove("matchday_picks"); rows.remove("matchday_pick_revisions");
         rows.get("seasons").getFirst().put("picksCollectionEnabled", false); rows.get("races").getFirst().put("picksManaged", false);
         var validator = new PickBackupValidator(7);
-        // when
-        rows.forEach((table, values) -> values.forEach(row -> validator.accept(table, row))); validator.validate();
-        // then
-        assertThat(validator.hasConfidentialContent()).isFalse();
+        // when / then
+        assertThatCode(() -> { rows.forEach((table, values) -> values.forEach(row -> validator.accept(table, row))); validator.validate(); })
+                .doesNotThrowAnyException();
     }
 
     @Test

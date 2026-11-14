@@ -15,10 +15,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.when;
 
 @CtcDevSpringBootContext
 @Tag("integration")
@@ -34,11 +32,11 @@ class PickPersistenceIT {
     @Autowired MatchdayPickDecisionRepository decisions;
     @Autowired PickSubmissionService submissions;
     @Autowired PickReviewService reviews;
+    @Autowired org.ctc.HistoricalPickCorrections corrections;
     @Autowired PickReservationService reservations;
     @Autowired SeasonCarPoolService poolService;
     UUID addedPoolCar;
     @Autowired EntityManager entityManager;
-    @MockitoBean PickCollectionStatus collection;
     TestHelper.SeasonFixture fixture;
     PickPayload payload;
     AuthorizedPickActor actor;
@@ -48,8 +46,6 @@ class PickPersistenceIT {
         // given
         tx.executeWithoutResult(status -> {
             fixture = helper.createFullSeasonFixture("TPK" + UUID.randomUUID().toString().substring(0, 7));
-            fixture.season().setPicksCollectionEnabled(true);
-            fixture.race().setPicksManaged(true);
             fixture.race().setDateTime(LocalDateTime.of(2035, 1, 1, 20, 0));
             fixture.matchday().setPickDeadline(LocalDateTime.of(2035, 1, 1, 12, 0));
             fixture.matchday().setPicksOpen(true);
@@ -63,7 +59,6 @@ class PickPersistenceIT {
                     TimeProgressionMode.EQUAL_CONDITIONS, null, "Slot 1: S01; Slot 2: R03", "Sunset",
                     Set.of(PickTyre.RS, PickTyre.RM), Set.of(PickTyre.RM));
             actor = new AuthorizedPickActor(fixture.race().getId(), fixture.season().getId(), fixture.homeTeam().getId(), "12345");
-            when(collection.isAvailable()).thenReturn(true);
             entityManager.flush();
         });
     }

@@ -17,8 +17,8 @@ class PickDeadlinePolicyTest {
     private static final Instant CUTOFF = Instant.parse("2026-11-02T19:00:00Z");
 
     @ParameterizedTest
-    @EnumSource(value = PickState.class, names = {"MISSING", "SUBMITTED", "RETURNED"})
-    void givenUnapprovedPickBeforeDeadline_whenAssessing_thenAllowOrdinaryConfirmation(PickState state) {
+    @EnumSource(value = PickState.class, names = {"MISSING", "SUBMITTED", "RETURNED", "APPROVED"})
+    void givenAnyPickStateBeforeDeadline_whenAssessing_thenAllowOrdinaryConfirmation(PickState state) {
         // given
         var policy = policy(CUTOFF.minusNanos(1));
         // when
@@ -67,25 +67,22 @@ class PickDeadlinePolicyTest {
     }
 
     @Test
-    void givenApprovedPickInOpenedMatchdayBeforeDeadline_whenAssessing_thenApprovalLocksTeamEditing() {
+    void givenApprovedPickInOpenedMatchdayBeforeDeadline_whenAssessing_thenTeamMayResubmit() {
         // given / when
         var decision = policy(CUTOFF.minusSeconds(3600)).assess(context(PickState.APPROVED, true, false, DEADLINE));
         // then
-        assertThat(decision.editable()).isFalse();
-        assertThat(decision.reason()).contains("Approved");
+        assertThat(decision.editable()).as("approval no longer locks the team before the deadline").isTrue();
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"season-disabled", "bot-disabled", "invalid-target"})
-    void givenUnavailableCollectionOrTargetInOpenedMatchday_whenAssessing_thenDenyTeamWrites(String unavailable) {
+    @Test
+    void givenInvalidTargetInOpenedMatchday_whenAssessing_thenDenyTeamWrites() {
         // given
-        var context = new PickDeadlinePolicy.Context(PickState.SUBMITTED, !unavailable.equals("season-disabled"),
-                !unavailable.equals("bot-disabled"), !unavailable.equals("invalid-target"), true, false, null);
+        var context = new PickDeadlinePolicy.Context(false, true, false, null);
         // when
         var decision = policy(CUTOFF).assess(context);
         // then
         assertThat(decision.editable()).isFalse();
-        assertThat(decision.reason()).isNotBlank();
+        assertThat(decision.reason()).isEqualTo("The target is unavailable");
     }
 
     @ParameterizedTest
@@ -138,6 +135,6 @@ class PickDeadlinePolicyTest {
     }
 
     private PickDeadlinePolicy.Context context(PickState state, boolean open, boolean closed, LocalDateTime deadline) {
-        return new PickDeadlinePolicy.Context(state, true, true, true, open, closed, deadline);
+        return new PickDeadlinePolicy.Context(true, open, closed, deadline);
     }
 }

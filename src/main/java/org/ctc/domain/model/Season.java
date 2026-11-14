@@ -22,9 +22,6 @@ public class Season extends BaseEntity {
     @Column(name = "lobby_rules_profile", nullable = false, length = 16)
     private LobbyRulesProfile lobbyRulesProfile = LobbyRulesProfile.LEGACY;
 
-    @Column(nullable = false)
-    private boolean picksCollectionEnabled;
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
 	private UUID id;

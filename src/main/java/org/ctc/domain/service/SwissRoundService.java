@@ -264,7 +264,6 @@ public class SwissRoundService {
             var race=leg.existing();
             if (race==null) { race=new Race(); race.setMatchday(day); race.setMatch(match); races.save(race); match.getRaces().add(race); day.getRaces().add(race); }
             race.setHomeTeamOverride(leg.reversed()?away:null); race.setAwayTeamOverride(leg.reversed()?home:null);
-            race.enrolForPicksIfEnabled();
         }
     }
     private void remove(Matchday day, Match match) {

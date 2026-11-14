@@ -19,6 +19,7 @@ import org.ctc.domain.model.*;
 import org.ctc.domain.picks.ManagementPickActor;
 import org.ctc.domain.picks.PreparedPickPublication;
 import org.ctc.domain.picks.PreparedPickReconciliation;
+import org.ctc.domain.picks.PublicPickProjection;
 import org.ctc.domain.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -34,7 +35,6 @@ public class PickPublicationService {
     private final RaceRepository races;
     private final PickPublicationAttemptRepository attempts;
     private final PickPublicationSnapshotRepository snapshots;
-    private final PickPublicationAuthorization authorization;
     private final PickSessionEpoch epoch;
     private final EntityManager entities;
     private final Clock clock;
@@ -43,10 +43,10 @@ public class PickPublicationService {
     @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "Spring injects the shared transaction-scoped EntityManager proxy; copying it would break persistence context identity.")
     public PickPublicationService(ImportLockService imports, PlatformTransactionManager manager, SeasonRepository seasons,
             RaceRepository races, PickPublicationAttemptRepository attempts, PickPublicationSnapshotRepository snapshots,
-            PickPublicationAuthorization authorization, PickSessionEpoch epoch, EntityManager entities, Clock clock) {
+            PickSessionEpoch epoch, EntityManager entities, Clock clock) {
         this.imports = imports; transactions = new TransactionTemplate(manager);
         this.seasons = seasons; this.races = races; this.attempts = attempts; this.snapshots = snapshots;
-        this.authorization = authorization; this.epoch = epoch; this.entities = entities; this.clock = clock;
+        this.epoch = epoch; this.entities = entities; this.clock = clock;
     }
 
     public <T> T publish(List<UUID> raceIds, PickPublicationOutput output, ManagementPickActor actor,
@@ -194,6 +194,48 @@ public class PickPublicationService {
         return rows;
     }
 
+    /**
+     * Public view of a race setup. A finished leg shows its stored setup. An unfinished leg shows the content of its
+     * latest confirmed publication: a lobby graphic releases everything except the car, every other output all fields.
+     */
+    public PublicPickProjection publicProjection(Race race) {
+        if (PickTargetRules.isFinished(race)) return PickPublicationContent.from(race).project(race.getId(), PickDisclosureField.all());
+        var confirmed = confirmed(race);
+        long version = confirmed.stream().mapToLong(PickPublicationAttempt::getContentVersion).max().orElse(0);
+        var latest = confirmed.stream().filter(attempt -> attempt.getContentVersion() == version).toList();
+        if (latest.isEmpty()) return new PublicPickProjection(race.getId(), null, null, null, null);
+        var first = latest.getFirst();
+        for (var attempt : latest) {
+            if (!first.getContentHash().equals(attempt.getContentHash())
+                    || first.getOrigin() != attempt.getOrigin() || first.getSourceVersion() != attempt.getSourceVersion()
+                    || !attempt.getContentHash().equals(attempt.getContent().fingerprint())) {
+                throw new BusinessRuleException("Published pick content has inconsistent confirmation evidence");
+            }
+        }
+        var fields = java.util.EnumSet.noneOf(PickDisclosureField.class);
+        confirmed.stream().filter(attempt -> attempt.getContentHash().equals(first.getContentHash()))
+                .forEach(attempt -> fields.addAll(released(attempt.getOutput())));
+        return first.getContent().project(race.getId(), fields);
+    }
+
+    /** Whether automatic edits may attach the complete settings graphic without disclosing unpublished choices. */
+    public boolean settingsReleased(Race race) {
+        if (PickTargetRules.isFinished(race)) return true;
+        var current = PickPublicationContent.from(race).fingerprint();
+        return confirmed(race).stream().anyMatch(attempt -> attempt.getContentHash().equals(current)
+                && released(attempt.getOutput()).containsAll(PickDisclosureField.all()));
+    }
+
+    private List<PickPublicationAttempt> confirmed(Race race) {
+        return snapshots.findByAttemptRaceIdOrderByAttemptContentVersionDescConfirmedAtDesc(race.getId()).stream()
+                .map(PickPublicationSnapshot::getAttempt)
+                .filter(attempt -> attempt.getState() == PickPublicationState.SUCCEEDED && attempt.matchesTarget(race)).toList();
+    }
+
+    private static Set<PickDisclosureField> released(PickPublicationOutput output) {
+        return output == PickPublicationOutput.LOBBY_SETTINGS ? PickDisclosureField.lobby() : PickDisclosureField.all();
+    }
+
     private static String fingerprint(List<PickPublicationAttempt> rows) {
         var value = new StringBuilder();
         for (var row : rows.stream().sorted(java.util.Comparator.comparing(PickPublicationAttempt::getId)).toList()) {
@@ -215,7 +257,6 @@ public class PickPublicationService {
         }
         var selected = new ArrayList<Race>();
         var contents = new HashMap<UUID, PickPublicationContent>();
-        var sources = new HashMap<UUID, PickPublicationAuthorization.Source>();
         for (UUID id : raceIds) {
             var race = locked.get(id);
             if (race == null || !seasonIds.contains(race.getMatchday().getSeason().getId())) throw unavailable();
@@ -229,7 +270,7 @@ public class PickPublicationService {
             var values = RaceSettingsValues.from(race.getSettings());
             LobbyRulesPolicy.requireCurrent(race.getMatchday().getSeason(), LobbyRulesProfile.from(race), values.startType(), values.slipstream());
             RaceTyrePolicy.require(race.getMatchday().getSeason(), race.getCarPoolEntry(), race.getCar(), values);
-            sources.put(id, authorization.authorize(race)); contents.put(id, PickPublicationContent.from(race)); selected.add(race);
+            contents.put(id, PickPublicationContent.from(race)); selected.add(race);
         }
         var bundle = render.apply(List.copyOf(selected));
         if (bundle == null || !bundle.fields().keySet().equals(Set.copyOf(raceIds))) {
@@ -237,15 +278,15 @@ public class PickPublicationService {
         }
         var ids = new ArrayList<UUID>();
         for (var race : selected) {
-            var content = contents.get(race.getId()); var source = sources.get(race.getId());
+            var content = contents.get(race.getId());
             if (!content.fingerprint().equals(PickPublicationContent.from(race).fingerprint())) {
                 throw new BusinessRuleException("Publication render changed its captured settings; reload before retrying");
             }
             var previous = attempts.findFirstByRaceIdOrderByContentVersionDescCapturedAtDesc(race.getId()).orElse(null);
             boolean same = previous != null && previous.matchesTarget(race) && previous.getContentHash().equals(content.fingerprint())
-                    && previous.getOrigin() == source.origin() && previous.getSourceVersion() == source.version();
+                    && previous.getOrigin() == PickPublicationOrigin.LEGACY && previous.getSourceVersion() == 0;
             long version = previous == null ? 1 : same ? previous.getContentVersion() : Math.addExact(previous.getContentVersion(), 1);
-            var attempt = new PickPublicationAttempt(new PickPublicationAttempt.Capture(batchId, race, version, source.version(), source.origin(),
+            var attempt = new PickPublicationAttempt(new PickPublicationAttempt.Capture(batchId, race, version, 0, PickPublicationOrigin.LEGACY,
                     output, content, bundle.fields().get(race.getId()), actor.userId(), bundle.channelId(), bundle.webhookId(), bundle.targetMessageId(),
                     bundle.templateHash(), bundle.requestManifest(), epoch.managementGeneration(), clock.instant()));
             ids.add(attempts.saveAndFlush(attempt).getId());

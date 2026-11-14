@@ -249,12 +249,6 @@ th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
     </div>
 </div>
 
-<div th:if="${seasonForm.id != null}" class="card mt-md" id="pickCollection">
-    <h2>Private picks collection</h2>
-    <p>Review existing settings before enabling confidential team picks for this season.</p>
-    <a class="btn btn-secondary" th:href="@{/admin/seasons/{id}/pick-collection(id=${seasonForm.id})}">Review collection</a>
-</div>
-
 <!-- Discord Integration (only when editing AND a forum-channel is configured) -->
 <div th:if="${seasonForm.id != null and discordIntegrationActive}"
 class="card mt-md" id="discordIntegration">

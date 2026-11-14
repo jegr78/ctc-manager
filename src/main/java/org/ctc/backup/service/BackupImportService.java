@@ -135,7 +135,7 @@ public class BackupImportService {
      * {@code SUPPORTED_SCHEMA_VERSIONS.toString()}, where {@code Set.of(1, 2)} produces
      * a hash-randomised order that breaks message-matching assertions.
      */
-    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21));
+    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22));
 
     /** Tables an older schema version never exported; they may be absent when the manifest announces no rows. */
     static final Set<String> INCIDENT_TABLES = Set.of("incident_match_contexts", "incident_report_windows", "incident_reports", "incident_report_revisions", "incident_report_events", "incident_deliveries", "incident_thread_publications", "incident_rulings", "incident_ruling_revisions", "incident_ruling_publications");
@@ -204,7 +204,6 @@ public class BackupImportService {
     private final Path stagingDir;
     private final Path importBackupsDir;
     private final Clock clock;
-    private final org.ctc.domain.service.PickCollectionStatus pickCollection;
     private final Path uploadsTargetDir;
 
     @PersistenceContext
@@ -239,7 +238,6 @@ public class BackupImportService {
             ApplicationEventPublisher eventPublisher,
             BackupExecutedByResolver executedByResolver,
             UploadsSwapPreflight uploadsSwapPreflight,
-            org.ctc.domain.service.PickCollectionStatus pickCollection,
             Clock clock,
             @Value("${app.backup.staging-dir}") String stagingDirRaw,
             @Value("${app.backup.import-backups-dir}") String importBackupsDirRaw,
@@ -257,7 +255,6 @@ public class BackupImportService {
         this.executedByResolver = executedByResolver;
         this.uploadsSwapPreflight = uploadsSwapPreflight;
         this.clock = clock;
-        this.pickCollection = pickCollection;
         this.stagingDir = Paths.get(stagingDirRaw).toAbsolutePath().normalize();
         this.importBackupsDir = Paths.get(importBackupsDirRaw).toAbsolutePath().normalize();
         this.uploadsTargetDir = Paths.get(uploadDirRaw).toAbsolutePath().normalize();
@@ -844,10 +841,6 @@ public class BackupImportService {
             lobbyRulesValidator.validate();
             pickValidator.validate();
             incidentValidator.validate();
-            if (pickValidator.hasConfidentialContent() && !pickCollection.isConfidentialityReady()) {
-                throw new BackupArchiveException(Reason.SCHEMA_MISMATCH,
-                        "This archive requires a release with confidential pick disclosure support; confidentiality is not available yet.");
-            }
         } catch (BackupArchiveException ex) {
             throw ex;
         } catch (org.ctc.backup.schema.ActiveSeasonBackupValidator.ValidationException ex) {

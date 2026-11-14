@@ -29,7 +29,6 @@ class PickSubmissionServiceTest {
     final MatchdayPickRevisionRepository revisions = mock(MatchdayPickRevisionRepository.class);
     final PickTargetService targets = mock(PickTargetService.class);
     final PickEligibilityService eligibility = mock(PickEligibilityService.class);
-    final PickCollectionStatus collection = mock(PickCollectionStatus.class);
     final PickWriteExecutor writes = mock(PickWriteExecutor.class);
     final TrackEnvironmentService environments = mock(TrackEnvironmentService.class);
     final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
@@ -53,17 +52,14 @@ class PickSubmissionServiceTest {
         day.setPickDeadline(LocalDateTime.of(2026, 11, 2, 20, 0));
         day.setPicksOpen(true);
         race.setMatchday(day);
-        season.setPicksCollectionEnabled(true);
-        race.setPicksManaged(true);
         pick = new MatchdayPick(race, season, team);
         actor = new AuthorizedPickActor(race.getId(), season.getId(), team.getId(), "12345");
         when(targets.lockForTeam(race.getId(), actor)).thenReturn(new PickTargetService.LockedTarget(season, race, pick));
         when(targets.isEligible(race)).thenReturn(true);
-        when(collection.isAvailable()).thenReturn(true);
         when(revisions.findByRequestId(request)).thenReturn(Optional.empty());
         when(picks.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(writes.execute(any())).thenAnswer(invocation -> ((Supplier<?>) invocation.getArgument(0)).get());
-        service = new PickSubmissionService(picks, revisions, targets, eligibility, new PickDeadlinePolicy(clock), collection, writes, clock, environments);
+        service = new PickSubmissionService(picks, revisions, targets, eligibility, new PickDeadlinePolicy(clock), writes, clock, environments);
     }
 
     @Test
@@ -126,7 +122,7 @@ class PickSubmissionServiceTest {
 
     private void gatewayActor() {
         actor = new AuthorizedPickActor(race.getId(), season.getId(), team.getId(), "12345",
-                new AuthorizedPickActor.ChannelContext("test-guild", "test-channel", 0));
+                new AuthorizedPickActor.ChannelContext("test-guild", "test-channel", 0, team.getId()));
         when(targets.lockForTeam(race.getId(), actor)).thenReturn(new PickTargetService.LockedTarget(season, race, pick));
     }
     private PickPayload withWeather(String weather) {
@@ -183,7 +179,7 @@ class PickSubmissionServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"at-deadline", "after-deadline", "closed-matchday", "closed", "approved", "disabled", "bot-unavailable", "invalid-target"})
+    @ValueSource(strings = {"at-deadline", "after-deadline", "closed-matchday", "closed", "invalid-target"})
     void givenClosedCollection_whenConfirming_thenLeaveHistoryAndAggregateUntouched(String cause) {
         // given / when / then
         switch (cause) {
@@ -191,9 +187,6 @@ class PickSubmissionServiceTest {
             case "after-deadline" -> race.getMatchday().setPickDeadline(LocalDateTime.of(2026, 11, 2, 18, 59));
             case "closed-matchday" -> race.getMatchday().setPicksOpen(false);
             case "closed" -> pick.close();
-            case "approved" -> { pick.submit(); pick.approve(1); }
-            case "disabled" -> season.setPicksCollectionEnabled(false);
-            case "bot-unavailable" -> when(collection.isAvailable()).thenReturn(false);
             case "invalid-target" -> when(targets.isEligible(race)).thenReturn(false);
             default -> throw new AssertionError(cause);
         }
@@ -202,6 +195,24 @@ class PickSubmissionServiceTest {
                 .isInstanceOf(BusinessRuleException.class);
         assertThat(pick.getVersion()).isEqualTo(version);
         verify(revisions, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void givenApprovedPick_whenResubmittingBeforeOrAfterCutoff_thenAcceptOnlyBeforeTheDeadline(boolean expired) {
+        // given
+        pick.submit(); pick.approve(1);
+        race.getMatchday().setPickDeadline(expired ? LocalDateTime.of(2026, 11, 2, 18, 59) : LocalDateTime.of(2026, 11, 2, 21, 0));
+        // when / then
+        if (expired) {
+            assertThatThrownBy(() -> service.submit(race.getId(), 2, request, actor, payload())).isInstanceOf(BusinessRuleException.class)
+                    .hasMessageContaining("deadline");
+            assertThat(pick.getState()).isEqualTo(PickState.APPROVED);
+        } else {
+            assertThat(service.submit(race.getId(), 2, request, actor, payload()).revisionNumber()).isEqualTo(2);
+            assertThat(pick.getState()).isEqualTo(PickState.SUBMITTED);
+            assertThat(pick.getApprovedRevisionNumber()).isEqualTo(1);
+        }
     }
 
     @Test
@@ -238,7 +249,7 @@ class PickSubmissionServiceTest {
         var advancing = mock(Clock.class);
         when(advancing.instant()).thenReturn(accepted, cutoff);
         var boundaryService = new PickSubmissionService(picks, revisions, targets, eligibility,
-                new PickDeadlinePolicy(advancing), collection, writes, advancing, environments);
+                new PickDeadlinePolicy(advancing), writes, advancing, environments);
         // when
         var receipt = boundaryService.submit(race.getId(), 0, request, actor, payload());
         // then

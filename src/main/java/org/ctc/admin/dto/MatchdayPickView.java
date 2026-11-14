@@ -12,8 +12,9 @@ public final class MatchdayPickView {
     public record Row(UUID raceId, UUID seasonId, UUID matchdayId, String label, String season, String matchday,
                       PickState state, long version, Integer revisionNumber, Integer approvedRevisionNumber, String deadline, String deadlineState,
                       boolean matchdayOpen, boolean manualClosed, String teamEditing, boolean targetValid,
-                      List<PickReviewForm.Action> actions, boolean correctable, String deadlineOverridePath) {
+                      List<PickReviewForm.Action> actions, boolean submittedAfterApproval, String deadlineOverridePath) {
         public Row { actions = List.copyOf(actions); }
+        public String stateLabel() { return submittedAfterApproval ? state + " after approval" : state.name(); }
     }
     public record Overview(UUID seasonId, UUID matchdayId, PickState state, List<Choice> seasons, List<Choice> matchdays, List<Row> rows) {
         public Overview { seasons = List.copyOf(seasons); matchdays = List.copyOf(matchdays); rows = List.copyOf(rows); }

@@ -3,7 +3,6 @@ package org.ctc.domain.service;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.List;
-import org.ctc.admin.dto.PickCorrectionForm;
 import org.ctc.admin.dto.PickReviewForm;
 import org.ctc.admin.service.MatchdayPickAdminService;
 import org.ctc.discord.service.DiscordPostService;
@@ -117,7 +116,7 @@ class MatchdayPickReviewIT extends PickPersistenceIT {
         // then
         var approved = admin.detail(fixture.race().getId());
         assertThat(approved.row().state()).isEqualTo(PickState.APPROVED); assertThat(approved.row().approvedRevisionNumber()).isEqualTo(1);
-        assertThat(approved.row().actions()).isEmpty(); assertThat(approved.row().correctable()).isTrue();
+        assertThat(approved.row().actions()).isEmpty(); assertThat(approved.row().submittedAfterApproval()).isFalse();
         tx.executeWithoutResult(status -> {
             var saved = entityManager.find(Race.class, fixture.race().getId());
             assertThat(saved.getCar().getId()).isEqualTo(payload.carId()); assertThat(saved.getTrack().getId()).isEqualTo(payload.trackId());
@@ -154,28 +153,28 @@ class MatchdayPickReviewIT extends PickPersistenceIT {
     }
 
     @Test
-    void givenApprovedRevision_whenSavingCorrection_thenRetainOriginalAndRecordActorReasonAndCompletePayload() throws Exception {
+    void givenApprovedRevision_whenTeamResubmitsBeforeDeadline_thenKeepApprovedSettingsUntilApprovedAgain() throws Exception {
         // given
         submit(); mvc.perform(decision(PickReviewForm.Action.APPROVE, "Original approved")).andExpect(status().is3xxRedirection());
-        mvc.perform(get(path() + "/correction")).andExpect(status().isOk()).andExpect(view().name("admin/matchday-pick-correction"));
-        var form = admin.correctionForm(fixture.race().getId());
+        var changed = new PickPayload(payload.trackId(), payload.carId(), payload.carPoolEntryId(), 22, payload.tyreWear(),
+                payload.fuelConsumption(), payload.refuelingSpeed(), payload.initialFuel(), payload.requiredPitStops(),
+                payload.timeProgressionMode(), payload.timeProgressionMultiplier(), payload.weather(), payload.timeOfDay(),
+                payload.availableTyres(), payload.mandatoryTyres());
         // when
-        mvc.perform(correction(form).param("laps", "22").param("weather", "Test corrected weather")
-                        .param("timeProgressionMode", "MULTIPLIER").param("timeProgressionMultiplier", "0"))
-                .andExpect(status().is3xxRedirection());
+        submissions.submit(fixture.race().getId(), 2, UUID.randomUUID(), actor, changed);
         // then
-        var corrected = admin.detail(fixture.race().getId());
-        assertThat(corrected.row().state()).isEqualTo(PickState.APPROVED); assertThat(corrected.row().approvedRevisionNumber()).isEqualTo(1);
-        assertThat(corrected.row().version()).isEqualTo(3); assertThat(corrected.revisions()).hasSize(1);
-        assertThat(corrected.revisions().getFirst().values()).anySatisfy(value -> {
-            assertThat(value.label()).isEqualTo("Laps"); assertThat(value.value()).isEqualTo("12");
-        });
-        assertThat(corrected.decisions().getFirst().kind()).isEqualTo(PickDecisionKind.CORRECTION);
-        assertThat(corrected.decisions().getFirst().actor()).isEqualTo("test-manager");
-        assertThat(corrected.decisions().getFirst().reason()).isEqualTo("Test internal correction reason");
-        assertThat(corrected.decisions().getFirst().correction()).anySatisfy(value -> {
-            assertThat(value.label()).isEqualTo("Time progression"); assertThat(value.value()).isEqualTo("0x");
-        });
+        var resubmitted = admin.detail(fixture.race().getId());
+        assertThat(resubmitted.row().state()).isEqualTo(PickState.SUBMITTED);
+        assertThat(resubmitted.row().submittedAfterApproval()).isTrue();
+        assertThat(resubmitted.row().stateLabel()).isEqualTo("SUBMITTED after approval");
+        assertThat(resubmitted.row().approvedRevisionNumber()).isEqualTo(1);
+        tx.executeWithoutResult(status -> assertThat(entityManager.find(Race.class, fixture.race().getId()).getSettings().getNumberOfLaps())
+                .as("the race keeps the approved revision").isEqualTo(payload.laps()));
+        mvc.perform(get(path())).andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("submitted a new revision after approval")));
+        mvc.perform(decision(PickReviewForm.Action.APPROVE, "Second revision approved").param("replaceExisting", "true"))
+                .andExpect(status().is3xxRedirection());
+        tx.executeWithoutResult(status -> assertThat(entityManager.find(Race.class, fixture.race().getId()).getSettings().getNumberOfLaps()).isEqualTo(22));
     }
 
     @ParameterizedTest
@@ -304,8 +303,9 @@ class MatchdayPickReviewIT extends PickPersistenceIT {
     }
 
     @Test
-    void givenEnrolledMissingTargetChangedToBye_whenLoadingReview_thenKeepOverviewReadableWithoutOfferingDecisions() {
+    void givenSubmittedTargetChangedToBye_whenLoadingReview_thenKeepOverviewReadableWithoutOfferingDecisions() {
         // given
+        submit();
         tx.executeWithoutResult(status -> {
             var race = entityManager.find(Race.class, fixture.race().getId()); race.getMatch().setBye(true); race.getMatch().setAwayTeam(null);
         });
@@ -317,28 +317,18 @@ class MatchdayPickReviewIT extends PickPersistenceIT {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"approval", "correction"})
+    @ValueSource(strings = {"approval", "return"})
     void givenManagementFormOpenedBeforeRestore_whenPostingAfterRestore_thenRejectWithoutChangingRestoredState(String kind) throws Exception {
         // given
         submit();
-        MockHttpServletRequestBuilder request;
-        if (kind.equals("approval")) request = decision(PickReviewForm.Action.APPROVE, "Test pre-restore approval");
-        else {
-            mvc.perform(decision(PickReviewForm.Action.APPROVE, "Test initial approval")).andExpect(status().is3xxRedirection());
-            request = correction(admin.correctionForm(fixture.race().getId())).param("laps", "22").param("weather", "Test stale correction")
-                    .param("timeProgressionMode", "EQUAL_CONDITIONS");
-        }
+        var action = kind.equals("approval") ? PickReviewForm.Action.APPROVE : PickReviewForm.Action.RETURN;
+        MockHttpServletRequestBuilder request = decision(action, "Test pre-restore " + kind);
         long version = admin.detail(fixture.race().getId()).row().version();
         epoch.afterRestore(null);
         // when / then
         mvc.perform(request).andExpect(status().isOk()).andExpect(model().attributeHasErrors("form"));
         assertThat(admin.detail(fixture.race().getId()).row().version()).isEqualTo(version);
-        if (kind.equals("approval")) {
-            mvc.perform(decision(PickReviewForm.Action.APPROVE, "Test explicitly reloaded approval")).andExpect(status().is3xxRedirection());
-        } else {
-            mvc.perform(correction(admin.correctionForm(fixture.race().getId())).param("laps", "22").param("weather", "Test reloaded correction")
-                    .param("timeProgressionMode", "EQUAL_CONDITIONS")).andExpect(status().is3xxRedirection());
-        }
+        mvc.perform(decision(action, "Test explicitly reloaded " + kind)).andExpect(status().is3xxRedirection());
         assertThat(admin.detail(fixture.race().getId()).row().version()).isEqualTo(version + 1);
     }
 
@@ -352,27 +342,5 @@ class MatchdayPickReviewIT extends PickPersistenceIT {
                 .param("expectedGeneration", form.getExpectedGeneration().toString());
         if (detail.row().revisionNumber() != null) request.param("revisionNumber", detail.row().revisionNumber().toString());
         return request;
-    }
-    MockHttpServletRequestBuilder correction(PickCorrectionForm form) {
-        return post(path() + "/correction").param("expectedVersion", form.getExpectedVersion().toString()).param("settingsFingerprint", form.getSettingsFingerprint())
-                .param("expectedGeneration", form.getExpectedGeneration().toString())
-                .param("lobbyRulesProfile", form.getLobbyRulesProfile().name()).param("startType", form.getStartType().name()).param("slipstream", form.getSlipstream().name())
-                .param("trackId", form.getTrackId().toString()).param("carId", form.getCarId().toString()).param("tyreWear", "2")
-                .param("fuelConsumption", "3").param("refuelingSpeed", "4").param("initialFuel", "DEFAULT").param("requiredPitStops", "1")
-                .param("availableTyres", "RS", "RM").param("mandatoryTyres", "RM").param("timeOfDay", "Sunset")
-                .param("reason", "Test internal correction reason");
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"lobbyRulesProfile", "startType", "slipstream"})
-    void givenMissingCorrectionRulesField_whenPosting_thenReturnItsFieldErrorWithoutChangingTheApprovedPick(String field) throws Exception {
-        // given
-        submit();
-        reviews.approve(fixture.race().getId(), 1, 1, new org.ctc.domain.picks.ManagementPickActor("test-manager"), "Test approved before missing field");
-        var request = correction(admin.correctionForm(fixture.race().getId())).param("laps", "12").param("weather", "Test unchanged weather")
-                .param("timeProgressionMode", "EQUAL_CONDITIONS").with(raw -> { raw.removeParameter(field); return raw; });
-        // when / then
-        mvc.perform(request).andExpect(status().isOk()).andExpect(model().attributeHasFieldErrors("form", field));
-        assertThat(admin.detail(fixture.race().getId()).row().version()).isEqualTo(2);
     }
 }

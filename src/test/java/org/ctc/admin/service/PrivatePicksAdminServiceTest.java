@@ -12,7 +12,6 @@ import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.picks.PickChannelPermissionSource;
 import org.ctc.domain.repository.*;
-import org.ctc.domain.service.PickCollectionStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -31,9 +30,8 @@ class PrivatePicksAdminServiceTest {
     final DiscordRestClient discord = mock(DiscordRestClient.class);
     final PickChannelPermissionSource permissions = mock(PickChannelPermissionSource.class);
     final DiscordPicksGateway gateway = mock(DiscordPicksGateway.class);
-    final PickCollectionStatus collection = mock(PickCollectionStatus.class);
     final PrivatePicksAdminService service = new PrivatePicksAdminService(bindings, seasons, teams, matches, configs,
-            discord, permissions, gateway, collection);
+            discord, permissions, gateway);
     final Season season = new Season("Test binding season");
     final Team team = new Team();
     final DiscordGlobalConfig config = new DiscordGlobalConfig();
@@ -138,7 +136,7 @@ class PrivatePicksAdminServiceTest {
         // then
         assertThat(view).isNotNull();
         assertThat(view.health()).isEqualTo("Disabled");
-        assertThat(view.registrationReady()).isFalse();
+        assertThat(view.registrationReady()).as("registration needs only the configured bot identity").isTrue();
         assertThat(view.seasons()).extracting(PrivatePicksAdminService.Choice::id).containsExactly(season.getId());
         assertThat(view.teams()).extracting(PrivatePicksAdminService.Choice::id).containsExactly(team.getId());
         verifyNoInteractions(discord, permissions);
@@ -148,7 +146,6 @@ class PrivatePicksAdminServiceTest {
     @Test
     void givenExplicitRegistrationAfterPrivacyAcceptance_whenRegistering_thenUpsertOnlyPicksInConfiguredGuild() throws Exception {
         // given
-        when(collection.isConfidentialityReady()).thenReturn(true);
         // when
         service.registerCommand();
         // then
@@ -158,10 +155,9 @@ class PrivatePicksAdminServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"privacy-not-ready", "missing-application", "identity-mismatch"})
+    @ValueSource(strings = {"missing-application", "identity-mismatch"})
     void givenUnavailableRegistration_whenRequesting_thenMakeNoCommandMutation(String invalid) throws Exception {
         // given
-        when(collection.isConfidentialityReady()).thenReturn(!invalid.equals("privacy-not-ready"));
         if (invalid.equals("missing-application")) config.setBotApplicationId("");
         if (invalid.equals("identity-mismatch")) config.setBotApplicationId("901");
         // when / then

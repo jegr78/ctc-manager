@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.ctc.admin.dto.PickCorrectionForm;
 import org.ctc.admin.dto.PickReviewForm;
 import org.ctc.admin.service.MatchdayPickAdminService;
 import org.ctc.domain.exception.BusinessRuleException;
@@ -48,46 +47,5 @@ public class MatchdayPickController {
         } catch (BusinessRuleException rejected) {
             result.reject("review", rejected.getMessage()); return detail(raceId, model);
         }
-    }
-
-    @GetMapping("/{raceId}/correction")
-    public String correction(@PathVariable UUID raceId, Model model) {
-        var form = service.correctionForm(raceId);
-        model.addAttribute("form", form);
-        return correctionModel(raceId, form, model);
-    }
-
-    @PostMapping("/{raceId}/correction/refresh")
-    public String refreshCorrection(@PathVariable UUID raceId, @ModelAttribute("form") PickCorrectionForm form, BindingResult result, Model model) {
-        model.addAttribute("form", form); return correctionModel(raceId, form, model);
-    }
-
-    @PostMapping("/{raceId}/correction")
-    public String correct(@PathVariable UUID raceId, @Valid @ModelAttribute("form") PickCorrectionForm form, BindingResult result,
-                          Principal principal, Model model, RedirectAttributes redirect) {
-        model.addAttribute("form", form);
-        if (result.hasErrors()) return correctionModel(raceId, form, model);
-        try {
-            service.correct(raceId, form, principal);
-            redirect.addFlashAttribute("successMessage", "Internal correction saved. The approved revision and team lock remain; publication is separate.");
-            return "redirect:/admin/matchday-picks/" + raceId;
-        } catch (BusinessRuleException rejected) {
-            result.reject("correction", rejected.getMessage()); return correctionModel(raceId, form, model);
-        }
-    }
-
-    private String correctionModel(UUID raceId, PickCorrectionForm form, Model model) {
-        var detail = service.detail(raceId); model.addAttribute("review", detail); model.addAttribute("selectedSeasonId", detail.row().seasonId());
-        var choices = service.correctionChoices(raceId, form);
-        model.addAttribute("choices", choices);
-        model.addAttribute("fuels", org.ctc.domain.model.PickInitialFuel.values());
-        var profile = form.getLobbyRulesProfile();
-        var tyres = org.ctc.domain.service.RaceTyreFormChoices.fromPick(profile, choices.carSelection(), form.getCarPoolEntryId(),
-                form.getAvailableTyres(), form.getMandatoryTyres());
-        model.addAttribute("availableTyreChoices", tyres.available());
-        model.addAttribute("mandatoryTyreChoices", tyres.mandatory());
-        model.addAttribute("startTypes", profile == null ? java.util.List.of() : profile.getStartTypes());
-        model.addAttribute("slipstreams", profile == null ? java.util.List.of() : profile.getSlipstreams());
-        return "admin/matchday-pick-correction";
     }
 }

@@ -59,7 +59,6 @@ class SettingsGraphicServiceTest {
         service = spy(service);
         var race = createReadyRace(false);
         when(standingsService.calculateStandings(any(), any())).thenReturn(List.of());
-        race.setPicksManaged(true);
         race.getSettings().setTimeProgressionMode(equal ? TimeProgressionMode.EQUAL_CONDITIONS : TimeProgressionMode.MULTIPLIER);
         race.getSettings().setTimeProgressionMultiplier(equal ? null : 0);
         var renderedPath = new java.util.concurrent.atomic.AtomicReference<Path>();
@@ -90,7 +89,7 @@ class SettingsGraphicServiceTest {
         service = spy(service);
         var race = createReadyRace(false);
         when(standingsService.calculateStandings(any(), any())).thenReturn(List.of());
-        race.setPicksManaged(true); service.saveTemplate("<html><p th:text='${weather}'></p></html>");
+         service.saveTemplate("<html><p th:text='${weather}'></p></html>");
         doAnswer(call -> { java.nio.file.Files.writeString(call.getArgument(1), call.getArgument(0)); return null; })
                 .when(service).renderScreenshot(anyString(), any(Path.class));
         // when / then

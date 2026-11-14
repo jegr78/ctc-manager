@@ -53,7 +53,6 @@ class PickPublicationPersistenceIT {
         // given
         tx.executeWithoutResult(status -> {
             fixture = helper.createFullSeasonFixture("TPB" + UUID.randomUUID().toString().substring(0, 7));
-            fixture.race().setPicksManaged(true);
             var track = new Track(); track.setName("Test private original " + UUID.randomUUID());
             track = tracks.save(track); trackId = track.getId(); fixture.race().setTrack(track);
             entityManager.flush();
@@ -104,19 +103,20 @@ class PickPublicationPersistenceIT {
     }
 
     @Test
-    void givenNewPartialVersion_whenReloading_thenNeverBorrowTrackFromOlderCompleteVersion() {
+    void givenNewerLobbyVersionWithChangedContent_whenReloading_thenNeverBorrowCarFromOlderCompleteVersion() {
         // given
         tx.executeWithoutResult(status -> {
             var first = prepare(1, PickDisclosureField.all()); first.confirm("test-first", captured.plusSeconds(1));
             attempts.flush(); snapshots.saveAndFlush(new PickPublicationSnapshot(first));
-            var second = prepare(2, Set.of(PickDisclosureField.LAPS)); second.confirm("test-second", captured.plusSeconds(2));
+            races.findById(fixture.race().getId()).orElseThrow().getTrack().setName("Test changed public track");
+            var second = prepare(2, PickDisclosureField.lobby()); second.confirm("test-second", captured.plusSeconds(2));
             attempts.flush(); snapshots.saveAndFlush(new PickPublicationSnapshot(second));
         });
         // when
         var projection = disclosure.forPublic(fixture.race().getId());
         // then
-        assertThat(projection.trackName()).isNull(); assertThat(projection.carName()).isNull();
-        assertThat(projection.settings()).isNotNull(); assertThat(projection.settings().weather()).isNull();
+        assertThat(projection.trackName()).isEqualTo("Test changed public track");
+        assertThat(projection.carName()).as("the newer lobby version withholds the car").isNull();
     }
 
     @Test
@@ -134,7 +134,6 @@ class PickPublicationPersistenceIT {
     @Test
     void givenExplicitLegacyPublication_whenSending_thenCommitPreparationBeforeNetworkAndConfirmFrozenContentAfterSuccess() {
         // given
-        tx.executeWithoutResult(status -> races.findById(fixture.race().getId()).orElseThrow().setPicksManaged(false));
         var sends = new AtomicInteger();
         // when
         String result = assertDoesNotThrow(() -> publications.publish(List.of(fixture.race().getId()), PickPublicationOutput.SETTINGS,
@@ -149,14 +148,12 @@ class PickPublicationPersistenceIT {
                 }, message -> "test-confirmed")));
         // then
         assertThat(result).isEqualTo("test-confirmed"); assertThat(sends).hasValue(1);
-        tx.executeWithoutResult(status -> races.findById(fixture.race().getId()).orElseThrow().setPicksManaged(true));
         assertThat(disclosure.forPublic(fixture.race().getId()).trackName()).contains("Test private original").doesNotContain("during network");
     }
 
     @Test
     void givenLostResponse_whenPublishing_thenRetainDurableUncertaintyWithoutDisclosingChoices() {
         // given
-        tx.executeWithoutResult(status -> races.findById(fixture.race().getId()).orElseThrow().setPicksManaged(false));
         // when / then
         assertThatThrownBy(() -> publications.publish(List.of(fixture.race().getId()), PickPublicationOutput.SETTINGS,
                 new ManagementPickActor("test-admin"), rows -> bundle(() -> { throw new IOException("Test lost response"); }, message -> "unexpected")))
@@ -170,7 +167,6 @@ class PickPublicationPersistenceIT {
     @Test
     void givenKnownRejectedOutput_whenPublishing_thenKeepARecordedFailureAndPermitAnExplicitRetry() {
         // given
-        tx.executeWithoutResult(status -> races.findById(fixture.race().getId()).orElseThrow().setPicksManaged(false));
         // when / then
         assertThatThrownBy(() -> publications.publish(List.of(fixture.race().getId()), PickPublicationOutput.SETTINGS,
                 new ManagementPickActor("test-admin"), rows -> bundle(() -> { throw new DiscordAuthException("Test rejected", null); }, message -> "unexpected")))
@@ -185,7 +181,6 @@ class PickPublicationPersistenceIT {
     @Test
     void givenRemoteSuccessAndLocalFailure_whenConfirming_thenPreserveUncertaintyInAnIndependentTransaction() {
         // given
-        tx.executeWithoutResult(status -> races.findById(fixture.race().getId()).orElseThrow().setPicksManaged(false));
         var sends = new AtomicInteger();
         // when / then
         assertThatThrownBy(() -> publications.publish(List.of(fixture.race().getId()), PickPublicationOutput.SETTINGS,
@@ -200,20 +195,8 @@ class PickPublicationPersistenceIT {
     }
 
     @Test
-    void givenManagedChoicesWithoutApproval_whenPublishing_thenRejectBeforePreparingOrSending() {
-        // given
-        var renders = new AtomicInteger();
-        // when / then
-        assertThatThrownBy(() -> publications.publish(List.of(fixture.race().getId()), PickPublicationOutput.SETTINGS,
-                new ManagementPickActor("test-admin"), rows -> { renders.incrementAndGet(); return bundle(() -> "unexpected", message -> "unexpected"); }))
-                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("approved");
-        assertThat(renders).hasValue(0);
-    }
-
-    @Test
     void givenRenderingThatChangesCapturedChoices_whenPublishing_thenRollBackBeforeAnyNetworkOrPreparedAttempt() {
         // given
-        tx.executeWithoutResult(status -> races.findById(fixture.race().getId()).orElseThrow().setPicksManaged(false));
         var sends = new AtomicInteger();
         // when / then
         assertThatThrownBy(() -> publications.publish(List.of(fixture.race().getId()), PickPublicationOutput.SETTINGS, new ManagementPickActor("test-manager"), rows -> {
@@ -362,7 +345,7 @@ class PickPublicationPersistenceIT {
         UUID secondId = tx.execute(status -> {
             var first = attempts.findByBatchId(batch).getFirst();
             var second = helper.createRace(first.getRace().getMatchday(), first.getRace().getMatch());
-            second.setPicksManaged(true); second.setTrack(tracks.findById(trackId).orElseThrow());
+             second.setTrack(tracks.findById(trackId).orElseThrow());
             var attempt = attempts.saveAndFlush(new PickPublicationAttempt(new PickPublicationAttempt.Capture(batch, second, 1, 0, PickPublicationOrigin.LEGACY,
                     first.getOutput(), PickPublicationContent.from(second), Set.of(PickDisclosureField.TRACK), first.getActorId(), first.getChannelId(), first.getWebhookId(),
                     null, first.getTemplateHash(), first.getRequestManifest(), first.getRuntimeGeneration(), captured)));
@@ -389,7 +372,9 @@ class PickPublicationPersistenceIT {
     private PickPublicationAttempt prepare(long version, Set<PickDisclosureField> fields) {
         var race = races.findById(fixture.race().getId()).orElseThrow();
         return attempts.saveAndFlush(new PickPublicationAttempt(new PickPublicationAttempt.Capture(UUID.randomUUID(), race,
-                version, 0, PickPublicationOrigin.LEGACY, PickPublicationOutput.SETTINGS, PickPublicationContent.from(race), fields,
+                version, 0, PickPublicationOrigin.LEGACY,
+                fields.contains(PickDisclosureField.CAR) ? PickPublicationOutput.SETTINGS : PickPublicationOutput.LOBBY_SETTINGS,
+                PickPublicationContent.from(race), fields,
                 "test-admin", "123456789012345678", "234567890123456789", null, "a".repeat(64), "{}",
                 "12345678-1234-1234-1234-123456789abc:0", captured)));
     }

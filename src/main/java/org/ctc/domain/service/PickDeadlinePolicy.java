@@ -6,7 +6,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import lombok.RequiredArgsConstructor;
 import org.ctc.domain.exception.BusinessRuleException;
-import org.ctc.domain.model.PickState;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -20,11 +19,8 @@ public class PickDeadlinePolicy {
     }
 
     Decision assessAt(Context context, Instant acceptedAt) {
-        if (!context.collectionEnabled() || !context.botEnabled() || !context.targetValid()) {
-            return new Decision(false, "Collection or target is unavailable");
-        }
-        if (context.state() == PickState.APPROVED) {
-            return new Decision(false, "Approved picks are locked");
+        if (!context.targetValid()) {
+            return new Decision(false, "The target is unavailable");
         }
         if (!context.matchdayOpen()) {
             return new Decision(false, "Matchday picks are closed");
@@ -54,7 +50,6 @@ public class PickDeadlinePolicy {
         return deadline.toInstant(offsets.getFirst());
     }
 
-    public record Context(PickState state, boolean collectionEnabled, boolean botEnabled,
-                          boolean targetValid, boolean matchdayOpen, boolean manualClosed, LocalDateTime deadline) {}
+    public record Context(boolean targetValid, boolean matchdayOpen, boolean manualClosed, LocalDateTime deadline) {}
     public record Decision(boolean editable, String reason) {}
 }

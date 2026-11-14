@@ -760,17 +760,19 @@ channel. The bot must currently be able to view it. A shared match channel canno
 Saving reads current Discord permissions and stores the association. It creates no channel or message.
 
 Every member with current access to the bound private channel follows that team's workflow.
-Manager roles, parent-team roles and guessed team IDs do not select another team. Channel access
-and the target's effective home ownership are checked again when reading or confirming a target.
+Bind an organisation's shared team channel to its parent team: it then serves the home legs of every
+sub-team, and each target names the fielding team and its opponent. Manager roles and guessed team
+IDs do not select another team. Channel access and the target's effective home ownership are checked
+again when reading or confirming a target.
 Removing a binding or revoking channel access prevents an old dialog from confirming a pick.
 
 The outgoing consumer defaults off. `DISCORD_PICKS_ENABLED` maps to `app.discord.picks.enabled`;
 worker count defaults to 2 and queue capacity to 32. The existing `DISCORD_BOT_TOKEN`, saved guild
 and application ID are reused. No public interaction endpoint or message-content intent is required.
-The delivered capability supports confidential collection and private-history restore. A consumer
-starts only after its explicit Gateway opt-in; season enrollment remains a separate management action.
+A consumer starts only after its explicit Gateway opt-in. Seasons need no separate activation:
+opening a matchday opens its targets.
 
-After confidentiality acceptance, use the explicit **Register /picks for this guild** action.
+Use the explicit **Register /picks for this guild** action.
 It upserts only this feature's guild command. Startup and backup restore never register commands.
 Tests use local fakes; this implementation does not register a live command or send a test message.
 
@@ -784,7 +786,8 @@ Settings-bearing publication uses the confirmed-content rules below; existing UR
 Run `/picks` in the bound team channel. Choose the exact home race using its season, matchday,
 opponent and leg. The private view shows the latest confirmed revision, author, server timestamp,
 effective deadline, return reason and central matchday opening status. Valid deadlines and save times use Discord timestamps in each viewer's local timezone and locale; deadlines also show relative time. Berlin remains the management input timezone. Missing or DST-ambiguous deadlines remain explanatory text. Only open matchdays appear in the selector; an existing private receipt can still refresh read-only after closure.
-An approved or closed target offers viewing without team editing.
+A closed target offers viewing without team editing. An approved target stays editable until its
+cutoff; a new submission waits for another approval.
 
 Start a new entry or replacement and choose a track and car from the target season. Search or
 page through large catalogs. Track search covers only this season's track pool, excluding tracks already used or reserved by the home team elsewhere. Clear the query to show all available tracks. An empty pool or no matching names gets an explanation; search never imports tracks from GT7. Discord owns the password-warning banner on modal forms; the application cannot hide it. Category seasons use the existing frozen entry/member policy.
@@ -805,10 +808,10 @@ After a lost reply, use `/picks` to check that saved state before starting anoth
 Repeated delivery of the same confirmation returns its original durable receipt.
 
 Tests exercise this flow offline. Live test-guild UAT needs separate operator authorization and
-synthetic fixtures. Do not enable production collection before confidentiality and rollout checks.
+synthetic fixtures. Do not enable production collection before the rollout checks.
 
 
-### Management review and internal corrections
+### Management review
 
 Open **Review team picks** from a race or matchday workspace, or use `/admin/matchday-picks`.
 Choose a season, then filter matchday and submission state. A past deadline remains independent
@@ -826,56 +829,39 @@ the matchday default. An exception does not open a closed matchday or affect ano
 
 Choose a review decision and supply a reason. Returning an unapproved revision retains the
 current matchday flag and effective deadline; an expired cutoff still needs a match exception.
-Approval locks team editing and applies only the selected revision's setup. Saving these settings
+Approval applies only the selected revision's setup. The team may still submit a newer revision
+before the cutoff; the overview then shows it as submitted after approval, and the race keeps the
+approved setup until the next approval. Saving these settings
 or decisions never posts to Discord. Historical individual opening/closure decisions remain stored;
 new native controls use the central matchday window.
 
 Compare existing internal values with the selected submission before approving. If they differ,
 explicitly select replacement consent. A changed submission version or an internal settings
 change after the page loaded rejects the request. A restore or application restart also invalidates
-an open review or correction form. The error page retains the entered reason;
+an open review form. The error page retains the entered reason;
 use **Reload current version** to review the current state before another decision.
 
-For an approved target, **Correct approved settings** records a separate complete correction and
-reason while retaining the original approved revision and team lock. Category entry changes use
-native **Refresh choices** before selecting a concrete member. Validation retains entered values.
-Zero multiplier remains distinct from Equal Conditions. Corrections remain internal until a
-separate explicit publication through the existing management controls.
+Management changes a race setup directly in the race editor at any time, also after approval.
+**Edit race settings** on the review page opens it. Historical correction records stay visible in
+the decision history. Review and approval keep content private. Gateway startup remains an explicit
+operator action, following the rollout checklist below.
 
-Review and approval keep content private. Gateway startup and season enrollment remain explicit
-operator actions, following the rollout checklist below.
-
-
-### Season opt-in and existing settings
-
-Open a season editor and choose **Review collection**. Existing seasons default to paused.
-Review each configured unfinished race, including drafts without a date. Classify its current
-setup as withheld, or as already public when a matching confirmed publication record proves it.
-An unresolved delivery blocks activation. Completed historical races remain on their legacy display
-rules. Classification neither approves a submission nor sends a message.
-
-Enable collection after reviewing all configured targets. Pause stops new collection without
-removing race enrollment, private history or confirmed public content. The Gateway still requires
-its own explicit opt-in, even when the season is configured for collection.
-
-An open matchday allows teams to submit picks before agreeing the individual race date. New
-unfinished legs inherit enrollment in an enabled season, including reversed home legs and
-generated pairings. If an older leg was missed, **Review collection → Enroll new races** applies
-the current settings classification without pausing collection or changing existing submissions.
-The race date remains unset until the teams agree it after pick publication.
+An open matchday allows teams to submit picks before agreeing the individual race date. Every
+unfinished leg of an open matchday is a target, including reversed home legs and generated pairings.
 
 ### Explicit publication and public pages
 
-Use the existing pairing settings, lobby-settings or explicit match-preview button. Managed races
-require exact approved content or a recorded internal correction. Each physical Discord output
+Use the existing pairing settings, lobby-settings or explicit match-preview button. Publication sends
+the stored race setup; it no longer requires an approved pick. Each physical Discord output
 captures its own content before sending. A successful lobby graphic releases its track and lobby
 fields while keeping the omitted car withheld. A settings graphic or explicit preview can release
 its rendered fields. Unknown custom templates remain usable, but do not establish an additional
 public field mask for website generation.
 
-Generated public pages read the last confirmed content version. An internal correction, approval,
-website regeneration, Gateway disconnect or paused season never releases newer choices. Automatic
-preview edits omit managed settings attachments. Internal PNG caches remain private and are not
+Generated public pages show a finished race (results, a match score or walkover, or a complete playoff
+pairing) with its stored setup. Every other race shows only the last confirmed content version, so a
+later edit, approval, website regeneration or Gateway disconnect never releases newer choices.
+Automatic preview edits attach the settings graphic only when the current setup is fully published. Internal PNG caches remain private and are not
 copied to public assets. The team-pick review shows confirmed fields, unpublished internal changes
 and a link to any unresolved output.
 
@@ -953,7 +939,7 @@ A central manual opening without a configured cutoff allows intake until managem
 matchday or all its matches complete. When configured, the match's exception takes precedence over
 the matchday deadline, and the exact cutoff applies even to returned picks. A spring clock gap or
 an autumn repeated time is rejected for new settings. The read-only data audit reports ambiguous
-effective deadlines without choosing an offset or changing data. Approval immediately locks team edits.
+effective deadlines without choosing an offset or changing data. Approval leaves team edits open until the cutoff.
 
 V39/schema 17 preserves existing immutable histories and adds typed window fields. Older archives
 restore matchdays closed with no pairing exceptions. After updating, explicitly open the intended
@@ -992,14 +978,13 @@ live guild registration, messages, production changes and test-guild UAT need se
   opponent, wrong channel or revoked member cannot. An old open dialog must not bypass a revocation.
 - [ ] Exercise fixed and enabled category choices, Equal Conditions and 0x, replacement/conflict,
   exact deadline closure, central opening/closure, match exceptions and return. Check receipt recovery and
-  approval lock. Generate the existing team cards before testing settings graphics. Approval must remain private until explicit publication; lobby-only output must
+  resubmission after approval. Generate the existing team cards before testing settings graphics. Approval must remain private until explicit publication; lobby-only output must
   still withhold the omitted car.
 - [ ] Qualify backup/recovery using the existing isolated recovery procedure. Check IDs, immutable
   history, old public masks, newer private corrections and unresolved delivery. Old dialogs must
   be invalidated and recovery must not resend messages.
-- [ ] Classify preconfigured unfinished races using actual publication evidence. Enable only the
-  intended future seasons and the one configured Gateway consumer. Verify its health and access
-  before accepting real submissions.
+- [ ] Open only the intended matchdays and enable the one configured Gateway consumer. Verify its
+  health and access before accepting real submissions.
 - [ ] Keep the existing Google Forms available until the operator deliberately retires them.
   Do not delete Forms or migrate old responses automatically.
 
@@ -1043,8 +1028,8 @@ with a record locator; it does not repair records or show report payload text in
 
 The existing outgoing Gateway serves both `/picks` and `/incidents`; do not start a second bot
 consumer. Its legacy configuration key remains `app.discord.picks.enabled`, default false.
-Incident scope comes from the confirmed match context/window and does not require a season's
-private-picks opt-in or a private team-channel binding.
+Incident scope comes from the confirmed match context/window and does not require an open picks matchday
+or a private team-channel binding.
 
 Use `/incidents` in the bound regular or playoff match channel. Choose **New report**, select
 the concrete leg when needed, then **Enter report**. Select involved drivers from that race's lineup, including guests, and supply replay timestamp,

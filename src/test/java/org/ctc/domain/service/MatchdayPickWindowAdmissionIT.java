@@ -35,7 +35,7 @@ class MatchdayPickWindowAdmissionIT extends PickPersistenceIT {
             var first = entityManager.find(Race.class, fixture.race().getId());
             first.getMatch().setPickDeadlineOverride(LocalDateTime.of(2035, 1, 1, 12, 0));
             var other = new Match(day, first.getAwayTeam(), first.getHomeTeam()); entityManager.persist(other);
-            var race = new Race(); race.setMatchday(day); race.setMatch(other); race.setPicksManaged(true);
+            var race = new Race(); race.setMatchday(day); race.setMatch(other);
             race.setHomeTeamOverride(first.getHomeTeam()); race.setAwayTeamOverride(first.getAwayTeam()); race.setDateTime(first.getDateTime());
             entityManager.persist(race); entityManager.flush(); return race.getId();
         });

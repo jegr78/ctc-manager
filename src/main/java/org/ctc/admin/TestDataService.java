@@ -1141,7 +1141,6 @@ public class TestDataService {
 		race.setCar(car);
 		race.setTrack(track);
 		race.setDateTime(java.time.LocalDateTime.now().plusDays(7));
-        race.enrolForPicksIfEnabled();
 		race.setSettings(createTestSettings(race));
 		race = raceRepository.save(race);
 		raceLineupRepository.save(new RaceLineup(race, driverHome1, home));

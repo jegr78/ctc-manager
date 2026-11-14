@@ -6,7 +6,6 @@ import java.time.ZoneId;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import org.ctc.admin.dto.MatchdayPickView.*;
-import org.ctc.admin.dto.PickCorrectionForm;
 import org.ctc.admin.dto.PickReviewForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.*;
@@ -33,8 +32,6 @@ public class MatchdayPickAdminService {
     private final PickTargetService targets;
     private final PickReviewService reviews;
     private final PickDeadlinePolicy deadlines;
-    private final PickCollectionStatus collection;
-    private final RaceFormDataService forms;
     private final Clock clock;
     private final Environment environment;
     private final PickSessionEpoch epoch;
@@ -53,9 +50,11 @@ public class MatchdayPickAdminService {
         var days = seasonId == null ? matchdays.findAll() : matchdays.findBySeasonIdOrderBySortIndexAsc(seasonId);
         var dayChoices = days.stream().map(day -> new Choice(day.getId(), day.getSeason().getDisplayLabel() + " | " + day.getLabel())).toList();
         var candidates = seasonId == null ? races.findAll() : races.findByMatchdaySeasonId(seasonId);
-        var rows = candidates.stream().filter(Race::isPicksManaged)
+        var rows = candidates.stream().filter(race -> race.getMatchday() != null && race.getHomeTeam() != null)
                 .filter(race -> matchdayId == null || matchdayId.equals(race.getMatchday().getId()))
-                .map(race -> row(race, candidates, picks.findSnapshotByRaceId(race.getId()).orElse(null)))
+                .map(race -> new Listed(race, picks.findSnapshotByRaceId(race.getId()).orElse(null)))
+                .filter(listed -> listed.pick() != null || listed.race().getMatchday().isPicksOpen() && targets.isEligible(listed.race()))
+                .map(listed -> row(listed.race(), candidates, listed.pick()))
                 .filter(row -> state == null || row.state() == state).sorted(Comparator.comparing(Row::label).thenComparing(Row::raceId)).toList();
         return new Overview(seasonId, matchdayId, state, seasonChoices, dayChoices, rows);
     }
@@ -87,7 +86,8 @@ public class MatchdayPickAdminService {
             comparison.add(new Comparison(current.label(), current.value(), submitted == null ? "No submission" : submitted.value(), changed));
         }
         var returnReason = stateReturnReason(pick, decisionHistory);
-        return new Detail(row, existing.fingerprint(), proposed != null && existing.configured() && !existing.matches(proposed), returnReason, comparison,
+        boolean replacement = proposed != null && existing.configured() && !existing.matches(proposed) && !reviews.holdsApproved(pick, existing);
+        return new Detail(row, existing.fingerprint(), replacement, returnReason, comparison,
                 history.stream().map(revision -> new Revision(revision.getRevisionNumber(), revision.getReceiptVersion(), revision.getSubmitterId(),
                         revision.getConfirmedAt(), values(revision.getPayload()))).toList(),
                 decisionHistory.stream().map(decision -> new Decision(decision.getKind(), decision.getAggregateVersion(), decision.getActorId(),
@@ -118,37 +118,6 @@ public class MatchdayPickAdminService {
         }
     }
 
-    @Transactional(readOnly = true)
-    public PickCorrectionForm correctionForm(UUID raceId) {
-        var detail = detail(raceId);
-        if (!detail.row().correctable()) throw new BusinessRuleException("Only an approved pick with unchanged target identity can be corrected");
-        var race = race(raceId); var snapshot = PickSetupSnapshot.from(race); var values = snapshot.settings();
-        var form = new PickCorrectionForm(); form.setExpectedVersion(detail.row().version()); form.setSettingsFingerprint(detail.fingerprint());
-        form.setExpectedGeneration(detail.generation());
-        form.setLobbyRulesProfile(snapshot.lobbyRulesProfile()); form.setStartType(values.startType()); form.setSlipstream(values.slipstream());
-        form.setTrackId(snapshot.trackId()); form.setCarId(snapshot.carId()); form.setCarPoolEntryId(snapshot.entryId());
-        form.setLaps(values.laps()); form.setTyreWear(values.tyreWear()); form.setFuelConsumption(values.fuelConsumption());
-        form.setRefuelingSpeed(values.refuelingSpeed()); form.setRequiredPitStops(values.requiredPitStops());
-        form.setTimeProgressionMode(values.timeProgressionMode()); form.setTimeProgressionMultiplier(values.timeProgressionMultiplier());
-        form.setWeather(values.weather()); form.setTimeOfDay(values.timeOfDay());
-        form.setInitialFuel(Arrays.stream(PickInitialFuel.values()).filter(fuel -> fuel.settingsValue().equals(values.initialFuel())).findFirst().orElse(null));
-        form.setAvailableTyres(tyres(values.availableTyres()).stream().filter(tyre -> !tyre.isWet()).toList());
-        form.setMandatoryTyres(List.copyOf(tyres(values.mandatoryTyres())));
-        return form;
-    }
-
-    @Transactional(readOnly = true)
-    public RaceService.RaceFormData correctionChoices(UUID raceId, PickCorrectionForm form) {
-        var race = race(raceId);
-        return forms.getSubmittedRaceFormData(race.getMatchday().getId(), race.getHomeTeam().getId(), raceId,
-                form.getCarPoolEntryId(), form.getCarId(), form.getTrackId());
-    }
-
-    public void correct(UUID raceId, PickCorrectionForm form, Principal principal) {
-        requireForm(form.getExpectedVersion(), form.getSettingsFingerprint(), form.getExpectedGeneration());
-        reviews.correct(raceId, form.getExpectedVersion(), actor(principal, form.getExpectedGeneration()), form.getReason(), form.payload(), form.getSettingsFingerprint());
-    }
-
     private ManagementPickActor actor(Principal principal, String generation) {
         String name = principal == null ? null : principal.getName();
         if (name != null && !name.isBlank() && name.length() <= 128) {
@@ -171,7 +140,7 @@ public class MatchdayPickAdminService {
         if (eligible && state != PickState.APPROVED) {
             if (pick != null && pick.getLatestRevisionNumber() != null) { actions.add(PickReviewForm.Action.APPROVE); actions.add(PickReviewForm.Action.RETURN); }
         }
-        var decision = deadlines.assess(new PickDeadlinePolicy.Context(state, season.isPicksCollectionEnabled(), collection.isAvailable(), eligible,
+        var decision = deadlines.assess(new PickDeadlinePolicy.Context(eligible,
                 day.isPicksOpen(), pick != null && pick.isManualClosed(), MatchdayPickWindowRules.deadline(race)));
         String deadline = "Not configured"; String deadlineState = "No pick deadline";
         var effectiveDeadline = MatchdayPickWindowRules.deadline(race);
@@ -187,14 +156,14 @@ public class MatchdayPickAdminService {
                 state, pick == null ? 0 : pick.getVersion(), pick == null ? null : pick.getLatestRevisionNumber(),
                 pick == null ? null : pick.getApprovedRevisionNumber(), deadline, deadlineState,
                 day.isPicksOpen(), pick != null && pick.isManualClosed(), identity ? decision.reason() : "Target identity changed; resolve before review",
-                identity, actions, identity && state == PickState.APPROVED,
+                identity, actions, pick != null && pick.hasSubmissionAfterApproval(),
                 race.getPlayoffMatchup() != null ? "/admin/pick-windows/playoffs/" + race.getPlayoffMatchup().getId()
                         : race.getMatch() != null ? "/admin/pick-windows/matches/" + race.getMatch().getId() : null);
     }
 
     private Race race(UUID id) {
         var race = races.findById(id).orElseThrow(MatchdayPickAdminService::unavailable);
-        if (!race.isPicksManaged() || race.getMatchday() == null || race.getHomeTeam() == null) throw unavailable();
+        if (race.getMatchday() == null || race.getHomeTeam() == null) throw unavailable();
         return race;
     }
     private List<Value> values(PickPayload payload) {
@@ -223,9 +192,6 @@ public class MatchdayPickAdminService {
         return history.stream().filter(decision -> decision.getKind() == PickDecisionKind.RETURN).findFirst()
                 .orElseThrow(() -> new BusinessRuleException("Return history is incomplete")).getReason();
     }
-    private static Set<PickTyre> tyres(String value) {
-        if (value == null || value.isBlank() || value.equals("None")) return Set.of();
-        return Arrays.stream(value.split(",\\s*")).map(PickTyre::valueOf).collect(java.util.stream.Collectors.toSet());
-    }
     private static BusinessRuleException unavailable() { return new BusinessRuleException("Pick review target or filter is unavailable"); }
+    private record Listed(Race race, MatchdayPick pick) { }
 }

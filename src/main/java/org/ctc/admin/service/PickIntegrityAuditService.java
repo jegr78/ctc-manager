@@ -39,13 +39,13 @@ public class PickIntegrityAuditService {
         var validator = new PickBackupValidator(BackupSchema.SCHEMA_VERSION);
         var lobbyRules = new LobbyRulesBackupValidator();
         var pickWindows = new org.ctc.backup.schema.PickWindowBackupValidator();
-        var managedRaces = new ArrayList<Race>();
+        var targetRaces = new ArrayList<Race>();
         var picks = new HashMap<java.util.UUID, MatchdayPick>();
         try {
             for (var entity : schema.getExportOrder()) {
                 if (!PickBackupValidator.supports(entity.tableName()) && !org.ctc.backup.schema.PickWindowBackupValidator.supports(entity.tableName())) continue;
                 for (var row : exports.fetchAllForBackup(entity.entityClass())) {
-                    if (row instanceof Race race && race.isPicksManaged()) managedRaces.add(race);
+                    if (row instanceof Race race) targetRaces.add(race);
                     if (row instanceof MatchdayPick pick) picks.put(pick.getRace().getId(), pick);
                     var json = org.ctc.backup.schema.PickWindowArchive.normalize(BackupSchema.SCHEMA_VERSION, entity.tableName(), mapper.valueToTree(row));
                     lobbyRules.accept(entity.tableName(), json);
@@ -56,8 +56,9 @@ public class PickIntegrityAuditService {
             pickWindows.validate();
             lobbyRules.validate();
             validator.validate();
-            for (var race : managedRaces) {
+            for (var race : targetRaces) {
                 var pick = picks.get(race.getId());
+                if (pick == null && (race.getMatchday() == null || !race.getMatchday().isPicksOpen())) continue;
                 if (!PickTargetRules.isUnfinishedTarget(race)
                         || pick != null && (pick.isManualClosed() || pick.getState() == PickState.APPROVED)) continue;
                 var deadline = org.ctc.domain.model.MatchdayPickWindowRules.deadline(race);

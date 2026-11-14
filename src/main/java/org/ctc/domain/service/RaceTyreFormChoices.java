@@ -24,15 +24,6 @@ public final class RaceTyreFormChoices {
         return new Options(usable, required, selected.codes(), selectedRequired.codes(), selected.retained(), selectedRequired.retained());
     }
 
-    public static Options fromPick(LobbyRulesProfile profile, RaceService.CarSelectionForm selection, UUID entryId,
-                                    List<PickTyre> available, List<PickTyre> mandatory) {
-        return from(profile, selection, entryId, text(available), text(mandatory));
-    }
-
-    private static String text(List<PickTyre> tyres) {
-        return tyres == null ? null : tyres.stream().map(tyre -> tyre == null ? "" : tyre.name()).collect(Collectors.joining(","));
-    }
-
     private static Selection state(String text, boolean mandatory, List<PickTyre> allowed) {
         try {
             var parsed = PickTyreText.read(text, mandatory);

@@ -18,7 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.when;
 
 @CtcDevSpringBootContext
 @Tag("integration")
@@ -41,7 +40,6 @@ class PickLifecycleIT {
     @Autowired SeasonPhaseService phaseService;
     @Autowired SeasonManagementService seasonService;
     @Autowired SeasonCarPoolService pools;
-    @MockitoBean PickCollectionStatus collection;
     @MockitoBean GoogleCalendarService googleCalendar;
     TestHelper.SeasonFixture fixture;
     UUID otherRace;
@@ -80,13 +78,8 @@ class PickLifecycleIT {
             unscheduled = helper.createRace(day3, helper.createMatch(day3, fixture.homeTeam(), fixture.awayTeam())).getId();
             thirdTeam = helper.createTeam("Test successor " + UUID.randomUUID(), "TL" + UUID.randomUUID().toString().substring(0, 7)).getId();
         });
-        tx.executeWithoutResult(status -> {
-            seasons.findById(fixture.season().getId()).orElseThrow().setPicksCollectionEnabled(true);
-            races.findById(fixture.race().getId()).orElseThrow().setPicksManaged(true);
-        });
         payload = new PickPayload(trackIds.getFirst(), carIds.getFirst(), null, 12, 2, 3, 4, PickInitialFuel.DEFAULT, 1,
                 TimeProgressionMode.MULTIPLIER, 0, "S01", "Sunset", Set.of(PickTyre.RS), Set.of());
-        when(collection.isAvailable()).thenReturn(true);
         submissions.submit(fixture.race().getId(), 0, UUID.randomUUID(), actor(fixture.race().getId(), fixture.homeTeam().getId()), payload);
     }
 
@@ -103,19 +96,12 @@ class PickLifecycleIT {
 
     @ParameterizedTest
     @ValueSource(strings = {"match", "leg"})
-    void givenCachedPausedSeason_whenCollectionIsEnabledBeforePlanning_thenUseTheLockedCurrentEnrollmentFlag(String creation) {
+    void givenSeasonWithoutActivation_whenCreatingMatchOrLeg_thenNewUnscheduledLegsAreImmediatelyPickTargets(String creation) {
+        // given
+        tx.executeWithoutResult(status -> races.findById(fixture.race().getId()).orElseThrow().getMatchday().getPhase().setLegs(2));
+        // when / then
         tx.executeWithoutResult(status -> {
-            var season = seasons.findById(fixture.season().getId()).orElseThrow();
-            season.setPicksCollectionEnabled(false);
-            races.findById(fixture.race().getId()).orElseThrow().getMatchday().getPhase().setLegs(2);
-        });
-        var separate = new TransactionTemplate(tx.getTransactionManager());
-        separate.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-        tx.executeWithoutResult(status -> {
-            var owner = seasons.findById(fixture.season().getId()).orElseThrow();
             var day = entityManager.find(Matchday.class, emptyDay);
-            assertThat(owner.isPicksCollectionEnabled()).isFalse();
-            separate.executeWithoutResult(other -> seasons.findById(owner.getId()).orElseThrow().setPicksCollectionEnabled(true));
             var match = creation.equals("match")
                     ? matchService.createMatchWithLegs(day, teams.findById(fixture.homeTeam().getId()).orElseThrow(),
                             teams.findById(fixture.awayTeam().getId()).orElseThrow(), false)
@@ -123,9 +109,9 @@ class PickLifecycleIT {
             entityManager.flush();
             var created = races.findByMatchId(match.getId()).stream()
                     .filter(race -> !race.getId().equals(fixture.race().getId())).toList();
-            assertThat(owner.isPicksCollectionEnabled()).isTrue();
             assertThat(created).isNotEmpty().allSatisfy(race -> {
-                assertThat(race.isPicksManaged()).isTrue(); assertThat(race.getDateTime()).isNull();
+                assertThat(race.getDateTime()).isNull();
+                assertThat(org.ctc.domain.model.PickTargetRules.isUnfinishedTarget(race)).as("no enrollment step exists any more").isTrue();
             });
         });
     }
@@ -169,14 +155,14 @@ class PickLifecycleIT {
     }
 
     @Test
-    void givenManagedPendingRace_whenChangingSetupThroughNativeEditor_thenRequireReviewAndKeepSubmission() {
+    void givenPendingPick_whenChangingSetupThroughNativeEditor_thenSaveSetupAndKeepSubmission() {
         // when
         var result = save(fixture.race().getId(), fixture.matchday().getId(), fixture.homeTeam().getId(), fixture.awayTeam().getId(),
                 payload.trackId(), payload.carId(), payload, LocalDateTime.of(2035, 1, 1, 20, 0));
         // then
-        assertThat(result.success()).isFalse();
-        assertThat(result.message()).contains("pick review");
-        tx.executeWithoutResult(status -> assertThat(races.findById(fixture.race().getId()).orElseThrow().getSettings()).isNull());
+        assertThat(result.success()).as(result.message()).isTrue();
+        tx.executeWithoutResult(status -> assertThat(races.findById(fixture.race().getId()).orElseThrow().getSettings().getWeather())
+                .isEqualTo(payload.weather()));
         assertOriginal();
     }
 
@@ -213,17 +199,16 @@ class PickLifecycleIT {
     }
 
     @Test
-    void givenPreviouslyScheduledUnmanagedRace_whenEditingMetadataAfterOptIn_thenPreserveExistingEnrollmentDecision() {
+    void givenScheduledRaceWithoutPick_whenEditingMetadata_thenSaveWithoutPickReview() {
         // when
         var result = save(otherRace, nextDay, fixture.homeTeam().getId(), fixture.awayTeam().getId(), null, null, null,
                 LocalDateTime.of(2035, 1, 2, 21, 0));
         // then
         assertThat(result.success()).isTrue();
-        tx.executeWithoutResult(status -> assertThat(races.findById(otherRace).orElseThrow().isPicksManaged()).isFalse());
     }
 
     @Test
-    void givenUnscheduledRaceInEnabledSeason_whenSchedulingFirstTime_thenEnrollWithoutClearingExistingHistoryOnDisable() {
+    void givenUnscheduledRace_whenSchedulingFirstTime_thenKeepOtherPickHistory() {
         // given
         UUID day = tx.execute(status -> races.findById(unscheduled).orElseThrow().getMatchday().getId());
         // when
@@ -232,11 +217,6 @@ class PickLifecycleIT {
         // then
         assertThat(result.success()).isTrue();
         tx.executeWithoutResult(status -> {
-            assertThat(races.findById(unscheduled).orElseThrow().isPicksManaged()).isTrue();
-            seasons.findById(fixture.season().getId()).orElseThrow().setPicksCollectionEnabled(false);
-        });
-        tx.executeWithoutResult(status -> {
-            assertThat(races.findById(fixture.race().getId()).orElseThrow().isPicksManaged()).isTrue();
             assertThat(picks.findByRaceId(fixture.race().getId()).orElseThrow().getVersion()).isEqualTo(1);
         });
     }
