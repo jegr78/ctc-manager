@@ -68,6 +68,8 @@ public class DriverStatsService {
         throw new StatsLookupException("No results for " + driver.getPsnId() + " in " + (period.alltime() ? "any season" : period.label()));
     }
 
+    public boolean exists(UUID driverId) { return drivers.existsById(driverId); }
+
     /** Drivers with a counted result in the scoped seasons whose PSN ID, nickname or alias contains the query. */
     public List<StatsChoice> choices(String query, StatsScope scope, String seasonOption) {
         boolean seasonScope = scope == StatsScope.SEASON && seasonOption != null;
@@ -132,7 +134,19 @@ public class DriverStatsService {
         int more = Math.max(0, teams.size() - SHOWN_TEAMS);
         return new DriverStats(driver.getId(), driver.getPsnId(), driver.getNickname(), period, rank, ranked, points, counted.size(),
                 wins, podiums, poles, fastest, best, classified == 0 ? null : (double) positionSum / classified, guests, dsq,
-                raced.size(), teams.subList(more, teams.size()), more);
+                raced.size(), teams.subList(more, teams.size()), more, profileSeason(driver, period, raced));
+    }
+
+    /** The website links a driver to the newest season with a roster entry, else to the newest season raced. */
+    private String profileSeason(Driver driver, StatsPeriod period, Set<UUID> raced) {
+        if (!period.alltime()) return period.label();
+        var rostered = seasonDrivers.findByDriverId(driver.getId()).stream().map(row -> row.getSeason().getId()).collect(java.util.stream.Collectors.toSet());
+        String fallback = null;
+        for (var season : period.seasons().reversed()) {
+            if (rostered.contains(season.id())) return season.label();
+            if (fallback == null && raced.contains(season.id())) fallback = season.label();
+        }
+        return fallback;
     }
 
     /** One team per season in chronological order, consecutive repeats merged; alltime names the parent team. */

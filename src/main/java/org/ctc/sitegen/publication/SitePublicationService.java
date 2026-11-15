@@ -408,6 +408,5 @@ public class SitePublicationService {
     public record Publication(String stage, String requestId, String snapshotId, int attempt, String detail, Long pr, Long runId) {
         public String prUrl() { return pr == null ? null : "https://github.com/jegr78/ctc-manager/pull/" + pr; }
         public String runUrl() { return runId == null ? null : "https://github.com/jegr78/ctc-manager/actions/runs/" + runId; }
-        public String publicUrl() { return "https://jegr78.github.io/ctc-manager/"; }
     }
 }

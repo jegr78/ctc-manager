@@ -41,6 +41,24 @@ class PickGatewayReplyTest {
     }
 
     @Test
+    void givenPublicDeferral_whenLiveThenExpiredOrReset_thenKeepTheSameGuardsAsPrivateReplies() {
+        // given
+        when(raw.deferPublic()).thenReturn(acknowledged);
+        var saved = new AtomicReference<PickGatewayResponse.Continuation>();
+        reply.deferPublic(saved::set); acknowledged.complete(continuation);
+        var message = new PickGatewayMessage("Shared by Test Member", List.of(), null);
+        // when / then
+        verify(raw, never()).deferPrivate();
+        saved.get().replyPrivate(message); verify(continuation).replyPrivate(message);
+        clearInvocations(continuation);
+        clock.now = NOW.plusSeconds(900); saved.get().replyPrivate(message);
+        verifyNoInteractions(continuation);
+        clock.now = NOW.plusSeconds(1); epoch.incrementAndGet(); saved.get().replyPrivate(message);
+        verify(continuation).replyPrivate("This interaction was reset. Start again.");
+        verify(continuation, never()).replyPrivate(message);
+    }
+
+    @Test
     void givenDeferredReply_whenAcknowledgementArrives_thenOnlyThenRunPrivateWork() {
         // given
         when(raw.deferPrivate()).thenReturn(acknowledged);

@@ -12,6 +12,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class SiteProperties {
 
     private String outputDir;
+    /** Public website URL used for links outside the site, such as Discord stats; empty means no links. */
+    private String publicBaseUrl;
     private boolean includeTestSeasons;
     private List<LinkEntry> links = new ArrayList<>();
     private String youtubeChannelUrl = "https://www.youtube.com/@CommunityTeamCup";

@@ -13,11 +13,14 @@ import java.util.stream.IntStream;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.service.DriverStatsService;
 import org.ctc.domain.service.StatsSeasonService;
+import org.ctc.domain.service.TeamStatsService;
+import org.ctc.sitegen.SiteProfileLinks;
 import org.ctc.domain.stats.DriverStats;
 import org.ctc.domain.stats.StatsChoice;
 import org.ctc.domain.stats.StatsLookupException;
 import org.ctc.domain.stats.StatsPeriod;
 import org.ctc.domain.stats.StatsScope;
+import org.ctc.domain.stats.TeamStats;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -27,16 +30,19 @@ class StatsInteractionHandlerTest {
     final PickGatewayResponse.Continuation continuation = mock(PickGatewayResponse.Continuation.class);
     final DriverStatsService drivers = mock(DriverStatsService.class);
     final StatsSeasonService seasons = mock(StatsSeasonService.class);
+    final TeamStatsService teams = mock(TeamStatsService.class);
+    final SiteProfileLinks links = mock(SiteProfileLinks.class);
     final java.util.concurrent.atomic.AtomicLong nanos = new java.util.concurrent.atomic.AtomicLong();
-    final StatsInteractionHandler handler = new StatsInteractionHandler(drivers, seasons, nanos::get);
+    final StatsInteractionHandler handler = new StatsInteractionHandler(drivers, teams, seasons, links, nanos::get);
 
     @Test
     void givenDriverCommand_whenFiguresExist_thenAnswerWithAPrivateEscapedEmbed() {
         // given
         when(response.deferPrivate()).thenReturn(CompletableFuture.completedFuture(continuation));
         var season = new Season("CTC *Spring*", 2026, 1);
+        season.setId(UUID.randomUUID());
         when(drivers.stats("Test_driver", StatsScope.SEASON, "s1")).thenReturn(new DriverStats(UUID.randomUUID(), "Test_*driver*", "Test",
-                StatsPeriod.of(season, List.of(season), false), 4, 62, 412, 12, 3, 5, 2, 1, 1, 3.44, 1, 1, 1, List.of("Test @everyone"), 0));
+                StatsPeriod.of(season, List.of(season), false), 4, 62, 412, 12, 3, 5, 2, 1, 1, 3.44, 1, 1, 1, List.of("Test @everyone"), 0, "2026 | #1 | CTC *Spring*"));
         // when
         handler.onInteraction(event(PickGatewayInteraction.Kind.COMMAND, "driver", null,
                 Map.of("name", List.of("Test_driver"), "scope", List.of("season"), "season", List.of("s1"))), reply());
@@ -50,13 +56,107 @@ class StatsInteractionHandlerTest {
                 "12 races · 3 wins · 5 podiums · 2 poles · 1 fastest lap", "Best P1 · Average P3.4", "412 total · 34.3 per race",
                 "1 guest race · 1 DSQ");
         assertThat(embed.fields().getFirst().value()).doesNotContain("@everyone").contains("@​everyone");
+        assertThat(embed.url()).as("without a public base URL the title carries no link").isNull();
+        var share = sent.getValue().buttons().getFirst();
+        assertThat(share.label()).isEqualTo("Share in channel");
+        assertThat(share.id()).startsWith(StatsInteractionHandler.SHARE + "d:").hasSizeLessThanOrEqualTo(100);
+    }
+
+    @Test
+    void givenTeamCommand_whenFiguresExist_thenAnswerWithTheTeamEmbedAndItsProfileLink() {
+        // given
+        when(response.deferPrivate()).thenReturn(CompletableFuture.completedFuture(continuation));
+        var season = new Season("CTC", 2026, 1);
+        season.setId(UUID.randomUUID());
+        var team = new TeamStats(UUID.randomUUID(), "Test_Alpha", StatsPeriod.of(season, List.of(season), false), 3, 10, "Group A", 8, 5, 1, 2,
+                400, 350, 16, 16, "Semifinal", 0, null, 0, 0, List.of(new TeamStats.TopDriver("Test_one", 120)), "2026 | #1 | CTC");
+        when(teams.stats("Test_Alpha", StatsScope.SEASON, season.getId().toString())).thenReturn(team);
+        when(links.team(team.teamId(), "2026 | #1 | CTC")).thenReturn("https://example.test/season/2026-1-ctc/team/t-alf.html");
+        // when
+        handler.onInteraction(event(PickGatewayInteraction.Kind.COMMAND, "team", null, Map.of("name", List.of("Test_Alpha"),
+                "scope", List.of("season"), "season", List.of(season.getId().toString()))), reply());
+        // then
+        var sent = ArgumentCaptor.forClass(PickGatewayMessage.class);
+        verify(continuation).replyPrivate(sent.capture());
+        var embed = sent.getValue().embed();
+        assertThat(embed.title()).isEqualTo("Test\\_Alpha");
+        assertThat(embed.url()).isEqualTo("https://example.test/season/2026-1-ctc/team/t-alf.html");
+        assertThat(embed.fields()).extracting(PickGatewayMessage.Field::value).contains("Rank 3 of 10 · Group A",
+                "8 matches · 5 wins · 1 draw · 2 losses · 63% won", "400 scored · 350 conceded · +50 difference · 16 match points",
+                "16 races", "Semifinal", "Test\\_one 120 pts");
+        assertThat(sent.getValue().buttons().getFirst().id())
+                .isEqualTo(StatsInteractionHandler.SHARE + "t:" + team.teamId() + ":s:" + season.getId());
+    }
+
+    @Test
+    void givenShareClick_whenTheEntityExists_thenRecomputeAndPostVisiblyWithoutAButton() {
+        // given
+        when(response.deferPublic()).thenReturn(CompletableFuture.completedFuture(continuation));
+        var id = UUID.randomUUID();
+        when(drivers.exists(id)).thenReturn(true);
+        when(drivers.stats(id.toString(), StatsScope.ALLTIME, null)).thenReturn(new DriverStats(id, "Test", "Test",
+                StatsPeriod.of(null, List.of(), false), 1, 1, 10, 1, 1, 1, 0, 0, 1, 1.0, 0, 0, 1, List.of(), 0, null));
+        // when
+        handler.onInteraction(button(StatsInteractionHandler.SHARE + "d:" + id + ":a:-"), reply());
+        // then
+        var sent = ArgumentCaptor.forClass(PickGatewayMessage.class);
+        verify(continuation).replyPrivate(sent.capture());
+        assertThat(sent.getValue().content()).as("the poster is named without a mention").isEqualTo("Shared by Test Member");
+        assertThat(sent.getValue().buttons()).isEmpty();
+        assertThat(sent.getValue().embed().title()).isEqualTo("Test");
+        verify(response, never()).deferPrivate();
+    }
+
+    @Test
+    void givenShareClickForARemovedOrMalformedEntity_whenClicking_thenSayNoLongerAvailablePrivately() {
+        // given
+        var id = UUID.randomUUID();
+        var malformed = mock(PickGatewayResponse.class);
+        // when
+        handler.onInteraction(button(StatsInteractionHandler.SHARE + "t:" + id + ":c:-"), reply());
+        handler.onInteraction(new PickGatewayInteraction("1", "100", "200", "300", PickGatewayInteraction.Kind.BUTTON,
+                StatsInteractionHandler.SHARE + "t:" + id + ":s:-", Map.of(), PickGatewayReplyTest.NOW, malformed, null, null, "Test Member"),
+                new PickGatewayReply(malformed, clock, PickGatewayReplyTest.NOW, new AtomicLong()::get, Runnable::run));
+        // then
+        verify(response).replyPrivate(StatsInteractionHandler.GONE);
+        verify(malformed).replyPrivate(StatsInteractionHandler.GONE);
+        verify(response, never()).deferPublic();
+    }
+
+    @Test
+    void givenShareClickForAVanishedSeason_whenClicking_thenSayNoLongerAvailablePrivately() {
+        // given
+        var id = UUID.randomUUID();
+        var season = UUID.randomUUID();
+        when(teams.exists(id)).thenReturn(true);
+        when(seasons.period(StatsScope.SEASON, season.toString())).thenThrow(new StatsLookupException("No season found"));
+        // when
+        handler.onInteraction(button(StatsInteractionHandler.SHARE + "t:" + id + ":s:" + season), reply());
+        // then
+        verify(response).replyPrivate(StatsInteractionHandler.GONE);
+        verify(response, never()).deferPublic();
+    }
+
+    @Test
+    void givenLongestShareId_whenEncodingAndParsing_thenStayWithinDiscordLimitsAndRoundTrip() {
+        // given
+        var season = new Season("CTC", 2026, 1);
+        season.setId(UUID.randomUUID());
+        var entity = UUID.randomUUID();
+        // when
+        String id = StatsInteractionHandler.ShareRequest.id(false, entity, StatsScope.SEASON, StatsPeriod.of(season, List.of(season), false));
+        var parsed = StatsInteractionHandler.ShareRequest.parse(id);
+        // then
+        assertThat(id).hasSizeLessThanOrEqualTo(100);
+        assertThat(parsed).isEqualTo(new StatsInteractionHandler.ShareRequest(false, entity, "season", season.getId().toString()));
+        assertThat(StatsInteractionHandler.ShareRequest.parse(StatsInteractionHandler.SHARE + "x:" + entity + ":a:-")).isNull();
     }
 
     @Test
     void givenNoActiveSeason_whenRenderingAlltimeFallback_thenSayItAndListTheLastTeams() {
         // when
         var embed = StatsEmbeds.driver(new DriverStats(UUID.randomUUID(), "Test", "Test", StatsPeriod.of(null, List.of(), true),
-                0, 0, 0, 1, 0, 0, 0, 0, 0, null, 0, 1, 2, List.of("Test A", "Test B", "Test C"), 2));
+                0, 0, 0, 1, 0, 0, 0, 0, 0, null, 0, 1, 2, List.of("Test A", "Test B", "Test C"), 2, null), null);
         // then
         assertThat(embed.description()).isEqualTo("Alltime · no season is active");
         assertThat(embed.fields()).extracting(PickGatewayMessage.Field::value)
@@ -116,25 +216,21 @@ class StatsInteractionHandlerTest {
     }
 
     @Test
-    void givenTeamCommand_whenAnswering_thenSayTeamStatsAreNotAvailableYet() {
-        // when
-        handler.onInteraction(event(PickGatewayInteraction.Kind.COMMAND, "team", null, Map.of()), reply());
-        // then
-        verify(response).replyPrivate("Team stats are not available yet.");
-    }
-
-    @Test
     void givenAutocomplete_whenFocusingNameOrSeason_thenOfferMatchingChoices() {
         // given
         when(drivers.choices("tes", StatsScope.CURRENT, null)).thenReturn(List.of(new StatsChoice("Test driver", "d1")));
         when(seasons.choices("20")).thenReturn(List.of(new StatsChoice("2026 | #1 | CTC", "s1")));
+        when(teams.choices("alp", StatsScope.CURRENT, null)).thenReturn(List.of(new StatsChoice("Test Alpha (T-ALF)", "t1")));
         // when
         handler.onInteraction(event(PickGatewayInteraction.Kind.AUTOCOMPLETE, "driver", "name", Map.of("name", List.of("tes"), "scope", List.of("bogus"))), reply());
         handler.onInteraction(event(PickGatewayInteraction.Kind.AUTOCOMPLETE, "driver", "season", Map.of("season", List.of("20"))), reply());
-        handler.onInteraction(event(PickGatewayInteraction.Kind.AUTOCOMPLETE, "team", "name", Map.of()), reply());
+        handler.onInteraction(event(PickGatewayInteraction.Kind.AUTOCOMPLETE, "team", "name", Map.of("name", List.of("alp")))
+                , reply());
+        handler.onInteraction(event(PickGatewayInteraction.Kind.AUTOCOMPLETE, "team", "scope", Map.of()), reply());
         // then
         verify(response).replyChoices(List.of(new PickGatewayModal.Option("Test driver", "d1")));
         verify(response).replyChoices(List.of(new PickGatewayModal.Option("2026 | #1 | CTC", "s1")));
+        verify(response).replyChoices(List.of(new PickGatewayModal.Option("Test Alpha (T-ALF)", "t1")));
         verify(response).replyChoices(List.of());
     }
 
@@ -159,6 +255,11 @@ class StatsInteractionHandlerTest {
     }
 
     private PickGatewayReply reply() { return new PickGatewayReply(response, clock, PickGatewayReplyTest.NOW, new AtomicLong()::get, Runnable::run); }
+
+    private PickGatewayInteraction button(String action) {
+        return new PickGatewayInteraction("1", "100", "200", "300", PickGatewayInteraction.Kind.BUTTON, action, Map.of(), PickGatewayReplyTest.NOW,
+                response, null, null, "Test Member");
+    }
 
     private PickGatewayInteraction event(PickGatewayInteraction.Kind kind, String subcommand, String focused, Map<String, List<String>> values) {
         return new PickGatewayInteraction("1", "100", "200", "300", kind, "stats", values, PickGatewayReplyTest.NOW, response,
