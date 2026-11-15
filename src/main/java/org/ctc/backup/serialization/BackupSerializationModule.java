@@ -30,6 +30,8 @@ public class BackupSerializationModule extends SimpleModule {
         setMixInAnnotation(MatchdayPickRevision.class, MatchdayPickRevisionMixIn.class);
         setMixInAnnotation(MatchdayPickDecision.class, MatchdayPickDecisionMixIn.class);
         setMixInAnnotation(LineupSubmission.class, LineupSubmissionMixIn.class);
+        setMixInAnnotation(org.ctc.domain.model.CarImage.class, CarImageMixIn.class);
+        setMixInAnnotation(org.ctc.domain.model.TrackImage.class, TrackImageMixIn.class);
         setMixInAnnotation(LineupSubmissionRevision.class, LineupSubmissionRevisionMixIn.class);
         setMixInAnnotation(LineupWindowEvent.class, LineupWindowEventMixIn.class);
         setMixInAnnotation(Car.class, CarMixIn.class);

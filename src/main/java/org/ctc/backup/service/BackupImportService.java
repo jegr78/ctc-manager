@@ -135,12 +135,13 @@ public class BackupImportService {
      * {@code SUPPORTED_SCHEMA_VERSIONS.toString()}, where {@code Set.of(1, 2)} produces
      * a hash-randomised order that breaks message-matching assertions.
      */
-    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23));
+    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24));
 
     /** Tables an older schema version never exported; they may be absent when the manifest announces no rows. */
     static final Set<String> INCIDENT_TABLES = Set.of("incident_match_contexts", "incident_report_windows", "incident_reports", "incident_report_revisions", "incident_report_events", "incident_deliveries", "incident_thread_publications", "incident_rulings", "incident_ruling_revisions", "incident_ruling_publications");
     static final Set<String> LINEUP_TABLES = Set.of("lineup_submissions", "lineup_submission_revisions", "lineup_window_events");
-    static final Map<Integer, Set<String>> TABLES_ABSENT_IN_SCHEMA = beforeLineups(beforeDisqualifications(beforePenalties(Map.of(
+    static final Set<String> IMAGE_TABLES = Set.of("car_images", "track_images");
+    static final Map<Integer, Set<String>> TABLES_ABSENT_IN_SCHEMA = beforeImages(beforeLineups(beforeDisqualifications(beforePenalties(Map.of(
             1, beforeIncidents("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "discord_global_config", "discord_post", "site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
             2, beforeIncidents("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
             3, beforeIncidents("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
@@ -150,7 +151,16 @@ public class BackupImportService {
             7, beforeIncidents(),
             8, Set.of("incident_deliveries", "incident_thread_publications", "incident_rulings", "incident_ruling_revisions", "incident_ruling_publications"),
             9, Set.of("incident_thread_publications", "incident_rulings", "incident_ruling_revisions", "incident_ruling_publications"),
-            10, Set.of("incident_rulings", "incident_ruling_revisions", "incident_ruling_publications")))));
+            10, Set.of("incident_rulings", "incident_ruling_revisions", "incident_ruling_publications"))))));
+
+    private static Map<Integer, Set<String>> beforeImages(Map<Integer, Set<String>> previous) {
+        var versions = new LinkedHashMap<Integer, Set<String>>();
+        for (int version = 1; version < org.ctc.backup.schema.CatalogImageBackupValidator.IMAGE_VERSION; version++) {
+            var absent = new java.util.HashSet<>(previous.getOrDefault(version, Set.of()));
+            absent.addAll(IMAGE_TABLES); versions.put(version, Set.copyOf(absent));
+        }
+        return Map.copyOf(versions);
+    }
 
     private static Map<Integer, Set<String>> beforeLineups(Map<Integer, Set<String>> previous) {
         var versions = new LinkedHashMap<Integer, Set<String>>();
@@ -812,6 +822,12 @@ public class BackupImportService {
      * Counts the rows {@link #restoreAll} would restore, through the same entry lookup and parse loop,
      * so the manifest check cannot pass on bytes the restore never reads.
      */
+    private static Set<String> archivedUploads(ZipFile zf) {
+        var names = new java.util.HashSet<String>();
+        zf.stream().filter(entry -> !entry.isDirectory() && entry.getName().startsWith("uploads/")).forEach(entry -> names.add(entry.getName()));
+        return names;
+    }
+
     private void validateRestorableRows(Path staged, BackupManifest manifest) throws BackupArchiveException {
         var activeSeasonValidator = new org.ctc.backup.schema.ActiveSeasonBackupValidator();
         var pickWindows = new org.ctc.backup.schema.PickWindowBackupValidator();
@@ -826,6 +842,7 @@ public class BackupImportService {
         Map<String, Long> counts = new LinkedHashMap<>();
         long[] inflatedBytes = {0L};
         try (ZipFile zf = new ZipFile(staged.toFile())) {
+            var imageValidator = new org.ctc.backup.schema.CatalogImageBackupValidator(manifest.schemaVersion(), archivedUploads(zf));
             for (EntityRef ref : backupSchema.getExportOrder()) {
                 // CodeQL FP: java/path-injection — assertEntrySafe + PathTraversalGuard.assertWithin defense not traceable; see docs/security/sast-acceptance.md
                 ZipEntry entry = zf.getEntry(ref.fileName());
@@ -842,6 +859,7 @@ public class BackupImportService {
                         pickValidator.accept(ref.tableName(), row);
                         incidentValidator.accept(ref.tableName(), row);
                         lineupValidator.accept(ref.tableName(), row);
+                        imageValidator.accept(ref.tableName(), row);
                     }));
                 }
             }
@@ -855,6 +873,7 @@ public class BackupImportService {
             pickValidator.validate();
             incidentValidator.validate();
             lineupValidator.validate();
+            imageValidator.validate();
         } catch (BackupArchiveException ex) {
             throw ex;
         } catch (org.ctc.backup.schema.ActiveSeasonBackupValidator.ValidationException ex) {

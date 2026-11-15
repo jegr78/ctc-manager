@@ -92,6 +92,8 @@ public class BackupExportService {
     private final LineupSubmissionRepository lineupSubmissions;
     private final LineupSubmissionRevisionRepository lineupRevisions;
     private final LineupWindowEventRepository lineupWindows;
+    private final CarImageRepository carImages;
+    private final TrackImageRepository trackImages;
     private final PickPublicationAttemptRepository publicationAttempts;
     private final PickPublicationSnapshotRepository publicationSnapshots;
     private final IncidentMatchContextRepository incidentContexts;
@@ -164,6 +166,8 @@ public class BackupExportService {
             LineupSubmissionRepository lineupSubmissions,
             LineupSubmissionRevisionRepository lineupRevisions,
             LineupWindowEventRepository lineupWindows,
+            CarImageRepository carImages,
+            TrackImageRepository trackImages,
 			@Value("${app.upload-dir:data/dev/uploads}") String uploadDirRaw
 	) {
 		this.backupSchema = backupSchema;
@@ -204,6 +208,8 @@ public class BackupExportService {
         this.lineupSubmissions = lineupSubmissions;
         this.lineupRevisions = lineupRevisions;
         this.lineupWindows = lineupWindows;
+        this.carImages = carImages;
+        this.trackImages = trackImages;
         this.publicationAttempts = publicationAttempts;
         this.publicationSnapshots = publicationSnapshots;
         this.incidentContexts = incidentContexts;
@@ -262,6 +268,8 @@ public class BackupExportService {
         this.repositoriesByEntityClass.put(LineupSubmission.class, lineupSubmissions);
         this.repositoriesByEntityClass.put(LineupSubmissionRevision.class, lineupRevisions);
         this.repositoriesByEntityClass.put(LineupWindowEvent.class, lineupWindows);
+        this.repositoriesByEntityClass.put(CarImage.class, carImages);
+        this.repositoriesByEntityClass.put(TrackImage.class, trackImages);
         this.repositoriesByEntityClass.put(PickPublicationAttempt.class, publicationAttempts);
         this.repositoriesByEntityClass.put(PickPublicationSnapshot.class, publicationSnapshots);
         this.repositoriesByEntityClass.put(IncidentMatchContext.class, incidentContexts);
@@ -346,6 +354,8 @@ public class BackupExportService {
 				addIfPresent(relativePaths, car.getImageUrl()));
 		trackRepository.findAll().forEach(track ->
 				addIfPresent(relativePaths, track.getImageUrl()));
+		carImages.findAll().forEach(image -> addIfPresent(relativePaths, image.getImagePath()));
+		trackImages.findAll().forEach(image -> addIfPresent(relativePaths, image.getImagePath()));
 		raceAttachmentRepository.findAll().forEach(attachment -> {
 			if (attachment.getType() == AttachmentType.FILE) {
 				addIfPresent(relativePaths, attachment.getUrl());
