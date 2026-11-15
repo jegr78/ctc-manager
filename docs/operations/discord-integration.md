@@ -53,7 +53,7 @@ In the Developer Portal, click **OAuth2 → URL Generator**.
 **Scopes:**
 
 - `bot`
-- `applications.commands` for the explicitly registered `/picks` and `/incidents` workflows. Discord includes this scope by default with `bot`.
+- `applications.commands` for the explicitly registered `/picks`, `/lineup` and `/incidents` workflows. Discord includes this scope by default with `bot`.
 
 Command registration and the outgoing Gateway connection are separate, explicit setup steps.
 
@@ -772,8 +772,8 @@ and application ID are reused. No public interaction endpoint or message-content
 A consumer starts only after its explicit Gateway opt-in. Seasons need no separate activation:
 opening a matchday opens its targets.
 
-Use the explicit **Register /picks for this guild** action.
-It upserts only this feature's guild command. Startup and backup restore never register commands.
+Use the explicit **Register /picks for this guild** and **Register /lineup for this guild** actions.
+Each upserts only its own guild command. Startup and backup restore never register commands.
 Tests use local fakes; this implementation does not register a live command or send a test message.
 
 Backup schema 6 retains channel bindings, including exact IDs. Schemas 1 through 5 remain supported
@@ -848,6 +848,39 @@ operator action, following the rollout checklist below.
 
 An open matchday allows teams to submit picks before agreeing the individual race date. Every
 unfinished leg of an open matchday is a target, including reversed home legs and generated pairings.
+
+### Private lineups
+
+`/lineup` uses the same Gateway consumer, channel bindings and access checks as `/picks`. A channel
+bound to an organisation's parent team serves every leg in which one of its teams plays, home or
+away. Each target names the matchday, the fielding team, the opponent, the leg and the start time,
+so sub-teams sharing one channel stay distinguishable. Byes have no target; a walkover, a complete
+playoff pairing or recorded results close a leg.
+
+A leg opens for both teams when its settings post is confirmed. Management can open or close a
+single leg with a reason from the lineup detail page; opening replaces the publication condition.
+Teams may submit until one hour before the leg's start in Europe/Berlin. Without a start time there
+is no deadline. A start that falls into a clock change needs management review and accepts no team
+submissions. Moving the start moves the deadline.
+
+Teams choose exactly the season's **Drivers per team** from the drivers registered for any team of
+the organisation; each option names the team the driver is registered for. Pages hold 25 drivers.
+**New driver** adds a PSN ID with an optional display name; management registers that driver when
+applying. Guests cannot be submitted through Discord. Fewer drivers need an explicit confirmation,
+more are rejected. After confirming, **Use this lineup for the next leg** prefills the following leg
+of the same pairing. A driver may field for only one team of an organisation on a matchday: the
+submission, the management apply and the race lineup editor reject a driver who already appears in
+a sister team's lineup or latest submission on that matchday. A driver registered for another
+organisation only produces a note. CSV and Sheets imports do not apply this rule.
+
+Teams may resubmit until the deadline, also after management applied an earlier revision. After
+the deadline only management corrects a lineup, recording actor, reason, time and the full lineup.
+Open **Review team lineups** from a matchday or race workspace, or use `/admin/matchday-lineups`.
+**Apply** writes the latest revision into the race lineup. It replaces only the submitting team's
+drivers, keeps the opponent's drivers and all guests and aggregates scores again. A leg with results
+requires explicit consent. Applying never publishes; lineup graphics and posts remain explicit.
+Applied lineups appear on the website with the next site generation, also before the deadline.
+Backup schema 23 keeps submissions, revisions and window decisions; older schemas restore none.
 
 ### Explicit publication and public pages
 
@@ -974,6 +1007,7 @@ live guild registration, messages, production changes and test-guild UAT need se
   management screens. Verify exact season/team/guild/channel bindings and bot visibility.
 - [ ] After separate live authorization, use **Register /picks for this guild**. It upserts only
   that guild's picks command and preserves unrelated commands. Startup/restore do not register it.
+- [ ] When lineups should be collected, use **Register /lineup for this guild** the same way.
 - [ ] Perform the authorized test-guild UAT. A teammate can view the saved team revision; an
   opponent, wrong channel or revoked member cannot. An old open dialog must not bypass a revocation.
 - [ ] Exercise fixed and enabled category choices, Equal Conditions and 0x, replacement/conflict,

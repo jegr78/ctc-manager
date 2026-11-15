@@ -93,7 +93,7 @@ class V45LineupMigrationIT {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"TOGGLE", "open"})
+    @ValueSource(strings = {"TOGGLE", "REOPEN"})
     void givenNewConnection_whenStoringUnknownWindowKind_thenReject(String kind) {
         // when / then
         assertThatThrownBy(() -> window(kind, 1)).isInstanceOf(SQLException.class);
