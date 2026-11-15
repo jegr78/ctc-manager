@@ -66,6 +66,26 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class DataAuditServiceIT {
     @Test
+    void givenGalleryImageWithoutItsFile_whenAuditing_thenReportItWithoutDeletingTheRow() {
+        // given
+        var car = entityManager.merge(new org.ctc.domain.model.Car("Test", "Test audit gallery " + id));
+        var image = new org.ctc.domain.model.CarImage();
+        image.setCar(car); image.setKind(org.ctc.domain.model.CarImageKind.STUDIO); image.setSource(org.ctc.domain.model.ImageSource.MANUAL);
+        image.setImagePath("/uploads/car-images/" + car.getId() + "/missing.png"); image.setWidth(10); image.setHeight(10);
+        image = entityManager.merge(image);
+        entityManager.flush(); entityManager.clear();
+        // when
+        var findings = dataAuditService.audit().findings(Category.CATALOG_IMAGES);
+        // then
+        var imageId = image.getId();
+        assertThat(findings).anySatisfy(finding -> {
+            assertThat(finding.subject()).isEqualTo("Car Test audit gallery " + id);
+            assertThat(finding.evidence()).contains(imageId.toString(), "missing.png");
+        });
+        assertThat(entityManager.find(org.ctc.domain.model.CarImage.class, imageId)).as("the audit changes nothing").isNotNull();
+    }
+
+    @Test
     void givenDriverFieldedForTwoSubTeamsOnOneMatchday_whenAuditing_thenReportOverlapWithoutChangingLineups() {
         // given
         var season = testHelper.createSeason("Test_Lineup_Audit_" + id);

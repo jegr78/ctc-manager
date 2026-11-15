@@ -79,6 +79,7 @@ class BackupExportServiceTest {
                 mock(PickPublicationAttemptRepository.class), mock(PickPublicationSnapshotRepository.class),
                 mock(IncidentMatchContextRepository.class), mock(IncidentReportWindowRepository.class), mock(IncidentReportRepository.class), mock(IncidentReportRevisionRepository.class), mock(IncidentReportEventRepository.class), mock(IncidentDeliveryRepository.class), incidentThreads, mock(IncidentRulingRepository.class), mock(IncidentRulingRevisionRepository.class), mock(IncidentRulingPublicationRepository.class), mock(RacePenaltyRevisionRepository.class), mock(RaceDisqualificationRevisionRepository.class),
                 mock(LineupSubmissionRepository.class), mock(LineupSubmissionRevisionRepository.class), mock(LineupWindowEventRepository.class),
+                mock(CarImageRepository.class), mock(TrackImageRepository.class),
 				tempDir.toString()
 		);
 		ReflectionTestUtils.invokeMethod(service, "initialize");

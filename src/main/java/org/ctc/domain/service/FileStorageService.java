@@ -62,6 +62,13 @@ public class FileStorageService {
 		return "/uploads/races/" + raceId + "/" + filename;
 	}
 
+	/** Whether an {@code /uploads/} URL names a stored regular file inside the upload directory. */
+	public boolean exists(String url) {
+		if (url == null || !url.startsWith("/uploads/")) return false;
+		Path file = uploadDir.resolve(url.substring("/uploads/".length())).normalize();
+		return file.startsWith(uploadDir) && Files.isRegularFile(file);
+	}
+
 	public void delete(String url) {
 		if (url == null || !url.startsWith("/uploads/")) {
 			return;
@@ -111,7 +118,7 @@ public class FileStorageService {
 		String safeName = UUID.randomUUID().toString().substring(0, 8) + "_" + sanitizeFilename(filename);
 		Path target = dir.resolve(safeName);
 		validatePathWithinUploadDir(target);
-		byte[] data = downloads.download(sourceUrl, ImageDownloadClient.ImageType.ofFilename(filename));
+		byte[] data = downloads.download(sourceUrl, ImageContent.Format.ofFilename(filename));
 		Files.createDirectories(dir);
 		try {
 			Files.write(target, data);

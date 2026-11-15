@@ -45,6 +45,7 @@ class CarServiceTest {
 
 	@Spy private CarMetadataService metadataService = new CarMetadataService();
 
+	@Mock private CatalogImageService gallery;
 	@InjectMocks
 	private CarService carService;
 
@@ -187,7 +188,9 @@ class CarServiceTest {
 			carService.delete(id);
 
 			// then
-			verify(carRepository).delete(car);
+			var order = inOrder(gallery, carRepository);
+			order.verify(gallery).deleteAllForCar(id);
+			order.verify(carRepository).delete(car);
 		}
 
 		@Test

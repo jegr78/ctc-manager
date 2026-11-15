@@ -32,7 +32,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class BackupSchema {
 
-    public static final int SCHEMA_VERSION = 23;
+    public static final int SCHEMA_VERSION = 24;
 
     /** Archives from this version on no longer carry the season and race pick activation flags. */
     public static final int PICK_FLAGS_REMOVED_VERSION = 22;

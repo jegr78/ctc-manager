@@ -40,6 +40,7 @@ class TrackServiceTest {
 	@Mock
 	private FileStorageService fileStorageService;
 
+	@Mock private CatalogImageService gallery;
 	@InjectMocks
 	private TrackService trackService;
 
@@ -156,6 +157,7 @@ class TrackServiceTest {
 			trackService.delete(id);
 
 			// then
+			verify(gallery).deleteAllForTrack(track.getId());
 			verify(trackRepository).delete(track);
 		}
 

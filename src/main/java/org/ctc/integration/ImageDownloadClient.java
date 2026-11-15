@@ -12,6 +12,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.domain.service.ImageContent;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -41,36 +42,6 @@ public class ImageDownloadClient {
         this.client = RestClient.builder().requestFactory(requestFactory).build();
     }
 
-    /** Image formats recognised by their leading bytes. */
-    public enum ImageType {
-        PNG, JPEG, WEBP;
-
-        /** The type a target filename declares through its extension. */
-        public static ImageType ofFilename(String filename) {
-            String lower = filename == null ? "" : filename.toLowerCase(Locale.ROOT);
-            if (lower.endsWith(".png")) return PNG;
-            if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return JPEG;
-            if (lower.endsWith(".webp")) return WEBP;
-            throw new IllegalArgumentException("Unsupported image file type: " + filename);
-        }
-
-        boolean matches(byte[] data) {
-            return switch (this) {
-                case PNG -> startsWith(data, 0, 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A);
-                case JPEG -> startsWith(data, 0, 0xFF, 0xD8, 0xFF);
-                case WEBP -> startsWith(data, 0, 'R', 'I', 'F', 'F') && startsWith(data, 8, 'W', 'E', 'B', 'P');
-            };
-        }
-
-        private static boolean startsWith(byte[] data, int offset, int... expected) {
-            if (data.length < offset + expected.length) return false;
-            for (int index = 0; index < expected.length; index++) {
-                if ((data[offset + index] & 0xFF) != expected[index]) return false;
-            }
-            return true;
-        }
-    }
-
     /** Which URLs may be fetched; tests replace it to reach a local stub. */
     record Policy(String scheme, Set<String> hosts, int port, Predicate<InetAddress> address, Resolver resolver) { }
 
@@ -80,7 +51,7 @@ public class ImageDownloadClient {
     }
 
     // CodeQL FP: java/ssrf — host allowlist plus resolved-address check in validate() precede the request; see docs/security/sast-acceptance.md
-    public byte[] download(String url, ImageType expected) throws IOException {
+    public byte[] download(String url, ImageContent.Format expected) throws IOException {
         URI uri = validate(url);
         byte[] data;
         try {
