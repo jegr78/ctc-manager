@@ -23,5 +23,6 @@ app:
 ctc:
   site:
     output-dir: /app/data/site
+    public-base-url: ${CTC_SITE_PUBLIC_BASE_URL:https://jegr78.github.io/ctc-manager/}
     publication:
       directory: /app/data/site-publication

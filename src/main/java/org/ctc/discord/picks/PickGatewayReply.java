@@ -32,9 +32,19 @@ public final class PickGatewayReply {
     }
 
     public boolean deferPrivate(Consumer<PickGatewayResponse.Continuation> operation) {
+        return defer(response::deferPrivate, operation);
+    }
+
+    /** Like {@link #deferPrivate} but the acknowledgement and every continuation message are visible in the channel. */
+    public boolean deferPublic(Consumer<PickGatewayResponse.Continuation> operation) {
+        return defer(response::deferPublic, operation);
+    }
+
+    private boolean defer(java.util.function.Supplier<java.util.concurrent.CompletionStage<PickGatewayResponse.Continuation>> acknowledge,
+                          Consumer<PickGatewayResponse.Continuation> operation) {
         if (!claimInitial()) return false;
         try {
-            response.deferPrivate().thenAccept(continuation -> {
+            acknowledge.get().thenAccept(continuation -> {
                 if (continuation == null || !continuationValid()) return;
                 PickGatewayResponse.Continuation guarded = new PickGatewayResponse.Continuation() {
                     @Override public void replyPrivate(String message) {
