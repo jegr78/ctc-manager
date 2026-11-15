@@ -60,6 +60,8 @@ class TeamStatsServiceIT {
     String suffix;
     TestHelper.SeasonFixture fixture;
     Team subTeam;
+    Team parentOnly;
+    Team parentSub;
     UUID playoff;
 
     @BeforeEach
@@ -70,7 +72,9 @@ class TeamStatsServiceIT {
             fixture = helper.createFullSeasonFixture("T-STT" + suffix);
             subTeam = helper.createSubTeam("T-STT" + suffix + " Away B", "T-STT" + suffix + "_AWB", fixture.awayTeam());
             var regular = phases.findRegularPhase(fixture.season().getId());
-            for (var team : List.of(fixture.homeTeam(), fixture.awayTeam(), subTeam)) phaseTeams.save(new PhaseTeam(regular, team));
+            parentOnly = helper.createTeam("T-STT" + suffix + " Parent", "T-STT" + suffix + "_PAR");
+            parentSub = helper.createSubTeam("T-STT" + suffix + " Parent X", "T-STT" + suffix + "_PAX", parentOnly);
+            for (var team : List.of(fixture.homeTeam(), fixture.awayTeam(), subTeam, parentSub)) phaseTeams.save(new PhaseTeam(regular, team));
             var leader = driver("TSTA" + suffix);
             var second = driver("TSTB" + suffix);
             var rival = driver("TSTC" + suffix);
@@ -84,6 +88,10 @@ class TeamStatsServiceIT {
             var subRace = helper.createRace(day, subMatch);
             fielded(subRace, rival, subTeam, 1, 25);
             fielded(subRace, leader, fixture.homeTeam(), 2, 18);
+            var parentDay = helper.createMatchday(fixture.season(), "T-STT" + suffix + " MD3", 3);
+            var parentMatch = helper.createMatch(parentDay, parentSub, fixture.awayTeam());
+            scored(parentMatch, 20, 10);
+            fielded(helper.createRace(parentDay, parentMatch), driver("TSTD" + suffix), parentSub, 1, 25);
         });
         playoff = playoffService.createPlayoff(fixture.season().getId(), "Test stats final", 2).getId();
         UUID finalMatchup = tx.execute(status -> playoffs.findById(playoff).orElseThrow().getRounds().getLast().getMatchups().stream()
@@ -111,9 +119,9 @@ class TeamStatsServiceIT {
             helper.deleteSeasonCascade(season);
             seasons.flush();
             drivers.deleteAllById(driverIds);
-            teams.deleteById(subTeam.getId());
+            teams.deleteAllById(List.of(subTeam.getId(), parentSub.getId()));
             teams.flush();
-            teams.deleteAllById(List.of(fixture.homeTeam().getId(), fixture.awayTeam().getId()));
+            teams.deleteAllById(List.of(fixture.homeTeam().getId(), fixture.awayTeam().getId(), parentOnly.getId()));
         });
     }
 
@@ -124,8 +132,8 @@ class TeamStatsServiceIT {
         // then
         var table = tx.execute(status -> standings.calculateStandings(phases.findRegularPhase(fixture.season().getId()).getId(), null));
         var row = table.stream().filter(standing -> standing.getTeam().getId().equals(fixture.homeTeam().getId())).findFirst().orElseThrow();
-        assertThat(stats.rank()).as("the rank is the team's position in the website standings").isEqualTo(table.indexOf(row) + 1).isEqualTo(2);
-        assertThat(stats.ranked()).isEqualTo(table.size()).isEqualTo(3);
+        assertThat(stats.rank()).as("the rank is the team's position in the website standings").isEqualTo(table.indexOf(row) + 1).isEqualTo(3);
+        assertThat(stats.ranked()).isEqualTo(table.size()).isEqualTo(4);
         assertThat(List.of(stats.played(), stats.wins(), stats.draws(), stats.losses(), stats.pointsFor(), stats.pointsAgainst(), stats.matchPoints()))
                 .isEqualTo(List.of(row.getPlayed(), row.getWins(), row.getDraws(), row.getLosses(), row.getPointsFor(), row.getPointsAgainst(), row.getPoints()))
                 .isEqualTo(List.of(2, 1, 0, 1, 90, 90, 3));
@@ -170,7 +178,20 @@ class TeamStatsServiceIT {
         // then
         assertThat(stats.titles()).isEqualTo(1);
         assertThat(stats.playoffAppearances()).isEqualTo(1);
-        assertThat(stats.bestResult()).isEqualTo("2nd in " + season().getDisplayLabel());
+        assertThat(stats.bestResult()).isEqualTo("3rd in " + season().getDisplayLabel());
+    }
+
+    @Test
+    void givenParentPlayingOnlyThroughSubteams_whenReadingStats_thenFindItAlltimeWithoutAProfileSeason() {
+        // when
+        var stats = service.stats(parentOnly.getName(), StatsPeriod.of(null, List.of(season()), false));
+        // then
+        assertThat(stats.teamId()).isEqualTo(parentOnly.getId());
+        assertThat(stats.wins()).isEqualTo(1);
+        assertThat(stats.seasons()).isEqualTo(1);
+        assertThat(stats.profileSeasonLabel()).as("the website writes no profile page for a parent without its own standings row").isNull();
+        assertThatThrownBy(() -> service.stats(parentOnly.getName(), period())).as("a season lists only rostered teams")
+                .isInstanceOf(StatsLookupException.class).hasMessage("No team found");
     }
 
     @Test

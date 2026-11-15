@@ -68,7 +68,7 @@ class StatsInteractionHandlerTest {
         when(response.deferPrivate()).thenReturn(CompletableFuture.completedFuture(continuation));
         var season = new Season("CTC", 2026, 1);
         season.setId(UUID.randomUUID());
-        var team = new TeamStats(UUID.randomUUID(), "Test_Alpha", StatsPeriod.of(season, List.of(season), false), 3, 10, "A", 8, 5, 1, 2,
+        var team = new TeamStats(UUID.randomUUID(), "Test_Alpha", StatsPeriod.of(season, List.of(season), false), 3, 10, "Group A", 8, 5, 1, 2,
                 400, 350, 16, 16, "Semifinal", 0, null, 0, 0, List.of(new TeamStats.TopDriver("Test_one", 120)), "2026 | #1 | CTC");
         when(teams.stats("Test_Alpha", StatsScope.SEASON, season.getId().toString())).thenReturn(team);
         when(links.team(team.teamId(), "2026 | #1 | CTC")).thenReturn("https://example.test/season/2026-1-ctc/team/t-alf.html");
@@ -120,6 +120,20 @@ class StatsInteractionHandlerTest {
         // then
         verify(response).replyPrivate(StatsInteractionHandler.GONE);
         verify(malformed).replyPrivate(StatsInteractionHandler.GONE);
+        verify(response, never()).deferPublic();
+    }
+
+    @Test
+    void givenShareClickForAVanishedSeason_whenClicking_thenSayNoLongerAvailablePrivately() {
+        // given
+        var id = UUID.randomUUID();
+        var season = UUID.randomUUID();
+        when(teams.exists(id)).thenReturn(true);
+        when(seasons.period(StatsScope.SEASON, season.toString())).thenThrow(new StatsLookupException("No season found"));
+        // when
+        handler.onInteraction(button(StatsInteractionHandler.SHARE + "t:" + id + ":s:" + season), reply());
+        // then
+        verify(response).replyPrivate(StatsInteractionHandler.GONE);
         verify(response, never()).deferPublic();
     }
 

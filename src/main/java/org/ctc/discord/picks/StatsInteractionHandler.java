@@ -1,9 +1,12 @@
 package org.ctc.discord.picks;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,7 +66,7 @@ public class StatsInteractionHandler implements PickGatewayInteractionHandler {
 
     private void share(PickGatewayInteraction event, PickGatewayReply reply) {
         var request = ShareRequest.parse(event.action());
-        if (request == null || !(request.driver() ? drivers.exists(request.id()) : teams.exists(request.id()))) {
+        if (request == null || !(request.driver() ? drivers.exists(request.id()) : teams.exists(request.id())) || !periodExists(request)) {
             reply.replyPrivate(GONE);
             return;
         }
@@ -71,7 +74,17 @@ public class StatsInteractionHandler implements PickGatewayInteractionHandler {
         answer(reply, true, sharedBy, () -> compute(request.driver(), request.id().toString(), request.scope(), request.season()));
     }
 
-    private void answer(PickGatewayReply reply, boolean visible, String sharedBy, java.util.function.Supplier<Answer> work) {
+    /** Checks the shared season before the visible acknowledgement, so a vanished season answers privately. */
+    private boolean periodExists(ShareRequest request) {
+        try {
+            seasons.period(StatsScope.parse(request.scope()), request.season());
+            return true;
+        } catch (StatsLookupException gone) {
+            return false;
+        }
+    }
+
+    private void answer(PickGatewayReply reply, boolean visible, String sharedBy, Supplier<Answer> work) {
         long claim = claim();
         if (claim == IDLE) {
             reply.replyPrivate(BUSY);
@@ -79,7 +92,7 @@ public class StatsInteractionHandler implements PickGatewayInteractionHandler {
         }
         boolean queued = false;
         try {
-            java.util.function.Consumer<PickGatewayResponse.Continuation> operation = continuation -> {
+            Consumer<PickGatewayResponse.Continuation> operation = continuation -> {
                 try {
                     var answer = work.get();
                     continuation.replyPrivate(visible
@@ -150,11 +163,11 @@ public class StatsInteractionHandler implements PickGatewayInteractionHandler {
 
     private record Answer(PickGatewayMessage.Embed embed, String shareId) { }
 
-    /** The share button's custom ID: {@code ctc-stats:share:<d|t>:<entity>:<c|a|s>:<season or ->}, at most 95 characters. */
+    /** The share button's custom ID: {@code ctc-stats:share:<d|t>:<entity>:<c|a|s>:<season or ->}, at most 93 characters. */
     record ShareRequest(boolean driver, UUID id, String scope, String season) {
         static String id(boolean driver, UUID entity, StatsScope scope, StatsPeriod period) {
             String season = scope == StatsScope.SEASON && period.season() != null ? period.season().id().toString() : "-";
-            return SHARE + (driver ? "d" : "t") + ":" + entity + ":" + scope.name().substring(0, 1).toLowerCase(java.util.Locale.ROOT) + ":" + season;
+            return SHARE + (driver ? "d" : "t") + ":" + entity + ":" + scope.name().substring(0, 1).toLowerCase(Locale.ROOT) + ":" + season;
         }
 
         static ShareRequest parse(String action) {

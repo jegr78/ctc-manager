@@ -35,7 +35,7 @@ final class StatsEmbeds {
 
     static PickGatewayMessage.Embed team(TeamStats stats, String url) {
         var fields = new ArrayList<PickGatewayMessage.Field>();
-        String rank = "Rank " + stats.rank() + " of " + stats.ranked() + (stats.group() == null ? "" : " · Group " + PickInteractionViews.escape(stats.group()));
+        String rank = "Rank " + stats.rank() + " of " + stats.ranked() + (stats.group() == null ? "" : " · " + PickInteractionViews.escape(stats.group()));
         fields.add(new PickGatewayMessage.Field("Rank", rank, false));
         fields.add(new PickGatewayMessage.Field("Matches", count(stats.played(), "match", "matches") + " · " + count(stats.wins(), "win") + " · "
                 + count(stats.draws(), "draw") + " · " + count(stats.losses(), "loss", "losses") + " · " + stats.winRate() + "% won", false));

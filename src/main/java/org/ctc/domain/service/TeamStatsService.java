@@ -60,13 +60,13 @@ public class TeamStatsService {
     public TeamStats stats(String nameOption, StatsPeriod period) {
         var known = new LinkedHashSet<>(ids(seasons.counted()));
         known.addAll(period.seasonIds());
-        var team = resolve(nameOption, known);
+        var team = resolve(nameOption, known, period.alltime());
         return period.alltime() ? alltime(team.getParentOrSelf(), period) : season(team, period);
     }
 
     public boolean exists(UUID teamId) { return teams.existsById(teamId); }
 
-    /** Teams on a regular-season roster of the scoped seasons whose name or short name contains the query. */
+    /** Teams on a regular-season roster of the scoped seasons, plus their parents outside a season scope, matching the query. */
     public List<StatsChoice> choices(String query, StatsScope scope, String seasonOption) {
         boolean seasonScope = scope == StatsScope.SEASON && seasonOption != null;
         var found = candidates.get(seasonScope ? "season:" + seasonOption : "all", () -> candidates(seasonScope ? seasonOption : null));
@@ -82,29 +82,32 @@ public class TeamStatsService {
         } catch (StatsLookupException unknownSeason) {
             scoped = ids(seasons.counted());
         }
-        return rostered(scoped).stream()
+        return rostered(scoped, seasonOption == null).stream()
                 .sorted(Comparator.comparing(Team::getName, String.CASE_INSENSITIVE_ORDER).thenComparing(Team::getId))
                 .map(team -> new Candidate(team.getId(), team.getName() + " (" + team.getShortName() + ")",
                         List.of(team.getName().toLowerCase(Locale.ROOT), team.getShortName().toLowerCase(Locale.ROOT))))
                 .toList();
     }
 
-    private Team resolve(String option, Collection<UUID> seasonIds) {
+    private Team resolve(String option, Collection<UUID> seasonIds, boolean withParents) {
         if (option == null || option.isBlank()) throw new StatsLookupException("No team found");
         String wanted = option.strip();
         UUID id = uuid(wanted);
-        var matches = rostered(seasonIds).stream().filter(team -> id != null ? team.getId().equals(id)
+        var matches = rostered(seasonIds, withParents).stream().filter(team -> id != null ? team.getId().equals(id)
                 : team.getName().equalsIgnoreCase(wanted) || team.getShortName().equalsIgnoreCase(wanted)).toList();
         if (matches.isEmpty()) throw new StatsLookupException("No team found");
         if (matches.size() > 1) throw new StatsLookupException("Several teams match, pick one from the list");
         return matches.getFirst();
     }
 
-    private List<Team> rostered(Collection<UUID> seasonIds) {
+    /** Parents count alltime because alltime standings roll subteams up, even for a parent never rostered itself. */
+    private List<Team> rostered(Collection<UUID> seasonIds, boolean withParents) {
         var found = new LinkedHashSet<Team>();
         for (UUID seasonId : seasonIds) {
-            phases.findByType(seasonId, PhaseType.REGULAR)
-                    .ifPresent(regular -> phaseTeams.findByPhaseId(regular.getId()).forEach(row -> found.add(row.getTeam())));
+            phases.findByType(seasonId, PhaseType.REGULAR).ifPresent(regular -> phaseTeams.findByPhaseId(regular.getId()).forEach(row -> {
+                found.add(row.getTeam());
+                if (withParents) found.add(row.getTeam().getParentOrSelf());
+            }));
         }
         return List.copyOf(found);
     }
@@ -136,9 +139,9 @@ public class TeamStatsService {
         for (var season : counted) {
             var regular = regularStandings(season.getId());
             int rank = indexOf(regular, standing -> own.test(standing.getTeam())) + 1;
+            if (indexOf(regular, standing -> standing.getTeam().getId().equals(team.getId())) >= 0) profileSeason = season.getDisplayLabel();
             if (rank > 0) {
                 seasonCount++;
-                profileSeason = season.getDisplayLabel();
                 if (bestRank == 0 || rank < bestRank) { bestRank = rank; bestSeason = season.getDisplayLabel(); }
             }
             var playoff = playoffs.findBySeasonId(season.getId());
