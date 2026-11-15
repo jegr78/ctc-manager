@@ -20,7 +20,7 @@ runs:
       id: browser
       shell: bash
       run: |
-        ./mvnw org.apache.maven.plugins:maven-dependency-plugin:build-classpath -DincludeScope=test -Dmdep.outputFile="$RUNNER_TEMP/ctc-browser-classpath.txt" -q
+        timeout 300 ./mvnw org.apache.maven.plugins:maven-dependency-plugin:build-classpath -DincludeScope=test -Dmdep.outputFile="$RUNNER_TEMP/ctc-browser-classpath.txt"
         python3 scripts/ci/browser-cache.py --classpath-file "$RUNNER_TEMP/ctc-browser-classpath.txt" >> "$GITHUB_OUTPUT"
     - name: Cache Playwright Browsers
       uses: actions/cache@v6

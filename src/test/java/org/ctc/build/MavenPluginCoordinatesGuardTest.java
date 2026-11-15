@@ -12,7 +12,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 class MavenPluginCoordinatesGuardTest {
-    private static final Pattern PREFIX_GOAL = Pattern.compile("(?<![\\w.:/=-])[a-z][a-z0-9-]*:[a-z][a-zA-Z-]*(?![\\w:/-])");
+    private static final Pattern COORDINATE_GOAL = Pattern.compile("[a-z][\\w.-]*:[a-z][\\w.-]*(:[\\w.-]+)?:[a-z][a-zA-Z-]*");
 
     @Test
     void givenCiDockerAndReleaseCommands_whenCallingAPluginGoal_thenUseFullCoordinatesInsteadOfAPrefix() throws IOException {
@@ -28,8 +28,9 @@ class MavenPluginCoordinatesGuardTest {
             for (int index = 0; index < lines.size(); index++) {
                 String line = lines.get(index);
                 if (!line.contains("mvnw")) continue;
-                var match = PREFIX_GOAL.matcher(line.substring(line.indexOf("mvnw")));
-                while (match.find()) violations.add(file + ":" + (index + 1) + " " + match.group());
+                for (String goal : pluginGoals(line.substring(line.indexOf("mvnw")))) {
+                    if (!COORDINATE_GOAL.matcher(goal).matches()) violations.add(file + ":" + (index + 1) + " " + goal);
+                }
             }
         }
         // then
@@ -37,11 +38,27 @@ class MavenPluginCoordinatesGuardTest {
     }
 
     @Test
-    void givenPrefixAndCoordinateGoals_whenMatching_thenFlagOnlyThePrefix() {
+    void givenPrefixAndCoordinateGoals_whenChecking_thenAcceptOnlyFullCoordinates() {
         // when / then
-        assertThat(PREFIX_GOAL.matcher("mvnw dependency:build-classpath -q").find()).isTrue();
-        assertThat(PREFIX_GOAL.matcher("mvnw -B versions:set -DnewVersion=1").find()).isTrue();
-        assertThat(PREFIX_GOAL.matcher("mvnw org.apache.maven.plugins:maven-dependency-plugin:build-classpath -Dmdep.outputFile=target/x.txt").find()).isFalse();
-        assertThat(PREFIX_GOAL.matcher("mvnw clean verify -Dsome=https://example.com/a:b").find()).isFalse();
+        assertThat(invalid("mvnw dependency:build-classpath -q")).containsExactly("dependency:build-classpath");
+        assertThat(invalid("mvnw -B versions:set -DnewVersion=1")).containsExactly("versions:set");
+        assertThat(invalid("mvnw org.apache.maven.plugins:maven-dependency-pluginopy-dependencies -B"))
+                .as("a coordinate that lost its goal separator is still a prefix").hasSize(1);
+        assertThat(invalid("mvnw clean org.apache.maven.plugins:maven-dependency-plugin:build-classpath -Dmdep.outputFile=target/x.txt")).isEmpty();
+        assertThat(invalid("mvnw org.apache.maven.plugins:maven-help-plugin:3.5.2:evaluate -Dx=https://example.com/a:b")).isEmpty();
+    }
+
+    private static List<String> invalid(String command) {
+        return pluginGoals(command).stream().filter(goal -> !COORDINATE_GOAL.matcher(goal).matches()).toList();
+    }
+
+    /** Whitespace-separated arguments with a colon that are not options, expressions or paths. */
+    private static List<String> pluginGoals(String command) {
+        var goals = new ArrayList<String>();
+        for (String token : command.split("[\\s\"'()]+")) {
+            if (token.startsWith("-") || token.contains("=") || token.contains("/") || token.contains("$") || !token.contains(":")) continue;
+            goals.add(token);
+        }
+        return goals;
     }
 }
