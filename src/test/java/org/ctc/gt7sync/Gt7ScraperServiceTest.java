@@ -260,6 +260,8 @@ class Gt7ScraperServiceTest {
                 Map.entry("3_01", "car365_3_01-CiZNavAe.js"));
         assertThat(scraperService.carShotModules(indexJs, "3656")).containsOnlyKeys("1_01", "1_02", "2_01", "2_02", "3_01").containsEntry("1_01", "car3656_1_01-DTZP2K4l.js");
         assertThat(scraperService.carShotModules(indexJs, "999")).isEmpty();
+        String fourKOnly = "\"../../generated-assets/images/car_shots/4k/car77_1_01.jpg\":()=>H(()=>import(`./car77_1_01-Ab.js`),[])";
+        assertThat(scraperService.carShotModules(fourKOnly, "77")).as("a slot without a 2K entry is not loaded").isEmpty();
     }
 
     @Test
