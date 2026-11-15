@@ -113,7 +113,12 @@ public class FileStorageService {
 		validatePathWithinUploadDir(target);
 		byte[] data = downloads.download(sourceUrl, ImageDownloadClient.ImageType.ofFilename(filename));
 		Files.createDirectories(dir);
-		Files.write(target, data);
+		try {
+			Files.write(target, data);
+		} catch (IOException | RuntimeException failure) {
+			Files.deleteIfExists(target);
+			throw failure;
+		}
 		log.info("Downloaded file: {} ({} bytes)", target, data.length);
 		return "/uploads/" + subDir + "/" + entityId + "/" + safeName;
 	}

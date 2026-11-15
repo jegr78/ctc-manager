@@ -278,12 +278,10 @@
         <Bug pattern="SSRF_SPRING,SSRF,URLCONNECTION_SSRF_FD"/>
     </Match>
 
-    <!-- FileStorageService path-traversal defenses: validatePathWithinUploadDir (line 156-162)
-         and validateNoPathTraversal (line 164-169) use toAbsolutePath().normalize().startsWith()
-         and contains("..") checks respectively. find-sec-bugs PATH_TRAVERSAL_IN detects the
-         unresolved path usage at the call sites before the validation call — it cannot trace
-         the defense through separate private methods. The defense is intentional and unit-tested.
-         See FileStorageService.java:156-169 for the full defense implementation. -->
+    <!-- FileStorageService path-traversal defenses: validatePathWithinUploadDir and validateNoPathTraversal
+         use toAbsolutePath().normalize().startsWith() and contains("..") checks respectively. find-sec-bugs
+         PATH_TRAVERSAL_IN detects the unresolved path usage at the call sites before the validation call; it cannot
+         trace the defense through separate private methods. The defense is intentional and unit-tested. -->
     <Match>
         <Class name="org.ctc.domain.service.FileStorageService"/>
         <Bug pattern="PATH_TRAVERSAL_IN"/>
