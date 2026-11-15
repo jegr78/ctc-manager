@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -29,7 +28,7 @@ public class StatsSeasonService {
         return seasons.findAll().stream()
                 .filter(season -> !season.getName().contains("Test"))
                 .filter(season -> phases.findByType(season.getId(), PhaseType.REGULAR).isPresent())
-                .sorted(Comparator.comparingInt(Season::getYear).thenComparingInt(Season::getNumber).thenComparing(Season::getId))
+                .sorted(Season.CHRONOLOGICAL)
                 .toList();
     }
 

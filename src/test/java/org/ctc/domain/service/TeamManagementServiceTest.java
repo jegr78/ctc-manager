@@ -189,6 +189,49 @@ class TeamManagementServiceTest {
 	}
 
 	@Nested
+	class TeamDetailLineupOrderTest {
+
+		@Test
+		void givenLineupsAndAnActiveSeason_whenLoadingTeamDetail_thenListActiveFirstThenNewest() {
+			// given
+			var team = createTeam("ALF", "Alpha");
+			var ninth = new Season("Beta", 2024, 2);
+			ninth.setId(UUID.randomUUID());
+			var tenth = new Season("Alpha", 2025, 1);
+			tenth.setId(UUID.randomUUID());
+			var newest = new Season("Gamma", 2026, 1);
+			newest.setId(UUID.randomUUID());
+			var active = new Season("Zeta", 2023, 1);
+			active.setId(UUID.randomUUID());
+			active.setActive(true);
+			var driver = new org.ctc.domain.model.Driver("Test_driver", "Test driver");
+			driver.setId(UUID.randomUUID());
+			when(teamRepository.findById(team.getId())).thenReturn(Optional.of(team));
+			when(seasonRepository.findBySeasonTeamsTeamId(team.getId())).thenReturn(List.of(ninth, active, newest, tenth));
+			when(raceLineupRepository.findByTeamIdIn(List.of(team.getId()))).thenReturn(List.of(lineup(ninth, driver, team), lineup(active, driver, team),
+					lineup(newest, driver, team), lineup(tenth, driver, team)));
+			when(seasonDriverRepository.findByTeamIdIn(List.of(team.getId()))).thenReturn(List.of());
+
+			// when
+			var detail = service.getTeamDetailData(team.getId());
+
+			// then
+			assertThat(detail.seasonDriverGroups()).extracting(group -> group.season().getName())
+					.as("the active season leads, then year and number decide, not the name").containsExactly("Zeta", "Gamma", "Alpha", "Beta");
+		}
+
+		private org.ctc.domain.model.RaceLineup lineup(Season season, org.ctc.domain.model.Driver driver, Team team) {
+			var phase = new org.ctc.domain.model.SeasonPhase();
+			phase.setSeason(season);
+			var matchday = new org.ctc.domain.model.Matchday();
+			matchday.setPhase(phase);
+			var race = new org.ctc.domain.model.Race();
+			race.setMatchday(matchday);
+			return new org.ctc.domain.model.RaceLineup(race, driver, team);
+		}
+	}
+
+	@Nested
 	class FindByIdTest {
 
 		@Test

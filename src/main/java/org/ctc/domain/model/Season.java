@@ -95,8 +95,8 @@ public class Season extends BaseEntity {
 	private List<Track> tracks = new ArrayList<>();
 
 	/** Oldest first: by year, then number, with the ID as a stable tie-breaker. */
-	public static final java.util.Comparator<Season> CHRONOLOGICAL = java.util.Comparator.comparingInt(Season::getYear)
-			.thenComparingInt(Season::getNumber).thenComparing(Season::getId, java.util.Comparator.nullsFirst(java.util.Comparator.naturalOrder()));
+	public static final Comparator<Season> CHRONOLOGICAL = Comparator.comparingInt(Season::getYear)
+			.thenComparingInt(Season::getNumber).thenComparing(Season::getId, Comparator.nullsFirst(Comparator.naturalOrder()));
 
 	public Season(String name) {
 		this.name = name;

@@ -22,6 +22,9 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @RequiredArgsConstructor
 public class TeamManagementService {
+	private static final Comparator<Season> ACTIVE_THEN_NEWEST = Comparator.comparing(Season::isActive).reversed()
+			.thenComparing(Season.CHRONOLOGICAL.reversed());
+
 
 	private final TeamRepository teamRepository;
 	private final SeasonRepository seasonRepository;
@@ -62,12 +65,6 @@ public class TeamManagementService {
 						)
 				))
 				.entrySet().stream()
-				.sorted((a, b) -> {
-					if (a.getKey().isActive() != b.getKey().isActive()) {
-						return a.getKey().isActive() ? -1 : 1;
-					}
-					return Season.CHRONOLOGICAL.compare(b.getKey(), a.getKey());
-				})
 				.map(entry -> {
 					var sortedByTeam = new LinkedHashMap<Team, List<Driver>>();
 					entry.getValue().entrySet().stream()
@@ -99,12 +96,6 @@ public class TeamManagementService {
 						)
 				))
 				.entrySet().stream()
-				.sorted((a, b) -> {
-					if (a.getKey().isActive() != b.getKey().isActive()) {
-						return a.getKey().isActive() ? -1 : 1;
-					}
-					return Season.CHRONOLOGICAL.compare(b.getKey(), a.getKey());
-				})
 				.map(entry -> {
 					var sortedByTeam = new LinkedHashMap<Team, List<Driver>>();
 					entry.getValue().entrySet().stream()
@@ -117,12 +108,7 @@ public class TeamManagementService {
 		// Merge: lineup groups first, then fallback groups
 		var allGroups = new ArrayList<>(seasonDriverGroups);
 		allGroups.addAll(fallbackGroups);
-		allGroups.sort((a, b) -> {
-			if (a.season().isActive() != b.season().isActive()) {
-				return a.season().isActive() ? -1 : 1;
-			}
-			return Season.CHRONOLOGICAL.compare(b.season(), a.season());
-		});
+		allGroups.sort(Comparator.comparing(SeasonDriverGroup::season, ACTIVE_THEN_NEWEST));
 
 		var allGroupedSeasonIds = allGroups.stream()
 				.map(g -> g.season().getId())
