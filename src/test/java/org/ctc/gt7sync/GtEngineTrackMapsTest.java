@@ -71,6 +71,9 @@ class GtEngineTrackMapsTest {
                 .hasMessage("Invalid or duplicate GT-Engine mapping for  Monza ");
         assertThatThrownBy(() -> list(List.of(new Layout("../etc", "x")), List.of(), List.of("../etc")))
                 .hasMessage("Invalid or duplicate GT-Engine layout ../etc");
+        for (String slug : List.of("monza-", "monza--2", "-monza", "Monza"))
+            assertThatThrownBy(() -> list(List.of(new Layout(slug, "x")), List.of(), List.of(slug)))
+                    .as(slug).hasMessage("Invalid or duplicate GT-Engine layout " + slug);
         assertThatThrownBy(() -> new GtEngineTrackMaps("https://example.com/maps.html", GtEngineTrackMaps.IMAGE_BASE, "1.65", "2026-11-15",
                 layouts, List.of(), List.of("fuji", "monza"), List.of())).hasMessage("Unexpected GT-Engine source");
     }

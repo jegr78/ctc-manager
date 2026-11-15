@@ -24,9 +24,9 @@ public record GtEngineTrackMaps(String source, String imageBase, String gameVers
                                 List<Mapping> mappings, List<String> unmappedLayouts, List<String> unmappedTracks) {
     public static final String PAGE_URL = "https://gt-engine.com/gt7/tracks/track-maps.html";
     public static final String IMAGE_BASE = "https://gt-engine.com/gt7/tracks/images/md/";
-    private static final Pattern SLUG = Pattern.compile("[a-z0-9]+(?:-[a-z0-9]+)*");
+    private static final Pattern SLUG = Pattern.compile("[a-z0-9][a-z0-9-]*");
     private static final Pattern IMAGE_HREF = Pattern.compile("images/md/(" + SLUG.pattern() + ")\\.png");
-    private static final Pattern VERSION = Pattern.compile("\\(Ver\\.\\s*([0-9]+(?:\\.[0-9]+)*)\\)");
+    private static final Pattern VERSION = Pattern.compile("\\(Ver\\.\\s?([0-9.]{1,16})\\)");
     private static final int MAX_LAYOUTS = 500;
     private static final int MAX_SLUG = 80;
     private static final ObjectMapper JSON = new ObjectMapper().enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
@@ -102,7 +102,7 @@ public record GtEngineTrackMaps(String source, String imageBase, String gameVers
             var href = IMAGE_HREF.matcher(anchor.attr("href"));
             if (!href.matches()) throw new IllegalArgumentException("Unexpected GT-Engine map link " + anchor.attr("href"));
             String slug = href.group(1);
-            if (slug.length() > MAX_SLUG) throw new IllegalArgumentException("GT-Engine layout slug is too long");
+            if (!validSlug(slug)) throw new IllegalArgumentException("Unexpected GT-Engine map link " + anchor.attr("href"));
             if (seen.add(slug)) layouts.add(new Layout(slug, anchor.attr("data-title").strip()));
             if (layouts.size() > MAX_LAYOUTS) throw new IllegalArgumentException("GT-Engine lists more layouts than expected");
         }
@@ -124,7 +124,7 @@ public record GtEngineTrackMaps(String source, String imageBase, String gameVers
     }
 
     private static boolean validSlug(String slug) {
-        return slug != null && slug.length() <= MAX_SLUG && SLUG.matcher(slug).matches();
+        return slug != null && slug.length() <= MAX_SLUG && SLUG.matcher(slug).matches() && !slug.endsWith("-") && !slug.contains("--");
     }
 
     public record Layout(String slug, String title) { }
