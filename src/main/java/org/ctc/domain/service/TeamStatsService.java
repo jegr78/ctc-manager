@@ -6,7 +6,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -25,7 +24,7 @@ import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
-import org.ctc.domain.stats.StatsCache;
+import org.ctc.domain.stats.StatsCandidates;
 import org.ctc.domain.stats.StatsChoice;
 import org.ctc.domain.stats.StatsLookupException;
 import org.ctc.domain.stats.StatsPeriod;
@@ -51,16 +50,22 @@ public class TeamStatsService {
     private final PlayoffRepository playoffs;
     private final RaceRepository races;
     private final RaceLineupRepository lineups;
-    private final StatsCache<List<Candidate>> candidates = new StatsCache<>();
+    private final StatsCandidates candidates = new StatsCandidates();
 
     public TeamStats stats(String nameOption, StatsScope scope, String seasonOption) {
-        return stats(nameOption, seasons.period(scope, seasonOption));
+        var counted = seasons.counted();
+        return stats(nameOption, seasons.period(counted, scope, seasonOption), ids(counted));
     }
 
+    /** Figures for an explicit period; teams resolve among the counted seasons and the period's own seasons. */
     public TeamStats stats(String nameOption, StatsPeriod period) {
         var known = new LinkedHashSet<>(ids(seasons.counted()));
         known.addAll(period.seasonIds());
-        var team = resolve(nameOption, known, period.alltime());
+        return stats(nameOption, period, known);
+    }
+
+    private TeamStats stats(String nameOption, StatsPeriod period, Collection<UUID> known) {
+        var team = resolve(nameOption, known);
         return period.alltime() ? alltime(team.getParentOrSelf(), period) : season(team, period);
     }
 
@@ -68,32 +73,26 @@ public class TeamStatsService {
 
     /** Teams on a regular-season roster of the scoped seasons, plus their parents outside a season scope, matching the query. */
     public List<StatsChoice> choices(String query, StatsScope scope, String seasonOption) {
-        boolean seasonScope = scope == StatsScope.SEASON && seasonOption != null;
-        var found = candidates.get(seasonScope ? "season:" + seasonOption : "all", () -> candidates(seasonScope ? seasonOption : null));
-        String needle = query == null ? "" : query.strip().toLowerCase(Locale.ROOT);
-        return found.stream().filter(candidate -> needle.isEmpty() || candidate.names().stream().anyMatch(name -> name.contains(needle)))
-                .limit(25).map(candidate -> new StatsChoice(candidate.label(), candidate.id().toString())).toList();
+        UUID season = scope == StatsScope.SEASON ? seasons.seasonKey(seasonOption) : null;
+        return candidates.choices(season == null ? "all" : season.toString(), () -> candidates(season), query);
     }
 
-    private List<Candidate> candidates(String seasonOption) {
-        List<UUID> scoped;
-        try {
-            scoped = seasonOption != null ? seasons.period(StatsScope.SEASON, seasonOption).seasonIds() : ids(seasons.counted());
-        } catch (StatsLookupException unknownSeason) {
-            scoped = ids(seasons.counted());
-        }
-        return rostered(scoped, seasonOption == null).stream()
+    void clearCaches() { candidates.clear(); }
+
+    private List<StatsCandidates.Candidate> candidates(UUID season) {
+        return rostered(season != null ? List.of(season) : ids(seasons.counted()), season == null).stream()
                 .sorted(Comparator.comparing(Team::getName, String.CASE_INSENSITIVE_ORDER).thenComparing(Team::getId))
-                .map(team -> new Candidate(team.getId(), team.getName() + " (" + team.getShortName() + ")",
-                        List.of(team.getName().toLowerCase(Locale.ROOT), team.getShortName().toLowerCase(Locale.ROOT))))
+                .map(team -> new StatsCandidates.Candidate(team.getId(), team.getName() + " (" + team.getShortName() + ")",
+                        List.of(team.getName(), team.getShortName())))
                 .toList();
     }
 
-    private Team resolve(String option, Collection<UUID> seasonIds, boolean withParents) {
+    /** The UUID an autocomplete choice carries, else one exact case-insensitive name or short name; a season answer reports a parent without its own row. */
+    private Team resolve(String option, Collection<UUID> seasonIds) {
         if (option == null || option.isBlank()) throw new StatsLookupException("No team found");
         String wanted = option.strip();
-        UUID id = uuid(wanted);
-        var matches = rostered(seasonIds, withParents).stream().filter(team -> id != null ? team.getId().equals(id)
+        UUID id = StatsCandidates.uuid(wanted);
+        var matches = rostered(seasonIds, true).stream().filter(team -> id != null ? team.getId().equals(id)
                 : team.getName().equalsIgnoreCase(wanted) || team.getShortName().equalsIgnoreCase(wanted)).toList();
         if (matches.isEmpty()) throw new StatsLookupException("No team found");
         if (matches.size() > 1) throw new StatsLookupException("Several teams match, pick one from the list");
@@ -220,14 +219,4 @@ public class TeamStatsService {
     }
 
     private static List<UUID> ids(List<Season> list) { return list.stream().map(Season::getId).toList(); }
-
-    private static UUID uuid(String value) {
-        try {
-            return UUID.fromString(value);
-        } catch (IllegalArgumentException name) {
-            return null;
-        }
-    }
-
-    private record Candidate(UUID id, String label, List<String> names) { }
 }

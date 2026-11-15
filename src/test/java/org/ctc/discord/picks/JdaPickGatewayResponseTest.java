@@ -188,21 +188,22 @@ class JdaPickGatewayResponseTest {
     }
 
     @Test
-    void givenPublicDeferral_whenSharing_thenAcknowledgeVisiblyAndPostWithoutMentions() {
+    void givenPrivateAcknowledgement_whenPostingVisibly_thenSendANonEphemeralFollowupWithoutMentions() {
         // given
-        when(event.deferReply(false)).thenReturn(initial);
+        when(event.deferReply(true)).thenReturn(initial);
         var followup = mock(WebhookMessageCreateAction.class, RETURNS_SELF);
         when(hook.sendMessageEmbeds(any(net.dv8tion.jda.api.entities.MessageEmbed.class))).thenReturn(followup);
-        var future = response.deferPublic().toCompletableFuture();
+        var future = response.deferPrivate().toCompletableFuture();
         var acknowledged = ArgumentCaptor.forClass(Consumer.class);
         verify(initial).queue(acknowledged.capture(), any());
         acknowledged.getValue().accept(hook);
         // when
-        future.join().replyPrivate(new PickGatewayMessage("Shared by Test Member", List.of(), null,
+        future.join().postVisible(new PickGatewayMessage("Shared by Test Member", List.of(), null,
                 new PickGatewayMessage.Embed("Test driver", null, "Alltime", List.of(), null)));
         // then
-        verify(event, never()).deferReply(true);
-        verify(followup, never()).setEphemeral(anyBoolean());
+        verify(event, never()).deferReply(false);
+        verify(followup).setEphemeral(false);
+        verify(followup, never()).setEphemeral(true);
         verify(followup).setContent("Shared by Test Member");
         verify(followup).setAllowedMentions(List.of());
         verify(followup).queue(any(), any());

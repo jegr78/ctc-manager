@@ -25,5 +25,7 @@ public final class StatsCache<V> {
         return value;
     }
 
+    public void clear() { entries.clear(); }
+
     private record Entry<V>(V value, long loadedAt) { }
 }

@@ -6,7 +6,6 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -23,7 +22,7 @@ import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonPhaseRepository;
 import org.ctc.domain.stats.DriverStats;
-import org.ctc.domain.stats.StatsCache;
+import org.ctc.domain.stats.StatsCandidates;
 import org.ctc.domain.stats.StatsChoice;
 import org.ctc.domain.stats.StatsLookupException;
 import org.ctc.domain.stats.StatsPeriod;
@@ -46,15 +45,21 @@ public class DriverStatsService {
     private final SeasonDriverRepository seasonDrivers;
     private final DriverRankingService rankings;
     private final SeasonPhaseRepository phases;
-    private final StatsCache<List<Candidate>> candidates = new StatsCache<>();
+    private final StatsCandidates candidates = new StatsCandidates();
 
     public DriverStats stats(String nameOption, StatsScope scope, String seasonOption) {
-        return stats(nameOption, seasons.period(scope, seasonOption));
+        var counted = seasons.counted();
+        return stats(nameOption, seasons.period(counted, scope, seasonOption), ids(counted));
     }
 
+    /** Figures for an explicit period; drivers resolve among the counted seasons and the period's own seasons. */
     public DriverStats stats(String nameOption, StatsPeriod period) {
         var known = new LinkedHashSet<>(ids(seasons.counted()));
         known.addAll(period.seasonIds());
+        return stats(nameOption, period, known);
+    }
+
+    private DriverStats stats(String nameOption, StatsPeriod period, Collection<UUID> known) {
         var driver = resolve(nameOption, known);
         var ranking = period.alltime() ? rankings.calculateAlltimeRanking(period.seasonIds())
                 : rankings.aggregateAcrossPhases(phases.findBySeasonIdOrderBySortIndex(period.season().id()).stream().map(SeasonPhase::getId).toList(),
@@ -72,24 +77,18 @@ public class DriverStatsService {
 
     /** Drivers with a counted result in the scoped seasons whose PSN ID, nickname or alias contains the query. */
     public List<StatsChoice> choices(String query, StatsScope scope, String seasonOption) {
-        boolean seasonScope = scope == StatsScope.SEASON && seasonOption != null;
-        var found = candidates.get(seasonScope ? "season:" + seasonOption : "all", () -> candidates(seasonScope ? seasonOption : null));
-        String needle = query == null ? "" : query.strip().toLowerCase(Locale.ROOT);
-        return found.stream().filter(candidate -> needle.isEmpty() || candidate.names().stream().anyMatch(name -> name.contains(needle)))
-                .limit(25).map(candidate -> new StatsChoice(candidate.label(), candidate.id().toString())).toList();
+        UUID season = scope == StatsScope.SEASON ? seasons.seasonKey(seasonOption) : null;
+        return candidates.choices(season == null ? "all" : season.toString(), () -> candidates(season), query);
     }
 
-    private List<Candidate> candidates(String seasonOption) {
-        List<UUID> scoped;
-        try {
-            scoped = seasonOption != null ? seasons.period(StatsScope.SEASON, seasonOption).seasonIds() : ids(seasons.counted());
-        } catch (StatsLookupException unknownSeason) {
-            scoped = ids(seasons.counted());
-        }
+    void clearCaches() { candidates.clear(); }
+
+    private List<StatsCandidates.Candidate> candidates(UUID season) {
+        List<UUID> scoped = season != null ? List.of(season) : ids(seasons.counted());
         if (scoped.isEmpty()) return List.of();
         return drivers.findWithResultsInSeasons(scoped).stream()
                 .sorted(Comparator.comparing(Driver::getPsnId, String.CASE_INSENSITIVE_ORDER).thenComparing(Driver::getId))
-                .map(driver -> new Candidate(driver.getId(), label(driver), names(driver).stream().map(name -> name.toLowerCase(Locale.ROOT)).toList()))
+                .map(driver -> new StatsCandidates.Candidate(driver.getId(), label(driver), names(driver)))
                 .toList();
     }
 
@@ -98,7 +97,7 @@ public class DriverStatsService {
         if (option == null || option.isBlank() || seasonIds.isEmpty()) throw new StatsLookupException("No driver found");
         String wanted = option.strip();
         var known = drivers.findWithResultsInSeasons(seasonIds);
-        UUID id = uuid(wanted);
+        UUID id = StatsCandidates.uuid(wanted);
         var matches = known.stream().filter(driver -> id != null ? driver.getId().equals(id)
                 : names(driver).stream().anyMatch(name -> name.equalsIgnoreCase(wanted))).toList();
         if (matches.isEmpty()) throw new StatsLookupException("No driver found");
@@ -177,13 +176,6 @@ public class DriverStatsService {
 
     private static List<UUID> ids(List<Season> list) { return list.stream().map(Season::getId).toList(); }
 
-    private static UUID uuid(String value) {
-        try {
-            return UUID.fromString(value);
-        } catch (IllegalArgumentException name) {
-            return null;
-        }
-    }
 
     private static List<String> names(Driver driver) {
         var names = new ArrayList<String>();
@@ -197,6 +189,4 @@ public class DriverStatsService {
         return driver.getNickname() == null || driver.getNickname().equalsIgnoreCase(driver.getPsnId())
                 ? driver.getPsnId() : driver.getPsnId() + " (" + driver.getNickname() + ")";
     }
-
-    private record Candidate(UUID id, String label, List<String> names) { }
 }

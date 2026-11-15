@@ -784,17 +784,19 @@ covers every published season and `season` uses the chosen one. Seasons with "Te
 or without a regular phase never count. Walkover races are excluded, playoff and guest races count,
 and a disqualified result counts as a race without a finishing position. Only drivers with a counted
 result are found. `/stats` reads the saved data directly, so a saved result appears in Discord
-before the next website snapshot is published. One answer is computed at a time; a second request
-meanwhile answers that stats are busy, so the private commands keep their workers. Autocomplete
-lists are cached for one minute.
+before the next website snapshot is published. Stats answers use at most one worker fewer than
+`app.discord.picks.workers` (default 2), at least one; a request beyond that answers that stats are busy, so the
+private commands always keep a worker. Autocomplete lists are cached for one minute per season.
 
 `/stats team name:<team> [scope] [season]` matches team names and short names. A season answer is
 the team's row of the website's regular-season standings, with its group and playoff result; an
 alltime answer is its row of the alltime standings with subteams rolled up to the parent, plus
 seasons, best regular-season result, playoff appearances and titles. Both answers list the top
-three drivers. Every answer carries **Share in channel**: the button recomputes the figures and
-posts them visibly with "Shared by <display name>", without mentions. It answers "No longer
-available" when the driver or team was removed.
+three drivers. Every answer carries **Share in channel**: the button recomputes the figures for the
+season the answer showed, confirms privately and then posts them visibly with "Shared by <display
+name>", without mentions. Failures stay private, for example "No longer available" when the driver,
+team or season was removed. Discord lets members use the button wherever they may use application
+commands; restrict `/stats` to channels through the guild's integration settings if needed.
 
 `CTC_SITE_PUBLIC_BASE_URL` maps to `ctc.site.public-base-url`. The `prod` profile defaults it to
 the GitHub Pages URL. When set, embed titles link to the season profile page, or for alltime to

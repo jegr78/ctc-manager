@@ -1,11 +1,9 @@
 package org.ctc.discord.picks;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.Semaphore;
 import java.util.function.Consumer;
-import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -23,8 +21,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * Entry point of the public /stats command. Answers are private embeds without mentions and carry a stateless
- * "Share in channel" button that recomputes the answer and posts it visibly. Only one answer is computed at a time
- * so public traffic always leaves workers for the private pick, lineup and incident commands.
+ * "Share in channel" button that recomputes the answer and posts it visibly. Stats answers hold at most one worker
+ * fewer than the pool has, so public traffic always leaves a worker for the private pick, lineup and incident commands.
  */
 @Slf4j
 @Component
@@ -34,18 +32,16 @@ public class StatsInteractionHandler implements PickGatewayInteractionHandler {
     static final String FAILED = "Stats could not be loaded. Try again shortly.";
     static final String GONE = "No longer available";
     static final String SHARE = "ctc-stats:share:";
-    private static final long IDLE = Long.MIN_VALUE;
-    private static final long STALE_NANOS = 30_000_000_000L;
     private final DriverStatsService drivers;
     private final TeamStatsService teams;
     private final StatsSeasonService seasons;
     private final SiteProfileLinks links;
-    private final AtomicLong runningSince = new AtomicLong(IDLE);
-    private final LongSupplier nanos;
+    private final Semaphore slots;
 
     @Autowired
-    public StatsInteractionHandler(DriverStatsService drivers, TeamStatsService teams, StatsSeasonService seasons, SiteProfileLinks links) {
-        this(drivers, teams, seasons, links, System::nanoTime);
+    public StatsInteractionHandler(DriverStatsService drivers, TeamStatsService teams, StatsSeasonService seasons, SiteProfileLinks links,
+                                   PickGatewaySettings settings) {
+        this(drivers, teams, seasons, links, new Semaphore(Math.max(1, settings.getWorkers() - 1)));
     }
 
     @Override
@@ -59,34 +55,27 @@ public class StatsInteractionHandler implements PickGatewayInteractionHandler {
                     reply.replyPrivate("Choose /stats driver or /stats team.");
                     return;
                 }
-                answer(reply, false, null, () -> compute(driver, event.option("name"), event.option("scope"), event.option("season")));
+                answer(reply, null, () -> compute(driver, event.option("name"), event.option("scope"), event.option("season")));
             }
         }
     }
 
     private void share(PickGatewayInteraction event, PickGatewayReply reply) {
         var request = ShareRequest.parse(event.action());
-        if (request == null || !(request.driver() ? drivers.exists(request.id()) : teams.exists(request.id())) || !periodExists(request)) {
+        if (request == null) {
             reply.replyPrivate(GONE);
             return;
         }
         String sharedBy = "Shared by " + (event.userName() == null || event.userName().isBlank() ? "a member" : PickInteractionViews.escape(event.userName()));
-        answer(reply, true, sharedBy, () -> compute(request.driver(), request.id().toString(), request.scope(), request.season()));
+        answer(reply, sharedBy, () -> {
+            if (!(request.driver() ? drivers.exists(request.id()) : teams.exists(request.id()))) throw new StatsLookupException(GONE);
+            return compute(request.driver(), request.id().toString(), request.scope(), request.season());
+        });
     }
 
-    /** Checks the shared season before the visible acknowledgement, so a vanished season answers privately. */
-    private boolean periodExists(ShareRequest request) {
-        try {
-            seasons.period(StatsScope.parse(request.scope()), request.season());
-            return true;
-        } catch (StatsLookupException gone) {
-            return false;
-        }
-    }
-
-    private void answer(PickGatewayReply reply, boolean visible, String sharedBy, Supplier<Answer> work) {
-        long claim = claim();
-        if (claim == IDLE) {
+    /** Computes on a worker after the private acknowledgement; a share posts the embed visibly only once it exists. */
+    private void answer(PickGatewayReply reply, String sharedBy, Supplier<Answer> work) {
+        if (!slots.tryAcquire()) {
             reply.replyPrivate(BUSY);
             return;
         }
@@ -95,21 +84,23 @@ public class StatsInteractionHandler implements PickGatewayInteractionHandler {
             Consumer<PickGatewayResponse.Continuation> operation = continuation -> {
                 try {
                     var answer = work.get();
-                    continuation.replyPrivate(visible
-                            ? new PickGatewayMessage(sharedBy, List.of(), null, answer.embed())
-                            : new PickGatewayMessage("", List.of(new PickGatewayMessage.Button(answer.shareId(), "Share in channel")), null, answer.embed()));
+                    if (sharedBy == null) {
+                        continuation.replyPrivate(new PickGatewayMessage("", List.of(new PickGatewayMessage.Button(answer.shareId(), "Share in channel")),
+                                null, answer.embed()));
+                    } else {
+                        continuation.replyPrivate("Shared in this channel.");
+                        continuation.postVisible(new PickGatewayMessage(sharedBy, List.of(), null, answer.embed()));
+                    }
                 } catch (StatsLookupException unknown) {
-                    continuation.replyPrivate(visible ? GONE : unknown.getMessage());
+                    continuation.replyPrivate(sharedBy == null ? PickInteractionViews.escape(unknown.getMessage()) : GONE);
                 } catch (RuntimeException failure) {
                     log.warn("Stats answer failed: {}", failure.getClass().getSimpleName());
                     continuation.replyPrivate(FAILED);
-                } finally {
-                    runningSince.compareAndSet(claim, IDLE);
                 }
             };
-            queued = visible ? reply.deferPublic(operation) : reply.deferPrivate(operation);
+            queued = reply.deferPrivate(operation, slots::release);
         } finally {
-            if (!queued) runningSince.compareAndSet(claim, IDLE);
+            if (!queued) slots.release();
         }
     }
 
@@ -118,20 +109,11 @@ public class StatsInteractionHandler implements PickGatewayInteractionHandler {
         if (driver) {
             var stats = drivers.stats(name, scope, seasonOption);
             return new Answer(StatsEmbeds.driver(stats, links.driver(stats.driverId(), stats.profileSeasonLabel())),
-                    ShareRequest.id(true, stats.driverId(), scope, stats.period()));
+                    ShareRequest.id(true, stats.driverId(), stats.period()));
         }
         var stats = teams.stats(name, scope, seasonOption);
         return new Answer(StatsEmbeds.team(stats, links.team(stats.teamId(), stats.profileSeasonLabel())),
-                ShareRequest.id(false, stats.teamId(), scope, stats.period()));
-    }
-
-    /** Claims the single answer slot; a claim whose work never ran expires after 30 seconds. */
-    private long claim() {
-        long now = nanos.getAsLong();
-        if (now == IDLE) now++;
-        long current = runningSince.get();
-        if (current != IDLE && now - current < STALE_NANOS) return IDLE;
-        return runningSince.compareAndSet(current, now) ? now : IDLE;
+                ShareRequest.id(false, stats.teamId(), stats.period()));
     }
 
     private List<PickGatewayModal.Option> choices(PickGatewayInteraction event) {
@@ -163,11 +145,14 @@ public class StatsInteractionHandler implements PickGatewayInteractionHandler {
 
     private record Answer(PickGatewayMessage.Embed embed, String shareId) { }
 
-    /** The share button's custom ID: {@code ctc-stats:share:<d|t>:<entity>:<c|a|s>:<season or ->}, at most 93 characters. */
+    /**
+     * The share button's custom ID: {@code ctc-stats:share:<d|t>:<entity>:<a|s>:<season or ->}, at most 93 characters. It
+     * names the season the answer showed; {@code c} from earlier buttons still parses as the current season.
+     */
     record ShareRequest(boolean driver, UUID id, String scope, String season) {
-        static String id(boolean driver, UUID entity, StatsScope scope, StatsPeriod period) {
-            String season = scope == StatsScope.SEASON && period.season() != null ? period.season().id().toString() : "-";
-            return SHARE + (driver ? "d" : "t") + ":" + entity + ":" + scope.name().substring(0, 1).toLowerCase(Locale.ROOT) + ":" + season;
+        static String id(boolean driver, UUID entity, StatsPeriod period) {
+            String shown = period.alltime() ? "a:-" : "s:" + period.season().id();
+            return SHARE + (driver ? "d" : "t") + ":" + entity + ":" + shown;
         }
 
         static ShareRequest parse(String action) {
