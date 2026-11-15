@@ -109,6 +109,7 @@ public class SeasonController {
         form.setRulebookUrl(season.getRulebookUrl());
         form.setRacingEtiquetteUrl(season.getRacingEtiquetteUrl());
 		form.setActive(season.isActive());
+        form.setLineupSize(season.getLineupSize());
         form.setCarPoolMode(season.getCarPoolMode());
 		model.addAttribute("seasonForm", form);
 		model.addAttribute("season", season);
@@ -223,7 +224,7 @@ public class SeasonController {
 		}
 		var season = seasonManagementService.save(form.getId(), form.getName(),
 				form.getYear(), form.getNumber(), form.getDescription(), form.isActive(),
-                form.getRulebookUrl(), form.getRacingEtiquetteUrl());
+                form.getRulebookUrl(), form.getRacingEtiquetteUrl(), form.getLineupSize());
 		redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + season.getName());
 		return "redirect:/admin/seasons";
 	}

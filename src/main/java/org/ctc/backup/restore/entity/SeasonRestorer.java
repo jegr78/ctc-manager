@@ -17,8 +17,8 @@ public class SeasonRestorer implements EntityRestorer {
     private static final String INSERT_SQL =
             "INSERT INTO seasons (id, name, season_year, season_number, description, active, "
                     + "created_at, updated_at, discord_race_results_thread_id, "
-                    + "discord_standings_thread_id, car_pool_mode, car_pool_state, lobby_rules_profile, rulebook_url, racing_etiquette_url) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    + "discord_standings_thread_id, car_pool_mode, car_pool_state, lobby_rules_profile, rulebook_url, racing_etiquette_url, lineup_size) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     @Override
     public String tableName() {
@@ -44,6 +44,7 @@ public class SeasonRestorer implements EntityRestorer {
                     ps.setString(13, org.ctc.backup.schema.LobbyRulesArchive.profile(row).name());
                     ps.setString(14, org.ctc.domain.model.SeasonDocumentLinks.normalize(nullableString(row, "rulebookUrl")));
                     ps.setString(15, org.ctc.domain.model.SeasonDocumentLinks.normalize(nullableString(row, "racingEtiquetteUrl")));
+                    ps.setInt(16, org.ctc.backup.schema.LineupArchive.lineupSize(row));
                 });
         for (var row : rows) {
             restorePool(row, "cars", true, jdbcTemplate);

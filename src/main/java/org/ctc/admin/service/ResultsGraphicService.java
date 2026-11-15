@@ -177,7 +177,7 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 				.toList();
 
 		var rows = new ArrayList<DriverResultRow>();
-		for (int i = 0; i < TEAM_DRIVERS; i++) {
+		for (int i = 0, size = teamDrivers(race); i < size; i++) {
 			String homeName = i < homeResults.size() ? homeResults.get(i).getDriver().getPsnId() : "n/a";
 			String homeNick = i < homeResults.size() ? resolveNickname(homeResults.get(i).getDriver()) : "";
 			int homePoints = i < homeResults.size() ? homeResults.get(i).getPointsTotal() : 0;

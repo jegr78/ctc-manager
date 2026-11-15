@@ -59,7 +59,7 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 		if (lineups.isEmpty() && !isWalkover) {
 			throw new IllegalStateException("No lineup entries for this race");
 		}
-		var pairings = buildPairings(lineups, homeTeam, awayTeam);
+		var pairings = buildPairings(lineups, homeTeam, awayTeam, teamDrivers(race));
 
 		String homeCardBase64 = encodeCardBase64(buildCardPath(season.getId().toString(), homeTeam.getShortName()));
 		String awayCardBase64 = encodeCardBase64(buildCardPath(season.getId().toString(), awayTeam.getShortName()));
@@ -125,7 +125,7 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 		return "/uploads/races/" + race.getId() + "/lineup.png";
 	}
 
-	List<DriverPairing> buildPairings(List<RaceLineup> lineups, Team homeTeam, Team awayTeam) {
+	List<DriverPairing> buildPairings(List<RaceLineup> lineups, Team homeTeam, Team awayTeam, int teamDrivers) {
 		var homeEntries = lineups.stream()
 				.filter(lu -> isTeamOrSubTeam(lu.getTeam(), homeTeam))
 				.toList();
@@ -134,7 +134,7 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 				.toList();
 
 		var pairings = new ArrayList<DriverPairing>();
-		for (int i = 0; i < TEAM_DRIVERS; i++) {
+		for (int i = 0; i < teamDrivers; i++) {
 			String homePsn = i < homeEntries.size() ? homeEntries.get(i).getDriver().getPsnId() : "n/a";
 			String homeNick = i < homeEntries.size() ? resolveNickname(homeEntries.get(i).getDriver()) : "";
 			boolean homeIsGuest = i < homeEntries.size() && homeEntries.get(i).isGuest();

@@ -73,7 +73,7 @@ class LineupGraphicServiceTest {
 		);
 
 		// when
-		var pairings = service.buildPairings(lineups, homeTeam, awayTeam);
+		var pairings = service.buildPairings(lineups, homeTeam, awayTeam, 6);
 
 		// then
 		assertThat(pairings).hasSize(6);
@@ -110,7 +110,7 @@ class LineupGraphicServiceTest {
 		);
 
 		// when
-		var pairings = service.buildPairings(lineups, homeTeam, awayTeam);
+		var pairings = service.buildPairings(lineups, homeTeam, awayTeam, 6);
 
 		// then
 		assertThat(pairings.get(0).homeDriver()).isEqualTo("HomeGuest");
@@ -146,7 +146,7 @@ class LineupGraphicServiceTest {
 		);
 
 		// when
-		var pairings = service.buildPairings(lineups, parentHome, awayTeam);
+		var pairings = service.buildPairings(lineups, parentHome, awayTeam, 6);
 
 		// then
 		assertThat(pairings).hasSize(6);
@@ -193,7 +193,7 @@ class LineupGraphicServiceTest {
 		);
 
 		// when
-		var pairings = service.buildPairings(lineups, homeTeam, awayTeam);
+		var pairings = service.buildPairings(lineups, homeTeam, awayTeam, 6);
 
 		// then
 		assertThat(pairings).hasSize(6);
@@ -229,7 +229,7 @@ class LineupGraphicServiceTest {
 		);
 
 		// when
-		var pairings = service.buildPairings(lineups, homeTeam, awayTeam);
+		var pairings = service.buildPairings(lineups, homeTeam, awayTeam, 6);
 
 		// then
 		assertThat(pairings).hasSize(6);

@@ -752,6 +752,7 @@ public class BackupImportService {
 
     private static JsonNode normalizeRestorableRow(int version, String table, JsonNode row) {
         row = org.ctc.backup.schema.SeasonDocumentArchive.normalize(version, table, row);
+        row = org.ctc.backup.schema.LineupArchive.normalize(version, table, row);
         row = org.ctc.backup.schema.LobbyRulesArchive.normalize(version, table, row);
         row = org.ctc.backup.schema.DisqualificationArchive.normalize(version, table, row);
         row = org.ctc.backup.schema.PickWindowArchive.normalize(version, table, row);

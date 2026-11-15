@@ -29,6 +29,7 @@ public class RaceLineupService {
 	private final DriverRepository driverRepository;
 	private final RaceResultRepository raceResultRepository;
 	private final ScoringService scoringService;
+    private final LineupOverlapService overlaps;
 
 	public LineupData getLineupData(UUID raceId) {
 		var race = raceRepository.findById(raceId)
@@ -112,6 +113,11 @@ public class RaceLineupService {
 			}
 		}
 
+		var fielded = new HashMap<UUID, Team>();
+		for (var entry : rosterAssignments.entrySet()) fielded.put(entry.getKey(), team(entry.getValue()));
+		for (var entry : guestAssignments.entrySet()) fielded.put(entry.getKey(), team(entry.getValue()));
+		overlaps.requireNone(race, fielded, row -> true);
+
 		var existing = raceLineupRepository.findByRaceId(raceId);
 		var priorGuestTeams = existing.stream()
 				.filter(RaceLineup::isGuest)
@@ -162,6 +168,10 @@ public class RaceLineupService {
 
 		log.info("Saved {} lineup entries for race {}", count, raceId);
 		return count;
+	}
+
+	private Team team(UUID teamId) {
+		return teamRepository.findById(teamId).orElseThrow(() -> new EntityNotFoundException("Team", teamId));
 	}
 
 	private Set<UUID> validFieldingTeamIds(Race race) {
