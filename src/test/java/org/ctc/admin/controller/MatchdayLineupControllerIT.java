@@ -37,6 +37,8 @@ class MatchdayLineupControllerIT {
     @Autowired RaceLineupRepository raceLineups;
     @Autowired LineupSubmissionRepository submissions;
     @Autowired PickSessionEpoch epoch;
+    @Autowired org.ctc.domain.service.LineupSubmissionService lineupSubmissions;
+    @Autowired LineupSubmissionRevisionRepository revisions;
     TestHelper.SeasonFixture fixture;
     final List<UUID> driverIds = new ArrayList<>();
 
@@ -126,5 +128,33 @@ class MatchdayLineupControllerIT {
         mvc.perform(post(detail + "/window").param("kind", "CLOSE").param("expectedSequence", "0")
                         .param("expectedGeneration", epoch.managementGeneration()).param("reason", "Stale form"))
                 .andExpect(status().isOk()).andExpect(content().string(containsString("The lineup window changed; reload before deciding")));
+    }
+
+    @Test
+    void givenProposedDriver_whenCorrecting_thenKeepItUnlessManagementUnchecksIt() throws Exception {
+        // given
+        String detail = "/admin/matchday-lineups/" + fixture.race().getId() + "/" + fixture.homeTeam().getId();
+        var entries = new ArrayList<org.ctc.domain.model.LineupPayload.Entry>();
+        entries.add(new org.ctc.domain.model.LineupPayload.Entry(driverIds.getFirst(), "x", null));
+        entries.add(org.ctc.domain.model.LineupPayload.Entry.proposal("Test_Rookie", "Rookie"));
+        lineupSubmissions.correct(fixture.race().getId(), fixture.homeTeam().getId(), 0, UUID.randomUUID(),
+                new org.ctc.domain.picks.ManagementPickActor("test-manager"), new org.ctc.domain.model.LineupPayload(6, entries), "Team e-mail");
+        mvc.perform(get(detail)).andExpect(content().string(containsString("Keep Rookie (Test_Rookie)")));
+        // when
+        mvc.perform(post(detail + "/correction").param("expectedVersion", "1").param("expectedGeneration", epoch.managementGeneration())
+                        .param("requestId", UUID.randomUUID().toString()).param("reason", "Swap driver")
+                        .param("drivers[0]", driverIds.get(1).toString()).param("keptProposals", "test_rookie"))
+                .andExpect(status().is3xxRedirection());
+        mvc.perform(post(detail + "/correction").param("expectedVersion", "2").param("expectedGeneration", epoch.managementGeneration())
+                        .param("requestId", UUID.randomUUID().toString()).param("reason", "Rookie withdrawn")
+                        .param("drivers[0]", driverIds.get(1).toString()))
+                .andExpect(status().is3xxRedirection());
+        // then
+        tx.executeWithoutResult(status -> {
+            var submission = submissions.findByRaceIdAndTeamId(fixture.race().getId(), fixture.homeTeam().getId()).orElseThrow();
+            var history = revisions.findBySubmissionIdOrderByRevisionNumberDesc(submission.getId());
+            assertThat(history.get(1).lineup().proposed()).as("a checked proposal stays").extracting(e -> e.psnId()).containsExactly("Test_Rookie");
+            assertThat(history.get(0).lineup().proposed()).as("an unchecked proposal is removed").isEmpty();
+        });
     }
 }

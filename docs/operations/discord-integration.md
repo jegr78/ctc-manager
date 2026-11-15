@@ -854,7 +854,9 @@ unfinished leg of an open matchday is a target, including reversed home legs and
 `/lineup` uses the same Gateway consumer, channel bindings and access checks as `/picks`. A channel
 bound to an organisation's parent team serves every leg in which one of its teams plays, home or
 away. Each target names the matchday, the fielding team, the opponent, the leg and the start time,
-so sub-teams sharing one channel stay distinguishable. Byes have no target; a walkover, a complete
+so sub-teams sharing one channel stay distinguishable. Everyone in a shared organisation channel sees the
+lineups of all its teams, including both sides when two of its teams meet. Bind a sub-team to its
+own channel to keep its lineup apart; that channel then serves only that sub-team. Byes have no target; a walkover, a complete
 playoff pairing or recorded results close a leg.
 
 A leg opens for both teams when its settings post is confirmed. Management can open or close a

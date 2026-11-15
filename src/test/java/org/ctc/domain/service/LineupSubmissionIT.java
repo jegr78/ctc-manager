@@ -257,6 +257,39 @@ class LineupSubmissionIT {
     }
 
     @Test
+    void givenSisterTeamsMeeting_whenOpponentSubmittedSameDriver_thenRejectWithoutNamingTheOpponent() {
+        // given
+        UUID derby = tx.execute(status -> {
+            var day = races.findById(firstRace).orElseThrow().getMatchday();
+            var race = helper.createRace(day, helper.createMatch(day, teams.findById(first).orElseThrow(), teams.findById(second).orElseThrow()));
+            race.setDateTime(LocalDateTime.of(2035, 1, 10, 22, 0));
+            return race.getId();
+        });
+        open(derby);
+        UUID shared = driverIds.get(6);
+        submit(derby, second, 0, UUID.randomUUID(), List.of(entry(shared)), true);
+        // when / then
+        assertThatThrownBy(() -> submit(derby, first, 0, UUID.randomUUID(), List.of(entry(shared)), true))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("A selected driver already fields for another team of your organisation on this matchday");
+    }
+
+    @Test
+    void givenSubTeamBoundChannel_whenAccessingSisterTarget_thenDeny() {
+        // given
+        String ownChannel = "200000000000000013";
+        tx.executeWithoutResult(status -> bindings.saveAndFlush(new TeamPickChannelBinding(seasons.findById(seasonId).orElseThrow(),
+                teams.findById(first).orElseThrow(), GUILD, ownChannel)));
+        when(permissions.hasCurrentPrivateAccess(GUILD, ownChannel, USER)).thenReturn(true);
+        var subTeamChannel = access.authorizeChannel(GUILD, ownChannel, USER);
+        open(secondRace);
+        // when / then
+        assertThatThrownBy(() -> access.authorizeLineupTarget(subTeamChannel, secondRace, second))
+                .as("a channel bound to one sub-team never serves its sister").isInstanceOf(BusinessRuleException.class);
+        assertThat(targets.list(subTeamChannel)).extracting(row -> row.teamId()).doesNotContain(second);
+    }
+
+    @Test
     void givenManagementClosedLeg_whenTeamSubmits_thenReject() {
         // given
         open(firstRace);

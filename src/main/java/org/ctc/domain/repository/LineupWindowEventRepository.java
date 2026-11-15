@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface LineupWindowEventRepository extends JpaRepository<LineupWindowEvent, UUID> {
+    boolean existsByRaceId(UUID raceId);
+
     Optional<LineupWindowEvent> findFirstByRaceIdOrderBySequenceNumberDesc(UUID raceId);
 
     List<LineupWindowEvent> findByRaceIdOrderBySequenceNumberDesc(UUID raceId);

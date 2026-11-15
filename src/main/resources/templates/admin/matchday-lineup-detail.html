@@ -65,6 +65,12 @@
                     </select>
                 </div>
             </fieldset>
+            <fieldset th:unless="${lineup.proposals.isEmpty()}"><legend>New drivers in the current revision</legend>
+                <p class="text-dim">Unchecked new drivers are removed from the corrected lineup.</p>
+                <div class="form-group" th:each="proposal, stat : ${lineup.proposals}">
+                    <label class="pick-check-option" th:for="${'keep-proposal-' + stat.index}"><input type="checkbox" th:id="${'keep-proposal-' + stat.index}" name="keptProposals" th:value="${proposal.key}" th:checked="${correctionForm.keptProposals.contains(proposal.key)}"><span th:text="${'Keep ' + proposal.label}"></span></label>
+                </div>
+            </fieldset>
             <div class="form-group"><label for="correction-reason">Correction reason</label><textarea id="correction-reason" th:field="*{reason}" maxlength="500" rows="2" required></textarea><span class="field-error" th:errors="*{reason}"></span></div>
             <button type="submit" class="btn btn-secondary">Save correction</button>
         </form>

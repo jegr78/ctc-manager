@@ -133,9 +133,11 @@ public class MatchdayLineupAdminService {
         form.setExpectedVersion(detail.version());
         form.setExpectedGeneration(detail.generation());
         form.setRequestId(UUID.randomUUID());
+        detail.proposals().forEach(proposal -> form.getKeptProposals().add(proposal.key()));
         var drivers = new ArrayList<UUID>(detail.currentDrivers());
-        while (drivers.size() < detail.lineupSize()) drivers.add(null);
-        form.setDrivers(drivers.subList(0, detail.lineupSize()));
+        int slots = Math.max(0, detail.lineupSize() - detail.proposals().size());
+        while (drivers.size() < slots) drivers.add(null);
+        form.setDrivers(new ArrayList<>(drivers.subList(0, Math.max(slots, Math.min(drivers.size(), detail.lineupSize())))));
         return form;
     }
 
@@ -164,9 +166,10 @@ public class MatchdayLineupAdminService {
 
     public List<String> correct(UUID raceId, UUID teamId, LineupCorrectionForm form, Principal principal) {
         var chosen = form.getDrivers().stream().filter(Objects::nonNull).toList();
-        if (chosen.isEmpty()) throw new BusinessRuleException("Choose at least one driver");
         var entries = new ArrayList<LineupPayload.Entry>();
         for (var driverId : chosen) entries.add(new LineupPayload.Entry(driverId, driverId.toString(), null));
+        entries.addAll(keptProposals(raceId, teamId, form.getKeptProposals()));
+        if (entries.isEmpty()) throw new BusinessRuleException("Choose at least one driver");
         LineupPayload payload;
         try {
             payload = new LineupPayload(Season.LINEUP_SIZE_MAX, entries);
@@ -175,6 +178,15 @@ public class MatchdayLineupAdminService {
         }
         return submissionService.correct(raceId, teamId, form.getExpectedVersion(), form.getRequestId(),
                 actor(principal, form.getExpectedGeneration()), payload, form.getReason()).warnings();
+    }
+
+    private List<LineupPayload.Entry> keptProposals(UUID raceId, UUID teamId, List<String> kept) {
+        if (kept == null || kept.isEmpty()) return List.of();
+        var keys = kept.stream().map(key -> key.toLowerCase(Locale.ROOT)).collect(java.util.stream.Collectors.toSet());
+        return submissions.findByRaceIdAndTeamId(raceId, teamId)
+                .flatMap(submission -> revisions.findBySubmissionIdAndRevisionNumber(submission.getId(), submission.getLatestRevisionNumber()))
+                .map(revision -> revision.lineup().proposed().stream().filter(entry -> keys.contains(entry.psnId().toLowerCase(Locale.ROOT))).toList())
+                .orElse(List.of());
     }
 
     public void decideWindow(UUID raceId, LineupWindowForm form, Principal principal) {

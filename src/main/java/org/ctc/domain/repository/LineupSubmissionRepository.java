@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface LineupSubmissionRepository extends JpaRepository<LineupSubmission, UUID> {
+    boolean existsByRaceId(UUID raceId);
+
     Optional<LineupSubmission> findByRaceIdAndTeamId(UUID raceId, UUID teamId);
 
     @EntityGraph(attributePaths = {"race", "team"})

@@ -52,7 +52,7 @@ public class LineupApplyService {
     public List<String> apply(UUID submissionId, long expectedVersion, int revisionNumber, Map<String, UUID> links,
                               boolean resultsConsent, ManagementPickActor actor) {
         String actorId = LineupSubmissionService.managementActor(actor);
-        return writes.execute(() -> {
+        return writes.executeReadCommitted(() -> {
             if (actor.generation() != null && !actor.generation().equals(epoch.managementGeneration())) {
                 throw new BusinessRuleException("This management form was reset by a restore or application restart; reload its current version");
             }

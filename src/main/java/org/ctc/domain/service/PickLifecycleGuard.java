@@ -15,9 +15,11 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class PickLifecycleGuard {
     private final MatchdayPickRepository picks;
+    private final org.ctc.domain.repository.LineupSubmissionRepository lineupSubmissions;
+    private final org.ctc.domain.repository.LineupWindowEventRepository lineupWindows;
     public void requireNoHistory(Collection<Race> races) {
         for (var race : races.stream().filter(row -> row.getId() != null).sorted(Comparator.comparing(Race::getId)).toList()) {
-            if (protects(race)) throw new BusinessRuleException("Cannot delete a race with confidential pick history");
+            if (protects(race)) throw new BusinessRuleException("Cannot delete a race with confidential pick history or lineup submissions");
         }
     }
 
@@ -29,11 +31,13 @@ public class PickLifecycleGuard {
     public String identityRejection(Race race, UUID matchdayId, Team home, Team away) {
         boolean changed = !Objects.equals(race.getMatchday() == null ? null : race.getMatchday().getId(), matchdayId)
                 || !Objects.equals(id(race.getHomeTeam()), id(home)) || !Objects.equals(id(race.getAwayTeam()), id(away));
-        return changed && protects(race) ? "Cannot reassign a race with confidential pick history" : null;
+        return changed && protects(race) ? "Cannot reassign a race with confidential pick history or lineup submissions" : null;
     }
 
+    /** Pick history and lineup submissions keep the race's identity and existence. */
     public boolean protects(Race race) {
-        return race.getId() != null && picks.findByRaceId(race.getId()).isPresent();
+        return race.getId() != null && (picks.findByRaceId(race.getId()).isPresent()
+                || lineupSubmissions.existsByRaceId(race.getId()) || lineupWindows.existsByRaceId(race.getId()));
     }
 
     private static UUID id(Team team) { return team == null ? null : team.getId(); }

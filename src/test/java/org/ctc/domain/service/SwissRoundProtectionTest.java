@@ -21,6 +21,8 @@ class SwissRoundProtectionTest {
     @Mock RacePenaltyRevisionRepository penalties;
     @Mock RaceDisqualificationRevisionRepository disqualifications;
     @Mock DiscordPostRepository posts;
+    @Mock LineupSubmissionRepository lineupSubmissions;
+    @Mock LineupWindowEventRepository lineupWindows;
     @InjectMocks SwissRoundProtection protection;
 
     @ParameterizedTest @ValueSource(strings={"score","walkover","channel","context","post","playoff","misplaced","results","lineup","picks","incident","penalty","dsq","attachment","racepost"})

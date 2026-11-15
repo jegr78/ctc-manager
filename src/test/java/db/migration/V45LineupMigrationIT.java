@@ -101,15 +101,14 @@ class V45LineupMigrationIT {
     }
 
     @Test
-    void givenStoredSubmission_whenDeletingRace_thenCascadeLineupHistory() throws SQLException {
+    void givenStoredHistory_whenDeletingRaceFromNewConnection_thenRejectAndKeepHistory() throws SQLException {
         // given
         submission(UUID.randomUUID(), 1, null, false);
         window("OPEN", 1);
-        // when
-        execute("DELETE FROM races WHERE id = ?", fixture.race().getId().toString());
-        // then
-        assertThat(count("lineup_submissions")).isZero();
-        assertThat(count("lineup_window_events")).isZero();
+        // when / then
+        assertThatThrownBy(() -> execute("DELETE FROM races WHERE id = ?", fixture.race().getId().toString())).isInstanceOf(SQLException.class);
+        assertThat(count("lineup_submissions")).as("lineup history is never cascaded away").isEqualTo(1);
+        assertThat(count("lineup_window_events")).isEqualTo(1);
     }
 
     private void submission(UUID id, int latest, Integer applied, boolean appliedMetadata) throws SQLException {

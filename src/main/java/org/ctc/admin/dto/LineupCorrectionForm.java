@@ -14,5 +14,7 @@ public class LineupCorrectionForm {
     @NotBlank @Pattern(regexp = "[0-9a-f-]{36}:[0-9]+") private String expectedGeneration;
     @NotNull private UUID requestId;
     private List<UUID> drivers = new ArrayList<>();
+    /** Proposed PSN IDs (lower case) of the current revision that the correction keeps. */
+    private List<String> keptProposals = new ArrayList<>();
     @NotBlank @Size(max = 500) private String reason;
 }

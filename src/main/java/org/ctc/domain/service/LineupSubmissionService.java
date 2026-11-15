@@ -31,7 +31,8 @@ import org.springframework.stereotype.Service;
 
 /**
  * Stores lineup revisions from private team channels until the leg's deadline, and management corrections and window
- * decisions at any time. Every write admits a restore writer before its own transaction and locks the owning season.
+ * decisions at any time. Every write admits a restore writer before its own READ COMMITTED transaction and locks the
+ * owning season, so the overlap and window checks see commits made while waiting for that lock.
  */
 @Service
 @RequiredArgsConstructor
@@ -59,7 +60,7 @@ public class LineupSubmissionService {
         if (actor == null || actor.channel() == null || !raceId.equals(actor.raceId()) || !teamId.equals(actor.teamId())) {
             throw new BusinessRuleException("Private channel access is unavailable");
         }
-        return writes.execute(() -> {
+        return writes.executeReadCommitted(() -> {
             var replay = replay(requestId, raceId, teamId, actor.userId());
             if (replay != null) return replay;
             var race = lock(raceId);
@@ -82,7 +83,7 @@ public class LineupSubmissionService {
                                  LineupPayload payload, String reason) {
         String actorId = managementActor(actor);
         String why = reason(reason);
-        return writes.execute(() -> {
+        return writes.executeReadCommitted(() -> {
             var replay = replay(requestId, raceId, teamId, actorId);
             if (replay != null) return replay;
             requireGeneration(actor);
@@ -100,7 +101,7 @@ public class LineupSubmissionService {
         String actorId = managementActor(actor);
         String why = reason(reason);
         if (kind == null) throw new BusinessRuleException("Choose whether to open or close lineups");
-        writes.execute(() -> {
+        writes.executeReadCommitted(() -> {
             requireGeneration(actor);
             var race = lock(raceId);
             int current = windows.findFirstByRaceIdOrderBySequenceNumberDesc(raceId).map(LineupWindowEvent::getSequenceNumber).orElse(0);
@@ -114,7 +115,15 @@ public class LineupSubmissionService {
                                 LineupActorKind kind, String actorId, String reason) {
         var fielded = new HashMap<UUID, Team>();
         lineup.driverIds().forEach(id -> fielded.put(id, team));
-        overlaps.requireNone(race, fielded, row -> LineupTargetRules.fieldingSide(row, race, team));
+        var conflicts = overlaps.conflicts(race, fielded, row -> LineupTargetRules.fieldingSide(row, race, team));
+        if (!conflicts.isEmpty()) {
+            var opponent = team.getId().equals(race.getHomeTeam().getId()) ? race.getAwayTeam() : race.getHomeTeam();
+            // A sister team playing this leg must not learn its opponent's unpublished lineup from the rejection.
+            if (kind == LineupActorKind.TEAM && conflicts.stream().anyMatch(conflict -> conflict.otherTeam().getId().equals(opponent.getId()))) {
+                throw new BusinessRuleException("A selected driver already fields for another team of your organisation on this matchday");
+            }
+            throw new BusinessRuleException(LineupOverlapService.message(conflicts));
+        }
         var submission = submissions.findByRaceIdAndTeamId(race.getId(), team.getId()).orElse(null);
         if (submission == null) {
             submission = new LineupSubmission(race, team);
