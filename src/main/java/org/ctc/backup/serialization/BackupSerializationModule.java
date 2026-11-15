@@ -29,6 +29,9 @@ public class BackupSerializationModule extends SimpleModule {
         setMixInAnnotation(MatchdayPick.class, MatchdayPickMixIn.class);
         setMixInAnnotation(MatchdayPickRevision.class, MatchdayPickRevisionMixIn.class);
         setMixInAnnotation(MatchdayPickDecision.class, MatchdayPickDecisionMixIn.class);
+        setMixInAnnotation(LineupSubmission.class, LineupSubmissionMixIn.class);
+        setMixInAnnotation(LineupSubmissionRevision.class, LineupSubmissionRevisionMixIn.class);
+        setMixInAnnotation(LineupWindowEvent.class, LineupWindowEventMixIn.class);
         setMixInAnnotation(Car.class, CarMixIn.class);
         setMixInAnnotation(Track.class, TrackMixIn.class);
         setMixInAnnotation(RaceScoring.class, RaceScoringMixIn.class);

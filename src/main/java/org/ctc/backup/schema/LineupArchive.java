@@ -16,7 +16,9 @@ public final class LineupArchive {
         var copy = object.deepCopy();
         var value = copy.get("lineupSize");
         if (version < LINEUP_VERSION) {
-            if (value != null && !value.isNull()) throw new IllegalArgumentException("Season lineup size requires backup schema 23");
+            if (value != null && !value.isNull() && !(value.isIntegralNumber() && value.intValue() == Season.LINEUP_SIZE_DEFAULT)) {
+                throw new IllegalArgumentException("Season lineup sizes other than " + Season.LINEUP_SIZE_DEFAULT + " require backup schema 23");
+            }
             copy.put("lineupSize", Season.LINEUP_SIZE_DEFAULT);
         } else if (value == null || !value.isIntegralNumber() || value.asInt() < 1 || value.asInt() > Season.LINEUP_SIZE_MAX) {
             throw new IllegalArgumentException("Season lineup size must be between 1 and " + Season.LINEUP_SIZE_MAX);
