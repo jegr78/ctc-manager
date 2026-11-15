@@ -785,8 +785,8 @@ or without a regular phase never count. Walkover races are excluded, playoff and
 and a disqualified result counts as a race without a finishing position. Only drivers with a counted
 result are found. `/stats` reads the saved data directly, so a saved result appears in Discord
 before the next website snapshot is published. Stats answers use at most one worker fewer than
-`app.discord.picks.workers` (default 2), at least one; a request beyond that answers that stats are busy, so the
-private commands always keep a worker. Autocomplete lists are cached for one minute per season.
+`app.discord.picks.workers` (default 2), at least one; a request beyond that answers that stats are busy, so with
+at least two workers the private commands always keep one. Autocomplete lists are cached for one minute per season.
 
 `/stats team name:<team> [scope] [season]` matches team names and short names. A season answer is
 the team's row of the website's regular-season standings, with its group and playoff result; an

@@ -100,8 +100,9 @@ class StatsInteractionHandlerTest {
         handler.onInteraction(button(StatsInteractionHandler.SHARE + "d:" + id + ":a:-"), reply());
         // then
         var sent = ArgumentCaptor.forClass(PickGatewayMessage.class);
-        verify(continuation).replyPrivate("Shared in this channel.");
-        verify(continuation).postVisible(sent.capture());
+        var order = inOrder(continuation);
+        order.verify(continuation).replyPrivate("Sharing in this channel.");
+        order.verify(continuation).postVisible(sent.capture());
         assertThat(sent.getValue().content()).as("the poster is named without a mention").isEqualTo("Shared by Test Member");
         assertThat(sent.getValue().buttons()).isEmpty();
         assertThat(sent.getValue().embed().title()).isEqualTo("Test");
@@ -215,6 +216,19 @@ class StatsInteractionHandlerTest {
         // then
         verify(busy).replyPrivate(StatsInteractionHandler.BUSY);
         assertThat(slots.availablePermits()).as("a skipped answer frees its slot at once").isEqualTo(1);
+    }
+
+    @Test
+    void givenInteractionTooOldToAcknowledge_whenAnswering_thenReturnTheSlotExactlyOnce() {
+        // given
+        var command = event(PickGatewayInteraction.Kind.COMMAND, "driver", null, Map.of("name", List.of("Test")));
+        // when
+        for (int attempt = 0; attempt < 2; attempt++) {
+            handler.onInteraction(command, new PickGatewayReply(response, clock, PickGatewayReplyTest.NOW.minusSeconds(5), new AtomicLong()::get, Runnable::run));
+        }
+        // then
+        assertThat(slots.availablePermits()).as("an unacknowledged answer releases its slot once").isEqualTo(1);
+        verify(response, never()).deferPrivate();
     }
 
     @Test

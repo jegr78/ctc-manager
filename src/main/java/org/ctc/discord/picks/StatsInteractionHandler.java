@@ -22,7 +22,8 @@ import org.springframework.stereotype.Component;
 /**
  * Entry point of the public /stats command. Answers are private embeds without mentions and carry a stateless
  * "Share in channel" button that recomputes the answer and posts it visibly. Stats answers hold at most one worker
- * fewer than the pool has, so public traffic always leaves a worker for the private pick, lineup and incident commands.
+ * fewer than the pool has, so with at least two workers public traffic always leaves one for the private pick, lineup
+ * and incident commands.
  */
 @Slf4j
 @Component
@@ -88,7 +89,7 @@ public class StatsInteractionHandler implements PickGatewayInteractionHandler {
                         continuation.replyPrivate(new PickGatewayMessage("", List.of(new PickGatewayMessage.Button(answer.shareId(), "Share in channel")),
                                 null, answer.embed()));
                     } else {
-                        continuation.replyPrivate("Shared in this channel.");
+                        continuation.replyPrivate("Sharing in this channel.");
                         continuation.postVisible(new PickGatewayMessage(sharedBy, List.of(), null, answer.embed()));
                     }
                 } catch (StatsLookupException unknown) {
