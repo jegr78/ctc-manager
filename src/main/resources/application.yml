@@ -16,6 +16,8 @@ app:
       enabled: ${DISCORD_PICKS_ENABLED:false}
       workers: 2
       queue-capacity: 32
+    stats:
+      enabled: ${DISCORD_STATS_ENABLED:false}
     bot-token: ${DISCORD_BOT_TOKEN:}
     allowed-hosts: discord.com
     attachment-hosts: cdn.discordapp.com

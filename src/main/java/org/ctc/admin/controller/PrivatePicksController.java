@@ -60,6 +60,17 @@ public class PrivatePicksController {
         return REDIRECT;
     }
 
+    @PostMapping("/register-stats-command")
+    public String registerStats(RedirectAttributes redirect) {
+        try {
+            service.registerStatsCommand();
+            redirect.addFlashAttribute("successMessage", "Stats command registered for the configured server.");
+        } catch (BusinessRuleException failure) {
+            redirect.addFlashAttribute("errorMessage", failure.getMessage());
+        }
+        return REDIRECT;
+    }
+
     @PostMapping("/register-lineup-command")
     public String registerLineup(RedirectAttributes redirect) {
         try {

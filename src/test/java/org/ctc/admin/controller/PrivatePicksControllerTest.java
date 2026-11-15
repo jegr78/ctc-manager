@@ -111,4 +111,19 @@ class PrivatePicksControllerTest {
         var form = new PrivatePickBindingForm(); form.setSeasonId(UUID.randomUUID());
         form.setTeamId(UUID.randomUUID()); form.setChannelId("200"); return form;
     }
+
+    @Test
+    void givenStatsRegistration_whenRequested_thenDelegateAndConfirmOrSurfaceError() {
+        // given
+        var success = new RedirectAttributesModelMap();
+        var failure = new RedirectAttributesModelMap();
+        // when
+        controller.registerStats(success);
+        doThrow(new BusinessRuleException("The stats command could not be registered.")).when(service).registerStatsCommand();
+        controller.registerStats(failure);
+        // then
+        verify(service, times(2)).registerStatsCommand();
+        assertThat(success.getFlashAttributes().get("successMessage")).isEqualTo("Stats command registered for the configured server.");
+        assertThat(failure.getFlashAttributes().get("errorMessage")).isEqualTo("The stats command could not be registered.");
+    }
 }

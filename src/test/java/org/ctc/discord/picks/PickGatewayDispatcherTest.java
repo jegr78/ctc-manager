@@ -231,4 +231,58 @@ class PickGatewayDispatcherTest {
         assertThat(PickGatewayDispatcher.reusesPrivateMessage("ctc-lineup:a:b")).isTrue();
         assertThat(PickGatewayDispatcher.reusesPrivateMessage("incidents")).isFalse();
     }
+
+    @Test
+    void givenRestoreHoldingAdmission_whenStatsOrPicksArrive_thenUseEachMaintenanceWording() {
+        // given
+        var picksResponse = mock(PickGatewayResponse.class);
+        dispatcher.start(); assertThat(imports.tryLock()).isTrue();
+        try {
+            // when
+            dispatcher.accept(GUILD, event(GUILD, PickGatewayInteraction.Kind.COMMAND, "stats"));
+            dispatcher.accept(GUILD, new PickGatewayInteraction("opaque-event", GUILD, "200000000000000002", "300000000000000003",
+                    PickGatewayInteraction.Kind.COMMAND, "picks", Map.of(), PickGatewayReplyTest.NOW, picksResponse));
+            // then
+            verify(response).replyPrivate("Stats are unavailable during maintenance.");
+            verify(picksResponse).replyPrivate("A backup restore is in progress. Try again later.");
+            verifyNoInteractions(handler);
+        } finally { imports.unlock(); }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"restore", "foreign-guild", "stopped"})
+    void givenUnavailableAutocomplete_whenDispatching_thenAnswerWithoutChoicesAndSkipTheHandler(String cause) {
+        // given
+        if (!cause.equals("stopped")) dispatcher.start();
+        if (cause.equals("restore")) assertThat(imports.tryLock()).isTrue();
+        try {
+            // when
+            dispatcher.accept(GUILD, event(cause.equals("foreign-guild") ? "999" : GUILD, PickGatewayInteraction.Kind.AUTOCOMPLETE, "stats"));
+            // then
+            verify(response).replyChoices(List.of());
+            verifyNoInteractions(handler);
+        } finally { if (cause.equals("restore")) imports.unlock(); }
+    }
+
+    @Test
+    void givenFailingAutocompleteHandler_whenDispatching_thenAnswerWithoutChoices() {
+        // given
+        dispatcher.start();
+        doThrow(new IllegalStateException("Test failure")).when(handler).onInteraction(any(), any());
+        // when
+        dispatcher.accept(GUILD, event(GUILD, PickGatewayInteraction.Kind.AUTOCOMPLETE, "stats"));
+        // then
+        verify(response).replyChoices(List.of());
+    }
+
+    @Test
+    void givenAvailableAutocomplete_whenDispatching_thenCallTheHandlerSynchronously() {
+        // given
+        dispatcher.start();
+        // when
+        dispatcher.accept(GUILD, event(GUILD, PickGatewayInteraction.Kind.AUTOCOMPLETE, "stats"));
+        // then
+        verify(handler).onInteraction(any(), any());
+        verify(response, never()).deferPrivate();
+    }
 }

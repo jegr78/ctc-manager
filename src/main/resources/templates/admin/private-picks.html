@@ -68,13 +68,16 @@
     </div>
     <div class="card">
         <h2>Register the Discord commands</h2>
-        <p class="text-dim mb-md">Register /picks and /lineup for the saved guild after configuring the bot and server. Each button updates its own command only. Both commands use the channel bindings above.</p>
+        <p class="text-dim mb-md">Register /picks and /lineup for the saved guild after configuring the bot and server. Each button updates its own command only. Both commands use the channel bindings above. /stats is public in every channel and needs no binding.</p>
         <div class="actions">
             <form th:action="@{/admin/discord-config/picks/register-command}" method="post">
                 <button type="submit" class="btn btn-secondary" th:disabled="${!setup.registrationReady}">Register /picks for this guild</button>
             </form>
             <form th:action="@{/admin/discord-config/picks/register-lineup-command}" method="post">
                 <button type="submit" class="btn btn-secondary" th:disabled="${!setup.registrationReady}">Register /lineup for this guild</button>
+            </form>
+            <form th:action="@{/admin/discord-config/picks/register-stats-command}" method="post">
+                <button type="submit" class="btn btn-secondary" th:disabled="${!setup.registrationReady}">Register /stats for this guild</button>
             </form>
         </div>
     </div>

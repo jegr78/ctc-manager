@@ -9,7 +9,10 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.Command;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -65,7 +68,35 @@ public class JdaPickGatewayTransport implements PickGatewayTransport {
 
         @Override
         public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
-            forward(event, PickGatewayInteraction.Kind.COMMAND, event.getName(), Map.of());
+            forward(event, PickGatewayInteraction.Kind.COMMAND, event.getName(), options(event.getOptions()), event.getSubcommandName(), null,
+                    new JdaPickGatewayResponse(event, PickGatewayDispatcher.reusesPrivateMessage(event.getName())));
+        }
+
+        @Override
+        public void onCommandAutoCompleteInteraction(CommandAutoCompleteInteractionEvent event) {
+            try {
+                var guild = event.getGuild();
+                PickGatewayResponse response = new PickGatewayResponse() {
+                    @Override public java.util.concurrent.CompletionStage<Continuation> deferPrivate() { throw new UnsupportedOperationException(); }
+                    @Override public void replyPrivate(String message) { throw new UnsupportedOperationException(); }
+                    @Override public void openModal(PickGatewayModal modal) { throw new UnsupportedOperationException(); }
+                    @Override public void replyChoices(List<PickGatewayModal.Option> choices) {
+                        event.replyChoices(choices.stream().map(choice -> new Command.Choice(choice.label(), choice.value())).toList())
+                                .queue(sent -> { }, failure -> { });
+                    }
+                };
+                receiver.accept(new PickGatewayInteraction(event.getId(), guild == null ? null : guild.getId(), event.getChannelId(),
+                        event.getUser().getId(), PickGatewayInteraction.Kind.AUTOCOMPLETE, event.getName(), options(event.getOptions()),
+                        event.getTimeCreated().toInstant(), response, event.getSubcommandName(), event.getFocusedOption().getName(), null));
+            } catch (RuntimeException unavailable) {
+                // Do not pass SDK exceptions containing callback tokens or private input to its event logger.
+            }
+        }
+
+        private static Map<String, List<String>> options(List<OptionMapping> options) {
+            var values = new LinkedHashMap<String, List<String>>();
+            for (var option : options) values.put(option.getName(), List.of(option.getAsString()));
+            return values;
         }
 
         @Override
@@ -92,11 +123,18 @@ public class JdaPickGatewayTransport implements PickGatewayTransport {
         }
 
         private void forward(IReplyCallback event, PickGatewayInteraction.Kind kind, String action, Map<String, List<String>> values) {
+            forward(event, kind, action, values, null, null, new JdaPickGatewayResponse(event, PickGatewayDispatcher.reusesPrivateMessage(action)));
+        }
+
+        private void forward(IReplyCallback event, PickGatewayInteraction.Kind kind, String action, Map<String, List<String>> values,
+                             String subcommand, String focused, PickGatewayResponse response) {
             try {
                 var guild = event.getGuild();
+                var member = event.getMember();
                 receiver.accept(new PickGatewayInteraction(event.getId(), guild == null ? null : guild.getId(),
                         event.getChannelId(), event.getUser().getId(), kind, action, values,
-                        event.getTimeCreated().toInstant(), new JdaPickGatewayResponse(event, PickGatewayDispatcher.reusesPrivateMessage(action))));
+                        event.getTimeCreated().toInstant(), response, subcommand, focused,
+                        member != null ? member.getEffectiveName() : event.getUser().getEffectiveName()));
             } catch (RuntimeException unavailable) {
                 // Do not pass SDK exceptions containing callback tokens or private input to its event logger.
             }

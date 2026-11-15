@@ -185,4 +185,52 @@ class JdaPickGatewayTransportTest {
             for (var interaction : List.of(command, button, select, modal)) verify(interaction, never()).getToken();
         }
     }
+
+    @Test
+    void givenStatsCommandAndAutocomplete_whenReceiving_thenForwardSubcommandOptionsFocusAndChoices() {
+        // given
+        when(builder.build()).thenReturn(jda);
+        try (var factory = mockStatic(JDABuilder.class)) {
+            factory.when(() -> JDABuilder.createLight(anyString(), any(java.util.Collection.class))).thenReturn(builder);
+            transport.connect("test-token", "100", receiver);
+            var captured = ArgumentCaptor.forClass(Object.class);
+            verify(builder).addEventListeners(captured.capture());
+            var listener = (ListenerAdapter) captured.getValue();
+            var guild = mock(Guild.class); when(guild.getId()).thenReturn("100");
+            var user = mock(User.class); when(user.getId()).thenReturn("300"); when(user.getEffectiveName()).thenReturn("Test Member");
+            var name = mock(net.dv8tion.jda.api.interactions.commands.OptionMapping.class);
+            when(name.getName()).thenReturn("name"); when(name.getAsString()).thenReturn("Test_Driver");
+            var command = mock(SlashCommandInteractionEvent.class);
+            var autocomplete = mock(net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent.class);
+            when(command.getId()).thenReturn("1"); when(command.getGuild()).thenReturn(guild); when(command.getChannelId()).thenReturn("200");
+            when(command.getUser()).thenReturn(user); when(command.getTimeCreated()).thenReturn(OffsetDateTime.ofInstant(PickGatewayReplyTest.NOW, ZoneOffset.UTC));
+            when(command.getName()).thenReturn("stats"); when(command.getSubcommandName()).thenReturn("driver"); when(command.getOptions()).thenReturn(List.of(name));
+            when(autocomplete.getId()).thenReturn("2"); when(autocomplete.getGuild()).thenReturn(guild); when(autocomplete.getChannelId()).thenReturn("200");
+            when(autocomplete.getUser()).thenReturn(user); when(autocomplete.getTimeCreated()).thenReturn(OffsetDateTime.ofInstant(PickGatewayReplyTest.NOW, ZoneOffset.UTC));
+            when(autocomplete.getName()).thenReturn("stats"); when(autocomplete.getSubcommandName()).thenReturn("team"); when(autocomplete.getOptions()).thenReturn(List.of(name));
+            var focused = new net.dv8tion.jda.api.interactions.AutoCompleteQuery(name);
+            when(autocomplete.getFocusedOption()).thenReturn(focused);
+            var choices = mock(net.dv8tion.jda.api.requests.restaction.interactions.AutoCompleteCallbackAction.class);
+            when(autocomplete.replyChoices(org.mockito.ArgumentMatchers.<java.util.Collection<net.dv8tion.jda.api.interactions.commands.Command.Choice>>any())).thenReturn(choices);
+            // when
+            listener.onSlashCommandInteraction(command);
+            listener.onCommandAutoCompleteInteraction(autocomplete);
+            // then
+            var mapped = ArgumentCaptor.forClass(PickGatewayInteraction.class);
+            verify(receiver, times(2)).accept(mapped.capture());
+            var slash = mapped.getAllValues().getFirst();
+            assertThat(slash.subcommand()).isEqualTo("driver");
+            assertThat(slash.option("name")).isEqualTo("Test_Driver");
+            assertThat(slash.userName()).isEqualTo("Test Member");
+            var typed = mapped.getValue();
+            assertThat(typed.kind()).isEqualTo(PickGatewayInteraction.Kind.AUTOCOMPLETE);
+            assertThat(typed.subcommand()).isEqualTo("team");
+            assertThat(typed.focused()).isEqualTo("name");
+            typed.response().replyChoices(List.of(new PickGatewayModal.Option("Test Driver", "uuid-1")));
+            var sent = ArgumentCaptor.forClass(java.util.Collection.class);
+            verify(autocomplete).replyChoices(sent.capture());
+            assertThat(sent.getValue()).extracting("name", "asString").containsExactly(org.assertj.core.groups.Tuple.tuple("Test Driver", "uuid-1"));
+            verify(choices).queue(any(), any());
+        }
+    }
 }
