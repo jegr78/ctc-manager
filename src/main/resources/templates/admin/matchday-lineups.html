@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/layout :: layout('Team lineups', ~{::section})}">
+<body>
+<section class="entity-editor lineup-review-workspace">
+    <p th:if="${overview.matchdayId != null}"><a class="back-link" th:href="@{/admin/matchdays/{id}(id=${overview.matchdayId})}">Back to matchday</a></p>
+    <h1>Team lineups</h1>
+    <p class="text-dim mb-md">Teams submit lineups for each leg in their private Discord channel with /lineup. Applying a submission writes the race lineup; publishing lineups remains a separate action. Applied lineups appear on the website with the next site generation, also before the leg's deadline.</p>
+    <form th:action="@{/admin/matchday-lineups}" method="get" class="card entity-editor-form">
+        <fieldset><legend>Season and matchday</legend>
+            <div class="form-group"><label for="lineup-season">Season</label>
+                <select id="lineup-season" name="seasonId"><option value="">Choose a season</option>
+                    <option th:each="choice : ${overview.seasons}" th:value="${choice.id}" th:text="${choice.label}" th:selected="${choice.id == overview.seasonId}"></option>
+                </select>
+            </div>
+            <div class="form-group" th:if="${overview.seasonId != null}"><label for="lineup-matchday">Matchday</label>
+                <select id="lineup-matchday" name="matchdayId"><option value="">All matchdays</option>
+                    <option th:each="choice : ${overview.matchdays}" th:value="${choice.id}" th:text="${choice.label}" th:selected="${choice.id == overview.matchdayId}"></option>
+                </select>
+            </div>
+        </fieldset><button type="submit" class="btn btn-secondary">Show lineups</button>
+    </form>
+    <div class="card" th:if="${overview.seasonId != null}">
+        <h2 th:text="${'Lineups per leg and team (' + overview.rows.size() + ')'}"></h2>
+        <p th:if="${overview.rows.isEmpty()}" class="text-dim">No unfinished legs or lineup submissions match this selection.</p>
+        <div th:unless="${overview.rows.isEmpty()}" class="table-scroll" role="region" aria-label="Team lineups per leg" tabindex="0">
+            <table><thead><tr><th scope="col">Leg</th><th scope="col">Team</th><th scope="col">Status</th><th scope="col">Checks</th><th scope="col">Window</th><th scope="col">Deadline</th><th scope="col">Details</th></tr></thead>
+                <tbody><tr th:each="row : ${overview.rows}" data-testid="lineup-row">
+                    <td th:text="${row.label}"></td>
+                    <td th:text="${row.team}"></td>
+                    <td data-testid="lineup-status" th:text="${row.status}"></td>
+                    <td><span th:if="${row.flags.isEmpty()}" class="text-dim">None</span><ul th:unless="${row.flags.isEmpty()}"><li th:each="flag : ${row.flags}" th:text="${flag}"></li></ul></td>
+                    <td th:text="${row.window}"></td>
+                    <td th:text="${row.deadline}"></td>
+                    <td><a class="btn btn-secondary btn-sm" th:href="@{/admin/matchday-lineups/{race}/{team}(race=${row.raceId},team=${row.teamId})}" th:attr="aria-label=${'Lineup details for ' + row.team + ', ' + row.label}">Open</a></td>
+                </tr></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+</body>
+</html>
