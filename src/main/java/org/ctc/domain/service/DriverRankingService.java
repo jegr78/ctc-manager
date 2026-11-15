@@ -16,9 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class DriverRankingService {
 
-	private static final Comparator<Season> CHRONOLOGICAL = Comparator.comparingInt(Season::getYear)
-			.thenComparingInt(Season::getNumber).thenComparing(Season::getId, Comparator.nullsFirst(Comparator.naturalOrder()));
-
 	private final RaceResultRepository raceResultRepository;
 	private final SeasonDriverRepository seasonDriverRepository;
 	private final SeasonPhaseService seasonPhaseService;
@@ -134,7 +131,7 @@ public class DriverRankingService {
 				.collect(Collectors.toMap(
 						Map.Entry::getKey,
 						e -> e.getValue().stream()
-								.max(Comparator.comparing((SeasonDriver sd) -> sd.getSeason(), CHRONOLOGICAL))
+								.max(Comparator.comparing((SeasonDriver sd) -> sd.getSeason(), Season.CHRONOLOGICAL))
 								.map(sd -> sd.getTeam().getParentOrSelf())
 								.orElse(null)));
 

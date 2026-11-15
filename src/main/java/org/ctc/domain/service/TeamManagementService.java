@@ -66,7 +66,7 @@ public class TeamManagementService {
 					if (a.getKey().isActive() != b.getKey().isActive()) {
 						return a.getKey().isActive() ? -1 : 1;
 					}
-					return b.getKey().getName().compareTo(a.getKey().getName());
+					return Season.CHRONOLOGICAL.compare(b.getKey(), a.getKey());
 				})
 				.map(entry -> {
 					var sortedByTeam = new LinkedHashMap<Team, List<Driver>>();
@@ -103,7 +103,7 @@ public class TeamManagementService {
 					if (a.getKey().isActive() != b.getKey().isActive()) {
 						return a.getKey().isActive() ? -1 : 1;
 					}
-					return b.getKey().getName().compareTo(a.getKey().getName());
+					return Season.CHRONOLOGICAL.compare(b.getKey(), a.getKey());
 				})
 				.map(entry -> {
 					var sortedByTeam = new LinkedHashMap<Team, List<Driver>>();
@@ -121,7 +121,7 @@ public class TeamManagementService {
 			if (a.season().isActive() != b.season().isActive()) {
 				return a.season().isActive() ? -1 : 1;
 			}
-			return b.season().getName().compareTo(a.season().getName());
+			return Season.CHRONOLOGICAL.compare(b.season(), a.season());
 		});
 
 		var allGroupedSeasonIds = allGroups.stream()

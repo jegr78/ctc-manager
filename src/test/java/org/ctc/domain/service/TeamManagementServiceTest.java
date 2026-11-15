@@ -161,6 +161,34 @@ class TeamManagementServiceTest {
 	}
 
 	@Nested
+	class TeamDetailSeasonOrderTest {
+
+		@Test
+		void givenSeasonNamesSortingAgainstTime_whenLoadingTeamDetail_thenListNewestSeasonFirst() {
+			// given
+			var team = createTeam("ALF", "Alpha");
+			var ninth = new Season("Season 9", 2025, 2);
+			ninth.setId(UUID.randomUUID());
+			var tenth = new Season("Season 10", 2026, 1);
+			tenth.setId(UUID.randomUUID());
+			var driver = new org.ctc.domain.model.Driver("Test_driver", "Test driver");
+			driver.setId(UUID.randomUUID());
+			when(teamRepository.findById(team.getId())).thenReturn(Optional.of(team));
+			when(seasonRepository.findBySeasonTeamsTeamId(team.getId())).thenReturn(List.of(ninth, tenth));
+			when(raceLineupRepository.findByTeamIdIn(List.of(team.getId()))).thenReturn(List.of());
+			when(seasonDriverRepository.findByTeamIdIn(List.of(team.getId()))).thenReturn(List.of(
+					new org.ctc.domain.model.SeasonDriver(ninth, driver, team), new org.ctc.domain.model.SeasonDriver(tenth, driver, team)));
+
+			// when
+			var detail = service.getTeamDetailData(team.getId());
+
+			// then
+			assertThat(detail.seasonDriverGroups()).extracting(group -> group.season().getName())
+					.as("year and number decide the order, not the season name").containsExactly("Season 10", "Season 9");
+		}
+	}
+
+	@Nested
 	class FindByIdTest {
 
 		@Test

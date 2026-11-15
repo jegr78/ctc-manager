@@ -333,6 +333,28 @@ class DriverRankingServiceTest {
 	}
 
 	@Test
+	void givenSeasonsWithEqualYearAndNumber_whenCalculateAlltimeRanking_thenTheLargerSeasonIdWins() {
+		// given
+		var lower = new Season("Duplicate", 2026, 3);
+		lower.setId(UUID.fromString("00000000-0000-0000-0000-000000000001"));
+		var higher = new Season("Duplicate", 2026, 3);
+		higher.setId(UUID.fromString("00000000-0000-0000-0000-000000000002"));
+		var p1r = new Team("Project One Racing", "P1R");
+		p1r.setId(UUID.randomUUID());
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		when(raceResultRepository.findAll()).thenReturn(List.of(createResult(race, panicpotato, 23, 1)));
+		when(seasonDriverRepository.findAll())
+				.thenReturn(List.of(new SeasonDriver(higher, panicpotato, p1r), new SeasonDriver(lower, panicpotato, tnr)));
+
+		// when
+		var rankings = driverRankingService.calculateAlltimeRanking();
+
+		// then
+		assertThat(rankings.getFirst().getTeam()).as("equal year and number fall back to the larger season id").isEqualTo(p1r);
+	}
+
+	@Test
 	void givenDriverInSubTeam_whenCalculateAlltimeRanking_thenShowsParentTeam() {
 		// given
 		var clr = new Team("Community League Racing", "CLR");
