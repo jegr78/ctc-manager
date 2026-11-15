@@ -32,7 +32,9 @@ Every slot found is loaded. An unknown slot prefix maps to `OTHER`. A car withou
 
 ### Tracks
 
-The GT7 track list offers only logos. Track images come from manual uploads. Third-party sources such as dg-edge.com are out of scope because their terms allow only personal use.
+The GT7 track list offers only logos. Background images come from manual uploads. Third-party sources such as dg-edge.com are out of scope because their terms allow only personal use.
+
+Layout maps come from GT-Engine (issue #451), whose track map page carries no license restriction. CTC is a non-profit league and credits GT-Engine in the gallery and the README. `gt7/track-maps-gtengine.json` holds the reviewed layout list of game version 1.65 and an explicit mapping from catalog track names to GT-Engine slugs. A map is stored as source `GTENGINE`, kind `LAYOUT`, source key `map`, one per track. The track list loads all mapped maps and compares the live page with the reviewed list; the comparison changes no data. The files stay in the upload directory and are never committed.
 
 ## Data model
 
@@ -44,7 +46,7 @@ Migration V46 adds two tables, which brings the entity count to 53. Backup schem
 - `kind`:
   - cars: `STUDIO`, `SCENE`, `COCKPIT`, `OTHER`
   - tracks: `BACKGROUND`, `LAYOUT`, `OTHER`
-- `source`: `GT7` or `MANUAL`
+- `source`: `GT7`, `GTENGINE` (track maps only, from V47 and schema 25) or `MANUAL`
 - `sourceKey`: the GT7 slot such as `2_01`. Required for `GT7`, null for `MANUAL`. Unique per car and source.
 - `label`: optional free text, at most 100 characters
 - `imagePath`: local `/uploads/...` path
