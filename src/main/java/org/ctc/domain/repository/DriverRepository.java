@@ -17,6 +17,13 @@ public interface DriverRepository extends JpaRepository<Driver, UUID> {
 
 	List<Driver> findByActiveTrue();
 
+	@EntityGraph(attributePaths = "aliases")
+	@Query("""
+			SELECT DISTINCT d FROM RaceResult rr JOIN rr.driver d JOIN rr.race r
+			LEFT JOIN r.match m LEFT JOIN m.walkoverTeam mw LEFT JOIN r.playoffMatchup pm LEFT JOIN pm.walkoverTeam pw
+			WHERE r.matchday.phase.season.id IN :seasonIds AND mw IS NULL AND pw IS NULL""")
+	List<Driver> findWithResultsInSeasons(@Param("seasonIds") java.util.Collection<UUID> seasonIds);
+
 	@Query("SELECT a.driver FROM PsnAlias a WHERE LOWER(a.alias) = LOWER(:alias)")
 	Optional<Driver> findByAliasIgnoreCase(@Param("alias") String alias);
 

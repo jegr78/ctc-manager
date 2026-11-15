@@ -166,6 +166,28 @@ class JdaPickGatewayResponseTest {
     }
 
     @Test
+    void givenPrivateEmbed_whenSending_thenSerializeTitleLinkAndFieldsWithoutMentions() {
+        // given
+        when(event.deferReply(true)).thenReturn(initial);
+        var followup = mock(WebhookMessageCreateAction.class, RETURNS_SELF);
+        when(hook.sendMessageEmbeds(any(net.dv8tion.jda.api.entities.MessageEmbed.class))).thenReturn(followup);
+        var future = response.deferPrivate().toCompletableFuture();
+        var acknowledged = ArgumentCaptor.forClass(Consumer.class);
+        verify(initial).queue(acknowledged.capture(), any());
+        acknowledged.getValue().accept(hook);
+        // when
+        future.join().replyPrivate(new PickGatewayMessage("", List.of(), null, new PickGatewayMessage.Embed("Test driver",
+                "https://example.test/driver", "Alltime", List.of(new PickGatewayMessage.Field("Races", "4 races", false)), "Test footer")));
+        // then
+        var embed = ArgumentCaptor.forClass(net.dv8tion.jda.api.entities.MessageEmbed.class);
+        verify(hook).sendMessageEmbeds(embed.capture());
+        assertThat(embed.getValue().toData().toString()).contains("Test driver", "https://example.test/driver", "Alltime", "Races", "4 races", "Test footer");
+        verify(followup).setEphemeral(true); verify(followup).setAllowedMentions(List.of());
+        verify(followup, never()).setContent(any());
+        verify(followup).queue(any(), any());
+    }
+
+    @Test
     void givenDeferredReply_whenSdkAcknowledges_thenOnlyPrivateMentionFreeFollowupsAreAvailable() {
         // given
         when(event.deferReply(anyBoolean())).thenReturn(initial);

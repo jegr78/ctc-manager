@@ -777,6 +777,17 @@ command. The Gateway connects when either switch is on; with only stats enabled,
 `/lineup` and `/incidents` answer that they are unavailable. `/stats` checks no roles or channel
 bindings because its figures are already public on the website.
 
+`/stats driver name:<driver> [scope] [season]` answers privately with an embed. The name offers
+PSN IDs, nicknames and aliases of drivers with results; typing an exact name works as well.
+Scope `current` uses the active season and falls back to alltime when none is active, `alltime`
+covers every published season and `season` uses the chosen one. Seasons with "Test" in their name
+or without a regular phase never count. Walkover races are excluded, playoff and guest races count,
+and a disqualified result counts as a race without a finishing position. Only drivers with a counted
+result are found. `/stats` reads the saved data directly, so a saved result appears in Discord
+before the next website snapshot is published. One answer is computed at a time; a second request
+meanwhile answers that stats are busy, so the private commands keep their workers. Autocomplete
+lists are cached for one minute.
+
 Use the explicit **Register /picks for this guild**, **Register /lineup for this guild** and
 **Register /stats for this guild** actions.
 Each upserts only its own guild command. Startup and backup restore never register commands.

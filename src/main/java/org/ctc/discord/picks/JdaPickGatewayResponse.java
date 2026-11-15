@@ -6,7 +6,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.List;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.components.label.Label;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.interactions.InteractionHook;
@@ -79,11 +81,22 @@ public class JdaPickGatewayResponse implements PickGatewayResponse {
             rows.add(ActionRow.of(select.build()));
         }
         if (!message.buttons().isEmpty()) rows.add(ActionRow.of(message.buttons().stream().map(button -> Button.secondary(button.id(), button.label())).toList()));
-        if (edit) {
+        if (message.embed() != null) {
+            var send = hook.sendMessageEmbeds(embed(message.embed())).setEphemeral(true).setAllowedMentions(List.of()).setComponents(rows);
+            if (!message.content().isEmpty()) send.setContent(message.content());
+            send.queue(sent -> { }, failure -> { });
+        } else if (edit) {
             hook.editOriginal(message.content()).setComponents(rows).setAllowedMentions(List.of()).queue(sent -> { }, failure -> { });
         } else {
             hook.sendMessage(message.content()).setEphemeral(true).setAllowedMentions(List.of()).setComponents(rows).queue(sent -> { }, failure -> { });
         }
+    }
+
+    static MessageEmbed embed(PickGatewayMessage.Embed source) {
+        var builder = new EmbedBuilder().setTitle(source.title(), source.url()).setDescription(source.description());
+        source.fields().forEach(field -> builder.addField(field.name(), field.value(), field.inline()));
+        if (source.footer() != null) builder.setFooter(source.footer());
+        return builder.build();
     }
 
     @Override
