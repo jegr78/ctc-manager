@@ -21,7 +21,7 @@ out "resume=false"
 last_tag=$(git tag --sort=-version:refname --list 'v[0-9]*.[0-9]*.[0-9]*' \
   | awk '/^v[0-9]+\.[0-9]+\.[0-9]+$/ && !found { print; found = 1 }')
 if [ -z "${last_tag}" ]; then
-  pom_version=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
+  pom_version=$(./mvnw org.apache.maven.plugins:maven-help-plugin:evaluate -Dexpression=project.version -q -DforceStdout)
   version=${pom_version%-SNAPSHOT}
   echo "Initial release: ${version} (from pom.xml ${pom_version})"
 else

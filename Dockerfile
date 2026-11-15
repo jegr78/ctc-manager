@@ -8,8 +8,8 @@ COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 
-RUN chmod +x mvnw && ./mvnw dependency:go-offline -B \
-    && ./mvnw dependency:copy-dependencies -DincludeGroupIds=com.microsoft.playwright \
+RUN chmod +x mvnw && ./mvnw org.apache.maven.plugins:maven-dependency-plugin:go-offline -B \
+    && ./mvnw org.apache.maven.plugins:maven-dependency-pluginopy-dependencies -DincludeGroupIds=com.microsoft.playwright \
        -DincludeScope=runtime -DoutputDirectory=/playwright -B
 
 FROM build-dependencies AS build
