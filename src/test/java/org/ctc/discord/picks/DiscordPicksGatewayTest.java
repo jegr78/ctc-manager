@@ -118,4 +118,16 @@ class DiscordPicksGatewayTest {
         verify(dispatcher).accept("100000000000000001", event);
         verify(dispatcher).stop();
     }
+
+    @Test
+    void givenOnlyStatsSwitch_whenStarting_thenStartWorkersAndConnect() {
+        // given
+        var statsOnly = new DiscordPicksGateway(() -> true, configs, transport, "test-gateway-token", dispatcher);
+        // when
+        statsOnly.start();
+        // then
+        verify(dispatcher).start();
+        verify(transport).connect(eq("test-gateway-token"), eq("100000000000000001"), any());
+        assertThat(statsOnly.health()).isEqualTo(DiscordPicksGateway.Health.CONNECTED);
+    }
 }

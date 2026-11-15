@@ -61,7 +61,7 @@ class PickGatewayConfigurationTest {
     }
 
     @Test
-    void givenEitherFeatureEnabled_whenStartingGateway_thenConnect() {
+    void givenStatsSwitchOnly_whenStartingConfiguredGateway_thenPassTheSwitch() {
         // given
         var picks = new PickGatewaySettings();
         var stats = new StatsGatewaySettings();
