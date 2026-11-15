@@ -11,10 +11,14 @@ public record PickGatewayMessage(String content, List<Button> buttons, Selection
     }
     @Override public String toString() { return "PickGatewayMessage[private]"; }
     public record Button(String id, String label) { }
-    public record Selection(String id, String placeholder, List<PickGatewayModal.Option> options) {
+    public record Selection(String id, String placeholder, List<PickGatewayModal.Option> options, int minValues, int maxValues) {
+        public Selection(String id, String placeholder, List<PickGatewayModal.Option> options) { this(id, placeholder, options, 1, 1); }
         public Selection {
             options = List.copyOf(options);
             if (options.isEmpty() || options.size() > 25) throw new IllegalArgumentException("Select requires 1 to 25 choices");
+            if (minValues < 0 || maxValues < 1 || minValues > maxValues || maxValues > options.size()) {
+                throw new IllegalArgumentException("Select value range exceeds its choices");
+            }
         }
     }
 }

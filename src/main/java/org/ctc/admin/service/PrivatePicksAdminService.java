@@ -84,15 +84,29 @@ public class PrivatePicksAdminService {
     }
 
     public void registerCommand() {
-        var config = configured();
-        if (!snowflake(config.getBotApplicationId()) || !config.getBotApplicationId().equals(currentBot().id())) {
-            throw new BusinessRuleException("Configure the application ID for the existing bot identity.");
-        }
+        var config = registrable();
         try {
             discord.registerPicksGuildCommand(config.getBotApplicationId(), config.getGuildId());
         } catch (DiscordApiException | RuntimeException unavailable) {
             throw new BusinessRuleException("The private picks command could not be registered. Retry when Discord is available.");
         }
+    }
+
+    public void registerLineupCommand() {
+        var config = registrable();
+        try {
+            discord.registerLineupGuildCommand(config.getBotApplicationId(), config.getGuildId());
+        } catch (DiscordApiException | RuntimeException unavailable) {
+            throw new BusinessRuleException("The lineup command could not be registered. Retry when Discord is available.");
+        }
+    }
+
+    private DiscordGlobalConfig registrable() {
+        var config = configured();
+        if (!snowflake(config.getBotApplicationId()) || !config.getBotApplicationId().equals(currentBot().id())) {
+            throw new BusinessRuleException("Configure the application ID for the existing bot identity.");
+        }
+        return config;
     }
 
     private DiscordGlobalConfig configured() {

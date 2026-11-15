@@ -54,6 +54,13 @@ public class DiscordRestClient {
                 .retrieve().toBodilessEntity());
     }
 
+    public void registerLineupGuildCommand(String applicationId, String guildId) throws DiscordApiException {
+        execute(() -> bot.post().uri("/applications/{applicationId}/guilds/{guildId}/commands", applicationId, guildId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("type", 1, "name", "lineup", "description", "Submit private team lineups"))
+                .retrieve().toBodilessEntity());
+    }
+
     public AccessGuild fetchAccessGuild(String guildId) throws DiscordApiException {
         return execute(() -> bot.get().uri("/guilds/{guildId}", guildId).retrieve().body(AccessGuild.class));
     }

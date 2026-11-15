@@ -71,7 +71,8 @@ public class JdaPickGatewayResponse implements PickGatewayResponse {
     private static void sendInteractive(InteractionHook hook, PickGatewayMessage message, boolean edit) {
         var rows = new java.util.ArrayList<ActionRow>();
         if (message.selection() != null) {
-            var select = StringSelectMenu.create(message.selection().id()).setPlaceholder(message.selection().placeholder()).setRequiredRange(1, 1);
+            var select = StringSelectMenu.create(message.selection().id()).setPlaceholder(message.selection().placeholder())
+                    .setRequiredRange(message.selection().minValues(), message.selection().maxValues());
             for (var option : message.selection().options()) {
                 select.addOptions(SelectOption.of(option.label(), option.value()).withDefault(option.defaultSelected()));
             }

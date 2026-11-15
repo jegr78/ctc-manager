@@ -82,6 +82,25 @@ public class LineupTargetService {
                 submission != null && submission.status() == LineupStatus.APPLIED, choices(race, team), warnings);
     }
 
+    /** The following leg of the same pairing when the team plays it and may still submit for it. */
+    public java.util.Optional<LineupTarget> nextLeg(ChannelPickActor actor, UUID raceId, UUID teamId) {
+        var authorized = access.authorizeLineupTarget(actor, raceId, teamId);
+        var race = races.findById(authorized.raceId()).orElseThrow(LineupTargetService::unavailable);
+        var legs = legs(race);
+        int index = legs.indexOf(race);
+        if (index < 0 || index + 1 >= legs.size()) return java.util.Optional.empty();
+        var next = legs.get(index + 1);
+        Team team;
+        try {
+            team = PickAccessService.participant(next, teamId);
+        } catch (BusinessRuleException notPlaying) {
+            return java.util.Optional.empty();
+        }
+        if (!LineupTargetRules.serves(authorized.channel().bindingTeamId(), team)) return java.util.Optional.empty();
+        var target = target(next, team, submissions.findByRaceIdAndTeamId(next.getId(), teamId).orElse(null));
+        return target.editable() ? java.util.Optional.of(target) : java.util.Optional.empty();
+    }
+
     /** The current window decision for one leg and team, without access checks. */
     public LineupWindowPolicy.Decision assess(Race race, Team team) {
         var override = windows.findFirstByRaceIdOrderBySequenceNumberDesc(race.getId()).map(LineupWindowEvent::getKind).orElse(null);

@@ -25,11 +25,19 @@ public class PickGatewayConfiguration {
     }
 
     @Bean
+    public LineupSessionStore lineupSessionStore(Clock clock, PickSessionEpoch epoch) {
+        return new LineupSessionStore(clock, epoch, 512);
+    }
+
+    @Bean
     public PickGatewayDispatcher pickGatewayDispatcher(PickGatewaySettings settings, PickInteractionHandler picks, IncidentInteractionHandler incidents,
-                                                       ImportLockService imports, Clock clock, PickSessionEpoch epoch) {
+                                                       LineupInteractionHandler lineups, ImportLockService imports, Clock clock, PickSessionEpoch epoch) {
         return new PickGatewayDispatcher(settings, (event, reply) -> {
-            if ("incidents".equals(event.action()) || event.action().startsWith("ctc-incidents:")) incidents.onInteraction(event, reply);
-            else picks.onInteraction(event, reply);
+            switch (String.valueOf(PickGatewayDispatcher.command(event.action()))) {
+                case "incidents" -> incidents.onInteraction(event, reply);
+                case "lineup" -> lineups.onInteraction(event, reply);
+                default -> picks.onInteraction(event, reply);
+            }
         }, imports, clock, epoch);
     }
 
