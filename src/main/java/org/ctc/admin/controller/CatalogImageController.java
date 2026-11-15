@@ -7,6 +7,7 @@ import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.CarImageKind;
 import org.ctc.domain.model.TrackImageKind;
 import org.ctc.domain.service.CatalogImageService;
+import org.ctc.gt7sync.Gt7CarShotService;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,7 +20,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 public class CatalogImageController {
     private final CatalogImageService gallery;
-    private final org.ctc.gt7sync.Gt7CarShotService gt7Shots;
+    private final Gt7CarShotService gt7Shots;
 
     @PostMapping("/admin/cars/{id}/images")
     public String uploadCarImages(@PathVariable UUID id, @RequestParam(name = "files", required = false) List<MultipartFile> files,

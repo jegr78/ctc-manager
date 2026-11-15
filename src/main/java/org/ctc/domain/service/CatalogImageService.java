@@ -96,7 +96,8 @@ public class CatalogImageService {
      * and manual images stay untouched. Replaced files are deleted after commit.
      */
     public Gt7Applied applyGt7CarImages(UUID carId, List<Gt7Shot> shots) {
-        var car = cars.findById(carId).orElseThrow(() -> new EntityNotFoundException("Car", carId));
+        shots.forEach(shot -> files.deleteOnRollback(shot.imagePath()));
+        var car = cars.findByIdForUpdate(carId).orElseThrow(() -> new EntityNotFoundException("Car", carId));
         var existing = carImages(carId);
         int next = next(existing);
         var added = new ArrayList<String>();
@@ -239,6 +240,14 @@ public class CatalogImageService {
     private static String name(MultipartFile file) {
         String original = file.getOriginalFilename();
         return original == null || original.isBlank() ? "The file" : original.replaceAll("\\p{Cntrl}", "");
+    }
+
+    /** Slot and stored path of the car's GT7 images, without loading entities. */
+    @Transactional(readOnly = true)
+    public java.util.Map<String, String> gt7Slots(UUID carId) {
+        var slots = new java.util.HashMap<String, String>();
+        carImages.findGt7Slots(carId).forEach(row -> slots.put(row.getSlot(), row.getImagePath()));
+        return slots;
     }
 
     /** A downloaded GT7 car shot already stored under {@code imagePath}. */

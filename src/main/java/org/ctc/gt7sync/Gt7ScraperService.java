@@ -137,10 +137,15 @@ public class Gt7ScraperService {
         return shots;
     }
 
+    /** Whether the value has the stored GT7 car ID form such as {@code car365}. */
+    public static boolean isCarId(String gt7Id) {
+        return gt7Id != null && gt7Id.matches("car[1-9]\\d{0,9}");
+    }
+
     /** Slot such as {@code 2_01} to the module file of every 2K car shot of the car, in slot order. */
     Map<String, String> carShotModules(String indexJs, String gt7Id) {
-        if (gt7Id == null || !gt7Id.matches("\\d{1,6}")) throw new IllegalArgumentException("Invalid GT7 car ID: " + gt7Id);
-        var pattern = Pattern.compile("car_shots/2k/car" + gt7Id + "_(\\d+_\\d+)\\.jpg[\"'`]\\s*:\\s*\\(\\)\\s*=>\\s*\\w+\\(\\s*\\(\\)\\s*=>\\s*import\\(\\s*([\"'`])\\./(car"
+        if (!isCarId(gt7Id)) throw new IllegalArgumentException("Invalid GT7 car ID: " + gt7Id);
+        var pattern = Pattern.compile("car_shots/2k/" + gt7Id + "_(\\d+_\\d+)\\.jpg[\"'`]\\s*:\\s*\\(\\)\\s*=>\\s*\\w+\\(\\s*\\(\\)\\s*=>\\s*import\\(\\s*([\"'`])\\./("
                 + gt7Id + "_\\1-[\\w-]+\\.js)\\2");
         var modules = new java.util.TreeMap<String, String>();
         var match = pattern.matcher(indexJs);
@@ -149,8 +154,8 @@ public class Gt7ScraperService {
     }
 
     String carShotImageUrl(String moduleJs, String gt7Id, String slot) {
-        if (gt7Id == null || !gt7Id.matches("\\d{1,6}") || slot == null || !slot.matches("\\d+_\\d+")) return null;
-        var pattern = Pattern.compile("([\"'`])(/common/dist/gt7/carlist/assets/car" + gt7Id + "_" + Pattern.quote(slot) + "-[\\w-]+\\.jpg)\\1");
+        if (!isCarId(gt7Id) || slot == null || !slot.matches("\\d+_\\d+")) return null;
+        var pattern = Pattern.compile("([\"'`])(/common/dist/gt7/carlist/assets/" + gt7Id + "_" + Pattern.quote(slot) + "-[\\w-]+\\.jpg)\\1");
         var match = pattern.matcher(moduleJs);
         return match.find() ? BASE_URL + match.group(2) : null;
     }

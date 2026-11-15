@@ -11,12 +11,11 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Car;
-import org.ctc.domain.model.CarImage;
-import org.ctc.domain.model.ImageSource;
 import org.ctc.domain.repository.CarRepository;
 import org.ctc.domain.service.CatalogImageService;
 import org.ctc.domain.service.CatalogImageService.Gt7Applied;
@@ -46,15 +45,15 @@ class Gt7CarShotServiceTest {
 
     @BeforeEach
     void setUp() {
-        car.setGt7Id("365");
+        car.setGt7Id("car365");
         when(cars.findById(carId)).thenReturn(Optional.of(car));
     }
 
     @Test
     void givenNewChangedAndIdenticalSlots_whenLoading_thenStoreOnlyChangedFilesAndReportEachSlot() throws IOException {
         // given
-        when(gallery.carImages(carId)).thenReturn(List.of(gt7("2_01", "/uploads/car-images/old-studio.jpg")));
-        when(scraper.scrapeCarShots("365")).thenReturn(List.of(new CarShot("1_01", "https://gt7/a.jpg"), new CarShot("2_01", "https://gt7/b.jpg"),
+        when(gallery.gt7Slots(carId)).thenReturn(Map.of("2_01", "/uploads/car-images/old-studio.jpg"));
+        when(scraper.scrapeCarShots("car365")).thenReturn(List.of(new CarShot("1_01", "https://gt7/a.jpg"), new CarShot("2_01", "https://gt7/b.jpg"),
                 new CarShot("2_02", "https://gt7/c.jpg")));
         when(files.downloadImage("https://gt7/a.jpg", "gt7.jpg")).thenReturn(scene);
         when(files.downloadImage("https://gt7/b.jpg", "gt7.jpg")).thenReturn(studio);
@@ -73,23 +72,23 @@ class Gt7CarShotServiceTest {
     }
 
     @Test
-    void givenApplyingFails_whenLoading_thenRemoveTheNewFiles() throws IOException {
+    void givenApplyingFails_whenLoading_thenLeaveCleanupToTheTransactionAndHideTheDatabaseError() throws IOException {
         // given
-        when(gallery.carImages(carId)).thenReturn(List.of());
-        when(scraper.scrapeCarShots("365")).thenReturn(List.of(new CarShot("1_01", "https://gt7/a.jpg")));
+        when(gallery.gt7Slots(carId)).thenReturn(Map.of());
+        when(scraper.scrapeCarShots("car365")).thenReturn(List.of(new CarShot("1_01", "https://gt7/a.jpg")));
         when(files.downloadImage("https://gt7/a.jpg", "gt7.jpg")).thenReturn(scene);
         when(files.storeBytes(eq("car-images"), eq(carId), any(), any())).thenReturn("/uploads/car-images/new1.jpg");
         when(gallery.applyGt7CarImages(eq(carId), anyList())).thenThrow(new IllegalStateException("database down"));
         // when / then
-        assertThatThrownBy(() -> service.load(carId)).isInstanceOf(BusinessRuleException.class).hasMessage("GT7 images could not be loaded: database down");
-        verify(files).delete("/uploads/car-images/new1.jpg");
+        assertThatThrownBy(() -> service.load(carId)).isInstanceOf(BusinessRuleException.class).hasMessage("GT7 images could not be saved; try again.");
+        verify(files, never()).delete(any());
     }
 
     @Test
     void givenFailedDownload_whenLoading_thenStoreNothingAndChangeNothing() throws IOException {
         // given
-        when(gallery.carImages(carId)).thenReturn(List.of());
-        when(scraper.scrapeCarShots("365")).thenReturn(List.of(new CarShot("1_01", "https://gt7/a.jpg"), new CarShot("2_01", "https://gt7/b.jpg")));
+        when(gallery.gt7Slots(carId)).thenReturn(Map.of());
+        when(scraper.scrapeCarShots("car365")).thenReturn(List.of(new CarShot("1_01", "https://gt7/a.jpg"), new CarShot("2_01", "https://gt7/b.jpg")));
         when(files.downloadImage("https://gt7/a.jpg", "gt7.jpg")).thenReturn(scene);
         when(files.storeBytes(eq("car-images"), eq(carId), any(), any())).thenReturn("/uploads/car-images/new1.jpg");
         when(files.downloadImage("https://gt7/b.jpg", "gt7.jpg")).thenThrow(new IOException("Image download failed with HTTP 404"));
@@ -102,8 +101,8 @@ class Gt7CarShotServiceTest {
     @Test
     void givenCarWithoutShots_whenLoading_thenReportThatNothingChanged() throws IOException {
         // given
-        when(gallery.carImages(carId)).thenReturn(List.of());
-        when(scraper.scrapeCarShots("365")).thenReturn(List.of());
+        when(gallery.gt7Slots(carId)).thenReturn(Map.of());
+        when(scraper.scrapeCarShots("car365")).thenReturn(List.of());
         when(gallery.applyGt7CarImages(carId, List.of())).thenReturn(new Gt7Applied(List.of(), List.of()));
         // when / then
         assertThat(service.load(carId).message()).isEqualTo("GT7 lists no car shots for this car; nothing changed.");
@@ -116,13 +115,5 @@ class Gt7CarShotServiceTest {
         // when / then
         assertThatThrownBy(() -> service.load(carId)).isInstanceOf(BusinessRuleException.class).hasMessage("This car has no GT7 ID");
         verify(scraper, never()).scrapeCarShots(any());
-    }
-
-    private static CarImage gt7(String slot, String path) {
-        var image = new CarImage();
-        image.setSource(ImageSource.GT7);
-        image.setSourceKey(slot);
-        image.setImagePath(path);
-        return image;
     }
 }

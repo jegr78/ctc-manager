@@ -172,13 +172,27 @@ class CatalogImageIT {
     }
 
     @Test
+    void givenRolledBackGt7Apply_whenTheTransactionEnds_thenRemoveTheStagedFile() throws Exception {
+        // given
+        String staged = storeGt7("staged.jpg");
+        // when
+        tx.executeWithoutResult(status -> {
+            gallery.applyGt7CarImages(car, List.of(new CatalogImageService.Gt7Shot("2_01", staged, 1920, 1080)));
+            status.setRollbackOnly();
+        });
+        // then
+        assertThat(file(staged)).doesNotExist();
+        assertThat(gallery.carImages(car)).isEmpty();
+    }
+
+    @Test
     void givenCarWithoutGt7Id_whenOpeningOrLoadingGt7Images_thenHideTheButtonAndExplain() throws Exception {
         // when / then
         mvc.perform(get("/admin/cars/{id}/edit", car)).andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Load GT7 images"))));
         mvc.perform(post("/admin/cars/{id}/images/gt7", car))
                 .andExpect(redirectedUrl("/admin/cars/" + car + "/edit#car-images")).andExpect(flash().attribute("galleryError", "This car has no GT7 ID"));
         var withId = cars.findById(car).orElseThrow();
-        withId.setGt7Id("365");
+        withId.setGt7Id("car365");
         cars.saveAndFlush(withId);
         mvc.perform(get("/admin/cars/{id}/edit", car)).andExpect(content().string(org.hamcrest.Matchers.containsString("Load GT7 images")));
     }

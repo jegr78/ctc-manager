@@ -105,7 +105,7 @@ public class CarController {
         if (form.getId() != null) {
             var car = carService.findById(form.getId());
             model.addAttribute("car", car);
-            model.addAttribute("galleryGt7", car.getGt7Id() != null && !car.getGt7Id().isBlank());
+            model.addAttribute("galleryGt7", org.ctc.gt7sync.Gt7ScraperService.isCarId(car.getGt7Id()));
             model.addAttribute("galleryImages", gallery.carImages(form.getId()));
             model.addAttribute("galleryKinds", org.ctc.domain.model.CarImageKind.values());
             model.addAttribute("galleryBasePath", "/admin/cars/" + form.getId());

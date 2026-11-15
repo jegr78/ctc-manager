@@ -177,6 +177,17 @@ public class FileStorageService {
 		return url;
 	}
 
+    /** Removes the file when the current transaction rolls back; an unknown outcome keeps it. */
+    public void deleteOnRollback(String url) {
+        if (url == null || !TransactionSynchronizationManager.isSynchronizationActive()) return;
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == STATUS_ROLLED_BACK) delete(url);
+            }
+        });
+    }
+
     public void deleteAfterCommit(String url) {
         if (url == null) return;
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
