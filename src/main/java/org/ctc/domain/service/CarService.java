@@ -28,6 +28,7 @@ public class CarService {
     private final SeasonCarPoolMemberRepository poolMembers;
 	private final FileStorageService fileStorageService;
 	private final CarMetadataService metadataService;
+	private final CatalogImageService gallery;
 
 	@Transactional(readOnly = true)
 	public List<Car> findAllSorted() {
@@ -97,6 +98,7 @@ public class CarService {
 			fileStorageService.delete(car.getImageUrl());
 		}
 
+		gallery.deleteAllForCar(id);
 		carRepository.delete(car);
 		log.info("Deleted car: {} {}", car.getManufacturer(), car.getName());
 	}

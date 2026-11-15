@@ -326,7 +326,7 @@ class FileStorageServiceTest {
 		var client = org.mockito.Mockito.mock(org.ctc.integration.ImageDownloadClient.class);
 		var service = new FileStorageService(org.ctc.TestHelper.enabledOutboundPolicy(), client, tempDir.toString());
 		byte[] png = {(byte) 0x89, 'P', 'N', 'G', 13, 10, 26, 10, 1};
-		org.mockito.Mockito.when(client.download("https://www.gran-turismo.com/a.png", org.ctc.integration.ImageDownloadClient.ImageType.PNG)).thenReturn(png);
+		org.mockito.Mockito.when(client.download("https://www.gran-turismo.com/a.png", org.ctc.domain.service.ImageContent.Format.PNG)).thenReturn(png);
 		var entity = UUID.randomUUID();
 		// when
 		String url = service.storeFromUrl("cars", entity, "https://www.gran-turismo.com/a.png", "car1.png");

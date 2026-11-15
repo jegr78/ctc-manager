@@ -24,6 +24,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class CarController {
 
 	private final CarService carService;
+	private final org.ctc.domain.service.CatalogImageService gallery;
 
 	@GetMapping
 	public String list(Model model) {
@@ -101,7 +102,14 @@ public class CarController {
         model.addAttribute("pageTitle", form.getId() == null ? "New Car" : "Edit Car");
         model.addAttribute("categories", CarCategory.values());
         model.addAttribute("drivetrains", Drivetrain.values());
-        if (form.getId() != null) model.addAttribute("car", carService.findById(form.getId()));
+        if (form.getId() != null) {
+            model.addAttribute("car", carService.findById(form.getId()));
+            model.addAttribute("galleryImages", gallery.carImages(form.getId()));
+            model.addAttribute("galleryKinds", org.ctc.domain.model.CarImageKind.values());
+            model.addAttribute("galleryBasePath", "/admin/cars/" + form.getId());
+            model.addAttribute("galleryOwner", form.getManufacturer() + " " + form.getName());
+            model.addAttribute("galleryPrefix", "car");
+        }
     }
 
 	@PostMapping("/{id}/delete")

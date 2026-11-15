@@ -111,7 +111,7 @@ public class FileStorageService {
 		String safeName = UUID.randomUUID().toString().substring(0, 8) + "_" + sanitizeFilename(filename);
 		Path target = dir.resolve(safeName);
 		validatePathWithinUploadDir(target);
-		byte[] data = downloads.download(sourceUrl, ImageDownloadClient.ImageType.ofFilename(filename));
+		byte[] data = downloads.download(sourceUrl, ImageContent.Format.ofFilename(filename));
 		Files.createDirectories(dir);
 		try {
 			Files.write(target, data);

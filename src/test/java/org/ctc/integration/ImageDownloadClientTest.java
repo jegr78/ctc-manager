@@ -11,7 +11,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.ctc.integration.ImageDownloadClient.ImageType;
+import org.ctc.domain.service.ImageContent.Format;
 import org.ctc.integration.ImageDownloadClient.Policy;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -72,14 +72,14 @@ class ImageDownloadClientTest {
     @Test
     void givenPngAndJpeg_whenDownloading_thenReturnTheBytes() throws IOException {
         // when / then
-        assertThat(stub.download(base + "/car.png", ImageType.PNG)).isEqualTo(PNG);
-        assertThat(stub.download(base + "/car.jpg", ImageType.JPEG)).isEqualTo(JPEG);
+        assertThat(stub.download(base + "/car.png", Format.PNG)).isEqualTo(PNG);
+        assertThat(stub.download(base + "/car.jpg", Format.JPEG)).isEqualTo(JPEG);
     }
 
     @Test
     void givenRedirect_whenDownloading_thenRefuseToFollowIt() {
         // when / then
-        assertThatThrownBy(() -> stub.download(base + "/redirect.png", ImageType.PNG))
+        assertThatThrownBy(() -> stub.download(base + "/redirect.png", Format.PNG))
                 .isInstanceOf(IOException.class).hasMessageContaining("refused a redirect (HTTP 302)");
         assertThat(requests).as("the redirect target is never requested").hasValue(1);
     }
@@ -87,25 +87,25 @@ class ImageDownloadClientTest {
     @Test
     void givenDeclaredOrStreamedOversizeBody_whenDownloading_thenRejectIt() {
         // when / then
-        assertThatThrownBy(() -> stub.download(base + "/large.png", ImageType.PNG))
+        assertThatThrownBy(() -> stub.download(base + "/large.png", Format.PNG))
                 .isInstanceOf(IOException.class).hasMessageContaining("exceeds");
-        assertThatThrownBy(() -> stub.download(base + "/streamed.png", ImageType.PNG))
+        assertThatThrownBy(() -> stub.download(base + "/streamed.png", Format.PNG))
                 .isInstanceOf(IOException.class).hasMessageContaining("exceeds");
     }
 
     @Test
     void givenContentOfAnotherType_whenDownloading_thenRejectIt() {
         // when / then
-        assertThatThrownBy(() -> stub.download(base + "/car.jpg", ImageType.PNG))
+        assertThatThrownBy(() -> stub.download(base + "/car.jpg", Format.PNG))
                 .isInstanceOf(IOException.class).hasMessage("Downloaded file is not a PNG image");
     }
 
     @Test
     void givenMissingImageOrSlowServer_whenDownloading_thenFailWithAnIoException() {
         // when / then
-        assertThatThrownBy(() -> stub.download(base + "/missing.png", ImageType.PNG))
+        assertThatThrownBy(() -> stub.download(base + "/missing.png", Format.PNG))
                 .isInstanceOf(IOException.class).hasMessage("Image download failed with HTTP 404");
-        assertThatThrownBy(() -> stub.download(base + "/slow.png", ImageType.PNG))
+        assertThatThrownBy(() -> stub.download(base + "/slow.png", Format.PNG))
                 .as("the read timeout ends a stalled download").isInstanceOf(IOException.class);
     }
 
@@ -114,15 +114,15 @@ class ImageDownloadClientTest {
         // given
         var production = new ImageDownloadClient();
         // when / then
-        assertThatThrownBy(() -> production.download("http://www.gran-turismo.com/a.png", ImageType.PNG))
+        assertThatThrownBy(() -> production.download("http://www.gran-turismo.com/a.png", Format.PNG))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Only HTTPS URLs allowed");
-        assertThatThrownBy(() -> production.download("https://example.com/a.png", ImageType.PNG))
+        assertThatThrownBy(() -> production.download("https://example.com/a.png", Format.PNG))
                 .isInstanceOf(IllegalArgumentException.class).hasMessage("URL host not allowed: example.com");
-        assertThatThrownBy(() -> production.download("https://user@www.gran-turismo.com/a.png", ImageType.PNG))
+        assertThatThrownBy(() -> production.download("https://user@www.gran-turismo.com/a.png", Format.PNG))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("URL host not allowed");
-        assertThatThrownBy(() -> production.download("https://www.gran-turismo.com:8443/a.png", ImageType.PNG))
+        assertThatThrownBy(() -> production.download("https://www.gran-turismo.com:8443/a.png", Format.PNG))
                 .as("only the default HTTPS port is allowed").isInstanceOf(IllegalArgumentException.class).hasMessageContaining("URL host not allowed");
-        assertThatThrownBy(() -> production.download(base + "/car.png", ImageType.PNG))
+        assertThatThrownBy(() -> production.download(base + "/car.png", Format.PNG))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThat(requests).hasValue(0);
     }
@@ -134,7 +134,7 @@ class ImageDownloadClientTest {
                 host -> new InetAddress[] {InetAddress.getByName("93.184.216.34"), InetAddress.getByName("10.0.0.7")}),
                 Duration.ofSeconds(1), Duration.ofSeconds(1));
         // when / then
-        assertThatThrownBy(() -> rebound.download("https://www.gran-turismo.com/a.png", ImageType.PNG))
+        assertThatThrownBy(() -> rebound.download("https://www.gran-turismo.com/a.png", Format.PNG))
                 .isInstanceOf(IllegalArgumentException.class).hasMessage("URL host resolves to a blocked address: www.gran-turismo.com");
     }
 
@@ -157,10 +157,10 @@ class ImageDownloadClientTest {
     @Test
     void givenFilenames_whenDerivingTheExpectedType_thenMapTheExtension() {
         // when / then
-        assertThat(ImageType.ofFilename("car1.PNG")).isEqualTo(ImageType.PNG);
-        assertThat(ImageType.ofFilename("car1_2_01.jpg")).isEqualTo(ImageType.JPEG);
-        assertThat(ImageType.ofFilename("x.webp")).isEqualTo(ImageType.WEBP);
-        assertThatThrownBy(() -> ImageType.ofFilename("x.gif")).isInstanceOf(IllegalArgumentException.class);
+        assertThat(Format.ofFilename("car1.PNG")).isEqualTo(Format.PNG);
+        assertThat(Format.ofFilename("car1_2_01.jpg")).isEqualTo(Format.JPEG);
+        assertThat(Format.ofFilename("x.webp")).isEqualTo(Format.WEBP);
+        assertThatThrownBy(() -> Format.ofFilename("x.gif")).isInstanceOf(IllegalArgumentException.class);
     }
 
     private static void respond(com.sun.net.httpserver.HttpExchange exchange, int status, byte[] body) throws IOException {

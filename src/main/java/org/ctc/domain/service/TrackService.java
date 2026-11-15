@@ -25,6 +25,7 @@ public class TrackService {
 	private final RaceRepository raceRepository;
 	private final SeasonRepository seasonRepository;
 	private final FileStorageService fileStorageService;
+	private final CatalogImageService gallery;
 
 	@Transactional(readOnly = true)
 	public List<Track> findAllSorted() {
@@ -84,6 +85,7 @@ public class TrackService {
 			fileStorageService.delete(track.getImageUrl());
 		}
 
+		gallery.deleteAllForTrack(id);
 		trackRepository.delete(track);
 		log.info("Deleted track: {}", track.getName());
 	}

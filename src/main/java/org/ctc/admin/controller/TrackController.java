@@ -25,6 +25,7 @@ public class TrackController {
 
 	private final TrackService trackService;
     private final TrackEnvironmentService environments;
+    private final org.ctc.domain.service.CatalogImageService gallery;
 
 	@GetMapping
 	public String list(Model model) {
@@ -93,6 +94,11 @@ public class TrackController {
     private void prepareEnvironment(UUID id, Model model) {
         var view = environments.view(id);
         model.addAttribute("environment", view);
+        model.addAttribute("galleryImages", gallery.trackImages(id));
+        model.addAttribute("galleryKinds", org.ctc.domain.model.TrackImageKind.values());
+        model.addAttribute("galleryBasePath", "/admin/tracks/" + id);
+        model.addAttribute("galleryOwner", trackService.findById(id).getName());
+        model.addAttribute("galleryPrefix", "track");
         model.addAttribute("environmentSourceUrl", org.ctc.domain.model.TrackEnvironmentProvenance.SOURCE_URL);
         model.addAttribute("rainCapabilities", TrackRainCapability.values());
         if (!model.containsAttribute("environmentForm")) {

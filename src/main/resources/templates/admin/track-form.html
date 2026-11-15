@@ -4,7 +4,7 @@
 <body>
 <section class="entity-editor">
     <div class="toolbar"><div><a th:href="@{/admin/tracks}" class="back-link">← Back to Tracks</a><h1 th:text="${trackForm.id != null ? 'Edit Track' : 'New Track'}"></h1></div></div>
-    <nav class="entity-section-nav" aria-label="Track editing sections"><a href="#track-identity">Identity</a><a href="#track-environment">Time &amp; weather</a><a th:if="${trackForm.id != null}" href="#track-image">Image</a></nav>
+    <nav class="entity-section-nav" aria-label="Track editing sections"><a href="#track-identity">Identity</a><a href="#track-environment">Time &amp; weather</a><a th:if="${trackForm.id != null}" href="#track-image">Image</a><a th:if="${trackForm.id != null}" href="#track-images">Images</a></nav>
     <div class="card">
         <form class="entity-editor-form" th:action="@{/admin/tracks/save}" th:object="${trackForm}" method="post">
             <input type="hidden" th:field="*{id}">
@@ -67,6 +67,7 @@
             </div>
         </form>
     </div>
+    <div th:if="${trackForm.id != null}" th:replace="~{admin/fragments/catalog-gallery :: gallery}"></div>
 </section>
 </body>
 </html>

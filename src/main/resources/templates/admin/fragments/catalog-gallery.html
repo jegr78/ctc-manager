@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="gallery" class="card mt-md catalog-gallery" th:id="${galleryPrefix + '-images'}">
+    <h2>Images</h2>
+    <p class="form-hint">Larger pictures for future graphics. The thumbnail above stays separate.</p>
+    <div th:if="${galleryStatus}" class="alert alert-success" role="status" th:text="${galleryStatus}"></div>
+    <div th:if="${galleryError}" class="alert alert-danger" role="alert" th:text="${galleryError}"></div>
+    <div th:if="${#lists.isEmpty(galleryImages)}" class="empty-state empty-state--compact"><p>No images yet.</p></div>
+    <ol th:unless="${#lists.isEmpty(galleryImages)}" class="gallery-grid" th:aria-label="${'Images of ' + galleryOwner}">
+        <li th:each="image, row : ${galleryImages}" class="gallery-item" th:id="${'image-' + image.id}">
+            <img th:src="${image.imagePath}" loading="lazy"
+                 th:alt="${galleryOwner + ', ' + #strings.toLowerCase(image.kindName) + (image.label != null ? ', ' + image.label : '') + ', image ' + row.count}">
+            <p class="gallery-meta">
+                <span th:text="${image.kindName}"></span> ·
+                <span th:text="${image.source}"></span><span th:if="${image.sourceKey != null}" th:text="${' ' + image.sourceKey}"></span> ·
+                <span th:text="${image.width + '×' + image.height}"></span>
+                <br th:if="${image.label != null}"><span th:if="${image.label != null}" th:text="${image.label}"></span>
+            </p>
+            <div class="gallery-actions">
+                <form th:action="@{|${galleryBasePath}/images/${image.id}/move|}" method="post">
+                    <input type="hidden" name="direction" value="up">
+                    <button type="submit" class="btn btn-secondary btn-xs" th:id="${'image-' + image.id + '-up'}" th:disabled="${row.first}"
+                            th:aria-label="${'Move image ' + row.count + ' of ' + row.size + ' up'}">Up</button>
+                </form>
+                <form th:action="@{|${galleryBasePath}/images/${image.id}/move|}" method="post">
+                    <input type="hidden" name="direction" value="down">
+                    <button type="submit" class="btn btn-secondary btn-xs" th:id="${'image-' + image.id + '-down'}" th:disabled="${row.last}"
+                            th:aria-label="${'Move image ' + row.count + ' of ' + row.size + ' down'}">Down</button>
+                </form>
+                <form th:action="@{|${galleryBasePath}/images/${image.id}/delete|}" method="post">
+                    <button type="submit" class="btn btn-danger btn-xs" th:id="${'image-' + image.id + '-delete'}"
+                            th:aria-label="${'Delete image ' + row.count + ' of ' + row.size}">Delete</button>
+                </form>
+            </div>
+        </li>
+    </ol>
+    <form th:action="@{|${galleryBasePath}/images|}" method="post" enctype="multipart/form-data" class="gallery-upload mt-xs">
+        <fieldset>
+            <legend>Add images</legend>
+            <div class="form-group">
+                <label th:for="${galleryPrefix + '-gallery-files'}">Image files</label>
+                <input type="file" th:id="${galleryPrefix + '-gallery-files'}" name="files" multiple required class="file-input"
+                       accept="image/png,image/jpeg,image/webp" th:aria-describedby="${galleryPrefix + '-gallery-files-hint'}">
+                <small class="form-hint" th:id="${galleryPrefix + '-gallery-files-hint'}">PNG, JPEG or WebP, at most 10 MB each.</small>
+            </div>
+            <div class="form-group">
+                <label th:for="${galleryPrefix + '-gallery-kind'}">Kind</label>
+                <select th:id="${galleryPrefix + '-gallery-kind'}" name="kind" required>
+                    <option th:each="kind : ${galleryKinds}" th:value="${kind.name()}" th:text="${#strings.capitalize(#strings.toLowerCase(kind.name()))}"></option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label th:for="${galleryPrefix + '-gallery-label'}">Label (optional)</label>
+                <input type="text" th:id="${galleryPrefix + '-gallery-label'}" name="label" maxlength="100">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">Upload images</button>
+        </fieldset>
+    </form>
+    <script th:src="@{/admin/js/catalog-gallery.js}" defer></script>
+</div>
+</body>
+</html>
