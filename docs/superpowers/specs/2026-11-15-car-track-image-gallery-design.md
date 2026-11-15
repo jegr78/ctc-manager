@@ -36,7 +36,7 @@ The GT7 track list offers only logos. Track images come from manual uploads. Thi
 
 ## Data model
 
-Migration V45 adds two tables, which brings the entity count to 50. Backup schema 23 exports both.
+Migration V46 adds two tables, which brings the entity count to 53. Backup schema 24 exports both.
 
 `CarImage` and `TrackImage` share these fields:
 
@@ -88,10 +88,12 @@ Uploads accept JPEG, PNG and WebP up to 10 MB, like the existing image upload. A
 - content check by magic bytes against the expected image type
 - rejection of resolved loopback, private, link-local and multicast addresses
 
+`ImageDownloadClient` implements these guards with Spring `RestClient` over the JDK client with redirects disabled. The filename extension of the stored file names the expected type. Every resolved address of the host must be public; the request itself resolves the name again, so the allowlist remains the primary control.
+
 ## Backup, restore and audit
 
 - Both tables are exported with every field. Their files are added to the archive through `enumerateReferencedUploads`.
-- Schema 23 requires both files, even when empty. Schemas 1 to 22 restore without images.
+- Schema 24 requires both files, even when empty. Schemas 1 to 23 restore without images.
 - Preflight before wipe checks:
   - owner references
   - enum values
