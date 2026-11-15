@@ -32,8 +32,8 @@ class StatsInteractionHandlerTest {
     final StatsSeasonService seasons = mock(StatsSeasonService.class);
     final TeamStatsService teams = mock(TeamStatsService.class);
     final SiteProfileLinks links = mock(SiteProfileLinks.class);
-    final java.util.concurrent.atomic.AtomicLong nanos = new java.util.concurrent.atomic.AtomicLong();
-    final StatsInteractionHandler handler = new StatsInteractionHandler(drivers, teams, seasons, links, nanos::get);
+    final java.util.concurrent.Semaphore slots = new java.util.concurrent.Semaphore(1);
+    final StatsInteractionHandler handler = new StatsInteractionHandler(drivers, teams, seasons, links, slots);
 
     @Test
     void givenDriverCommand_whenFiguresExist_thenAnswerWithAPrivateEscapedEmbed() {
@@ -89,9 +89,9 @@ class StatsInteractionHandlerTest {
     }
 
     @Test
-    void givenShareClick_whenTheEntityExists_thenRecomputeAndPostVisiblyWithoutAButton() {
+    void givenShareClick_whenTheEntityExists_thenConfirmPrivatelyAndPostVisiblyWithoutAButton() {
         // given
-        when(response.deferPublic()).thenReturn(CompletableFuture.completedFuture(continuation));
+        when(response.deferPrivate()).thenReturn(CompletableFuture.completedFuture(continuation));
         var id = UUID.randomUUID();
         when(drivers.exists(id)).thenReturn(true);
         when(drivers.stats(id.toString(), StatsScope.ALLTIME, null)).thenReturn(new DriverStats(id, "Test", "Test",
@@ -100,41 +100,42 @@ class StatsInteractionHandlerTest {
         handler.onInteraction(button(StatsInteractionHandler.SHARE + "d:" + id + ":a:-"), reply());
         // then
         var sent = ArgumentCaptor.forClass(PickGatewayMessage.class);
-        verify(continuation).replyPrivate(sent.capture());
+        var order = inOrder(continuation);
+        order.verify(continuation).replyPrivate("Sharing in this channel.");
+        order.verify(continuation).postVisible(sent.capture());
         assertThat(sent.getValue().content()).as("the poster is named without a mention").isEqualTo("Shared by Test Member");
         assertThat(sent.getValue().buttons()).isEmpty();
         assertThat(sent.getValue().embed().title()).isEqualTo("Test");
-        verify(response, never()).deferPrivate();
     }
 
     @Test
-    void givenShareClickForARemovedOrMalformedEntity_whenClicking_thenSayNoLongerAvailablePrivately() {
+    void givenShareClickForARemovedEntityOrVanishedSeason_whenClicking_thenSayNoLongerAvailableOnlyPrivately() {
         // given
-        var id = UUID.randomUUID();
-        var malformed = mock(PickGatewayResponse.class);
-        // when
-        handler.onInteraction(button(StatsInteractionHandler.SHARE + "t:" + id + ":c:-"), reply());
-        handler.onInteraction(new PickGatewayInteraction("1", "100", "200", "300", PickGatewayInteraction.Kind.BUTTON,
-                StatsInteractionHandler.SHARE + "t:" + id + ":s:-", Map.of(), PickGatewayReplyTest.NOW, malformed, null, null, "Test Member"),
-                new PickGatewayReply(malformed, clock, PickGatewayReplyTest.NOW, new AtomicLong()::get, Runnable::run));
-        // then
-        verify(response).replyPrivate(StatsInteractionHandler.GONE);
-        verify(malformed).replyPrivate(StatsInteractionHandler.GONE);
-        verify(response, never()).deferPublic();
-    }
-
-    @Test
-    void givenShareClickForAVanishedSeason_whenClicking_thenSayNoLongerAvailablePrivately() {
-        // given
-        var id = UUID.randomUUID();
+        when(response.deferPrivate()).thenReturn(CompletableFuture.completedFuture(continuation));
+        var removed = UUID.randomUUID();
+        var team = UUID.randomUUID();
         var season = UUID.randomUUID();
-        when(teams.exists(id)).thenReturn(true);
-        when(seasons.period(StatsScope.SEASON, season.toString())).thenThrow(new StatsLookupException("No season found"));
+        when(teams.exists(team)).thenReturn(true);
+        when(teams.stats(team.toString(), StatsScope.SEASON, season.toString())).thenThrow(new StatsLookupException("No season found"));
         // when
-        handler.onInteraction(button(StatsInteractionHandler.SHARE + "t:" + id + ":s:" + season), reply());
+        handler.onInteraction(button(StatsInteractionHandler.SHARE + "t:" + removed + ":c:-"), reply());
+        handler.onInteraction(button(StatsInteractionHandler.SHARE + "t:" + team + ":s:" + season), reply());
+        // then
+        verify(continuation, times(2)).replyPrivate(StatsInteractionHandler.GONE);
+        verify(continuation, never()).postVisible(any());
+        verify(drivers, never()).exists(any());
+    }
+
+    @Test
+    void givenMalformedShareId_whenClicking_thenAnswerPrivatelyWithoutWork() {
+        // given
+        var malformed = StatsInteractionHandler.SHARE + "t:" + UUID.randomUUID() + ":s:-";
+        // when
+        handler.onInteraction(button(malformed), reply());
         // then
         verify(response).replyPrivate(StatsInteractionHandler.GONE);
-        verify(response, never()).deferPublic();
+        verify(response, never()).deferPrivate();
+        verifyNoInteractions(teams);
     }
 
     @Test
@@ -144,12 +145,16 @@ class StatsInteractionHandlerTest {
         season.setId(UUID.randomUUID());
         var entity = UUID.randomUUID();
         // when
-        String id = StatsInteractionHandler.ShareRequest.id(false, entity, StatsScope.SEASON, StatsPeriod.of(season, List.of(season), false));
+        String id = StatsInteractionHandler.ShareRequest.id(false, entity, StatsPeriod.of(season, List.of(season), false));
         var parsed = StatsInteractionHandler.ShareRequest.parse(id);
         // then
         assertThat(id).hasSizeLessThanOrEqualTo(100);
         assertThat(parsed).isEqualTo(new StatsInteractionHandler.ShareRequest(false, entity, "season", season.getId().toString()));
         assertThat(StatsInteractionHandler.ShareRequest.parse(StatsInteractionHandler.SHARE + "x:" + entity + ":a:-")).isNull();
+        assertThat(StatsInteractionHandler.ShareRequest.id(true, entity, StatsPeriod.of(null, List.of(season), true)))
+                .as("an alltime fallback shares alltime").isEqualTo(StatsInteractionHandler.SHARE + "d:" + entity + ":a:-");
+        assertThat(StatsInteractionHandler.ShareRequest.parse(StatsInteractionHandler.SHARE + "d:" + entity + ":c:-"))
+                .as("buttons posted before the season was encoded still parse").isEqualTo(new StatsInteractionHandler.ShareRequest(true, entity, "current", null));
     }
 
     @Test
@@ -176,6 +181,17 @@ class StatsInteractionHandlerTest {
     }
 
     @Test
+    void givenLookupMessageWithMarkdown_whenAnswering_thenEscapeIt() {
+        // given
+        when(response.deferPrivate()).thenReturn(CompletableFuture.completedFuture(continuation));
+        when(drivers.stats(any(), any(StatsScope.class), any())).thenThrow(new StatsLookupException("No results for Test_Max_Power in 2026 | #1 | CTC"));
+        // when
+        handler.onInteraction(event(PickGatewayInteraction.Kind.COMMAND, "driver", null, Map.of("name", List.of("Test"))), reply());
+        // then
+        verify(continuation).replyPrivate("No results for Test\\_Max\\_Power in 2026 \\| \\#1 \\| CTC");
+    }
+
+    @Test
     void givenUnexpectedFailure_whenAnswering_thenReplyWithTheStatsFailureText() {
         // given
         when(response.deferPrivate()).thenReturn(CompletableFuture.completedFuture(continuation));
@@ -187,19 +203,32 @@ class StatsInteractionHandlerTest {
     }
 
     @Test
-    void givenRunningAnswer_whenAnotherArrives_thenSayBusyUntilTheClaimExpires() {
+    void givenAllSlotsBusy_whenAnotherArrives_thenSayBusyAndFreeTheSlotWhenTheAcknowledgementFails() {
         // given
-        when(response.deferPrivate()).thenReturn(new CompletableFuture<>());
+        var pending = new CompletableFuture<PickGatewayResponse.Continuation>();
+        when(response.deferPrivate()).thenReturn(pending);
         var command = event(PickGatewayInteraction.Kind.COMMAND, "driver", null, Map.of("name", List.of("Test")));
         handler.onInteraction(command, reply());
         // when
         var busy = mock(PickGatewayResponse.class);
         handler.onInteraction(command, new PickGatewayReply(busy, clock, PickGatewayReplyTest.NOW, new AtomicLong()::get, Runnable::run));
-        nanos.addAndGet(30_000_000_000L);
-        handler.onInteraction(command, reply());
+        pending.completeExceptionally(new IllegalStateException("Test acknowledgement failure"));
         // then
         verify(busy).replyPrivate(StatsInteractionHandler.BUSY);
-        verify(response, times(2)).deferPrivate();
+        assertThat(slots.availablePermits()).as("a skipped answer frees its slot at once").isEqualTo(1);
+    }
+
+    @Test
+    void givenInteractionTooOldToAcknowledge_whenAnswering_thenReturnTheSlotExactlyOnce() {
+        // given
+        var command = event(PickGatewayInteraction.Kind.COMMAND, "driver", null, Map.of("name", List.of("Test")));
+        // when
+        for (int attempt = 0; attempt < 2; attempt++) {
+            handler.onInteraction(command, new PickGatewayReply(response, clock, PickGatewayReplyTest.NOW.minusSeconds(5), new AtomicLong()::get, Runnable::run));
+        }
+        // then
+        assertThat(slots.availablePermits()).as("an unacknowledged answer releases its slot once").isEqualTo(1);
+        verify(response, never()).deferPrivate();
     }
 
     @Test

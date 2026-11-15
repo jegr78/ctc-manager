@@ -50,6 +50,9 @@ public class JdaPickGatewayResponse implements PickGatewayResponse {
                 @Override public void replyPrivate(PickGatewayMessage message) {
                     sendInteractive(hook, message, reusePrivateMessage && first.getAndSet(false));
                 }
+                @Override public void postVisible(PickGatewayMessage message) {
+                    sendVisible(hook, message);
+                }
             });
         };
         Consumer<Throwable> rejected = failure -> result.completeExceptionally(new IllegalStateException("Private acknowledgement failed"));
@@ -61,29 +64,15 @@ public class JdaPickGatewayResponse implements PickGatewayResponse {
         return result;
     }
 
-    @Override
-    public CompletionStage<Continuation> deferPublic() {
-        var result = new CompletableFuture<Continuation>();
-        callback.deferReply(false).queue(hook -> result.complete(new Continuation() {
-            @Override public void replyPrivate(String message) {
-                hook.sendMessage(message).setAllowedMentions(List.of()).queue(sent -> { }, failure -> { });
-            }
-            @Override public void replyPrivate(PickGatewayMessage message) {
-                sendVisible(hook, message);
-            }
-        }), failure -> result.completeExceptionally(new IllegalStateException("Public acknowledgement failed")));
-        return result;
-    }
-
     private static void sendVisible(InteractionHook hook, PickGatewayMessage message) {
         var rows = message.buttons().isEmpty() ? List.<ActionRow>of()
                 : List.of(ActionRow.of(message.buttons().stream().map(button -> Button.secondary(button.id(), button.label())).toList()));
         if (message.embed() != null) {
-            var send = hook.sendMessageEmbeds(embed(message.embed())).setAllowedMentions(List.of()).setComponents(rows);
+            var send = hook.sendMessageEmbeds(embed(message.embed())).setEphemeral(false).setAllowedMentions(List.of()).setComponents(rows);
             if (!message.content().isEmpty()) send.setContent(message.content());
             send.queue(sent -> { }, failure -> { });
         } else {
-            hook.sendMessage(message.content()).setAllowedMentions(List.of()).setComponents(rows).queue(sent -> { }, failure -> { });
+            hook.sendMessage(message.content()).setEphemeral(false).setAllowedMentions(List.of()).setComponents(rows).queue(sent -> { }, failure -> { });
         }
     }
 

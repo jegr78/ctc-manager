@@ -188,21 +188,28 @@ class JdaPickGatewayResponseTest {
     }
 
     @Test
-    void givenPublicDeferral_whenSharing_thenAcknowledgeVisiblyAndPostWithoutMentions() {
+    void givenPrivateConfirmationFirst_whenPostingVisibly_thenSendTheEmbedAsANonEphemeralFollowupWithoutMentions() {
         // given
-        when(event.deferReply(false)).thenReturn(initial);
+        when(event.deferReply(true)).thenReturn(initial);
+        var confirmation = mock(WebhookMessageCreateAction.class, RETURNS_SELF);
         var followup = mock(WebhookMessageCreateAction.class, RETURNS_SELF);
+        when(hook.sendMessage("Sharing in this channel.")).thenReturn(confirmation);
         when(hook.sendMessageEmbeds(any(net.dv8tion.jda.api.entities.MessageEmbed.class))).thenReturn(followup);
-        var future = response.deferPublic().toCompletableFuture();
+        var future = response.deferPrivate().toCompletableFuture();
         var acknowledged = ArgumentCaptor.forClass(Consumer.class);
         verify(initial).queue(acknowledged.capture(), any());
         acknowledged.getValue().accept(hook);
         // when
-        future.join().replyPrivate(new PickGatewayMessage("Shared by Test Member", List.of(), null,
+        future.join().replyPrivate("Sharing in this channel.");
+        future.join().postVisible(new PickGatewayMessage("Shared by Test Member", List.of(), null,
                 new PickGatewayMessage.Embed("Test driver", null, "Alltime", List.of(), null)));
         // then
-        verify(event, never()).deferReply(true);
-        verify(followup, never()).setEphemeral(anyBoolean());
+        var order = inOrder(confirmation, followup);
+        order.verify(confirmation).setEphemeral(true);
+        order.verify(confirmation).queue(any(), any());
+        order.verify(followup).setEphemeral(false);
+        verify(event, never()).deferReply(false);
+        verify(followup, never()).setEphemeral(true);
         verify(followup).setContent("Shared by Test Member");
         verify(followup).setAllowedMentions(List.of());
         verify(followup).queue(any(), any());

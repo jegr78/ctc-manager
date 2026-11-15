@@ -34,7 +34,11 @@ public class StatsSeasonService {
     }
 
     public StatsPeriod period(StatsScope scope, String seasonOption) {
-        var counted = counted();
+        return period(counted(), scope, seasonOption);
+    }
+
+    /** Resolves the scope among already loaded counted seasons. */
+    public StatsPeriod period(List<Season> counted, StatsScope scope, String seasonOption) {
         return switch (scope) {
             case ALLTIME -> StatsPeriod.of(null, counted, false);
             case CURRENT -> counted.stream().filter(Season::isActive).findFirst()
@@ -51,9 +55,22 @@ public class StatsSeasonService {
 
     public List<StatsChoice> choices(String query) {
         String needle = query == null ? "" : query.strip().toLowerCase(Locale.ROOT);
+        return cachedChoices().stream().filter(choice -> choice.label().toLowerCase(Locale.ROOT).contains(needle)).limit(25).toList();
+    }
+
+    /** The counted season an autocomplete season option names, from the cached season list; null when it names none. */
+    public UUID seasonKey(String seasonOption) {
+        if (seasonOption == null || seasonOption.isBlank()) return null;
+        String wanted = seasonOption.strip();
+        return cachedChoices().stream().filter(choice -> choice.value().equals(wanted) || choice.label().equalsIgnoreCase(wanted))
+                .map(choice -> UUID.fromString(choice.value())).findFirst().orElse(null);
+    }
+
+    void clearCaches() { choices.clear(); }
+
+    private List<StatsChoice> cachedChoices() {
         return choices.get("seasons", () -> counted().reversed().stream()
-                        .map(season -> new StatsChoice(season.getDisplayLabel(), season.getId().toString())).toList()).stream()
-                .filter(choice -> choice.label().toLowerCase(Locale.ROOT).contains(needle)).limit(25).toList();
+                .map(season -> new StatsChoice(season.getDisplayLabel(), season.getId().toString())).toList());
     }
 
     private static boolean matches(Season season, String option) {

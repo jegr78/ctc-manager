@@ -78,14 +78,14 @@ The bot counts the same seasons as the public website. It excludes seasons whose
 ## Reply and sharing
 
 - Every answer is an ephemeral embed with empty allowed mentions and Markdown-escaped names.
-- The embed carries a "Share in channel" button. Its custom ID encodes kind, entity UUID, scope and season UUID, within the 100-character limit.
+- The embed carries a "Share in channel" button. Its custom ID encodes kind, entity UUID and the season the answer showed (or alltime), within the 100-character limit.
 - A click recomputes the figures and posts the embed publicly in the channel with the text "Shared by <display name>", without a mention.
 - The button holds no server state and does not expire. An entity that no longer exists, for example after a restore, produces the ephemeral reply "No longer available".
 - Figures come from the live database, so they can be newer than the published website.
 
 ## Website links
 
-A new property `ctc.site.public-base-url` holds the public site URL. Without it, embeds carry no link. The hard-coded Pages URL in the site publication code moves to this property.
+A new property `ctc.site.public-base-url` holds the public site URL. Without it, embeds carry no link. The hard-coded Pages URL in the application's site publication code moves to this property. The host-side publisher `deploy/lib/publication.py` keeps its own constant, because it runs outside the application and must not depend on its configuration.
 
 - season scope: the driver or team profile of that season, using the stored `SiteSlug`
 - alltime: the profile in the newest counted season, as the site's "latest season profile" logic chooses it

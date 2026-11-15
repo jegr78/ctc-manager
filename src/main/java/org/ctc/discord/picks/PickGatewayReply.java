@@ -32,20 +32,20 @@ public final class PickGatewayReply {
     }
 
     public boolean deferPrivate(Consumer<PickGatewayResponse.Continuation> operation) {
-        return defer(response::deferPrivate, operation);
+        return deferPrivate(operation, () -> { });
     }
 
-    /** Like {@link #deferPrivate} but the acknowledgement and every continuation message are visible in the channel. */
-    public boolean deferPublic(Consumer<PickGatewayResponse.Continuation> operation) {
-        return defer(response::deferPublic, operation);
-    }
-
-    private boolean defer(java.util.function.Supplier<java.util.concurrent.CompletionStage<PickGatewayResponse.Continuation>> acknowledge,
-                          Consumer<PickGatewayResponse.Continuation> operation) {
+    /**
+     * Like {@link #deferPrivate(Consumer)}; once this returns true, {@code finished} runs exactly once, whether the
+     * operation ran, failed or was skipped by expiry, restore or a saturated pool.
+     */
+    public boolean deferPrivate(Consumer<PickGatewayResponse.Continuation> operation, Runnable finished) {
         if (!claimInitial()) return false;
+        var done = new AtomicBoolean();
+        Runnable finish = () -> { if (done.compareAndSet(false, true)) finished.run(); };
         try {
-            acknowledge.get().thenAccept(continuation -> {
-                if (continuation == null || !continuationValid()) return;
+            response.deferPrivate().thenAccept(continuation -> {
+                if (continuation == null || !continuationValid()) { finish.run(); return; }
                 PickGatewayResponse.Continuation guarded = new PickGatewayResponse.Continuation() {
                     @Override public void replyPrivate(String message) {
                         if (continuationValid()) safelyReply(continuation, currentGeneration() ? message : RESET);
@@ -59,22 +59,34 @@ public final class PickGatewayReply {
                             // Interactive replies retain the same private failure boundary as text replies.
                         }
                     }
+                    @Override public void postVisible(PickGatewayMessage message) {
+                        if (!continuationValid()) return;
+                        if (!currentGeneration()) { safelyReply(continuation, RESET); return; }
+                        try {
+                            continuation.postVisible(message);
+                        } catch (RuntimeException unavailable) {
+                            // A failed visible post must not fall back to another channel message.
+                        }
+                    }
                 };
-                if (!currentGeneration()) { guarded.replyPrivate(RESET); return; }
+                if (!currentGeneration()) { guarded.replyPrivate(RESET); finish.run(); return; }
                 try {
                     work.execute(() -> {
-                        if (!continuationValid()) return;
-                        if (!currentGeneration()) { guarded.replyPrivate(RESET); return; }
                         try {
+                            if (!continuationValid()) return;
+                            if (!currentGeneration()) { guarded.replyPrivate(RESET); return; }
                             operation.accept(guarded);
                         } catch (RuntimeException failure) {
                             guarded.replyPrivate(FAILED);
+                        } finally {
+                            finish.run();
                         }
                     });
                 } catch (RejectedExecutionException saturated) {
                     guarded.replyPrivate(BUSY);
+                    finish.run();
                 }
-            }).exceptionally(failure -> null);
+            }).exceptionally(failure -> { finish.run(); return null; });
             return true;
         } catch (RuntimeException acknowledgementFailed) {
             return false;

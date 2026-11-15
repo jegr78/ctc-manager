@@ -41,21 +41,47 @@ class PickGatewayReplyTest {
     }
 
     @Test
-    void givenPublicDeferral_whenLiveThenExpiredOrReset_thenKeepTheSameGuardsAsPrivateReplies() {
+    void givenVisiblePost_whenLiveThenExpiredOrReset_thenKeepTheSameGuardsAsPrivateReplies() {
         // given
-        when(raw.deferPublic()).thenReturn(acknowledged);
+        when(raw.deferPrivate()).thenReturn(acknowledged);
         var saved = new AtomicReference<PickGatewayResponse.Continuation>();
-        reply.deferPublic(saved::set); acknowledged.complete(continuation);
+        reply.deferPrivate(saved::set); acknowledged.complete(continuation);
         var message = new PickGatewayMessage("Shared by Test Member", List.of(), null);
         // when / then
-        verify(raw, never()).deferPrivate();
-        saved.get().replyPrivate(message); verify(continuation).replyPrivate(message);
+        saved.get().postVisible(message); verify(continuation).postVisible(message);
         clearInvocations(continuation);
-        clock.now = NOW.plusSeconds(900); saved.get().replyPrivate(message);
+        clock.now = NOW.plusSeconds(900); saved.get().postVisible(message);
         verifyNoInteractions(continuation);
-        clock.now = NOW.plusSeconds(1); epoch.incrementAndGet(); saved.get().replyPrivate(message);
+        clock.now = NOW.plusSeconds(1); epoch.incrementAndGet(); saved.get().postVisible(message);
         verify(continuation).replyPrivate("This interaction was reset. Start again.");
-        verify(continuation, never()).replyPrivate(message);
+        verify(continuation, never()).postVisible(message);
+    }
+
+    @Test
+    void givenFinishCallback_whenWorkRunsOrIsSkipped_thenRunItExactlyOnce() {
+        // given
+        var finished = new java.util.concurrent.atomic.AtomicInteger();
+        when(raw.deferPrivate()).thenReturn(acknowledged);
+        // when
+        reply.deferPrivate(result -> { throw new IllegalStateException("Test failure"); }, finished::incrementAndGet);
+        acknowledged.complete(continuation);
+        var expired = new CompletableFuture<PickGatewayResponse.Continuation>();
+        var late = mock(PickGatewayResponse.class);
+        when(late.deferPrivate()).thenReturn(expired);
+        new PickGatewayReply(late, clock, NOW, epoch::get, Runnable::run).deferPrivate(result -> { }, finished::incrementAndGet);
+        clock.now = NOW.plusSeconds(900); expired.complete(continuation);
+        clock.now = NOW;
+        var reset = new CompletableFuture<PickGatewayResponse.Continuation>();
+        var restored = mock(PickGatewayResponse.class);
+        when(restored.deferPrivate()).thenReturn(reset);
+        new PickGatewayReply(restored, clock, NOW, epoch::get, Runnable::run).deferPrivate(result -> { }, finished::incrementAndGet);
+        epoch.incrementAndGet(); reset.complete(continuation);
+        var saturated = mock(PickGatewayResponse.class);
+        when(saturated.deferPrivate()).thenReturn(CompletableFuture.completedFuture(continuation));
+        new PickGatewayReply(saturated, clock, NOW, epoch::get, task -> { throw new RejectedExecutionException(); })
+                .deferPrivate(result -> { }, finished::incrementAndGet);
+        // then
+        assertThat(finished).as("failed, expired, reset and rejected work each finish once").hasValue(4);
     }
 
     @Test

@@ -40,6 +40,7 @@ class DriverStatsServiceIT {
     @Autowired TestHelper helper;
     @Autowired TransactionTemplate tx;
     @Autowired DriverStatsService service;
+    @Autowired StatsSeasonService seasonService;
     @Autowired SeasonRepository seasons;
     @Autowired TeamRepository teams;
     @Autowired DriverRepository drivers;
@@ -110,6 +111,8 @@ class DriverStatsServiceIT {
         seeding.seedTeam(opening, fixture.awayTeam().getId(), 2);
         UUID playoffRace = playoffService.addRaceToMatchup(opening, null, null, LocalDateTime.of(2035, 1, 1, 20, 0)).getId();
         tx.executeWithoutResult(status -> result(races.findById(playoffRace).orElseThrow(), drivers.findById(driverIds.getFirst()).orElseThrow(), 1, 2, false, 20, false));
+        service.clearCaches();
+        seasonService.clearCaches();
     }
 
     @AfterEach
@@ -199,6 +202,22 @@ class DriverStatsServiceIT {
         assertThat(stats.teams()).as("alltime names the parent of a subteam in season order")
                 .containsExactly(fixture.homeTeam().getName(), fixture.awayTeam().getName());
         assertThat(stats.moreTeams()).isZero();
+    }
+
+    @Test
+    void givenSeasonScope_whenListingAndReadingThroughTheCommandOptions_thenUseOnlyThatSeason() {
+        // when
+        var later = service.choices(suffix, org.ctc.domain.stats.StatsScope.SEASON, laterPeriod().season().id().toString());
+        var all = service.choices(suffix, org.ctc.domain.stats.StatsScope.CURRENT, null);
+        var stats = service.stats("tsd" + suffix, org.ctc.domain.stats.StatsScope.SEASON, laterPeriod().season().id().toString());
+        // then
+        assertThat(later).as("a season scope offers only that season's drivers")
+                .extracting(org.ctc.domain.stats.StatsChoice::value).containsExactly(driverIds.getFirst().toString());
+        assertThat(all).extracting(org.ctc.domain.stats.StatsChoice::label).as("idle and walkover-only drivers are not offered")
+                .containsExactly("TSD" + suffix + " (Test stats target " + suffix + ")", "TST1" + suffix + " (Test stats twin " + suffix + ")",
+                        "TST2" + suffix + " (Test stats twin " + suffix + ")", "TSX" + suffix + " (Test stats rival " + suffix + ")");
+        assertThat(stats.races()).isEqualTo(1);
+        assertThat(stats.period().season().id()).isEqualTo(laterPeriod().season().id());
     }
 
     @Test

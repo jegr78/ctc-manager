@@ -43,6 +43,7 @@ class TeamStatsServiceIT {
     @Autowired TestHelper helper;
     @Autowired TransactionTemplate tx;
     @Autowired TeamStatsService service;
+    @Autowired StatsSeasonService seasonService;
     @Autowired StandingsService standings;
     @Autowired SeasonPhaseService phases;
     @Autowired SeasonRepository seasons;
@@ -99,6 +100,8 @@ class TeamStatsServiceIT {
         seeding.seedTeam(finalMatchup, fixture.homeTeam().getId(), 1);
         seeding.seedTeam(finalMatchup, subTeam.getId(), 2);
         playoffService.setWinnerManually(finalMatchup, fixture.homeTeam().getId(), "Test final decided");
+        service.clearCaches();
+        seasonService.clearCaches();
     }
 
     @AfterEach
@@ -190,8 +193,25 @@ class TeamStatsServiceIT {
         assertThat(stats.wins()).isEqualTo(1);
         assertThat(stats.seasons()).isEqualTo(1);
         assertThat(stats.profileSeasonLabel()).as("the website writes no profile page for a parent without its own standings row").isNull();
-        assertThatThrownBy(() -> service.stats(parentOnly.getName(), period())).as("a season lists only rostered teams")
-                .isInstanceOf(StatsLookupException.class).hasMessage("No team found");
+        assertThatThrownBy(() -> service.stats(parentOnly.getName(), period())).as("a season answer names the parent without its own row")
+                .isInstanceOf(StatsLookupException.class).hasMessage("No results for " + parentOnly.getName() + " in " + season().getDisplayLabel());
+    }
+
+    @Test
+    void givenSeasonOrWiderScope_whenListingAndReadingThroughTheCommandOptions_thenOfferParentsOnlyOutsideTheSeason() {
+        // when
+        String seasonId = fixture.season().getId().toString();
+        var inSeason = service.choices("T-STT" + suffix, org.ctc.domain.stats.StatsScope.SEASON, seasonId);
+        var alltime = service.choices("T-STT" + suffix, org.ctc.domain.stats.StatsScope.ALLTIME, null);
+        var stats = service.stats(fixture.homeTeam().getShortName(), org.ctc.domain.stats.StatsScope.SEASON, seasonId);
+        // then
+        assertThat(inSeason).extracting(org.ctc.domain.stats.StatsChoice::value).as("a season offers its rostered teams only")
+                .containsExactlyInAnyOrder(fixture.homeTeam().getId().toString(), fixture.awayTeam().getId().toString(),
+                        subTeam.getId().toString(), parentSub.getId().toString());
+        assertThat(alltime).extracting(org.ctc.domain.stats.StatsChoice::value).contains(parentOnly.getId().toString());
+        assertThat(alltime).extracting(org.ctc.domain.stats.StatsChoice::label)
+                .contains(fixture.homeTeam().getName() + " (" + fixture.homeTeam().getShortName() + ")");
+        assertThat(stats.rank()).isEqualTo(3);
     }
 
     @Test
