@@ -2953,3 +2953,4 @@ body:has(.archive-dialog[open]) { overflow: hidden; }
 .gallery-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .gallery-actions form { margin: 0; }
 .gallery-upload fieldset { border: 0; padding: 0; margin: 0; }
+.gallery-gt7 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

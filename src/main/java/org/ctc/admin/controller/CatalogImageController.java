@@ -19,6 +19,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 public class CatalogImageController {
     private final CatalogImageService gallery;
+    private final org.ctc.gt7sync.Gt7CarShotService gt7Shots;
 
     @PostMapping("/admin/cars/{id}/images")
     public String uploadCarImages(@PathVariable UUID id, @RequestParam(name = "files", required = false) List<MultipartFile> files,
@@ -28,6 +29,11 @@ public class CatalogImageController {
             int added = gallery.uploadCarImages(id, files, parse(CarImageKind.class, kind), label);
             return added == 1 ? "1 image added." : added + " images added.";
         });
+    }
+
+    @PostMapping("/admin/cars/{id}/images/gt7")
+    public String loadGt7CarImages(@PathVariable UUID id, RedirectAttributes redirect) {
+        return run(redirect, carEditor(id) + "#car-images", () -> gt7Shots.load(id).message());
     }
 
     @PostMapping("/admin/cars/{id}/images/{imageId}/delete")

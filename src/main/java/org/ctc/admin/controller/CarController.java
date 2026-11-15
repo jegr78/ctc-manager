@@ -103,7 +103,9 @@ public class CarController {
         model.addAttribute("categories", CarCategory.values());
         model.addAttribute("drivetrains", Drivetrain.values());
         if (form.getId() != null) {
-            model.addAttribute("car", carService.findById(form.getId()));
+            var car = carService.findById(form.getId());
+            model.addAttribute("car", car);
+            model.addAttribute("galleryGt7", car.getGt7Id() != null && !car.getGt7Id().isBlank());
             model.addAttribute("galleryImages", gallery.carImages(form.getId()));
             model.addAttribute("galleryKinds", org.ctc.domain.model.CarImageKind.values());
             model.addAttribute("galleryBasePath", "/admin/cars/" + form.getId());

@@ -124,6 +124,37 @@ public class Gt7ScraperService {
         return match.find() ? BASE_URL + match.group(2) : null;
     }
 
+    /** The official 2K car shots of one car, ordered by slot; an empty list when GT7 lists none. */
+    public List<CarShot> scrapeCarShots(String gt7Id) throws IOException {
+        String html = externalConnection(CARS_PAGE).get().html();
+        String indexJs = fetchText(BASE_URL + extractScriptSrc(html, "/common/dist/gt7/carlist/assets/index-"));
+        var shots = new ArrayList<CarShot>();
+        for (var module : carShotModules(indexJs, gt7Id).entrySet()) {
+            String imageUrl = carShotImageUrl(fetchText(BASE_URL + "/common/dist/gt7/carlist/assets/" + module.getValue()), gt7Id, module.getKey());
+            if (imageUrl == null) throw new IOException("GT7 car shot " + module.getKey() + " has no image");
+            shots.add(new CarShot(module.getKey(), imageUrl));
+        }
+        return shots;
+    }
+
+    /** Slot such as {@code 2_01} to the module file of every 2K car shot of the car, in slot order. */
+    Map<String, String> carShotModules(String indexJs, String gt7Id) {
+        if (gt7Id == null || !gt7Id.matches("\\d{1,6}")) throw new IllegalArgumentException("Invalid GT7 car ID: " + gt7Id);
+        var pattern = Pattern.compile("car_shots/2k/car" + gt7Id + "_(\\d+_\\d+)\\.jpg[\"'`]\\s*:\\s*\\(\\)\\s*=>\\s*\\w+\\(\\s*\\(\\)\\s*=>\\s*import\\(\\s*([\"'`])\\./(car"
+                + gt7Id + "_\\1-[\\w-]+\\.js)\\2");
+        var modules = new java.util.TreeMap<String, String>();
+        var match = pattern.matcher(indexJs);
+        while (match.find()) modules.putIfAbsent(match.group(1), match.group(3));
+        return modules;
+    }
+
+    String carShotImageUrl(String moduleJs, String gt7Id, String slot) {
+        if (gt7Id == null || !gt7Id.matches("\\d{1,6}") || slot == null || !slot.matches("\\d+_\\d+")) return null;
+        var pattern = Pattern.compile("([\"'`])(/common/dist/gt7/carlist/assets/car" + gt7Id + "_" + Pattern.quote(slot) + "-[\\w-]+\\.jpg)\\1");
+        var match = pattern.matcher(moduleJs);
+        return match.find() ? BASE_URL + match.group(2) : null;
+    }
+
 	public Map<String, String> parseTunersJs(String tunersJs) {
 		var map = new HashMap<String, String>();
         Pattern p = Pattern.compile("(tnr\\d+):\\{([^}]*)\\}");
@@ -241,6 +272,9 @@ public class Gt7ScraperService {
             this(gt7Id, manufacturer, name, imageUrl, null, null, null, null);
         }
 	}
+
+    public record CarShot(String slot, String imageUrl) {
+    }
 
 	public record ScrapedTrack(String id, String name, String country, String baseId, String imageUrl) {
 	}

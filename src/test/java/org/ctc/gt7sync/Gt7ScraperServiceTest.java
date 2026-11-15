@@ -247,6 +247,39 @@ class Gt7ScraperServiceTest {
                 .satisfies(car -> assertThat(car.name()).isEqualTo("Skyline GTS-R (R31) '87"));
     }
 
+    @Test
+    void givenProductionCarListBundle_whenSelectingCarShots_thenKeepOnly2kModulesOfThatCarBySlot() throws IOException {
+        // given
+        String indexJs = loadFixture("gt7/carlist-index-car-shots.js");
+        // when
+        var modules = scraperService.carShotModules(indexJs, "365");
+        // then
+        assertThat(modules).as("4K entries and car3656 are ignored").containsExactly(
+                Map.entry("1_01", "car365_1_01-3T8vbnCx.js"), Map.entry("1_02", "car365_1_02-BbK93QWo.js"),
+                Map.entry("2_01", "car365_2_01-Cks__gEF.js"), Map.entry("2_02", "car365_2_02-BfkyQpB5.js"),
+                Map.entry("3_01", "car365_3_01-CiZNavAe.js"));
+        assertThat(scraperService.carShotModules(indexJs, "3656")).containsOnlyKeys("1_01", "1_02", "2_01", "2_02", "3_01").containsEntry("1_01", "car3656_1_01-DTZP2K4l.js");
+        assertThat(scraperService.carShotModules(indexJs, "999")).isEmpty();
+    }
+
+    @Test
+    void givenProductionShotModule_whenReadingIt_thenReturnTheHashedImageUrl() throws IOException {
+        // given
+        String module = loadFixture("gt7/carlist-car-shot-module.js");
+        // when / then
+        assertThat(scraperService.carShotImageUrl(module, "365", "2_01"))
+                .isEqualTo("https://www.gran-turismo.com/common/dist/gt7/carlist/assets/car365_2_01-CbsitXT5.jpg");
+        assertThat(scraperService.carShotImageUrl(module, "365", "1_01")).as("the module must name the requested slot").isNull();
+        assertThat(scraperService.carShotImageUrl("var e=`https://evil.example/car365_2_01-x.jpg`;", "365", "2_01")).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "36a", "365.*", "../1"})
+    void givenNonNumericGt7Id_whenSelectingCarShots_thenRejectIt(String gt7Id) {
+        // when / then
+        assertThatThrownBy(() -> scraperService.carShotModules("", gt7Id)).isInstanceOf(IllegalArgumentException.class);
+    }
+
 	private String loadFixture(String path) throws IOException {
 		try (var is = getClass().getClassLoader().getResourceAsStream(path)) {
 			if (is == null) {

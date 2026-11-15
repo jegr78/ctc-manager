@@ -43,6 +43,7 @@ import org.springframework.web.multipart.MultipartFile;
 class CatalogImageIT {
     @Autowired MockMvc mvc;
     @Autowired CatalogImageService gallery;
+    @Autowired FileStorageService files;
     @Autowired CarService carService;
     @Autowired CarRepository cars;
     @Autowired TrackRepository tracks;
@@ -149,6 +150,40 @@ class CatalogImageIT {
     }
 
     @Test
+    void givenGt7AndManualImages_whenApplyingGt7Shots_thenReplaceTheSlotAppendNewOnesAndKeepManualImages() throws Exception {
+        // given
+        gallery.uploadCarImages(car, List.of(png("own.png", 10, 10)), CarImageKind.STUDIO, "Own");
+        String first = storeGt7("first.jpg");
+        gallery.applyGt7CarImages(car, List.of(new CatalogImageService.Gt7Shot("2_01", first, 1920, 1080)));
+        String second = storeGt7("second.jpg");
+        String scene = storeGt7("scene.jpg");
+        // when
+        var applied = gallery.applyGt7CarImages(car, List.of(new CatalogImageService.Gt7Shot("2_01", second, 1920, 1080),
+                new CatalogImageService.Gt7Shot("1_01", scene, 1920, 1080)));
+        // then
+        assertThat(applied.added()).containsExactly("1_01");
+        assertThat(applied.replaced()).containsExactly("2_01");
+        var images = gallery.carImages(car);
+        assertThat(images).extracting(CarImage::getSourceKey).containsExactly(null, "2_01", "1_01");
+        assertThat(images).extracting(CarImage::getKind).containsExactly(CarImageKind.STUDIO, CarImageKind.STUDIO, CarImageKind.SCENE);
+        assertThat(images.get(0).getLabel()).as("manual images stay untouched").isEqualTo("Own");
+        assertThat(images.get(1).getImagePath()).isEqualTo(second);
+        assertThat(file(first)).as("the replaced file is removed after commit").doesNotExist();
+    }
+
+    @Test
+    void givenCarWithoutGt7Id_whenOpeningOrLoadingGt7Images_thenHideTheButtonAndExplain() throws Exception {
+        // when / then
+        mvc.perform(get("/admin/cars/{id}/edit", car)).andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Load GT7 images"))));
+        mvc.perform(post("/admin/cars/{id}/images/gt7", car))
+                .andExpect(redirectedUrl("/admin/cars/" + car + "/edit#car-images")).andExpect(flash().attribute("galleryError", "This car has no GT7 ID"));
+        var withId = cars.findById(car).orElseThrow();
+        withId.setGt7Id("365");
+        cars.saveAndFlush(withId);
+        mvc.perform(get("/admin/cars/{id}/edit", car)).andExpect(content().string(org.hamcrest.Matchers.containsString("Load GT7 images")));
+    }
+
+    @Test
     void givenCarWithImages_whenDeletingTheCar_thenRemoveImagesAndFiles() {
         // given
         gallery.uploadCarImages(car, List.of(png("gone.png", 10, 10)), CarImageKind.OTHER, null);
@@ -178,6 +213,10 @@ class CatalogImageIT {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Move image 2 of 2 up")));
         mvc.perform(get("/admin/cars/new")).andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("-images\""))));
         mvc.perform(get("/admin/tracks/new")).andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("-images\""))));
+    }
+
+    private String storeGt7(String name) throws java.io.IOException {
+        return files.storeBytes("car-images", car, name, TestImages.jpeg(1920, 1080));
     }
 
     private Path file(String url) {

@@ -112,13 +112,23 @@ public class FileStorageService {
 	 * image type. The caller removes the file again when its transaction rolls back.
 	 */
 	public String storeFromUrl(String subDir, UUID entityId, String sourceUrl, String filename) throws IOException {
+		validatePathWithinUploadDir(uploadDir.resolve(subDir).resolve(entityId.toString()).resolve(sanitizeFilename(filename)));
+		return storeBytes(subDir, entityId, filename, downloadImage(sourceUrl, filename));
+	}
+
+	/** Downloads an image of the type the filename extension declares, without storing it. */
+	public byte[] downloadImage(String sourceUrl, String filename) throws IOException {
 		outboundPolicy.requireEnabled();
+		return downloads.download(sourceUrl, ImageContent.Format.ofFilename(filename));
+	}
+
+	/** Stores bytes under a fresh name in the entity's folder and returns its {@code /uploads/} URL. */
+	public String storeBytes(String subDir, UUID entityId, String filename, byte[] data) throws IOException {
 		Path dir = uploadDir.resolve(subDir).resolve(entityId.toString());
 		validatePathWithinUploadDir(dir);
 		String safeName = UUID.randomUUID().toString().substring(0, 8) + "_" + sanitizeFilename(filename);
 		Path target = dir.resolve(safeName);
 		validatePathWithinUploadDir(target);
-		byte[] data = downloads.download(sourceUrl, ImageContent.Format.ofFilename(filename));
 		Files.createDirectories(dir);
 		try {
 			Files.write(target, data);
@@ -126,8 +136,18 @@ public class FileStorageService {
 			Files.deleteIfExists(target);
 			throw failure;
 		}
-		log.info("Downloaded file: {} ({} bytes)", target, data.length);
+		log.info("Stored file: {} ({} bytes)", target, data.length);
 		return "/uploads/" + subDir + "/" + entityId + "/" + safeName;
+	}
+
+	/** Whether the stored file of an {@code /uploads/} URL holds exactly these bytes. */
+	public boolean hasContent(String url, byte[] data) {
+		if (!exists(url)) return false;
+		try {
+			return java.util.Arrays.equals(Files.readAllBytes(uploadDir.resolve(url.substring("/uploads/".length())).normalize()), data);
+		} catch (IOException unreadable) {
+			return false;
+		}
 	}
 
 	public String storeImage(String subDir, UUID entityId, MultipartFile file) throws IOException {

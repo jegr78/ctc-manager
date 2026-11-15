@@ -91,6 +91,39 @@ public class CatalogImageService {
         return checked.size();
     }
 
+    /**
+     * Applies downloaded GT7 car shots: a slot that already has a GT7 image gets the new file, a new slot is appended
+     * and manual images stay untouched. Replaced files are deleted after commit.
+     */
+    public Gt7Applied applyGt7CarImages(UUID carId, List<Gt7Shot> shots) {
+        var car = cars.findById(carId).orElseThrow(() -> new EntityNotFoundException("Car", carId));
+        var existing = carImages(carId);
+        int next = next(existing);
+        var added = new ArrayList<String>();
+        var replaced = new ArrayList<String>();
+        for (var shot : shots) {
+            var current = existing.stream().filter(image -> image.getSource() == ImageSource.GT7 && shot.slot().equals(image.getSourceKey())).findFirst();
+            var image = current.orElseGet(CarImage::new);
+            if (current.isPresent()) {
+                files.deleteAfterCommit(image.getImagePath());
+                replaced.add(shot.slot());
+            } else {
+                image.setCar(car);
+                image.setSource(ImageSource.GT7);
+                image.setSourceKey(shot.slot());
+                image.setSortIndex(next++);
+                added.add(shot.slot());
+            }
+            image.setKind(CarImageKind.forGt7Slot(shot.slot()));
+            image.setImagePath(shot.imagePath());
+            image.setWidth(shot.width());
+            image.setHeight(shot.height());
+            carImages.save(image);
+        }
+        log.info("Applied GT7 images to car {}: added {}, replaced {}", carId, added, replaced);
+        return new Gt7Applied(List.copyOf(added), List.copyOf(replaced));
+    }
+
     public void deleteCarImage(UUID carId, UUID imageId) {
         var image = carImages.findById(imageId).filter(row -> row.getCar().getId().equals(carId))
                 .orElseThrow(() -> new EntityNotFoundException("Car image", imageId));
@@ -207,6 +240,11 @@ public class CatalogImageService {
         String original = file.getOriginalFilename();
         return original == null || original.isBlank() ? "The file" : original.replaceAll("\\p{Cntrl}", "");
     }
+
+    /** A downloaded GT7 car shot already stored under {@code imagePath}. */
+    public record Gt7Shot(String slot, String imagePath, int width, int height) { }
+
+    public record Gt7Applied(List<String> added, List<String> replaced) { }
 
     private record Checked(MultipartFile file, String label, ImageContent.Dimensions size) { }
 }
