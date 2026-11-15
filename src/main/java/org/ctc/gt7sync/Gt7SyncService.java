@@ -217,7 +217,7 @@ public class Gt7SyncService {
 				try {
 					String localPath = fileStorageService.storeFromUrl("cars", task.car.getId(), task.imageUrl, task.gt7Id + ".png");
 					carImageResults.add(new ImageResult<>(task, localPath, null));
-				} catch (IOException e) {
+				} catch (IOException | IllegalArgumentException e) {
 					carImageResults.add(new ImageResult<>(task, null, e));
 				}
 			}));

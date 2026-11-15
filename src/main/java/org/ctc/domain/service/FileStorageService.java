@@ -10,7 +10,9 @@ import java.nio.file.Paths;
 import java.util.Set;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.integration.ImageDownloadClient;
 import org.ctc.integration.OutboundPolicy;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,11 +32,18 @@ public class FileStorageService {
 	private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 	private final OutboundPolicy outboundPolicy;
+	private final ImageDownloadClient downloads;
 	private final Path uploadDir;
 
-	public FileStorageService(OutboundPolicy outboundPolicy, @Value("${app.upload-dir:uploads}") String uploadDir) {
+	@Autowired
+	public FileStorageService(OutboundPolicy outboundPolicy, ImageDownloadClient downloads, @Value("${app.upload-dir:uploads}") String uploadDir) {
 		this.outboundPolicy = outboundPolicy;
+		this.downloads = downloads;
 		this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
+	}
+
+	public FileStorageService(OutboundPolicy outboundPolicy, String uploadDir) {
+		this(outboundPolicy, new ImageDownloadClient(), uploadDir);
 	}
 
 	public String store(UUID raceId, MultipartFile file) throws IOException {
@@ -91,24 +100,26 @@ public class FileStorageService {
 		}
 	}
 
-	// CodeQL FP: java/ssrf — startsWith-chain hostname blocklist (validateHostname, lines 128-159) not recognized as sanitizer; see docs/security/sast-acceptance.md
+	/**
+	 * Downloads an image through {@link ImageDownloadClient} and stores it; the filename extension names the expected
+	 * image type. The caller removes the file again when its transaction rolls back.
+	 */
 	public String storeFromUrl(String subDir, UUID entityId, String sourceUrl, String filename) throws IOException {
 		outboundPolicy.requireEnabled();
-		if (sourceUrl == null || !sourceUrl.toLowerCase().startsWith("https://")) {
-			log.warn("Rejected non-HTTPS URL: {}", sourceUrl);
-			throw new IllegalArgumentException("Only HTTPS URLs allowed: " + sourceUrl);
-		}
-		validateHostname(sourceUrl);
 		Path dir = uploadDir.resolve(subDir).resolve(entityId.toString());
 		validatePathWithinUploadDir(dir);
-		Files.createDirectories(dir);
 		String safeName = UUID.randomUUID().toString().substring(0, 8) + "_" + sanitizeFilename(filename);
 		Path target = dir.resolve(safeName);
 		validatePathWithinUploadDir(target);
-		try (var in = java.net.URI.create(sourceUrl).toURL().openStream()) {
-			Files.copy(in, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+		byte[] data = downloads.download(sourceUrl, ImageDownloadClient.ImageType.ofFilename(filename));
+		Files.createDirectories(dir);
+		try {
+			Files.write(target, data);
+		} catch (IOException | RuntimeException failure) {
+			Files.deleteIfExists(target);
+			throw failure;
 		}
-		log.info("Downloaded file: {} from {}", target, sourceUrl);
+		log.info("Downloaded file: {} ({} bytes)", target, data.length);
 		return "/uploads/" + subDir + "/" + entityId + "/" + safeName;
 	}
 
@@ -158,40 +169,6 @@ public class FileStorageService {
 			return "file";
 		}
 		return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
-	}
-
-	// SSRF defense: find-sec-bugs cannot recognize startsWith-chain hostname blocklists as
-	// sanitizers. This method is the suppressed sanitizer. See config/spotbugs-exclude.xml
-	// FileStorageService SSRF_SPRING,SSRF entry for the corresponding suppression rationale.
-	private void validateHostname(String sourceUrl) {
-		String hostname = java.net.URI.create(sourceUrl).getHost();
-		if (hostname == null) {
-			throw new IllegalArgumentException("URL hostname blocked: <null>");
-		}
-		hostname = hostname.toLowerCase();
-		if ("localhost".equals(hostname) || "[::1]".equals(hostname)) {
-			log.warn("Blocked SSRF attempt to internal host: {}", hostname);
-			throw new IllegalArgumentException("URL hostname blocked: " + hostname);
-		}
-		if (hostname.startsWith("127.") || hostname.startsWith("10.") || hostname.startsWith("192.168.")
-				|| hostname.startsWith("169.254.")) {
-			log.warn("Blocked SSRF attempt to internal host: {}", hostname);
-			throw new IllegalArgumentException("URL hostname blocked: " + hostname);
-		}
-		if (hostname.startsWith("172.")) {
-			String[] octets = hostname.split("\\.");
-			if (octets.length >= 2) {
-				try {
-					int secondOctet = Integer.parseInt(octets[1]);
-					if (secondOctet >= 16 && secondOctet <= 31) {
-						log.warn("Blocked SSRF attempt to internal host: {}", hostname);
-						throw new IllegalArgumentException("URL hostname blocked: " + hostname);
-					}
-				} catch (NumberFormatException e) {
-					// Not a numeric IP, allow
-				}
-			}
-		}
 	}
 
 	// PATH_TRAVERSAL defense: toAbsolutePath().normalize().startsWith() check.

@@ -15,7 +15,7 @@ See `CLAUDE.md` "Conventions > CodeQL SAST (Code Scanning)" for the workflow.
 
 | Alert-ID | Rule | Location | Bucket | Rationale | Source-Marker |
 |----------|------|----------|--------|-----------|---------------|
-| N/A (filtered) | java/ssrf | FileStorageService.storeFromUrl:86 | suppressed | startsWith-chain hostname blocklist (validateHostname, FileStorageService.java:128-159) covering localhost, 127.x, 10.x, 192.168.x, 169.254.x, 172.16-31.x ranges not recognized as a sanitizer by CodeQL (only allowlist-style sanitizers are recognized); intentional defense, unit-tested; defense-in-depth via Phase 81 SpotBugs SSRF_SPRING,SSRF suppression in config/spotbugs-exclude.xml. **Alert-ID = N/A (filtered):** `query-filters[].exclude: { id: java/ssrf }` in `.github/codeql/codeql-config.yml` excludes the rule before SARIF upload — the alert never reaches the Security tab, so no Alert-Number exists. Baseline scan 2026-05-17 confirmed: 0 alerts emitted for this rule. | FileStorageService.java:86 |
+| N/A (filtered) | java/ssrf | ImageDownloadClient.download | suppressed | Host allowlist in `ImageDownloadClient.validate` (HTTPS to `www.gran-turismo.com` on the default port only, no user info) plus a check at validation time that every resolved address is public; `fetch` disables redirects and caps the body at 15 MB, and `download` checks the magic bytes; CodeQL does not model this allowlist as a sanitizer; intentional defense, unit-tested in `ImageDownloadClientTest`; defense-in-depth via the SpotBugs SSRF_SPRING,SSRF suppression in config/spotbugs-exclude.xml. **Alert-ID = N/A (filtered):** `query-filters[].exclude: { id: java/ssrf }` in `.github/codeql/codeql-config.yml` excludes the rule before SARIF upload — the alert never reaches the Security tab, so no Alert-Number exists. | ImageDownloadClient.java download() |
 
 ## ZIP-Slip (Archive Path Traversal)
 
@@ -50,7 +50,7 @@ Every finding was triaged by hand. Two led to source changes; the rest are struc
 | PATH_TRAVERSAL_IN | `PathTraversalGuard.assertWithin` | 1 | suppressed | The flagged `Paths.get()` is the guard's own absolute-path probe — flagging the defense is circular |
 | PATH_TRAVERSAL_IN | `TeamCardController.download`, `.downloadAll` | 2 | suppressed | Resolved segment passes `TeamCardService.sanitizeFilename()`; no separator can survive, so the path stays one level below the season-UUID directory |
 | PATH_TRAVERSAL_IN | `RaceAttachmentService.downloadAttachment` | 1 | suppressed | `file.startsWith(uploadDirPath)` containment check on the normalized path runs immediately after the flagged `resolve()` |
-| URLCONNECTION_SSRF_FD | `FileStorageService.storeFromUrl` | 1 | suppressed | Same hostname blocklist already accepted for `SSRF_SPRING`/`SSRF` above; added to the existing `<Match>` |
+| URLCONNECTION_SSRF_FD | `ImageDownloadClient.download` | 1 | suppressed | Kept in the same `<Match>` as the `java/ssrf` row above for the same host allowlist and resolved-address check; the client uses `RestClient` over the JDK HTTP client, so this `URLConnection` pattern is a precaution if a detector maps it there |
 | PREDICTABLE_RANDOM | `DiscordRateLimitInterceptor.jitterMs` | 1 | suppressed | Retry jitter, never a token/nonce/identifier |
 | NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE | `BackupStagingCleanup.sweepStagingDir` | 1 | suppressed | `getFileName()` on `Files.list()` entries — a directory listing never yields a root path |
 

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.mock.web.MockMultipartFile;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -253,7 +254,7 @@ class FileStorageServiceTest {
 		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
 				"https://localhost/image.png", "image.png"))
 				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessageContaining("hostname blocked");
+				.hasMessageContaining("URL host not allowed");
 	}
 
 	@Test
@@ -262,7 +263,7 @@ class FileStorageServiceTest {
 		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
 				"https://127.0.0.1/image.png", "image.png"))
 				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessageContaining("hostname blocked");
+				.hasMessageContaining("URL host not allowed");
 	}
 
 	@Test
@@ -271,7 +272,7 @@ class FileStorageServiceTest {
 		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
 				"https://10.0.0.1/image.png", "image.png"))
 				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessageContaining("hostname blocked");
+				.hasMessageContaining("URL host not allowed");
 	}
 
 	@Test
@@ -280,7 +281,7 @@ class FileStorageServiceTest {
 		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
 				"https://172.16.0.1/image.png", "image.png"))
 				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessageContaining("hostname blocked");
+				.hasMessageContaining("URL host not allowed");
 	}
 
 	@Test
@@ -289,16 +290,16 @@ class FileStorageServiceTest {
 		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
 				"https://192.168.1.1/image.png", "image.png"))
 				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessageContaining("hostname blocked");
+				.hasMessageContaining("URL host not allowed");
 	}
 
 	@Test
 	void givenLinkLocalUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
 		// when / then
 		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
-				"https://169.254.169.254/latest/meta-data/", "metadata"))
+				"https://169.254.169.254/latest/meta-data/", "metadata.png"))
 				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessageContaining("hostname blocked");
+				.hasMessageContaining("URL host not allowed");
 	}
 
 	@Test
@@ -307,17 +308,32 @@ class FileStorageServiceTest {
 		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
 				"https://[::1]/image.png", "image.png"))
 				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessageContaining("hostname blocked");
+				.hasMessageContaining("URL host not allowed");
 	}
 
 	@Test
-	void givenPublicUrl_whenStoreFromUrl_thenSsrfCheckPasses() {
-		// when / then - passes hostname check but fails on actual download (no server)
+	void givenHostOutsideTheAllowlist_whenStoreFromUrl_thenRejectBeforeAnyRequest() {
+		// when / then
 		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
 				"https://example.com/image.png", "image.png"))
-				.isInstanceOf(IOException.class);
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("URL host not allowed: example.com");
 	}
 
+	@Test
+	void givenDownloadedPng_whenStoreFromUrl_thenWriteItBelowTheEntityAndCheckThePngType() throws IOException {
+		// given
+		var client = org.mockito.Mockito.mock(org.ctc.integration.ImageDownloadClient.class);
+		var service = new FileStorageService(org.ctc.TestHelper.enabledOutboundPolicy(), client, tempDir.toString());
+		byte[] png = {(byte) 0x89, 'P', 'N', 'G', 13, 10, 26, 10, 1};
+		org.mockito.Mockito.when(client.download("https://www.gran-turismo.com/a.png", org.ctc.integration.ImageDownloadClient.ImageType.PNG)).thenReturn(png);
+		var entity = UUID.randomUUID();
+		// when
+		String url = service.storeFromUrl("cars", entity, "https://www.gran-turismo.com/a.png", "car1.png");
+		// then
+		assertThat(url).startsWith("/uploads/cars/" + entity + "/").endsWith("_car1.png");
+		assertThat(java.nio.file.Files.readAllBytes(tempDir.resolve(url.substring("/uploads/".length())))).isEqualTo(png);
+	}
 
 	@Test
 	void givenPathTraversalFilename_whenStore_thenThrowsIllegalArgument() {
