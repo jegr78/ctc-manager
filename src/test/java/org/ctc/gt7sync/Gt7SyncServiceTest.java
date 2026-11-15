@@ -160,6 +160,25 @@ class Gt7SyncServiceTest {
 	}
 
 	@Test
+	void givenRejectedImageUrl_whenDownloadCarImage_thenBatchCompletesWithoutThrowing() throws IOException {
+		// given
+		when(scraperService.scrapeCars()).thenReturn(SCRAPED_CARS);
+		var savedCar = new Car("Alfa Romeo", "4C Gr.3");
+		savedCar.setGt7Id("car310");
+		var id = UUID.randomUUID();
+		savedCar.setId(id);
+		when(carRepository.save(any(Car.class))).thenReturn(savedCar);
+		when(fileStorageService.storeFromUrl(eq("cars"), eq(id), anyString(), eq("car310.png")))
+				.thenThrow(new IllegalArgumentException("URL host not allowed: example.com"));
+
+		// when
+		var result = syncService.executeSync(List.of("car310"), List.of());
+
+		// then
+		assertThat(result.carsImported()).as("a rejected image URL does not abort the import").isEqualTo(1);
+	}
+
+	@Test
 	void givenIoException_whenDownloadCarImage_thenBatchCompletesWithoutThrowing() throws IOException {
 		// given
 		when(scraperService.scrapeCars()).thenReturn(SCRAPED_CARS);

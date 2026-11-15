@@ -4,6 +4,7 @@ import static org.ctc.util.LogSanitizer.sanitize;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.admin.controller.CatalogImageController;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -30,9 +31,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @Slf4j
 public class BackupUploadExceptionHandler {
-    private static final java.util.regex.Pattern GALLERY_UPLOAD =
-            java.util.regex.Pattern.compile("/admin/(car|track)s/([0-9a-fA-F-]{36})/images");
-
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public String handleMaxUploadSizeExceeded(
             MaxUploadSizeExceededException ex,
@@ -41,11 +39,8 @@ public class BackupUploadExceptionHandler {
 
         log.warn("Multipart upload rejected: max-size exceeded — uri={}, limit={}",
                 sanitize(request.getRequestURI()), ex.getMaxUploadSize());
-        var gallery = GALLERY_UPLOAD.matcher(request.getRequestURI());
-        if (gallery.matches()) {
-            redirectAttributes.addFlashAttribute("galleryError", "The upload is larger than 100 MB in total; add fewer files at once.");
-            return "redirect:/admin/" + gallery.group(1) + "s/" + gallery.group(2) + "/edit#" + gallery.group(1) + "-images";
-        }
+        var gallery = CatalogImageController.oversizedUpload(request.getRequestURI(), redirectAttributes);
+        if (gallery.isPresent()) return gallery.get();
         redirectAttributes.addFlashAttribute("errorMessage",
                 "Upload too large — maximum is 100 MB.");
         return "redirect:/admin/backup";

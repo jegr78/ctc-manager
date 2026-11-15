@@ -6,11 +6,12 @@
     <p class="form-hint">Larger pictures for future graphics. The thumbnail above stays separate.</p>
     <div th:if="${galleryStatus}" class="alert alert-success" role="status" th:text="${galleryStatus}"></div>
     <div th:if="${galleryError}" class="alert alert-danger" role="alert" th:text="${galleryError}"></div>
+    <div class="sr-only" aria-live="polite" data-gallery-announcer></div>
     <div th:if="${#lists.isEmpty(galleryImages)}" class="empty-state empty-state--compact"><p>No images yet.</p></div>
     <ol th:unless="${#lists.isEmpty(galleryImages)}" class="gallery-grid" th:aria-label="${'Images of ' + galleryOwner}">
         <li th:each="image, row : ${galleryImages}" class="gallery-item" th:id="${'image-' + image.id}">
             <img th:src="${image.imagePath}" loading="lazy"
-                 th:alt="${galleryOwner + ', ' + #strings.toLowerCase(image.kindName) + (image.label != null ? ', ' + image.label : '') + ', image ' + row.count}">
+                 th:alt="${image.altText(galleryOwner, row.count)}">
             <p class="gallery-meta">
                 <span th:text="${image.kindName}"></span> ·
                 <span th:text="${image.source}"></span><span th:if="${image.sourceKey != null}" th:text="${' ' + image.sourceKey}"></span> ·
@@ -51,12 +52,12 @@
             <div class="form-group">
                 <label th:for="${galleryPrefix + '-gallery-kind'}">Kind</label>
                 <select th:id="${galleryPrefix + '-gallery-kind'}" name="kind" required>
-                    <option th:each="kind : ${galleryKinds}" th:value="${kind.name()}" th:text="${#strings.capitalize(#strings.toLowerCase(kind.name()))}"></option>
+                    <option th:each="kind : ${galleryKinds}" th:value="${kind.name()}" th:selected="${kind.name() == galleryKind}" th:text="${#strings.capitalize(#strings.toLowerCase(kind.name()))}"></option>
                 </select>
             </div>
             <div class="form-group">
                 <label th:for="${galleryPrefix + '-gallery-label'}">Label (optional)</label>
-                <input type="text" th:id="${galleryPrefix + '-gallery-label'}" name="label" maxlength="100">
+                <input type="text" th:id="${galleryPrefix + '-gallery-label'}" name="label" maxlength="100" th:value="${galleryLabel}">
             </div>
             <button type="submit" class="btn btn-primary btn-sm">Upload images</button>
         </fieldset>

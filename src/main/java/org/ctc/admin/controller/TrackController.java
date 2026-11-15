@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.TrackForm;
 import org.ctc.admin.dto.TrackEnvironmentForm;
 import org.ctc.domain.service.TrackEnvironmentService;
+import org.ctc.domain.model.TrackImageKind;
 import org.ctc.domain.model.TrackRainCapability;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.service.TrackService;
@@ -51,7 +52,7 @@ public class TrackController {
 		model.addAttribute("trackForm", form);
         model.addAttribute("pageTitle", "Edit Track");
 		model.addAttribute("track", track);
-        prepareEnvironment(id, model);
+        prepareEditor(id, model);
 		return "admin/track-form";
 	}
 
@@ -72,7 +73,7 @@ public class TrackController {
 	                   Model model, RedirectAttributes redirectAttributes) {
 		if (result.hasErrors()) {
             model.addAttribute("rainCapabilities", TrackRainCapability.values());
-            if (trackForm.getId() != null) prepareEnvironment(trackForm.getId(), model);
+            if (trackForm.getId() != null) prepareEditor(trackForm.getId(), model);
             model.addAttribute("pageTitle", trackForm.getId() == null ? "New Track" : "Edit Track");
             if (trackForm.getId() != null) model.addAttribute("track", trackService.findById(trackForm.getId()));
 			return "admin/track-form";
@@ -85,20 +86,28 @@ public class TrackController {
 			result.reject("track", e.getMessage());
             model.addAttribute("rainCapabilities", TrackRainCapability.values());
             model.addAttribute("pageTitle", trackForm.getId() == null ? "New Track" : "Edit Track");
-            if (trackForm.getId() != null) { model.addAttribute("track", trackService.findById(trackForm.getId())); prepareEnvironment(trackForm.getId(), model); }
+            if (trackForm.getId() != null) { model.addAttribute("track", trackService.findById(trackForm.getId())); prepareEditor(trackForm.getId(), model); }
             return "admin/track-form";
 		}
 		return "redirect:/admin/tracks";
 	}
 
-    private void prepareEnvironment(UUID id, Model model) {
-        var view = environments.view(id);
-        model.addAttribute("environment", view);
+    private void prepareEditor(UUID id, Model model) {
+        prepareEnvironment(id, model);
+        prepareGallery(id, model);
+    }
+
+    private void prepareGallery(UUID id, Model model) {
         model.addAttribute("galleryImages", gallery.trackImages(id));
-        model.addAttribute("galleryKinds", org.ctc.domain.model.TrackImageKind.values());
+        model.addAttribute("galleryKinds", TrackImageKind.values());
         model.addAttribute("galleryBasePath", "/admin/tracks/" + id);
         model.addAttribute("galleryOwner", trackService.findById(id).getName());
         model.addAttribute("galleryPrefix", "track");
+    }
+
+    private void prepareEnvironment(UUID id, Model model) {
+        var view = environments.view(id);
+        model.addAttribute("environment", view);
         model.addAttribute("environmentSourceUrl", org.ctc.domain.model.TrackEnvironmentProvenance.SOURCE_URL);
         model.addAttribute("rainCapabilities", TrackRainCapability.values());
         if (!model.containsAttribute("environmentForm")) {

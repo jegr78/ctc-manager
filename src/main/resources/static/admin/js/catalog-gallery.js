@@ -1,4 +1,10 @@
 (function () {
+    function announce() {
+        var announcer = document.querySelector('.catalog-gallery [data-gallery-announcer]');
+        var message = document.querySelector('.catalog-gallery [role=status], .catalog-gallery [role=alert]');
+        if (announcer && message) announcer.textContent = message.textContent;
+    }
+
     function restoreFocus() {
         var target = window.location.hash.slice(1);
         var upload = document.querySelector('.catalog-gallery .gallery-upload input[type=file]');
@@ -16,6 +22,10 @@
         if (control) control.focus();
     }
     // Fragment navigation finishes after load and would otherwise reset the focus.
-    if (document.readyState === 'complete') setTimeout(restoreFocus, 0);
-    else window.addEventListener('load', function () { setTimeout(restoreFocus, 0); });
+    function afterLoad() {
+        restoreFocus();
+        announce();
+    }
+    if (document.readyState === 'complete') setTimeout(afterLoad, 0);
+    else window.addEventListener('load', function () { setTimeout(afterLoad, 0); });
 })();

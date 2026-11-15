@@ -85,6 +85,19 @@ class Gt7CarShotServiceTest {
     }
 
     @Test
+    void givenApplyTransactionThatNeverStarts_whenLoading_thenRemoveTheNewFiles() throws IOException {
+        // given
+        when(gallery.gt7Slots(carId)).thenReturn(Map.of());
+        when(scraper.scrapeCarShots("car365")).thenReturn(List.of(new CarShot("1_01", "https://gt7/a.jpg")));
+        when(files.downloadImage("https://gt7/a.jpg", "gt7.jpg")).thenReturn(scene);
+        when(files.storeBytes(eq("car-images"), eq(carId), any(), any())).thenReturn("/uploads/car-images/new1.jpg");
+        when(gallery.applyGt7CarImages(eq(carId), anyList())).thenThrow(new org.springframework.transaction.CannotCreateTransactionException("no connection"));
+        // when / then
+        assertThatThrownBy(() -> service.load(carId)).hasMessage("GT7 images could not be saved; try again.");
+        verify(files).delete("/uploads/car-images/new1.jpg");
+    }
+
+    @Test
     void givenFailedDownload_whenLoading_thenStoreNothingAndChangeNothing() throws IOException {
         // given
         when(gallery.gt7Slots(carId)).thenReturn(Map.of());

@@ -9,6 +9,8 @@ import java.util.UUID;
 import org.ctc.domain.model.CarImageKind;
 import org.ctc.domain.model.ImageSource;
 import org.ctc.domain.model.TrackImageKind;
+import java.time.DateTimeException;
+import java.time.LocalDateTime;
 
 /**
  * Bounded prewipe checks for car and track gallery images: schema 24 or later, existing owners, known kinds and
@@ -23,8 +25,9 @@ public final class CatalogImageBackupValidator {
     private final Set<UUID> cars = new HashSet<>();
     private final Set<UUID> tracks = new HashSet<>();
     private final Set<String> slots = new HashSet<>();
-    private final List<UUID[]> carOwners = new ArrayList<>();
-    private final List<UUID[]> trackOwners = new ArrayList<>();
+    private final List<UUID> carOwners = new ArrayList<>();
+    private final List<UUID> trackOwners = new ArrayList<>();
+    private final Set<UUID> imageIds = new HashSet<>();
     private int retained;
 
     /** @param archivedUploads the archive entry names below {@code uploads/} */
@@ -47,12 +50,15 @@ public final class CatalogImageBackupValidator {
     }
 
     public void validate() {
-        for (var owner : carOwners) if (!cars.contains(owner[0])) throw new IllegalArgumentException("A car image references a missing car");
-        for (var owner : trackOwners) if (!tracks.contains(owner[0])) throw new IllegalArgumentException("A track image references a missing track");
+        for (var owner : carOwners) if (!cars.contains(owner)) throw new IllegalArgumentException("A car image references a missing car");
+        for (var owner : trackOwners) if (!tracks.contains(owner)) throw new IllegalArgumentException("A track image references a missing track");
     }
 
-    private <E extends Enum<E>> void image(JsonNode row, UUID id, String owner, Class<E> kinds, List<UUID[]> owners) {
+    private <E extends Enum<E>> void image(JsonNode row, UUID id, String owner, Class<E> kinds, List<UUID> owners) {
         if (version < IMAGE_VERSION) throw new IllegalArgumentException("Gallery images require backup schema " + IMAGE_VERSION);
+        if (!imageIds.add(id)) throw new IllegalArgumentException("Image " + id + " appears twice");
+        time(row, "createdAt");
+        time(row, "updatedAt");
         UUID ownerId = uuid(row, owner);
         enumValue(row, "kind", kinds);
         var source = enumValue(row, "source", ImageSource.class);
@@ -67,12 +73,12 @@ public final class CatalogImageBackupValidator {
         String label = text(row, "label");
         if (label != null && label.length() > 100) throw new IllegalArgumentException("An image label exceeds 100 characters");
         if (key != null && key.length() > 32) throw new IllegalArgumentException("An image source key exceeds 32 characters");
-        if (positive(row, "width") && positive(row, "height") && row.path("sortIndex").isIntegralNumber()) {
+        if (positive(row, "width") && positive(row, "height") && row.path("sortIndex").isIntegralNumber() && row.path("sortIndex").canConvertToInt()) {
             String path = text(row, "imagePath");
             if (path == null || path.length() > 500 || !path.startsWith("/uploads/") || !archivedUploads.contains("uploads/" + path.substring("/uploads/".length()))) {
                 throw new IllegalArgumentException("The file of image " + id + " is missing from the archive");
             }
-            owners.add(new UUID[] {ownerId, id});
+            owners.add(ownerId);
             return;
         }
         throw new IllegalArgumentException("Image " + id + " needs a positive size and a sort index");
@@ -80,7 +86,7 @@ public final class CatalogImageBackupValidator {
 
     private static boolean positive(JsonNode row, String field) {
         var value = row.get(field);
-        return value != null && value.isIntegralNumber() && value.intValue() > 0;
+        return value != null && value.isIntegralNumber() && value.canConvertToInt() && value.intValue() > 0;
     }
 
     private static <E extends Enum<E>> E enumValue(JsonNode row, String field, Class<E> type) {
@@ -89,6 +95,15 @@ public final class CatalogImageBackupValidator {
             return Enum.valueOf(type, value == null ? "" : value);
         } catch (IllegalArgumentException unknown) {
             throw new IllegalArgumentException("Unknown image " + field + ": " + value);
+        }
+    }
+
+    private static void time(JsonNode row, String field) {
+        String value = text(row, field);
+        try {
+            LocalDateTime.parse(value == null ? "" : value);
+        } catch (DateTimeException invalid) {
+            throw new IllegalArgumentException("Invalid image timestamp " + field);
         }
     }
 

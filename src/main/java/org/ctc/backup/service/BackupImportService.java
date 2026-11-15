@@ -66,6 +66,9 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.ctc.backup.schema.CatalogImageBackupValidator;
+import java.util.LinkedHashSet;
+import java.util.HashSet;
 
 /**
  * Stateless orchestrator for the backup import pipeline.
@@ -130,12 +133,12 @@ public class BackupImportService {
      * fresh slugs after import. Versions 1 through 3 may omit pool tables. Versions outside
      * the supported set are refused with {@link Reason#SCHEMA_MISMATCH}.
      *
-     * <p>Declared as a {@link java.util.LinkedHashSet} so the iteration order is stable
+     * <p>Declared as a {@link LinkedHashSet} so the iteration order is stable
      * (ascending integer order) — used directly inside the error message via
      * {@code SUPPORTED_SCHEMA_VERSIONS.toString()}, where {@code Set.of(1, 2)} produces
      * a hash-randomised order that breaks message-matching assertions.
      */
-    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24));
+    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24));
 
     /** Tables an older schema version never exported; they may be absent when the manifest announces no rows. */
     static final Set<String> INCIDENT_TABLES = Set.of("incident_match_contexts", "incident_report_windows", "incident_reports", "incident_report_revisions", "incident_report_events", "incident_deliveries", "incident_thread_publications", "incident_rulings", "incident_ruling_revisions", "incident_ruling_publications");
@@ -155,8 +158,8 @@ public class BackupImportService {
 
     private static Map<Integer, Set<String>> beforeImages(Map<Integer, Set<String>> previous) {
         var versions = new LinkedHashMap<Integer, Set<String>>();
-        for (int version = 1; version < org.ctc.backup.schema.CatalogImageBackupValidator.IMAGE_VERSION; version++) {
-            var absent = new java.util.HashSet<>(previous.getOrDefault(version, Set.of()));
+        for (int version = 1; version < CatalogImageBackupValidator.IMAGE_VERSION; version++) {
+            var absent = new HashSet<>(previous.getOrDefault(version, Set.of()));
             absent.addAll(IMAGE_TABLES); versions.put(version, Set.copyOf(absent));
         }
         return Map.copyOf(versions);
@@ -165,7 +168,7 @@ public class BackupImportService {
     private static Map<Integer, Set<String>> beforeLineups(Map<Integer, Set<String>> previous) {
         var versions = new LinkedHashMap<Integer, Set<String>>();
         for (int version = 1; version < org.ctc.backup.schema.LineupArchive.LINEUP_VERSION; version++) {
-            var absent = new java.util.HashSet<>(previous.getOrDefault(version, Set.of()));
+            var absent = new HashSet<>(previous.getOrDefault(version, Set.of()));
             absent.addAll(LINEUP_TABLES); versions.put(version, Set.copyOf(absent));
         }
         return Map.copyOf(versions);
@@ -174,7 +177,7 @@ public class BackupImportService {
     private static Map<Integer, Set<String>> beforeDisqualifications(Map<Integer, Set<String>> previous) {
         var versions = new LinkedHashMap<Integer, Set<String>>();
         for (int version = 1; version < 16; version++) {
-            var absent = new java.util.HashSet<>(previous.getOrDefault(version, Set.of()));
+            var absent = new HashSet<>(previous.getOrDefault(version, Set.of()));
             absent.add("race_disqualification_revisions"); versions.put(version, Set.copyOf(absent));
         }
         return Map.copyOf(versions);
@@ -183,14 +186,14 @@ public class BackupImportService {
     private static Map<Integer, Set<String>> beforePenalties(Map<Integer, Set<String>> previous) {
         var versions = new LinkedHashMap<Integer, Set<String>>();
         for (int version = 1; version < 13; version++) {
-            var absent = new java.util.HashSet<>(previous.getOrDefault(version, Set.of()));
+            var absent = new HashSet<>(previous.getOrDefault(version, Set.of()));
             absent.add("race_penalty_revisions"); versions.put(version, Set.copyOf(absent));
         }
         return Map.copyOf(versions);
     }
 
     private static Set<String> beforeIncidents(String... olderTables) {
-        var tables = new java.util.HashSet<>(INCIDENT_TABLES);
+        var tables = new HashSet<>(INCIDENT_TABLES);
         tables.addAll(List.of(olderTables));
         return Set.copyOf(tables);
     }
@@ -819,7 +822,7 @@ public class BackupImportService {
     }
 
     private static Set<String> archivedUploads(ZipFile zf) {
-        var names = new java.util.HashSet<String>();
+        var names = new HashSet<String>();
         zf.stream().filter(entry -> !entry.isDirectory() && entry.getName().startsWith("uploads/")).forEach(entry -> names.add(entry.getName()));
         return names;
     }
@@ -842,7 +845,7 @@ public class BackupImportService {
         Map<String, Long> counts = new LinkedHashMap<>();
         long[] inflatedBytes = {0L};
         try (ZipFile zf = new ZipFile(staged.toFile())) {
-            var imageValidator = new org.ctc.backup.schema.CatalogImageBackupValidator(manifest.schemaVersion(), archivedUploads(zf));
+            var imageValidator = new CatalogImageBackupValidator(manifest.schemaVersion(), archivedUploads(zf));
             for (EntityRef ref : backupSchema.getExportOrder()) {
                 // CodeQL FP: java/path-injection — assertEntrySafe + PathTraversalGuard.assertWithin defense not traceable; see docs/security/sast-acceptance.md
                 ZipEntry entry = zf.getEntry(ref.fileName());

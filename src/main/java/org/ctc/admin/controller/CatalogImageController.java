@@ -1,7 +1,10 @@
 package org.ctc.admin.controller;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.CarImageKind;
@@ -26,6 +29,8 @@ public class CatalogImageController {
     public String uploadCarImages(@PathVariable UUID id, @RequestParam(name = "files", required = false) List<MultipartFile> files,
                                   @RequestParam(required = false) String kind, @RequestParam(required = false) String label,
                                   RedirectAttributes redirect) {
+        redirect.addFlashAttribute("galleryKind", kind);
+        redirect.addFlashAttribute("galleryLabel", label);
         return run(redirect, carEditor(id) + "#car-images", () -> {
             int added = gallery.uploadCarImages(id, files, parse(CarImageKind.class, kind), label);
             return added == 1 ? "1 image added." : added + " images added.";
@@ -56,6 +61,8 @@ public class CatalogImageController {
     public String uploadTrackImages(@PathVariable UUID id, @RequestParam(name = "files", required = false) List<MultipartFile> files,
                                     @RequestParam(required = false) String kind, @RequestParam(required = false) String label,
                                     RedirectAttributes redirect) {
+        redirect.addFlashAttribute("galleryKind", kind);
+        redirect.addFlashAttribute("galleryLabel", label);
         return run(redirect, trackEditor(id) + "#track-images", () -> {
             int added = gallery.uploadTrackImages(id, files, parse(TrackImageKind.class, kind), label);
             return added == 1 ? "1 image added." : added + " images added.";
@@ -77,9 +84,21 @@ public class CatalogImageController {
                 () -> "Image moved to position " + gallery.moveTrackImage(id, imageId, up) + ".");
     }
 
-    private static String run(RedirectAttributes redirect, String target, java.util.function.Supplier<String> action) {
+    private static final Pattern UPLOAD = Pattern.compile("/admin/(car|track)s/([0-9a-fA-F-]{36})/images");
+
+    /** The gallery to return to when a multipart request to an upload endpoint exceeds the size limit. */
+    public static Optional<String> oversizedUpload(String uri, RedirectAttributes redirect) {
+        var match = UPLOAD.matcher(uri == null ? "" : uri);
+        if (!match.matches()) return Optional.empty();
+        redirect.addFlashAttribute("galleryError", "The upload is larger than 100 MB in total; add fewer files at once.");
+        return Optional.of("redirect:/admin/" + match.group(1) + "s/" + match.group(2) + "/edit#" + match.group(1) + "-images");
+    }
+
+    private static String run(RedirectAttributes redirect, String target, Supplier<String> action) {
         try {
             redirect.addFlashAttribute("galleryStatus", action.get());
+            redirect.getFlashAttributes().remove("galleryKind");
+            redirect.getFlashAttributes().remove("galleryLabel");
         } catch (BusinessRuleException rejected) {
             redirect.addFlashAttribute("galleryError", rejected.getMessage());
         }
