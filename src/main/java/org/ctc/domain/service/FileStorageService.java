@@ -62,6 +62,13 @@ public class FileStorageService {
 		return "/uploads/races/" + raceId + "/" + filename;
 	}
 
+	/** Whether an {@code /uploads/} URL names a stored regular file inside the upload directory. */
+	public boolean exists(String url) {
+		if (url == null || !url.startsWith("/uploads/")) return false;
+		Path file = uploadDir.resolve(url.substring("/uploads/".length())).normalize();
+		return file.startsWith(uploadDir) && Files.isRegularFile(file);
+	}
+
 	public void delete(String url) {
 		if (url == null || !url.startsWith("/uploads/")) {
 			return;
