@@ -30,6 +30,6 @@ public final class StatsCandidates {
 
     /** A selectable entity with its label and the names a query matches against. */
     public record Candidate(UUID id, String label, List<String> names) {
-        public Candidate { names = names.stream().map(name -> name.toLowerCase(Locale.ROOT)).toList(); }
+        public Candidate { names = List.copyOf(names.stream().map(name -> name.toLowerCase(Locale.ROOT)).toList()); }
     }
 }
