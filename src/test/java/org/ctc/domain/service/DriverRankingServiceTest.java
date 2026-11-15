@@ -47,7 +47,7 @@ class DriverRankingServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		season = new Season("2026");
+		season = new Season("2026", 2026, 1);
 		season.setId(UUID.randomUUID());
 
 		tnr = new Team("The Neutrals Racing", "TNR");
@@ -262,7 +262,7 @@ class DriverRankingServiceTest {
 	@Test
 	void givenDriverInMultipleTeams_whenCalculateAlltimeRanking_thenShowsMostRecentTeam() {
 		// given
-		var season2 = new Season("2025");
+		var season2 = new Season("2025", 2025, 1);
 		season2.setId(UUID.randomUUID());
 
 		var p1r = new Team("Project One Racing", "P1R");
@@ -285,8 +285,73 @@ class DriverRankingServiceTest {
 		var rankings = driverRankingService.calculateAlltimeRanking();
 
 		// then
-		// Season "2026" > "2025" alphabetically, so TNR is most recent
 		assertEquals(tnr, rankings.get(0).getTeam());
+	}
+
+	@Test
+	void givenSeasonNamesSortingAgainstTime_whenCalculateAlltimeRanking_thenShowsTheChronologicallyLatestTeam() {
+		// given
+		var ninth = new Season("Season 9", 2025, 2);
+		ninth.setId(UUID.randomUUID());
+		var tenth = new Season("Season 10", 2026, 1);
+		tenth.setId(UUID.randomUUID());
+		var p1r = new Team("Project One Racing", "P1R");
+		p1r.setId(UUID.randomUUID());
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		when(raceResultRepository.findAll()).thenReturn(List.of(createResult(race, panicpotato, 23, 1)));
+		when(seasonDriverRepository.findAll())
+				.thenReturn(List.of(new SeasonDriver(tenth, panicpotato, tnr), new SeasonDriver(ninth, panicpotato, p1r)));
+
+		// when
+		var rankings = driverRankingService.calculateAlltimeRanking();
+
+		// then
+		assertThat(rankings.getFirst().getTeam()).as("year and number decide, not the alphabetical season name").isEqualTo(tnr);
+	}
+
+	@Test
+	void givenSeasonsOfOneYear_whenCalculateAlltimeRanking_thenTheHigherNumberWins() {
+		// given
+		var spring = new Season("Spring", 2026, 1);
+		spring.setId(UUID.randomUUID());
+		var autumn = new Season("Autumn", 2026, 2);
+		autumn.setId(UUID.randomUUID());
+		var p1r = new Team("Project One Racing", "P1R");
+		p1r.setId(UUID.randomUUID());
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		when(raceResultRepository.findAll()).thenReturn(List.of(createResult(race, panicpotato, 23, 1)));
+		when(seasonDriverRepository.findAll())
+				.thenReturn(List.of(new SeasonDriver(autumn, panicpotato, p1r), new SeasonDriver(spring, panicpotato, tnr)));
+
+		// when
+		var rankings = driverRankingService.calculateAlltimeRanking();
+
+		// then
+		assertThat(rankings.getFirst().getTeam()).as("autumn is season 2 of 2026").isEqualTo(p1r);
+	}
+
+	@Test
+	void givenSeasonsWithEqualYearAndNumber_whenCalculateAlltimeRanking_thenTheLargerSeasonIdWins() {
+		// given
+		var lower = new Season("Duplicate", 2026, 3);
+		lower.setId(UUID.fromString("00000000-0000-0000-0000-000000000001"));
+		var higher = new Season("Duplicate", 2026, 3);
+		higher.setId(UUID.fromString("00000000-0000-0000-0000-000000000002"));
+		var p1r = new Team("Project One Racing", "P1R");
+		p1r.setId(UUID.randomUUID());
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		when(raceResultRepository.findAll()).thenReturn(List.of(createResult(race, panicpotato, 23, 1)));
+		when(seasonDriverRepository.findAll())
+				.thenReturn(List.of(new SeasonDriver(higher, panicpotato, p1r), new SeasonDriver(lower, panicpotato, tnr)));
+
+		// when
+		var rankings = driverRankingService.calculateAlltimeRanking();
+
+		// then
+		assertThat(rankings.getFirst().getTeam()).as("equal year and number fall back to the larger season id").isEqualTo(p1r);
 	}
 
 	@Test

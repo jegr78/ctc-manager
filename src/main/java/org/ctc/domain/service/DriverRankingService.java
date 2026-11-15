@@ -124,14 +124,14 @@ public class DriverRankingService {
 	private List<DriverRanking> calculateAlltimeRanking(List<RaceResult> results,
 	                                                     List<SeasonDriver> allSeasonDrivers) {
 
-		// For each driver, find their most recent team (by season name), resolved to parent
+		// For each driver, find their most recent team by year and number, resolved to parent
 		Map<UUID, Team> driverTeamMap = allSeasonDrivers.stream()
 				.collect(Collectors.groupingBy(sd -> sd.getDriver().getId()))
 				.entrySet().stream()
 				.collect(Collectors.toMap(
 						Map.Entry::getKey,
 						e -> e.getValue().stream()
-								.max(Comparator.comparing(sd -> sd.getSeason().getName()))
+								.max(Comparator.comparing((SeasonDriver sd) -> sd.getSeason(), Season.CHRONOLOGICAL))
 								.map(sd -> sd.getTeam().getParentOrSelf())
 								.orElse(null)));
 

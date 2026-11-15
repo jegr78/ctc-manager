@@ -94,6 +94,10 @@ public class Season extends BaseEntity {
 	@OrderBy("name ASC")
 	private List<Track> tracks = new ArrayList<>();
 
+	/** Oldest first: by year, then number, with the ID as a stable tie-breaker. */
+	public static final java.util.Comparator<Season> CHRONOLOGICAL = java.util.Comparator.comparingInt(Season::getYear)
+			.thenComparingInt(Season::getNumber).thenComparing(Season::getId, java.util.Comparator.nullsFirst(java.util.Comparator.naturalOrder()));
+
 	public Season(String name) {
 		this.name = name;
 	}
