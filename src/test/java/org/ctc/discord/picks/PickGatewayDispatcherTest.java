@@ -196,4 +196,39 @@ class PickGatewayDispatcherTest {
         verify(response).replyPrivate("Incident reporting is unavailable in this channel.");
         verifyNoInteractions(handler);
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"command", "component"})
+    void givenLineupInteraction_whenDispatching_thenReachTheFeatureHandler(String entry) {
+        // given
+        dispatcher.start();
+        // when
+        dispatcher.accept(GUILD, event(GUILD, entry.equals("command") ? PickGatewayInteraction.Kind.COMMAND : PickGatewayInteraction.Kind.BUTTON,
+                entry.equals("command") ? "lineup" : "ctc-lineup:opaque:nonce"));
+        // then
+        verify(handler).onInteraction(any(), any());
+    }
+
+    @Test
+    void givenLineupFromAnotherGuild_whenDispatching_thenDenyWithLineupWording() {
+        // given
+        dispatcher.start();
+        // when
+        dispatcher.accept(GUILD, event("999", PickGatewayInteraction.Kind.COMMAND, "lineup"));
+        // then
+        verify(response).replyPrivate("Lineups are unavailable in this channel.");
+        verifyNoInteractions(handler);
+    }
+
+    @Test
+    void whenClassifyingActions_thenRouteEachCommandAndReuseOnlyPicksAndLineupMessages() {
+        // when / then
+        assertThat(PickGatewayDispatcher.command("lineup")).isEqualTo("lineup");
+        assertThat(PickGatewayDispatcher.command("ctc-lineup:a:b")).isEqualTo("lineup");
+        assertThat(PickGatewayDispatcher.command("ctc-picks:a:b")).isEqualTo("picks");
+        assertThat(PickGatewayDispatcher.command("ctc-incidents:a:b")).isEqualTo("incidents");
+        assertThat(PickGatewayDispatcher.command("ctc-lineups:a:b")).as("a lookalike prefix belongs to no command").isNull();
+        assertThat(PickGatewayDispatcher.reusesPrivateMessage("ctc-lineup:a:b")).isTrue();
+        assertThat(PickGatewayDispatcher.reusesPrivateMessage("incidents")).isFalse();
+    }
 }

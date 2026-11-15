@@ -47,9 +47,9 @@ public class PickGatewayDispatcher {
                     pool.execute(task);
                 });
         if (expectedGuild == null || !expectedGuild.equals(interaction.guildId())) {
-            reply.replyPrivate(incident(interaction) ? "Incident reporting is unavailable in this channel." : "Picks are unavailable in this channel.");
+            reply.replyPrivate(feature(interaction) + " unavailable in this channel.");
         } else if (pool == null) {
-            reply.replyPrivate(incident(interaction) ? "Incident reporting is unavailable. Try again later." : "Picks are unavailable. Try again later.");
+            reply.replyPrivate(feature(interaction) + " unavailable. Try again later.");
         } else if (imports.isLocked()) {
             reply.replyPrivate("A backup restore is in progress. Try again later.");
         } else {
@@ -64,9 +64,31 @@ public class PickGatewayDispatcher {
     private boolean belongsToReporting(PickGatewayInteraction interaction) {
         if (interaction == null || interaction.kind() == null || interaction.action() == null) return false;
         return interaction.kind() == PickGatewayInteraction.Kind.COMMAND
-                ? "picks".equals(interaction.action()) || "incidents".equals(interaction.action())
-                : interaction.action().startsWith("ctc-picks:") || interaction.action().startsWith("ctc-incidents:");
+                ? COMMANDS.contains(interaction.action())
+                : COMMANDS.stream().anyMatch(command -> interaction.action().startsWith(prefix(command)));
     }
 
-    private static boolean incident(PickGatewayInteraction event) { return "incidents".equals(event.action()) || event.action().startsWith("ctc-incidents:"); }
+    private static final java.util.List<String> COMMANDS = java.util.List.of("picks", "incidents", "lineup");
+
+    /** Routes an interaction to the command it belongs to, or null when it belongs to none. */
+    public static String command(String action) {
+        if (action == null) return null;
+        return COMMANDS.stream().filter(command -> command.equals(action) || action.startsWith(prefix(command))).findFirst().orElse(null);
+    }
+
+    /** Picks and lineups edit their initial private reply; incident delivery keeps its own response mode. */
+    static boolean reusesPrivateMessage(String action) {
+        String command = command(action);
+        return "picks".equals(command) || "lineup".equals(command);
+    }
+
+    private static String prefix(String command) { return "ctc-" + command + ":"; }
+
+    private static String feature(PickGatewayInteraction event) {
+        return switch (String.valueOf(command(event.action()))) {
+            case "incidents" -> "Incident reporting is";
+            case "lineup" -> "Lineups are";
+            default -> "Picks are";
+        };
+    }
 }

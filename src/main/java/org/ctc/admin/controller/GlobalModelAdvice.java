@@ -32,6 +32,7 @@ public class GlobalModelAdvice {
 		if (uri.startsWith("/admin/seasons")) return "seasons";
 		if (uri.startsWith("/admin/swiss-rounds")) return "matchdays";
 		if (uri.startsWith("/admin/matchday-picks")) return "matchdays";
+		if (uri.startsWith("/admin/matchday-lineups")) return "matchdays";
 		if (uri.startsWith("/admin/matchdays")) return "matchdays";
 		if (uri.startsWith("/admin/matches")) return "matchdays";
 		if (uri.startsWith("/admin/races")) return "races";

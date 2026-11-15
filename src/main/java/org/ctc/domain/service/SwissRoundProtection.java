@@ -18,6 +18,8 @@ public class SwissRoundProtection {
     private final RacePenaltyRevisionRepository penalties;
     private final RaceDisqualificationRevisionRepository disqualifications;
     private final DiscordPostRepository posts;
+    private final org.ctc.domain.repository.LineupSubmissionRepository lineupSubmissions;
+    private final org.ctc.domain.repository.LineupWindowEventRepository lineupWindows;
 
     public String reason(Match match, List<Race> legs) {
         if (match.getHomeScore()!=null || match.getAwayScore()!=null) return "Recorded team score";
@@ -31,6 +33,7 @@ public class SwissRoundProtection {
             if (!leg.getResults().isEmpty()) return "Recorded driver results";
             if (lineups.existsByRaceId(leg.getId())) return "Recorded race lineup";
             if (picks.findSnapshotByRaceId(leg.getId()).isPresent()) return "Confidential pick history";
+            if (lineupSubmissions.existsByRaceId(leg.getId()) || lineupWindows.existsByRaceId(leg.getId())) return "Lineup submission history";
             if (reports.existsByRaceId(leg.getId())) return "Permanent incident report history";
             if (penalties.existsByRaceId(leg.getId())) return "Permanent team penalty history";
             if (disqualifications.existsByRaceId(leg.getId())) return "Permanent driver disqualification history";

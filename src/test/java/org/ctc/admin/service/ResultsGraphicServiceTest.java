@@ -69,6 +69,7 @@ class ResultsGraphicServiceTest {
 		awayTeam.setId(UUID.randomUUID());
 
 		var race = new Race();
+		race.setMatchday(seasonDay());
 		race.setId(UUID.randomUUID());
 		var match = new Match(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("S"), "MD 1", 1), homeTeam, awayTeam);
 		race.setMatch(match);
@@ -117,6 +118,7 @@ class ResultsGraphicServiceTest {
 		awayTeam.setId(UUID.randomUUID());
 
 		var race = new Race();
+		race.setMatchday(seasonDay());
 		race.setId(UUID.randomUUID());
 		var match = new Match(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("S"), "MD 1", 1), homeTeam, awayTeam);
 		race.setMatch(match);
@@ -150,6 +152,7 @@ class ResultsGraphicServiceTest {
 		awayTeam.setId(UUID.randomUUID());
 
 		var race = new Race();
+		race.setMatchday(seasonDay());
 		race.setId(UUID.randomUUID());
 		var match = new Match(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("S"), "MD 1", 1), homeTeam, awayTeam);
 		race.setMatch(match);
@@ -194,6 +197,7 @@ class ResultsGraphicServiceTest {
 		awayTeam.setId(UUID.randomUUID());
 
 		var race = new Race();
+		race.setMatchday(seasonDay());
 		race.setId(UUID.randomUUID());
 		var match = new Match(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("S"), "MD 1", 1), homeTeam, awayTeam);
 		race.setMatch(match);
@@ -224,6 +228,7 @@ class ResultsGraphicServiceTest {
 		awayTeam.setId(UUID.randomUUID());
 
 		var race = new Race();
+		race.setMatchday(seasonDay());
 		race.setId(UUID.randomUUID());
 		var match = new Match(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("S"), "MD 1", 1), homeTeam, awayTeam);
 		race.setMatch(match);
@@ -255,6 +260,7 @@ class ResultsGraphicServiceTest {
 		// given
 		var service = createService();
 		var race = new Race();
+		race.setMatchday(seasonDay());
 
 		// when / then
 		assertThatThrownBy(() -> service.generateResults(race))
@@ -327,5 +333,11 @@ class ResultsGraphicServiceTest {
 
 		// then
 		assertThat(service.hasCustomTemplate()).isFalse();
+	}
+
+	private static Matchday seasonDay() {
+		var day = new Matchday();
+		day.setPhase(new SeasonPhase(new Season(), PhaseType.REGULAR, PhaseLayout.LEAGUE, 0));
+		return day;
 	}
 }

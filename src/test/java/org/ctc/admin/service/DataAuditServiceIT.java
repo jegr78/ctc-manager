@@ -65,6 +65,31 @@ import org.springframework.transaction.annotation.Transactional;
 @Tag("integration")
 @Transactional
 class DataAuditServiceIT {
+    @Test
+    void givenDriverFieldedForTwoSubTeamsOnOneMatchday_whenAuditing_thenReportOverlapWithoutChangingLineups() {
+        // given
+        var season = testHelper.createSeason("Test_Lineup_Audit_" + id);
+        var org = testHelper.createTeam("Test audit org " + id, "TAO" + id);
+        var first = testHelper.createSubTeam("Test audit one " + id, "TA1" + id, org);
+        var second = testHelper.createSubTeam("Test audit two " + id, "TA2" + id, org);
+        var other = testHelper.createTeam("Test audit other " + id, "TAX" + id);
+        var day = testHelper.createMatchday(season, "Test audit MD " + id, 1);
+        var firstRace = testHelper.createRace(day, testHelper.createMatch(day, first, other));
+        var secondRace = testHelper.createRace(day, testHelper.createMatch(day, other, second));
+        var driver = testHelper.createDriver("Test_Audit_Shared_" + id, "Shared");
+        raceLineupRepository.save(new RaceLineup(firstRace, driver, first));
+        raceLineupRepository.save(new RaceLineup(secondRace, driver, second));
+        entityManager.flush(); entityManager.clear();
+        // when
+        var findings = dataAuditService.audit().findings(Category.LINEUPS);
+        // then
+        assertThat(findings).anySatisfy(finding -> {
+            assertThat(finding.subject()).contains("Test_Audit_Shared_" + id);
+            assertThat(finding.evidence()).contains("TA1" + id, "TA2" + id);
+        });
+        assertThat(raceLineupRepository.findByRaceMatchdayId(day.getId())).as("the audit changes nothing").hasSize(2);
+    }
+
     @Test void givenSwissTeamUsedTwiceInRound_whenAuditing_thenReportRoundRuleWithoutChangingPairings() {
         var fixture=testHelper.createFullSeasonFixture("Test_Swiss_Audit_"+id);
         fixture.race().getMatchday().getPhase().setFormat(SeasonFormat.SWISS);

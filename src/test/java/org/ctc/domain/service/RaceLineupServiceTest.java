@@ -42,6 +42,7 @@ class RaceLineupServiceTest {
 	private ScoringService scoringService;
 
 	@org.mockito.Mock private org.ctc.domain.service.RaceDisqualificationLifecycleGuard disqualificationGuard;
+	@Mock private LineupOverlapService overlaps;
     @InjectMocks
 	private RaceLineupService service;
 
@@ -487,5 +488,24 @@ class RaceLineupServiceTest {
 
 		// then
 		assertThat(guests).containsExactly(guestLineup);
+	}
+
+	@Test
+	void givenOrganisationOverlap_whenSaveLineup_thenRejectBeforeDeletingRows() {
+		// given
+		var raceId = UUID.randomUUID();
+		var driverId = UUID.randomUUID();
+		var team = new Team();
+		team.setId(UUID.randomUUID());
+		var race = new Race();
+		race.setId(raceId);
+		when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
+		when(teamRepository.findById(team.getId())).thenReturn(Optional.of(team));
+		org.mockito.Mockito.doThrow(new BusinessRuleException("overlap")).when(overlaps)
+				.requireNone(org.mockito.ArgumentMatchers.eq(race), org.mockito.ArgumentMatchers.eq(Map.of(driverId, team)), any());
+		// when / then
+		assertThatThrownBy(() -> service.saveLineup(raceId, Map.of(driverId, team.getId())))
+				.isInstanceOf(BusinessRuleException.class).hasMessage("overlap");
+		verify(raceLineupRepository, org.mockito.Mockito.never()).deleteAll(any());
 	}
 }

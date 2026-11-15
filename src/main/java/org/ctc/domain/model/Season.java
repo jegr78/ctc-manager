@@ -17,6 +17,8 @@ import lombok.ToString;
 @NoArgsConstructor
 @ToString(exclude = {"phases", "seasonDrivers", "seasonTeams", "cars", "tracks", "carPoolEntries"})
 public class Season extends BaseEntity {
+    public static final int LINEUP_SIZE_DEFAULT = 6;
+    public static final int LINEUP_SIZE_MAX = 12;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "lobby_rules_profile", nullable = false, length = 16)
@@ -46,6 +48,9 @@ public class Season extends BaseEntity {
 
 	@Column(nullable = false)
 	private boolean active;
+
+    @Column(name = "lineup_size", nullable = false)
+    private int lineupSize = LINEUP_SIZE_DEFAULT;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "car_pool_mode", nullable = false, length = 24)

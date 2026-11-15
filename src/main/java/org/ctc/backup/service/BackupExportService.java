@@ -89,6 +89,9 @@ public class BackupExportService {
     private final MatchdayPickRevisionRepository pickRevisions;
     private final MatchdayPickDecisionRepository pickDecisions;
     private final TeamPickChannelBindingRepository pickBindings;
+    private final LineupSubmissionRepository lineupSubmissions;
+    private final LineupSubmissionRevisionRepository lineupRevisions;
+    private final LineupWindowEventRepository lineupWindows;
     private final PickPublicationAttemptRepository publicationAttempts;
     private final PickPublicationSnapshotRepository publicationSnapshots;
     private final IncidentMatchContextRepository incidentContexts;
@@ -158,6 +161,9 @@ public class BackupExportService {
             IncidentRulingRepository incidentRulings, IncidentRulingRevisionRepository rulingRevisions, IncidentRulingPublicationRepository rulingPublications,
             RacePenaltyRevisionRepository penaltyRevisions,
             RaceDisqualificationRevisionRepository disqualificationRevisions,
+            LineupSubmissionRepository lineupSubmissions,
+            LineupSubmissionRevisionRepository lineupRevisions,
+            LineupWindowEventRepository lineupWindows,
 			@Value("${app.upload-dir:data/dev/uploads}") String uploadDirRaw
 	) {
 		this.backupSchema = backupSchema;
@@ -195,6 +201,9 @@ public class BackupExportService {
         this.pickRevisions = pickRevisions;
         this.pickDecisions = pickDecisions;
         this.pickBindings = pickBindings;
+        this.lineupSubmissions = lineupSubmissions;
+        this.lineupRevisions = lineupRevisions;
+        this.lineupWindows = lineupWindows;
         this.publicationAttempts = publicationAttempts;
         this.publicationSnapshots = publicationSnapshots;
         this.incidentContexts = incidentContexts;
@@ -250,6 +259,9 @@ public class BackupExportService {
         this.repositoriesByEntityClass.put(MatchdayPickRevision.class, pickRevisions);
         this.repositoriesByEntityClass.put(MatchdayPickDecision.class, pickDecisions);
         this.repositoriesByEntityClass.put(TeamPickChannelBinding.class, pickBindings);
+        this.repositoriesByEntityClass.put(LineupSubmission.class, lineupSubmissions);
+        this.repositoriesByEntityClass.put(LineupSubmissionRevision.class, lineupRevisions);
+        this.repositoriesByEntityClass.put(LineupWindowEvent.class, lineupWindows);
         this.repositoriesByEntityClass.put(PickPublicationAttempt.class, publicationAttempts);
         this.repositoriesByEntityClass.put(PickPublicationSnapshot.class, publicationSnapshots);
         this.repositoriesByEntityClass.put(IncidentMatchContext.class, incidentContexts);

@@ -71,6 +71,29 @@ public class PickAccessService {
                 new AuthorizedPickActor.ChannelContext(current.guildId(), current.channelId(), generation, binding.teamId()));
     }
 
+    /** Authorizes a lineup for {@code teamId}, which must play the leg and be served by the channel's binding. */
+    public AuthorizedPickActor authorizeLineupTarget(ChannelPickActor channel, UUID raceId, UUID teamId) {
+        if (channel == null || raceId == null || teamId == null) throw unavailable();
+        long generation = epoch.getAsLong();
+        var current = authorizeChannel(channel.guildId(), channel.channelId(), channel.userId());
+        var race = races.findById(raceId).orElseThrow(PickAccessService::unavailable);
+        if (race.getMatchday() == null || race.getMatchday().getSeason() == null) throw unavailable();
+        var team = participant(race, teamId);
+        var seasonId = race.getMatchday().getSeason().getId();
+        var binding = current.bindings().stream()
+                .filter(row -> seasonId.equals(row.seasonId()) && org.ctc.domain.model.LineupTargetRules.serves(row.teamId(), team))
+                .findFirst().orElseThrow(PickAccessService::unavailable);
+        if (generation != epoch.getAsLong()) throw unavailable();
+        return new AuthorizedPickActor(raceId, seasonId, teamId, current.userId(),
+                new AuthorizedPickActor.ChannelContext(current.guildId(), current.channelId(), generation, binding.teamId()));
+    }
+
+    static org.ctc.domain.model.Team participant(org.ctc.domain.model.Race race, UUID teamId) {
+        if (race.getHomeTeam() != null && teamId.equals(race.getHomeTeam().getId())) return race.getHomeTeam();
+        if (race.getAwayTeam() != null && teamId.equals(race.getAwayTeam().getId())) return race.getAwayTeam();
+        throw unavailable();
+    }
+
     @Transactional(propagation = Propagation.MANDATORY)
     public void recheck(AuthorizedPickActor actor) {
         var channel = actor.channel();

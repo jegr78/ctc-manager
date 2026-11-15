@@ -123,10 +123,11 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 			}
 		}
 
-		while (homeRows.size() < TEAM_DRIVERS) {
+		int teamDrivers = teamDrivers(race);
+		while (homeRows.size() < teamDrivers) {
 			homeRows.add(emptyRow());
 		}
-		while (awayRows.size() < TEAM_DRIVERS) {
+		while (awayRows.size() < teamDrivers) {
 			awayRows.add(emptyRow());
 		}
 

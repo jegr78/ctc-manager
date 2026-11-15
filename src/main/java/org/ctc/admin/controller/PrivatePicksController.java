@@ -59,4 +59,15 @@ public class PrivatePicksController {
         }
         return REDIRECT;
     }
+
+    @PostMapping("/register-lineup-command")
+    public String registerLineup(RedirectAttributes redirect) {
+        try {
+            service.registerLineupCommand();
+            redirect.addFlashAttribute("successMessage", "Lineup command registered for the configured server.");
+        } catch (BusinessRuleException failure) {
+            redirect.addFlashAttribute("errorMessage", failure.getMessage());
+        }
+        return REDIRECT;
+    }
 }

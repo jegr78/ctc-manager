@@ -226,6 +226,11 @@ public class PickPublicationService {
                 && released(attempt.getOutput()).containsAll(PickDisclosureField.all()));
     }
 
+    /** Whether a settings post for this leg was confirmed; it opens lineup intake. */
+    public boolean settingsPublished(Race race) {
+        return confirmed(race).stream().anyMatch(attempt -> attempt.getOutput() == PickPublicationOutput.SETTINGS);
+    }
+
     private List<PickPublicationAttempt> confirmed(Race race) {
         return snapshots.findByAttemptRaceIdOrderByAttemptContentVersionDescConfirmedAtDesc(race.getId()).stream()
                 .map(PickPublicationSnapshot::getAttempt)

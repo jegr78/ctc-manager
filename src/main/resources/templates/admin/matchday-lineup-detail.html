@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/layout :: layout('Team lineup', ~{::section})}">
+<body>
+<section class="entity-editor lineup-review-workspace">
+    <p><a th:href="@{/admin/matchday-lineups(seasonId=${lineup.seasonId},matchdayId=${lineup.matchdayId})}" class="back-link">Back to team lineups</a></p>
+    <h1 th:text="${'Lineup of ' + lineup.row.team}">Lineup</h1>
+    <p class="pick-target-label" data-testid="lineup-target" th:text="${lineup.row.label}"></p>
+    <nav class="entity-section-nav" aria-label="Lineup sections"><a href="#lineup-status">Status</a><a href="#lineup-apply">Apply</a><a href="#lineup-revisions">Revisions</a><a href="#lineup-correction">Correction</a><a href="#lineup-window">Window</a></nav>
+    <div class="card" id="lineup-status">
+        <h2>Status</h2>
+        <dl class="detail-fields">
+            <dt class="label">Status</dt><dd data-testid="lineup-detail-status" th:text="${lineup.row.status}"></dd>
+            <dt class="label">Current revision</dt><dd th:text="${lineup.latestRevision ?: 'None'}"></dd>
+            <dt class="label">Drivers per team</dt><dd th:text="${lineup.lineupSize}"></dd>
+            <dt class="label">Team window</dt><dd th:text="${lineup.row.window}"></dd>
+            <dt class="label">Deadline</dt><dd th:text="${lineup.row.deadline}"></dd>
+        </dl>
+        <div th:unless="${lineup.row.flags.isEmpty()}"><h3>Checks</h3><ul><li th:each="flag : ${lineup.row.flags}" th:text="${flag}"></li></ul></div>
+        <div th:unless="${lineup.conflicts.isEmpty()}" class="field-error" role="alert"><p>Organisation overlap on this matchday:</p><ul><li th:each="conflict : ${lineup.conflicts}" th:text="${conflict}"></li></ul></div>
+        <div th:unless="${lineup.warnings.isEmpty()}" class="alert alert-warning"><p>Drivers registered for another organisation:</p><ul><li th:each="warning : ${lineup.warnings}" th:text="${warning}"></li></ul></div>
+        <div class="actions mt-md"><a class="btn btn-secondary" th:href="@{/admin/races/{id}/lineup(id=${lineup.row.raceId})}">Open race lineup editor</a><a class="btn btn-secondary" th:href="@{/admin/races/{id}(id=${lineup.row.raceId})}">Race workspace</a></div>
+    </div>
+    <div class="card" id="lineup-apply">
+        <h2>Apply the current revision</h2>
+        <p class="text-dim mb-md">Applying replaces only this team's drivers in the race lineup. The opponent's drivers and all guests stay. Scores are aggregated again; nothing is published.</p>
+        <p th:if="${lineup.latestRevision == null}" class="text-dim">No lineup has been submitted yet.</p>
+        <form th:if="${lineup.latestRevision != null}" th:object="${applyForm}" th:action="@{/admin/matchday-lineups/{race}/{team}/apply(race=${lineup.row.raceId},team=${lineup.row.teamId})}" method="post" class="entity-editor-form">
+            <div th:if="${#fields.hasErrors('*')}" class="field-error" role="alert"><p>The lineup was not applied.</p><ul><li th:each="error : ${#fields.errors('*')}" th:text="${error}"></li></ul></div>
+            <input type="hidden" th:field="*{expectedVersion}"><input type="hidden" th:field="*{expectedGeneration}"><input type="hidden" th:field="*{revisionNumber}">
+            <fieldset th:unless="${lineup.proposals.isEmpty()}"><legend>New drivers</legend>
+                <div class="form-group" th:each="proposal, stat : ${lineup.proposals}">
+                    <label th:for="${'link-' + stat.index}" th:text="${'Driver for ' + proposal.label}"></label>
+                    <select th:id="${'link-' + stat.index}" th:name="${'links[' + proposal.key + ']'}">
+                        <option value="create" th:selected="${applyForm.links[proposal.key] == 'create'}">Create a new driver for this team</option>
+                        <option th:if="${proposal.suggestedDriverId != null}" th:value="${proposal.suggestedDriverId}" th:selected="${applyForm.links[proposal.key] == proposal.suggestedDriverId.toString()}" th:text="${'Link existing driver ' + proposal.suggestion}"></option>
+                    </select>
+                </div>
+            </fieldset>
+            <div th:if="${lineup.hasResults}" class="form-group"><label class="pick-check-option" for="lineup-results-consent"><input id="lineup-results-consent" type="checkbox" th:field="*{resultsConsent}"><span>This leg already has results. Change its lineup anyway.</span></label></div>
+            <button type="submit" class="btn btn-primary" th:text="${'Apply revision ' + lineup.latestRevision}">Apply</button>
+        </form>
+    </div>
+    <div class="card" id="lineup-revisions">
+        <h2>Submitted revisions</h2>
+        <p th:if="${lineup.revisions.isEmpty()}" class="text-dim">No revisions.</p>
+        <div th:each="revision : ${lineup.revisions}" class="mb-md">
+            <h3 th:text="${'Revision ' + revision.number + (revision.applied ? ' (applied)' : '')}"></h3>
+            <p class="text-dim" th:text="${revision.submittedAt + ' · ' + revision.actor}"></p>
+            <p th:if="${revision.reason != null}" th:text="${'Reason: ' + revision.reason}"></p>
+            <ol><li th:each="line : ${revision.lines}" th:text="${line}"></li></ol>
+        </div>
+    </div>
+    <div class="card" id="lineup-correction">
+        <h2>Management correction</h2>
+        <p class="text-dim mb-md">A correction records a new revision with your name and reason. It is allowed after the deadline. Apply it afterwards to change the race lineup.</p>
+        <form th:object="${correctionForm}" th:action="@{/admin/matchday-lineups/{race}/{team}/correction(race=${lineup.row.raceId},team=${lineup.row.teamId})}" method="post" class="entity-editor-form">
+            <div th:if="${#fields.hasErrors('*')}" class="field-error" role="alert"><p>The correction was not saved.</p><ul><li th:each="error : ${#fields.errors('*')}" th:text="${error}"></li></ul></div>
+            <input type="hidden" th:field="*{expectedVersion}"><input type="hidden" th:field="*{expectedGeneration}"><input type="hidden" th:field="*{requestId}">
+            <fieldset><legend>Drivers</legend>
+                <div class="form-group" th:each="slot, stat : ${correctionForm.drivers}">
+                    <label th:for="${'correction-driver-' + stat.index}" th:text="${'Driver ' + (stat.index + 1)}"></label>
+                    <select th:id="${'correction-driver-' + stat.index}" th:name="${'drivers[' + stat.index + ']'}">
+                        <option value="">No driver</option>
+                        <option th:each="choice : ${lineup.choices}" th:value="${choice.driverId}" th:text="${choice.label}" th:selected="${slot != null and slot == choice.driverId}"></option>
+                    </select>
+                </div>
+            </fieldset>
+            <fieldset th:unless="${lineup.proposals.isEmpty()}"><legend>New drivers in the current revision</legend>
+                <p class="text-dim">Unchecked new drivers are removed from the corrected lineup.</p>
+                <div class="form-group" th:each="proposal, stat : ${lineup.proposals}">
+                    <label class="pick-check-option" th:for="${'keep-proposal-' + stat.index}"><input type="checkbox" th:id="${'keep-proposal-' + stat.index}" name="keptProposals" th:value="${proposal.key}" th:checked="${correctionForm.keptProposals.contains(proposal.key)}"><span th:text="${'Keep ' + proposal.label}"></span></label>
+                </div>
+            </fieldset>
+            <div class="form-group"><label for="correction-reason">Correction reason</label><textarea id="correction-reason" th:field="*{reason}" maxlength="500" rows="2" required></textarea><span class="field-error" th:errors="*{reason}"></span></div>
+            <button type="submit" class="btn btn-secondary">Save correction</button>
+        </form>
+    </div>
+    <div class="card" id="lineup-window">
+        <h2>Lineup window for this leg</h2>
+        <p class="text-dim mb-md">Lineups open for both teams when the settings of this leg are published. Opening here replaces that condition; closing stops team submissions. The deadline one hour before the start always applies to teams.</p>
+        <form th:object="${windowForm}" th:action="@{/admin/matchday-lineups/{race}/{team}/window(race=${lineup.row.raceId},team=${lineup.row.teamId})}" method="post" class="entity-editor-form">
+            <div th:if="${#fields.hasErrors('*')}" class="field-error" role="alert"><p>The window decision was not saved.</p><ul><li th:each="error : ${#fields.errors('*')}" th:text="${error}"></li></ul></div>
+            <input type="hidden" th:field="*{expectedSequence}"><input type="hidden" th:field="*{expectedGeneration}">
+            <fieldset><legend>Decision</legend>
+                <div class="form-group"><label for="window-kind">Decision</label>
+                    <select id="window-kind" th:field="*{kind}"><option value="OPEN">Open lineups for this leg</option><option value="CLOSE">Close lineups for this leg</option></select>
+                </div>
+                <div class="form-group"><label for="window-reason">Reason</label><textarea id="window-reason" th:field="*{reason}" maxlength="500" rows="2" required></textarea><span class="field-error" th:errors="*{reason}"></span></div>
+            </fieldset>
+            <button type="submit" class="btn btn-secondary">Save window decision</button>
+        </form>
+        <h3 class="mt-md">Window history</h3>
+        <p th:if="${lineup.windowEvents.isEmpty()}" class="text-dim">No management decisions.</p>
+        <ul th:unless="${lineup.windowEvents.isEmpty()}"><li th:each="event : ${lineup.windowEvents}" th:text="${event.at + ' · ' + event.kind + ' by ' + event.actor + ': ' + event.reason}"></li></ul>
+    </div>
+</section>
+</body>
+</html>

@@ -31,5 +31,9 @@ public class SeasonForm {
 
 	private boolean active;
 
+    @jakarta.validation.constraints.Min(1)
+    @jakarta.validation.constraints.Max(org.ctc.domain.model.Season.LINEUP_SIZE_MAX)
+    private int lineupSize = org.ctc.domain.model.Season.LINEUP_SIZE_DEFAULT;
+
     private CarPoolMode carPoolMode = CarPoolMode.FIXED_CARS;
 }

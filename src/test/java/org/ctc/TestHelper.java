@@ -48,6 +48,9 @@ public class TestHelper {
     private final org.ctc.domain.repository.IncidentRulingRevisionRepository rulingRevisions;
     private final IncidentReportRevisionRepository incidentRevisions;
     private final IncidentReportEventRepository incidentEvents;
+    private final org.ctc.domain.repository.LineupSubmissionRepository lineupSubmissions;
+    private final org.ctc.domain.repository.LineupSubmissionRevisionRepository lineupRevisions;
+    private final org.ctc.domain.repository.LineupWindowEventRepository lineupWindows;
 
 	/**
 	 * Deletes a helper-created Season together with its committed fixture graph (race
@@ -63,6 +66,7 @@ public class TestHelper {
         disqualifications.deleteAll(disqualifications.findBySeasonId(seasonId)); disqualifications.flush();
         deleteIncidentHistory(seasonId);
         deletePickHistory(seasonId);
+        deleteLineupHistory(seasonId);
 		raceLineupRepository.deleteAll(raceLineupRepository.findByRaceMatchdaySeasonId(seasonId));
 		raceRepository.deleteAll(raceRepository.findByMatchdaySeasonId(seasonId));
 		matchRepository.deleteAll(matchRepository.findByMatchdaySeasonId(seasonId));
@@ -103,6 +107,19 @@ public class TestHelper {
             }
             incidentContexts.delete(context); incidentContexts.flush();
         }
+    }
+
+    @Transactional
+    public void deleteLineupHistory(UUID seasonId) {
+        var raceIds = raceRepository.findByMatchdaySeasonId(seasonId).stream().map(Race::getId).toList();
+        var submissions = lineupSubmissions.findByRaceIdIn(raceIds);
+        var submissionIds = submissions.stream().map(LineupSubmission::getId).toList();
+        lineupRevisions.deleteAll(lineupRevisions.findAll().stream().filter(row -> submissionIds.contains(row.getSubmission().getId())).toList());
+        lineupRevisions.flush();
+        lineupSubmissions.deleteAll(submissions);
+        lineupSubmissions.flush();
+        lineupWindows.deleteAll(lineupWindows.findByRaceIds(raceIds));
+        lineupWindows.flush();
     }
 
     @Transactional

@@ -46,7 +46,7 @@ class RaceServiceTest {
     @BeforeEach
     void setUpSelectionPolicy() {
         org.springframework.test.util.ReflectionTestUtils.setField(service, "pickGuard",
-                new PickLifecycleGuard(org.mockito.Mockito.mock(MatchdayPickRepository.class)));
+                new PickLifecycleGuard(org.mockito.Mockito.mock(MatchdayPickRepository.class), org.mockito.Mockito.mock(org.ctc.domain.repository.LineupSubmissionRepository.class), org.mockito.Mockito.mock(org.ctc.domain.repository.LineupWindowEventRepository.class)));
         org.springframework.test.util.ReflectionTestUtils.setField(service, "reservations", org.mockito.Mockito.mock(PickReservationService.class));
         org.springframework.test.util.ReflectionTestUtils.setField(service, "settingsApplication",
                 new RaceSettingsApplicationService(carRepository, trackRepository, null));
