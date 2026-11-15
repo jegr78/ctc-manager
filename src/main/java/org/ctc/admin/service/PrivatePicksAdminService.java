@@ -101,6 +101,15 @@ public class PrivatePicksAdminService {
         }
     }
 
+    public void registerStatsCommand() {
+        var config = registrable();
+        try {
+            discord.registerStatsGuildCommand(config.getBotApplicationId(), config.getGuildId());
+        } catch (DiscordApiException | RuntimeException unavailable) {
+            throw new BusinessRuleException("The stats command could not be registered. Retry when Discord is available.");
+        }
+    }
+
     private DiscordGlobalConfig registrable() {
         var config = configured();
         if (!snowflake(config.getBotApplicationId()) || !config.getBotApplicationId().equals(currentBot().id())) {

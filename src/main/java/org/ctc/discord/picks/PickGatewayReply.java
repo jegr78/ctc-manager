@@ -91,6 +91,17 @@ public final class PickGatewayReply {
         }
     }
 
+    /** Autocomplete has no acknowledgement step: the choices are the answer and must arrive within three seconds. */
+    public boolean replyChoices(java.util.List<PickGatewayModal.Option> choices) {
+        if (!claimInitial()) return false;
+        try {
+            response.replyChoices(choices.size() > 25 ? choices.subList(0, 25) : choices);
+            return true;
+        } catch (RuntimeException acknowledgementFailed) {
+            return false;
+        }
+    }
+
     public boolean isAcknowledged() { return acknowledged.get(); }
 
     private boolean claimInitial() {

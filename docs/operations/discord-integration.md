@@ -53,7 +53,7 @@ In the Developer Portal, click **OAuth2 → URL Generator**.
 **Scopes:**
 
 - `bot`
-- `applications.commands` for the explicitly registered `/picks`, `/lineup` and `/incidents` workflows. Discord includes this scope by default with `bot`.
+- `applications.commands` for the explicitly registered `/picks`, `/lineup`, `/incidents` and `/stats` workflows. Discord includes this scope by default with `bot`.
 
 Command registration and the outgoing Gateway connection are separate, explicit setup steps.
 
@@ -772,7 +772,13 @@ and application ID are reused. No public interaction endpoint or message-content
 A consumer starts only after its explicit Gateway opt-in. Seasons need no separate activation:
 opening a matchday opens its targets.
 
-Use the explicit **Register /picks for this guild** and **Register /lineup for this guild** actions.
+`DISCORD_STATS_ENABLED` maps to `app.discord.stats.enabled` and switches the public `/stats`
+command. The Gateway connects when either switch is on; with only stats enabled, `/picks`,
+`/lineup` and `/incidents` answer that they are unavailable. `/stats` checks no roles or channel
+bindings because its figures are already public on the website.
+
+Use the explicit **Register /picks for this guild**, **Register /lineup for this guild** and
+**Register /stats for this guild** actions.
 Each upserts only its own guild command. Startup and backup restore never register commands.
 Tests use local fakes; this implementation does not register a live command or send a test message.
 

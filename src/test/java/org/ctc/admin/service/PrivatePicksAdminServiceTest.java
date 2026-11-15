@@ -154,6 +154,25 @@ class PrivatePicksAdminServiceTest {
         verifyNoMoreInteractions(discord);
     }
 
+    @Test
+    void givenConfiguredBot_whenRegisteringStats_thenUpsertOnlyStatsInConfiguredGuild() throws Exception {
+        // when
+        service.registerStatsCommand();
+        // then
+        verify(discord).fetchBotUser();
+        verify(discord).registerStatsGuildCommand("900", "100");
+        verifyNoMoreInteractions(discord);
+    }
+
+    @Test
+    void givenDiscordFailure_whenRegisteringStats_thenReportGenericError() throws Exception {
+        // given
+        org.mockito.Mockito.doThrow(new RuntimeException("remote detail")).when(discord).registerStatsGuildCommand("900", "100");
+        // when / then
+        assertThatThrownBy(service::registerStatsCommand).isInstanceOf(BusinessRuleException.class)
+                .hasMessage("The stats command could not be registered. Retry when Discord is available.");
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"missing-application", "identity-mismatch"})
     void givenUnavailableRegistration_whenRequesting_thenMakeNoCommandMutation(String invalid) throws Exception {

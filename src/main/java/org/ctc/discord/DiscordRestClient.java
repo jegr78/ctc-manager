@@ -61,6 +61,29 @@ public class DiscordRestClient {
                 .retrieve().toBodilessEntity());
     }
 
+    public void registerStatsGuildCommand(String applicationId, String guildId) throws DiscordApiException {
+        execute(() -> bot.post().uri("/applications/{applicationId}/guilds/{guildId}/commands", applicationId, guildId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(statsCommand())
+                .retrieve().toBodilessEntity());
+    }
+
+    /** The public /stats command with its driver and team subcommands; name and season use autocomplete. */
+    static Map<String, Object> statsCommand() {
+        return Map.of("type", 1, "name", "stats", "description", "Driver and team statistics",
+                "options", List.of(statsSubcommand("driver", "Statistics of one driver", "PSN ID or nickname"),
+                        statsSubcommand("team", "Statistics of one team", "Team name or short name")));
+    }
+
+    private static Map<String, Object> statsSubcommand(String name, String description, String nameHelp) {
+        return Map.of("type", 1, "name", name, "description", description, "options", List.of(
+                Map.of("type", 3, "name", "name", "description", nameHelp, "required", true, "autocomplete", true),
+                Map.of("type", 3, "name", "scope", "description", "Current season, alltime or a chosen season", "required", false,
+                        "choices", List.of(Map.of("name", "Current season", "value", "current"), Map.of("name", "Alltime", "value", "alltime"),
+                                Map.of("name", "Season", "value", "season"))),
+                Map.of("type", 3, "name", "season", "description", "Season for the Season scope", "required", false, "autocomplete", true)));
+    }
+
     public AccessGuild fetchAccessGuild(String guildId) throws DiscordApiException {
         return execute(() -> bot.get().uri("/guilds/{guildId}", guildId).retrieve().body(AccessGuild.class));
     }
