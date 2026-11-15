@@ -118,7 +118,7 @@ jobs:
 
       - name: Set the release version for the build
         if: steps.plan.outputs.publish == 'true'
-        run: ./mvnw -B versions:set -DnewVersion=${{ steps.version.outputs.new_version }} -DgenerateBackupPoms=false
+        run: ./mvnw -B org.codehaus.mojo:versions-maven-plugin:set -DnewVersion=${{ steps.version.outputs.new_version }} -DgenerateBackupPoms=false
 
       # ci.yml already tested this revision; the release only builds it with the release version.
       - name: Build

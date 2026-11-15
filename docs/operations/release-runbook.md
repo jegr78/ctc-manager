@@ -86,7 +86,7 @@ git worktree add /tmp/v1.10-build 45aabfd0
 cd /tmp/v1.10-build
 
 # Set the pom version, then assert it landed.
-./mvnw versions:set -DnewVersion=1.10.0 -DgenerateBackupPoms=false
+./mvnw org.codehaus.mojo:versions-maven-plugin:set -DnewVersion=1.10.0 -DgenerateBackupPoms=false
 grep '<version>1.10.0</version>' pom.xml \
   || { echo "FATAL: pom version was not updated"; exit 1; }
 
@@ -145,7 +145,7 @@ git worktree add /tmp/v1.11-build 598d1431
 cd /tmp/v1.11-build
 
 # versions:set BEFORE package — same Pitfall 3 ordering as Section 2.
-./mvnw versions:set -DnewVersion=1.11.0 -DgenerateBackupPoms=false
+./mvnw org.codehaus.mojo:versions-maven-plugin:set -DnewVersion=1.11.0 -DgenerateBackupPoms=false
 grep '<version>1.11.0</version>' pom.xml \
   || { echo "FATAL: pom version was not updated"; exit 1; }
 

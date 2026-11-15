@@ -68,7 +68,7 @@ jobs:
           cache: maven
       - name: Compile shared source and discover the complete test inventory
         run: |
-          ./mvnw clean test-compile dependency:build-classpath -DincludeScope=test -Dmdep.outputFile=target/ci-classpath.txt --no-transfer-progress
+          ./mvnw clean test-compile org.apache.maven.plugins:maven-dependency-plugin:build-classpath -DincludeScope=test -Dmdep.outputFile=target/ci-classpath.txt --no-transfer-progress
           java -cp "target/test-classes:target/classes:$(cat target/ci-classpath.txt)" org.ctc.testsupport.CiTestInventory target/ci-inventory.tsv
           python3 scripts/ci/test-partitions.py plan
       - uses: actions/upload-artifact@v7
