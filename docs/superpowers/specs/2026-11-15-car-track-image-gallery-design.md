@@ -68,7 +68,7 @@ Car and track forms get an "Images" fieldset with:
 - up and down buttons for the order, with labeled controls, retained focus and position announcements
 - on cars with a GT7 ID: a "Load GT7 images" button that reports added, replaced and unchanged slots
 
-Uploads accept JPEG, PNG and WebP up to 10 MB, like the existing image upload. All controls are native forms with CSRF and work without JavaScript. Errors keep the form context.
+Uploads accept JPEG, PNG and WebP up to 10 MB, like the existing image upload. The file extension must match the format the leading bytes show. All controls are native forms with CSRF and work without JavaScript. Errors keep the form context.
 
 ## GT7 loading
 
@@ -100,7 +100,8 @@ Uploads accept JPEG, PNG and WebP up to 10 MB, like the existing image upload. A
   - the `sourceKey`/`source` pairing
   - uniqueness of GT7 slots per car
   - that every referenced file is present in the archive
-- The read-only data audit reports missing files and invalid pairings without repair.
+- The read-only data audit reports images whose file is missing, without repair. The database checks already prevent invalid pairings.
+- The export leaves out gallery rows whose file is missing, so every export stays restorable; the audit still lists them.
 
 ## Tests
 

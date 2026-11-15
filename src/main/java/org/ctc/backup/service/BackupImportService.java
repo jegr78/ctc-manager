@@ -818,16 +818,16 @@ public class BackupImportService {
         return totalRows;
     }
 
-    /**
-     * Counts the rows {@link #restoreAll} would restore, through the same entry lookup and parse loop,
-     * so the manifest check cannot pass on bytes the restore never reads.
-     */
     private static Set<String> archivedUploads(ZipFile zf) {
         var names = new java.util.HashSet<String>();
         zf.stream().filter(entry -> !entry.isDirectory() && entry.getName().startsWith("uploads/")).forEach(entry -> names.add(entry.getName()));
         return names;
     }
 
+    /**
+     * Counts the rows {@link #restoreAll} would restore, through the same entry lookup and parse loop,
+     * so the manifest check cannot pass on bytes the restore never reads.
+     */
     private void validateRestorableRows(Path staged, BackupManifest manifest) throws BackupArchiveException {
         var activeSeasonValidator = new org.ctc.backup.schema.ActiveSeasonBackupValidator();
         var pickWindows = new org.ctc.backup.schema.PickWindowBackupValidator();

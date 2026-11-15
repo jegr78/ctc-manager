@@ -67,7 +67,7 @@
             </div>
         </form>
     </div>
-    <div th:if="${trackForm.id != null}" th:replace="~{admin/fragments/catalog-gallery :: gallery}"></div>
+    <th:block th:if="${trackForm.id != null}"><div th:replace="~{admin/fragments/catalog-gallery :: gallery}"></div></th:block>
 </section>
 </body>
 </html>

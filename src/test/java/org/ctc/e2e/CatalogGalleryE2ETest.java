@@ -74,6 +74,30 @@ class CatalogGalleryE2ETest extends PlaywrightConfig {
     }
 
     @Test
+    void givenNoJavaScript_whenUploadingMovingAndDeleting_thenTheNativeFormsStillWork() {
+        try (var nativeContext = browser.newContext(new com.microsoft.playwright.Browser.NewContextOptions().setJavaScriptEnabled(false))) {
+            // given
+            var nativePage = nativeContext.newPage();
+            nativePage.navigate(url("/admin/cars/" + car + "/edit"));
+            // when
+            nativePage.locator("#car-gallery-files").setInputFiles(new FilePayload[] {
+                    new FilePayload("a.png", "image/png", TestImages.png(100, 50)),
+                    new FilePayload("b.webp", "image/webp", TestImages.webpExtended(300, 200))});
+            nativePage.locator(".gallery-upload button[type=submit]").click();
+            var items = nativePage.locator(".gallery-item");
+            items.first().locator("button[id$='-down']").click();
+            // then
+            assertThat(nativePage.locator("#car-images [role=status]")).hasText("Image moved to position 2.");
+            assertThat(items.first()).containsText("300×200");
+            // when
+            items.first().locator("button[id$='-delete']").click();
+            // then
+            assertThat(items).hasCount(1);
+            assertThat(items.first()).containsText("100×50");
+        }
+    }
+
+    @Test
     void givenNonImageFile_whenUploading_thenShowTheErrorAndKeepTheGalleryEmpty() {
         // given
         page.navigate(url("/admin/cars/" + car + "/edit"));

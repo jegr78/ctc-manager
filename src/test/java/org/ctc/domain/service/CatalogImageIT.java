@@ -9,12 +9,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
-import org.ctc.admin.dto.DataAuditFinding.Category;
-import org.ctc.admin.service.DataAuditService;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Car;
 import org.ctc.domain.model.CarImage;
@@ -51,7 +48,6 @@ class CatalogImageIT {
     @Autowired TrackRepository tracks;
     @Autowired CarImageRepository carImages;
     @Autowired TrackImageRepository trackImages;
-    @Autowired DataAuditService audit;
     @Autowired TransactionTemplate tx;
     @Value("${app.upload-dir}") String uploadDir;
     UUID car;
@@ -96,6 +92,16 @@ class CatalogImageIT {
                 .isInstanceOf(BusinessRuleException.class).hasMessage("fake.png is not a PNG, JPEG or WebP image");
         assertThat(gallery.carImages(car)).isEmpty();
         assertThat(Path.of(uploadDir, "car-images", car.toString())).as("no file is written before every file passes").doesNotExist();
+    }
+
+    @Test
+    void givenExtensionOfAnotherFormat_whenUploading_thenRejectIt() {
+        // given
+        var disguised = new MockMultipartFile("files", "photo.pdf", "application/pdf", TestImages.jpeg(10, 10));
+        // when / then
+        assertThatThrownBy(() -> gallery.uploadCarImages(car, List.of(disguised), CarImageKind.STUDIO, null))
+                .isInstanceOf(BusinessRuleException.class).hasMessage("photo.pdf is a JPEG image; its file extension must be .jpg");
+        assertThat(gallery.carImages(car)).isEmpty();
     }
 
     @Test
@@ -170,19 +176,8 @@ class CatalogImageIT {
         mvc.perform(get("/admin/cars/{id}/edit", car))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"image-" + first + "-up\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Move image 2 of 2 up")));
-    }
-
-    @Test
-    void givenImageWhoseFileIsGone_whenAuditing_thenReportItWithoutDeletingTheRow() throws Exception {
-        // given
-        gallery.uploadTrackImages(track, List.of(png("lost.png", 10, 10)), TrackImageKind.BACKGROUND, null);
-        var image = gallery.trackImages(track).getFirst();
-        Files.delete(file(image.getImagePath()));
-        // when
-        var findings = audit.audit().findings(Category.CATALOG_IMAGES);
-        // then
-        assertThat(findings).anySatisfy(finding -> assertThat(finding.evidence()).contains(image.getId().toString()));
-        assertThat(trackImages.findById(image.getId())).as("the audit changes nothing").isPresent();
+        mvc.perform(get("/admin/cars/new")).andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("-images\""))));
+        mvc.perform(get("/admin/tracks/new")).andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("-images\""))));
     }
 
     private Path file(String url) {

@@ -41,6 +41,8 @@ class CatalogImageBackupValidatorTest {
                 .hasMessage("A GT7 image needs its source key and a manual image must not have one");
         assertThatThrownBy(() -> validator(24).accept("car_images", carImage("MANUAL", "2_01", "/uploads/car-images/a/1.jpg")))
                 .hasMessage("A GT7 image needs its source key and a manual image must not have one");
+        assertThatThrownBy(() -> validator(24).accept("car_images", carImage("MANUAL", " ", "/uploads/car-images/a/1.jpg")))
+                .as("the database accepts only a null key for manual images").hasMessage("A GT7 image needs its source key and a manual image must not have one");
     }
 
     @Test
@@ -70,6 +72,17 @@ class CatalogImageBackupValidatorTest {
         // when / then
         assertThatThrownBy(() -> validator(24).accept("car_images", unknownKind)).hasMessage("Unknown image kind: BACKGROUND");
         assertThatThrownBy(() -> validator(24).accept("car_images", zeroWidth)).hasMessageContaining("needs a positive size");
+    }
+
+    @Test
+    void givenValuesLongerThanTheirColumns_whenValidating_thenReject() {
+        // when / then
+        assertThatThrownBy(() -> validator(24).accept("car_images", carImage("GT7", "k".repeat(33), "/uploads/car-images/a/1.jpg")))
+                .hasMessage("An image source key exceeds 32 characters");
+        String longPath = "/uploads/car-images/a/" + "x".repeat(480) + ".jpg";
+        var validator = new CatalogImageBackupValidator(24, Set.of(longPath.substring(1)));
+        validator.accept("cars", JSON.createObjectNode().put("id", car.toString()));
+        assertThatThrownBy(() -> validator.accept("car_images", carImage("MANUAL", null, longPath))).hasMessageContaining("is missing from the archive");
     }
 
     @Test

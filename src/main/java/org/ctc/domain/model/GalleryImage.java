@@ -14,4 +14,9 @@ public interface GalleryImage {
     int getHeight();
     int getSortIndex();
     void setSortIndex(int sortIndex);
+    void setSource(ImageSource source);
+    void setLabel(String label);
+    void setImagePath(String imagePath);
+    void setWidth(int width);
+    void setHeight(int height);
 }

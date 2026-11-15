@@ -296,7 +296,8 @@ public class BackupExportService {
 		Map<String, Long> counts = new LinkedHashMap<>();
 		for (EntityRef ref : backupSchema.getExportOrder()) {
 			JpaRepository<?, ?> repo = lookupRepository(ref.entityClass());
-			counts.put(ref.tableName(), repo.count());
+			boolean gallery = ref.entityClass() == CarImage.class || ref.entityClass() == TrackImage.class;
+			counts.put(ref.tableName(), gallery ? fetchAllForBackup(ref.entityClass()).size() : repo.count());
 		}
 		log.debug("countRowsPerTable computed {} entries", counts.size());
 		return counts;
@@ -313,8 +314,8 @@ public class BackupExportService {
 		JpaRepository<?, ?> repo = lookupRepository(entityClass);
 		try {
 			Method method = repo.getClass().getMethod("findAllForBackup");
-			Object result = method.invoke(repo);
-			return (List<?>) result;
+			List<?> result = (List<?>) method.invoke(repo);
+			return entityClass == CarImage.class || entityClass == TrackImage.class ? withStoredFile(result) : result;
 		} catch (NoSuchMethodException ex) {
 			throw new IllegalStateException(
 					"Repository for " + entityClass.getSimpleName()
@@ -405,6 +406,24 @@ public class BackupExportService {
 			return;
 		}
 		set.add(relative);
+	}
+
+	/** Gallery rows whose file is gone cannot be restored, so the export leaves them out; the data audit lists them. */
+	private List<?> withStoredFile(List<?> images) {
+		var kept = new ArrayList<Object>();
+		for (Object row : images) {
+			var image = (GalleryImage) row;
+			var relative = new LinkedHashSet<String>();
+			addIfPresent(relative, image.getImagePath());
+			Path absolute = relative.isEmpty() ? null : uploadRoot.resolve(relative.getFirst()).toAbsolutePath().normalize();
+			if (absolute != null && absolute.startsWith(uploadRoot) && Files.isRegularFile(absolute)) {
+				kept.add(row);
+			} else {
+				log.warn("Leaving gallery image {} out of the backup because its file {} is missing; see the data audit",
+						image.getId(), sanitizeForLog(image.getImagePath()));
+			}
+		}
+		return kept;
 	}
 
 	private static String sanitizeForLog(String value) {

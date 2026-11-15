@@ -80,7 +80,7 @@
             </div>
         </form>
     </div>
-    <div th:if="${carForm.id != null}" th:replace="~{admin/fragments/catalog-gallery :: gallery}"></div>
+    <th:block th:if="${carForm.id != null}"><div th:replace="~{admin/fragments/catalog-gallery :: gallery}"></div></th:block>
 </section>
 </body>
 </html>

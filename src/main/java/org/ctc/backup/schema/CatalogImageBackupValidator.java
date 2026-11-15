@@ -57,7 +57,8 @@ public final class CatalogImageBackupValidator {
         enumValue(row, "kind", kinds);
         var source = enumValue(row, "source", ImageSource.class);
         String key = text(row, "sourceKey");
-        if ((source == ImageSource.GT7) == (key == null || key.isBlank())) {
+        boolean paired = source == ImageSource.GT7 ? key != null && !key.isBlank() : key == null;
+        if (!paired) {
             throw new IllegalArgumentException("A GT7 image needs its source key and a manual image must not have one");
         }
         if (source == ImageSource.GT7 && !slots.add(owner + ':' + ownerId + ':' + key)) {
@@ -65,9 +66,10 @@ public final class CatalogImageBackupValidator {
         }
         String label = text(row, "label");
         if (label != null && label.length() > 100) throw new IllegalArgumentException("An image label exceeds 100 characters");
+        if (key != null && key.length() > 32) throw new IllegalArgumentException("An image source key exceeds 32 characters");
         if (positive(row, "width") && positive(row, "height") && row.path("sortIndex").isIntegralNumber()) {
             String path = text(row, "imagePath");
-            if (path == null || !path.startsWith("/uploads/") || !archivedUploads.contains("uploads/" + path.substring("/uploads/".length()))) {
+            if (path == null || path.length() > 500 || !path.startsWith("/uploads/") || !archivedUploads.contains("uploads/" + path.substring("/uploads/".length()))) {
                 throw new IllegalArgumentException("The file of image " + id + " is missing from the archive");
             }
             owners.add(new UUID[] {ownerId, id});

@@ -121,6 +121,20 @@ class CatalogImageBackupRoundTripIT {
         verify(imports, never()).wipeAllTables(anyMap());
     }
 
+    @Test
+    void givenGalleryFileLostOnDisk_whenExporting_thenLeaveTheRowOutAndKeepTheArchiveRestorable() throws Exception {
+        // given
+        var lost = gallery.carImages(car).getFirst();
+        Files.delete(ROOT.resolve("uploads").resolve(lost.getImagePath().substring("/uploads/".length())));
+        // when
+        byte[] archive = export();
+        imports.execute(imports.stage(upload(archive)).stagingId());
+        // then
+        assertThat(gallery.carImages(car)).extracting(CarImage::getId).as("only the image with its file survives")
+                .doesNotContain(lost.getId()).hasSize(1);
+        assertThat(gallery.trackImages(track)).hasSize(1);
+    }
+
     private static MockMultipartFile png(String name) { return new MockMultipartFile("files", name, "image/png", TestImages.png(640, 360)); }
     private byte[] export() throws IOException {
         var output = new ByteArrayOutputStream();

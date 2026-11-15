@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.BusinessRuleException;
@@ -69,8 +68,7 @@ public class CatalogImageService {
             var image = new CarImage();
             image.setCar(car);
             image.setKind(kind);
-            fill(image::setSource, image::setLabel, image::setImagePath, image::setWidth, image::setHeight, image::setSortIndex,
-                    upload, store("car-images", carId, upload.file()), next++);
+            fill(image, upload, store("car-images", carId, upload.file()), next++);
             carImages.save(image);
         }
         log.info("Added {} images to car {}", checked.size(), carId);
@@ -86,8 +84,7 @@ public class CatalogImageService {
             var image = new TrackImage();
             image.setTrack(track);
             image.setKind(kind);
-            fill(image::setSource, image::setLabel, image::setImagePath, image::setWidth, image::setHeight, image::setSortIndex,
-                    upload, store("track-images", trackId, upload.file()), next++);
+            fill(image, upload, store("track-images", trackId, upload.file()), next++);
             trackImages.save(image);
         }
         log.info("Added {} images to track {}", checked.size(), trackId);
@@ -162,7 +159,11 @@ public class CatalogImageService {
             } catch (IOException failure) {
                 throw new UncheckedIOException(failure);
             }
-            if (ImageContent.detect(data) == null) throw new BusinessRuleException(name(file) + " is not a PNG, JPEG or WebP image");
+            var format = ImageContent.detect(data);
+            if (format == null) throw new BusinessRuleException(name(file) + " is not a PNG, JPEG or WebP image");
+            if (!format.equals(declared(file))) {
+                throw new BusinessRuleException(name(file) + " is a " + format + " image; its file extension must be " + format.extension());
+            }
             ImageContent.Dimensions size;
             try {
                 size = ImageContent.dimensions(data);
@@ -174,33 +175,38 @@ public class CatalogImageService {
         return checked;
     }
 
+    private static ImageContent.Format declared(MultipartFile file) {
+        try {
+            return ImageContent.Format.ofFilename(file.getOriginalFilename());
+        } catch (IllegalArgumentException unsupported) {
+            return null;
+        }
+    }
+
     private String store(String folder, UUID ownerId, MultipartFile file) {
         try {
             return files.storeImage(folder, ownerId, file);
         } catch (IOException failure) {
-            throw new UncheckedIOException(failure);
+            log.warn("Could not store gallery image for {}", ownerId, failure);
+            throw new BusinessRuleException(name(file) + " could not be stored; no image was added");
         } catch (IllegalArgumentException rejected) {
             throw new BusinessRuleException(name(file) + ": " + rejected.getMessage());
         }
     }
 
-    private static void fill(Consumer<ImageSource> source, Consumer<String> label, Consumer<String> path, IntSetter width,
-                             IntSetter height, IntSetter sortIndex, Checked upload, String storedPath, int position) {
-        source.accept(ImageSource.MANUAL);
-        label.accept(upload.label());
-        path.accept(storedPath);
-        width.set(upload.size().width());
-        height.set(upload.size().height());
-        sortIndex.set(position);
+    private static void fill(GalleryImage image, Checked upload, String storedPath, int position) {
+        image.setSource(ImageSource.MANUAL);
+        image.setLabel(upload.label());
+        image.setImagePath(storedPath);
+        image.setWidth(upload.size().width());
+        image.setHeight(upload.size().height());
+        image.setSortIndex(position);
     }
 
     private static String name(MultipartFile file) {
         String original = file.getOriginalFilename();
         return original == null || original.isBlank() ? "The file" : original.replaceAll("\\p{Cntrl}", "");
     }
-
-    @FunctionalInterface
-    private interface IntSetter { void set(int value); }
 
     private record Checked(MultipartFile file, String label, ImageContent.Dimensions size) { }
 }
