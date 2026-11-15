@@ -50,6 +50,25 @@ class SeasonControllerTest {
 	private TestHelper testHelper;
 
     @Test
+    void givenLineupSize_whenSavingSeason_thenStoreItAndRejectOutOfRangeValues() throws Exception {
+        // given
+        var season = testHelper.createSeason("Test Lineup Size Season");
+        // when
+        mockMvc.perform(post("/admin/seasons/save").param("id", season.getId().toString())
+                        .param("name", season.getName()).param("year", "2027").param("number", "1").param("lineupSize", "8"))
+                .andExpect(status().is3xxRedirection());
+        // then
+        assertThat(seasonRepository.findById(season.getId()).orElseThrow().getLineupSize()).isEqualTo(8);
+        mockMvc.perform(get("/admin/seasons/" + season.getId() + "/edit"))
+                .andExpect(model().attribute("seasonForm", hasProperty("lineupSize", is(8))))
+                .andExpect(content().string(containsString("Drivers per team")));
+        mockMvc.perform(post("/admin/seasons/save").param("id", season.getId().toString())
+                        .param("name", season.getName()).param("year", "2027").param("number", "1").param("lineupSize", "13"))
+                .andExpect(status().isOk()).andExpect(model().attributeHasFieldErrors("seasonForm", "lineupSize"));
+        assertThat(seasonRepository.findById(season.getId()).orElseThrow().getLineupSize()).as("an invalid size is not saved").isEqualTo(8);
+    }
+
+    @Test
     void nativeSeasonFormSavesOwnDocumentsAndRetainsSubmittedValuesOnFieldErrors() throws Exception {
         var first = testHelper.createSeason("Test Document Season A");
         var second = testHelper.createSeason("Test Document Season B");
