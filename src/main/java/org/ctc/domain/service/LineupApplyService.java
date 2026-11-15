@@ -103,7 +103,7 @@ public class LineupApplyService {
         if (drivers.findByPsnIdIgnoreCase(psnId).isPresent()) {
             throw new BusinessRuleException(psnId + " already exists; link the existing driver instead of creating one");
         }
-        var created = drivers.save(new Driver(psnId, displayName));
+        var created = drivers.save(new Driver(psnId, displayName == null ? psnId : displayName));
         if (seasonDrivers.findBySeasonIdAndDriverId(season.getId(), created.getId()).isEmpty()) {
             seasonDrivers.save(new SeasonDriver(season, created, team));
         }

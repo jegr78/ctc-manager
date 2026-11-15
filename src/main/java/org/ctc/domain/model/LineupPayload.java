@@ -100,6 +100,6 @@ public record LineupPayload(int requiredSize, List<Entry> entries) {
         public static Entry known(Driver driver) { return new Entry(driver.getId(), driver.getPsnId(), driver.getNickname()); }
         public static Entry proposal(String psnId, String displayName) { return new Entry(null, psnId == null ? null : psnId.strip(), displayName); }
         public boolean proposed() { return driverId == null; }
-        public String label() { return displayName == null ? psnId : displayName + " (" + psnId + ")"; }
+        public String label() { return displayName == null || displayName.equalsIgnoreCase(psnId) ? psnId : displayName + " (" + psnId + ")"; }
     }
 }
