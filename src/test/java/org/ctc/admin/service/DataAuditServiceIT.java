@@ -86,6 +86,31 @@ class DataAuditServiceIT {
     }
 
     @Test
+    void givenTwoGtEngineImagesOfWhichOneBreaksKeyAndKind_whenAuditing_thenReportBothRulesWithoutChangingRows() {
+        // given
+        var track = entityManager.merge(new org.ctc.domain.model.Track("Test audit map track " + id));
+        var map = gtEngineImage(track, "map", org.ctc.domain.model.TrackImageKind.LAYOUT);
+        var wrong = gtEngineImage(track, "other", org.ctc.domain.model.TrackImageKind.BACKGROUND);
+        entityManager.flush(); entityManager.clear();
+        // when
+        var findings = dataAuditService.audit().findings(Category.CATALOG_IMAGES).stream()
+                .filter(finding -> finding.subject().equals("Track Test audit map track " + id)).toList();
+        // then
+        assertThat(findings).extracting(finding -> finding.evidence()).anySatisfy(evidence ->
+                assertThat(evidence).isEqualTo("GT-Engine image " + wrong.getId() + " has source key other and kind BACKGROUND instead of map and LAYOUT"));
+        assertThat(findings).extracting(finding -> finding.evidence()).contains("The track has more than one GT-Engine map");
+        assertThat(entityManager.find(org.ctc.domain.model.TrackImage.class, map.getId())).as("the audit changes nothing").isNotNull();
+        assertThat(entityManager.find(org.ctc.domain.model.TrackImage.class, wrong.getId())).isNotNull();
+    }
+
+    private org.ctc.domain.model.TrackImage gtEngineImage(org.ctc.domain.model.Track track, String key, org.ctc.domain.model.TrackImageKind kind) {
+        var image = new org.ctc.domain.model.TrackImage();
+        image.setTrack(track); image.setKind(kind); image.setSource(org.ctc.domain.model.ImageSource.GTENGINE); image.setSourceKey(key);
+        image.setImagePath("/uploads/track-images/" + track.getId() + "/" + key + ".png"); image.setWidth(10); image.setHeight(10);
+        return entityManager.merge(image);
+    }
+
+    @Test
     void givenDriverFieldedForTwoSubTeamsOnOneMatchday_whenAuditing_thenReportOverlapWithoutChangingLineups() {
         // given
         var season = testHelper.createSeason("Test_Lineup_Audit_" + id);

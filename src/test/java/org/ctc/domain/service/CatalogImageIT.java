@@ -246,6 +246,63 @@ class CatalogImageIT {
     }
 
     @Test
+    void givenManualImage_whenApplyingGtEngineMapsTwice_thenAppendOneAttributedLayoutAndReplaceItsFile() throws Exception {
+        // given
+        gallery.uploadTrackImages(track, List.of(png("own.png", 10, 10)), TrackImageKind.BACKGROUND, "Own");
+        String first = files.storeBytes("track-images", track, "gtengine_monza.png", TestImages.png(1500, 1500));
+        String second = files.storeBytes("track-images", track, "gtengine_monza.png", TestImages.png(1500, 1501));
+        // when
+        boolean firstReplaced = gallery.applyGtEngineMap(track, first, 1500, 1500);
+        boolean secondReplaced = gallery.applyGtEngineMap(track, second, 1500, 1501);
+        // then
+        assertThat(firstReplaced).isFalse();
+        assertThat(secondReplaced).isTrue();
+        var images = gallery.trackImages(track);
+        assertThat(images).extracting(image -> image.getSource()).containsExactly(ImageSource.MANUAL, ImageSource.GTENGINE);
+        var map = images.get(1);
+        assertThat(map.getKind()).isEqualTo(TrackImageKind.LAYOUT);
+        assertThat(map.getSourceKey()).isEqualTo("map");
+        assertThat(map.getLabel()).isEqualTo("Layout map by GT-Engine (gt-engine.com)");
+        assertThat(map.getHeight()).isEqualTo(1501);
+        assertThat(gallery.gtEngineMapPath(track)).hasValue(second);
+        assertThat(images.get(0).getLabel()).as("manual images stay untouched").isEqualTo("Own");
+        assertThat(file(first)).as("the replaced file is removed after commit").doesNotExist();
+    }
+
+    @Test
+    void givenGtEngineMap_whenOpeningTheTrackEditor_thenNameAndLinkTheSource() throws Exception {
+        // given
+        gallery.applyGtEngineMap(track, files.storeBytes("track-images", track, "gtengine_monza.png", TestImages.png(1500, 1500)), 1500, 1500);
+        // when / then
+        mvc.perform(get("/admin/tracks/{id}/edit", track))
+                .andExpect(content().string(containsString("href=\"https://gt-engine.com/gt7/tracks/track-maps.html\" class=\"detail-link\" rel=\"noopener noreferrer\">GT-Engine</a>")))
+                .andExpect(content().string(containsString("gallery-item--layout")))
+                .andExpect(content().string(not(containsString("Load GT-Engine map"))));
+    }
+
+    @Test
+    void givenTrackWithoutAReviewedLayout_whenPostingTheGtEngineAction_thenReturnToTheGalleryWithTheReason() throws Exception {
+        // when / then
+        mvc.perform(post("/admin/tracks/{id}/images/gt-engine", track))
+                .andExpect(redirectedUrl("/admin/tracks/" + track + "/edit#track-images"))
+                .andExpect(flash().attribute("galleryError", "GT-Engine has no map for this track"));
+    }
+
+    @Test
+    void givenTrackWithAReviewedLayout_whenOpeningTheEditorAndTheList_thenOfferGtEngineActions() throws Exception {
+        // given
+        var mapped = tracks.saveAndFlush(new Track("Tsukuba Circuit "));
+        try {
+            // when / then
+            mvc.perform(get("/admin/tracks/{id}/edit", mapped.getId())).andExpect(content().string(containsString("Load GT-Engine map")));
+            mvc.perform(get("/admin/tracks")).andExpect(content().string(containsString("reviewed for game version <span>1.65</span>")))
+                    .andExpect(content().string(containsString("Load all GT-Engine maps")));
+        } finally {
+            tracks.delete(mapped);
+        }
+    }
+
+    @Test
     void givenCarWithImages_whenDeletingTheCar_thenRemoveImagesAndFiles() {
         // given
         gallery.uploadCarImages(car, List.of(png("gone.png", 10, 10)), CarImageKind.OTHER, null);

@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-/** One gallery image of a track; {@code sourceKey} names the GT7 slot and is null for manual uploads. */
+/** One gallery image of a track; {@code sourceKey} names the GT7 slot or the GT-Engine map and is null for manual uploads. */
 @Entity
 @Table(name = "track_images")
 @Getter

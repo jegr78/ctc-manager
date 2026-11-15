@@ -11,6 +11,7 @@ import org.ctc.domain.model.CarImageKind;
 import org.ctc.domain.model.TrackImageKind;
 import org.ctc.domain.service.CatalogImageService;
 import org.ctc.gt7sync.Gt7CarShotService;
+import org.ctc.gt7sync.GtEngineTrackMapService;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,6 +25,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class CatalogImageController {
     private final CatalogImageService gallery;
     private final Gt7CarShotService gt7Shots;
+    private final GtEngineTrackMapService trackMaps;
 
     @PostMapping("/admin/cars/{id}/images")
     public String uploadCarImages(@PathVariable UUID id, @RequestParam(name = "files", required = false) List<MultipartFile> files,
@@ -67,6 +69,11 @@ public class CatalogImageController {
             int added = gallery.uploadTrackImages(id, files, parse(TrackImageKind.class, kind), label);
             return added == 1 ? "1 image added." : added + " images added.";
         });
+    }
+
+    @PostMapping("/admin/tracks/{id}/images/gt-engine")
+    public String loadGtEngineMap(@PathVariable UUID id, RedirectAttributes redirect) {
+        return run(redirect, trackEditor(id) + "#track-images", () -> trackMaps.load(id).message());
     }
 
     @PostMapping("/admin/tracks/{id}/images/{imageId}/delete")

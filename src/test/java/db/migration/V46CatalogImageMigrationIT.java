@@ -79,6 +79,25 @@ class V46CatalogImageMigrationIT {
         if (valid) assertThatCode(insert).doesNotThrowAnyException(); else assertThatThrownBy(insert).isInstanceOf(SQLException.class);
     }
 
+    @ParameterizedTest
+    @CsvSource({"GTENGINE,map,true", "GTENGINE,,false", "GTENGINE,' ',false", "GT7,1_01,true", "MANUAL,,true", "MANUAL,map,false", "WEB,,false"})
+    void givenNewConnectionAfterV47_whenStoringTrackImageSources_thenRequireAKeyForDownloadedSources(String source, String key, boolean valid) {
+        // when
+        org.assertj.core.api.ThrowableAssert.ThrowingCallable insert = () -> execute("""
+                INSERT INTO track_images (id, track_id, kind, source, source_key, image_path, width, height, sort_index, created_at, updated_at)
+                VALUES (?, ?, 'LAYOUT', ?, ?, '/uploads/track-images/x.png', 10, 10, 0, ?, ?)""",
+                UUID.randomUUID().toString(), track.toString(), source, key, now(), now());
+        // then
+        if (valid) assertThatCode(insert).as(source + " with key " + key).doesNotThrowAnyException();
+        else assertThatThrownBy(insert).as(source + " with key " + key).isInstanceOf(SQLException.class);
+    }
+
+    @Test
+    void givenNewConnection_whenStoringAGtEngineCarImage_thenReject() {
+        // when / then
+        assertThatThrownBy(() -> carImage("STUDIO", "GTENGINE", "map", 640)).as("GT-Engine supplies track maps only").isInstanceOf(SQLException.class);
+    }
+
     private void carImage(String kind, String source, String key, int width) throws SQLException {
         execute("""
                 INSERT INTO car_images (id, car_id, kind, source, source_key, image_path, width, height, sort_index, created_at, updated_at)

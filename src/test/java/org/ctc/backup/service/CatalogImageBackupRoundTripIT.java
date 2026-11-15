@@ -47,6 +47,7 @@ class CatalogImageBackupRoundTripIT {
     @Autowired CarImageRepository carImages;
     @Autowired TrackImageRepository trackImages;
     @Autowired CatalogImageService gallery;
+    @Autowired org.ctc.domain.service.FileStorageService storageService;
     @Autowired BackupArchiveService archives;
     @MockitoSpyBean BackupImportService imports;
     @MockitoSpyBean BackupExportService exports;
@@ -109,6 +110,31 @@ class CatalogImageBackupRoundTripIT {
             assertThat(failure.getMessage()).contains("Gallery images require backup schema 24");
         });
         verify(imports, never()).wipeAllTables(anyMap());
+    }
+
+    @Test
+    void givenGtEngineMap_whenRestoringSchema25AndSchema24Archives_thenRestoreTheMapOrRejectBeforeWiping() throws Exception {
+        // given
+        gallery.applyGtEngineMap(track, storageService.storeBytes("track-images", track, "gtengine_monza.png", TestImages.png(1500, 1500)), 1500, 1500);
+        var mapId = gallery.trackImages(track).getLast().getId();
+        byte[] archive = export();
+        assertThat(JSON.readTree(unzip(archive).get("data/track-images.json"))).allSatisfy(row ->
+                assertThat(row.has("slot")).as("the derived slot is not part of the archive").isFalse());
+        var older = unzip(archive);
+        var manifest = (ObjectNode) JSON.readTree(older.get("manifest.json"));
+        manifest.put("schema_version", 24);
+        older.put("manifest.json", JSON.writeValueAsBytes(manifest));
+        // when / then
+        assertThatThrownBy(() -> imports.stage(upload(zip(older)))).isInstanceOfSatisfying(BackupArchiveException.class, failure ->
+                assertThat(failure.getMessage()).contains("GT-Engine maps belong to tracks and require backup schema 25"));
+        verify(imports, never()).wipeAllTables(anyMap());
+        imports.execute(imports.stage(upload(archive)).stagingId());
+        assertThat(gallery.trackImages(track)).filteredOn(image -> image.getId().equals(mapId)).singleElement().satisfies(image -> {
+            assertThat(image.getSource()).isEqualTo(ImageSource.GTENGINE);
+            assertThat(image.getSourceKey()).isEqualTo("map");
+            assertThat(image.getLabel()).isEqualTo("Layout map by GT-Engine (gt-engine.com)");
+            assertThat(ROOT.resolve("uploads").resolve(image.getImagePath().substring("/uploads/".length()))).exists();
+        });
     }
 
     @Test

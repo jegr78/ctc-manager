@@ -119,6 +119,12 @@ public class FileStorageService {
 		return downloads.download(sourceUrl, ImageContent.Format.ofFilename(filename));
 	}
 
+	/** Downloads a GT-Engine track layout map as PNG, without storing it. */
+	public byte[] downloadTrackMap(String sourceUrl) throws IOException {
+		outboundPolicy.requireEnabled();
+		return downloads.downloadTrackMap(sourceUrl);
+	}
+
 	/** Stores bytes under a fresh name in the entity's folder and returns its {@code /uploads/} URL. */
 	public String storeBytes(String subDir, UUID entityId, String filename, byte[] data) throws IOException {
 		Path dir = uploadDir.resolve(subDir).resolve(entityId.toString());

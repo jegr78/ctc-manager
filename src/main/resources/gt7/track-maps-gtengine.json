@@ -1,0 +1,993 @@
+{
+  "source": "https://gt-engine.com/gt7/tracks/track-maps.html",
+  "imageBase": "https://gt-engine.com/gt7/tracks/images/md/",
+  "gameVersion": "1.65",
+  "retrievedOn": "2026-11-15",
+  "layouts": [
+    {
+      "slug": "alsace-village",
+      "title": "Alsace Village"
+    },
+    {
+      "slug": "alsace-village-2",
+      "title": "Alsace Village Reverse"
+    },
+    {
+      "slug": "alsace-test",
+      "title": "Alsace Test Course"
+    },
+    {
+      "slug": "alsace-test-2",
+      "title": "Alsace Test Course Reverse"
+    },
+    {
+      "slug": "autopolis",
+      "title": "Autopolis"
+    },
+    {
+      "slug": "autopolis-shortcut",
+      "title": "Autopolis Shortcut"
+    },
+    {
+      "slug": "barcelona-catalunya-gp",
+      "title": "Barcelona-Catalunya GP Layout"
+    },
+    {
+      "slug": "barcelona-catalunya-gp-no-chicane",
+      "title": "Barcelona-Catalunya GP Layout No Chicane"
+    },
+    {
+      "slug": "barcelona-catalunya-national",
+      "title": "Barcelona-Catalunya National Layout"
+    },
+    {
+      "slug": "barcelona-catalunya-rallycross",
+      "title": "Barcelona-Catalunya Rallycross Layout"
+    },
+    {
+      "slug": "blue-moon-speedway",
+      "title": "Blue Moon Speedway"
+    },
+    {
+      "slug": "blue-moon-speedway-2",
+      "title": "Blue Moon Speedway Reverse"
+    },
+    {
+      "slug": "blue-moon-infield-a",
+      "title": "Blue Moon Infield A"
+    },
+    {
+      "slug": "blue-moon-infield-a2",
+      "title": "Blue Moon Infield A Reverse"
+    },
+    {
+      "slug": "blue-moon-infield-b",
+      "title": "Blue Moon Infield B"
+    },
+    {
+      "slug": "blue-moon-infield-b2",
+      "title": "Blue Moon Infield B Reverse"
+    },
+    {
+      "slug": "brands-hatch-gp",
+      "title": "Brands Hatch GP"
+    },
+    {
+      "slug": "brands-hatch-indy",
+      "title": "Brands Hatch Indy"
+    },
+    {
+      "slug": "broad-bean",
+      "title": "Broad Bean"
+    },
+    {
+      "slug": "broad-bean-2",
+      "title": "Broad Bean Reverse"
+    },
+    {
+      "slug": "colorado-springs-lake",
+      "title": "Colorado Springs Lake"
+    },
+    {
+      "slug": "colorado-springs-lake-2",
+      "title": "Colorado Springs Lake Reverse"
+    },
+    {
+      "slug": "daytona-tri-oval",
+      "title": "Daytona Tri-Oval"
+    },
+    {
+      "slug": "daytona-road",
+      "title": "Daytona Road Course"
+    },
+    {
+      "slug": "deep-forest",
+      "title": "Deep Forest"
+    },
+    {
+      "slug": "deep-forest-2",
+      "title": "Deep Forest Reverse"
+    },
+    {
+      "slug": "dragon-trail-seaside",
+      "title": "Dragon Trail Seaside"
+    },
+    {
+      "slug": "dragon-trail-seaside-2",
+      "title": "Dragon Trail Seaside Reverse"
+    },
+    {
+      "slug": "dragon-trail-gardens",
+      "title": "Dragon Trail Gardens"
+    },
+    {
+      "slug": "dragon-trail-gardens-2",
+      "title": "Dragon Trail Gardens Reverse"
+    },
+    {
+      "slug": "eiger-nordwand",
+      "title": "Eiger Nordwand"
+    },
+    {
+      "slug": "eiger-nordwand-2",
+      "title": "Eiger Nordwand Reverse"
+    },
+    {
+      "slug": "fishermans-ranch",
+      "title": "Fishermans Ranch"
+    },
+    {
+      "slug": "fishermans-ranch-2",
+      "title": "Fishermans Ranch Reverse"
+    },
+    {
+      "slug": "fuji",
+      "title": "Fuji"
+    },
+    {
+      "slug": "fuji-short",
+      "title": "Fuji Short"
+    },
+    {
+      "slug": "goodwood",
+      "title": "Goodwood"
+    },
+    {
+      "slug": "grand-valley-highway-1",
+      "title": "Grand Valley Highway 1"
+    },
+    {
+      "slug": "grand-valley-highway-1-2",
+      "title": "Grand Valley Highway 1 Reverse"
+    },
+    {
+      "slug": "grand-valley-south",
+      "title": "Grand Valley South"
+    },
+    {
+      "slug": "grand-valley-south-2",
+      "title": "Grand Valley South Reverse"
+    },
+    {
+      "slug": "high-speed-ring",
+      "title": "High Speed Ring"
+    },
+    {
+      "slug": "high-speed-ring-2",
+      "title": "High Speed Ring Reverse"
+    },
+    {
+      "slug": "interlagos",
+      "title": "Interlagos"
+    },
+    {
+      "slug": "kyoto-miyabi",
+      "title": "Kyoto Miyabi"
+    },
+    {
+      "slug": "kyoto-yamagiwa",
+      "title": "Kyoto Yamagiwa"
+    },
+    {
+      "slug": "kyoto-yamagiwa-2",
+      "title": "Kyoto Yamagiwa Reverse"
+    },
+    {
+      "slug": "kyoto-yamagiwa-miyabi",
+      "title": "Kyoto Yamagiwa + Miyabi"
+    },
+    {
+      "slug": "kyoto-yamagiwa-miyabi-2",
+      "title": "Kyoto Yamagiwa + Miyabi Reverse"
+    },
+    {
+      "slug": "lago-maggiore-full",
+      "title": "Lago Maggiore Full Course"
+    },
+    {
+      "slug": "lago-maggiore-full-2",
+      "title": "Lago Maggiore Full Course Reverse"
+    },
+    {
+      "slug": "lago-maggiore-centre",
+      "title": "Lago Maggiore Centre"
+    },
+    {
+      "slug": "lago-maggiore-centre-2",
+      "title": "Lago Maggiore Centre Reverse"
+    },
+    {
+      "slug": "lago-maggiore-east",
+      "title": "Lago Maggiore East"
+    },
+    {
+      "slug": "lago-maggiore-east-2",
+      "title": "Lago Maggiore East Reverse"
+    },
+    {
+      "slug": "lago-maggiore-east-end",
+      "title": "Lago Maggiore East End"
+    },
+    {
+      "slug": "lago-maggiore-east-end-2",
+      "title": "Lago Maggiore East End Reverse"
+    },
+    {
+      "slug": "lago-maggiore-west",
+      "title": "Lago Maggiore West"
+    },
+    {
+      "slug": "lago-maggiore-west-2",
+      "title": "Lago Maggiore West Reverse"
+    },
+    {
+      "slug": "lago-maggiore-west-end",
+      "title": "Lago Maggiore West End"
+    },
+    {
+      "slug": "lago-maggiore-west-end-2",
+      "title": "Lago Maggiore West End Reverse"
+    },
+    {
+      "slug": "laguna-seca",
+      "title": "Laguna Seca"
+    },
+    {
+      "slug": "lake-louise-long",
+      "title": "Lake Louise Long Track"
+    },
+    {
+      "slug": "lake-louise-long-2",
+      "title": "Lake Louise Long Track Reverse"
+    },
+    {
+      "slug": "lake-louise-short",
+      "title": "Lake Louise Short Track"
+    },
+    {
+      "slug": "lake-louise-short-2",
+      "title": "Lake Louise Short Track Reverse"
+    },
+    {
+      "slug": "lake-louise-tri-oval",
+      "title": "Lake Louise Tri-Oval"
+    },
+    {
+      "slug": "lake-louise-tri-oval-2",
+      "title": "Lake Louise Tri-Oval Reverse"
+    },
+    {
+      "slug": "northern-isle",
+      "title": "Northern Isle"
+    },
+    {
+      "slug": "northern-isle-infield",
+      "title": "Northern Isle Infield"
+    },
+    {
+      "slug": "nurburgring-gp",
+      "title": "Nürburgring GP"
+    },
+    {
+      "slug": "nurburgring-sprint",
+      "title": "Nürburgring Sprint"
+    },
+    {
+      "slug": "red-bull-ring",
+      "title": "Red Bull Ring"
+    },
+    {
+      "slug": "red-bull-ring-short",
+      "title": "Red Bull Ring Short"
+    },
+    {
+      "slug": "road-atlanta",
+      "title": "Road Atlanta"
+    },
+    {
+      "slug": "sardegna-road-a",
+      "title": "Sardegna Road A"
+    },
+    {
+      "slug": "sardegna-road-a2",
+      "title": "Sardegna Road A Reverse"
+    },
+    {
+      "slug": "sardegna-road-b",
+      "title": "Sardegna Road B"
+    },
+    {
+      "slug": "sardegna-road-b2",
+      "title": "Sardegna Road B Reverse"
+    },
+    {
+      "slug": "sardegna-road-c",
+      "title": "Sardegna Road C"
+    },
+    {
+      "slug": "sardegna-road-c2",
+      "title": "Sardegna Road C Reverse"
+    },
+    {
+      "slug": "sardegna-windmills",
+      "title": "Sardegna Windmills"
+    },
+    {
+      "slug": "sardegna-windmills-2",
+      "title": "Sardegna Windmills Reverse"
+    },
+    {
+      "slug": "suzuka-east",
+      "title": "Suzuka East"
+    },
+    {
+      "slug": "tokyo-express-central-cw",
+      "title": "Tokyo Express Central Clockwise"
+    },
+    {
+      "slug": "tokyo-express-central-ccw",
+      "title": "Tokyo Express Central Counterclockwise"
+    },
+    {
+      "slug": "tsukuba",
+      "title": "Tsukuba"
+    },
+    {
+      "slug": "watkins-glen-long",
+      "title": "Watkins Glen Long Course"
+    },
+    {
+      "slug": "watkins-glen-short",
+      "title": "Watkins Glen Short Course"
+    },
+    {
+      "slug": "willow-springs-big-willow",
+      "title": "Willow Springs Big Willow"
+    },
+    {
+      "slug": "willow-springs-horse-thief-mile",
+      "title": "Willow Springs Horse Thief Mile"
+    },
+    {
+      "slug": "willow-springs-horse-thief-mile-2",
+      "title": "Willow Springs Horse Thief Mile Reverse"
+    },
+    {
+      "slug": "willow-springs-streets-of-willow-springs",
+      "title": "Willow Springs Streets of Willow Springs"
+    },
+    {
+      "slug": "willow-springs-streets-of-willow-springs-2",
+      "title": "Willow Springs Streets of Willow Springs Reverse"
+    },
+    {
+      "slug": "gilles-villeneuve",
+      "title": "gilles-villeneuve"
+    },
+    {
+      "slug": "monza",
+      "title": "Monza"
+    },
+    {
+      "slug": "monza-no-chicane",
+      "title": "Monza No Chicane"
+    },
+    {
+      "slug": "mount-panorama",
+      "title": "Mount Panorama"
+    },
+    {
+      "slug": "sainte-croix-a",
+      "title": "Sainte-Croix A"
+    },
+    {
+      "slug": "sainte-croix-a2",
+      "title": "Sainte-Croix A Reverse"
+    },
+    {
+      "slug": "sainte-croix-b",
+      "title": "Sainte-Croix B"
+    },
+    {
+      "slug": "sainte-croix-b2",
+      "title": "Sainte-Croix B Reverse"
+    },
+    {
+      "slug": "sainte-croix-c",
+      "title": "Sainte-Croix C"
+    },
+    {
+      "slug": "sainte-croix-c2",
+      "title": "Sainte-Croix C Reverse"
+    },
+    {
+      "slug": "spa-francorchamps",
+      "title": "Spa-Francorchamps"
+    },
+    {
+      "slug": "spa-24h",
+      "title": "Spa 24h Layout"
+    },
+    {
+      "slug": "suzuka",
+      "title": "Suzuka"
+    },
+    {
+      "slug": "tokyo-express-south-cw",
+      "title": "Tokyo Express South Clockwise"
+    },
+    {
+      "slug": "tokyo-express-south-ccw",
+      "title": "Tokyo Express South Counterclockwise"
+    },
+    {
+      "slug": "trial-mountain",
+      "title": "Trial Mountain"
+    },
+    {
+      "slug": "trial-mountain-2",
+      "title": "Trial Mountain Reverse"
+    },
+    {
+      "slug": "yas-marina",
+      "title": "Yas Marina"
+    },
+    {
+      "slug": "tokyo-express-east-cw",
+      "title": "Tokyo Express East Clockwise"
+    },
+    {
+      "slug": "tokyo-express-east-ccw",
+      "title": "Tokyo Express East Counterclockwise"
+    },
+    {
+      "slug": "24-heures-du-mans",
+      "title": "24 Heures du Mans"
+    },
+    {
+      "slug": "24-heures-du-mans-no-chicane",
+      "title": "24 Heures du Mans No Chicane"
+    },
+    {
+      "slug": "nurburgring-24h",
+      "title": "Nürburgring 24h"
+    },
+    {
+      "slug": "nurburgring-endurance",
+      "title": "Nürburgring Endurance"
+    },
+    {
+      "slug": "nurburgring-endurance-2",
+      "title": "Nürburgring Endurance II"
+    },
+    {
+      "slug": "nurburgring-nordschleife",
+      "title": "Nürburgring Nordschleife"
+    },
+    {
+      "slug": "nurburgring-nordschleife-tourist",
+      "title": "Nürburgring Nordschleife Tourist"
+    },
+    {
+      "slug": "special-stage-route-x",
+      "title": "Special Stage Route X"
+    }
+  ],
+  "mappings": [
+    {
+      "trackName": "24 Heures du Mans Racing Circuit",
+      "slug": "24-heures-du-mans"
+    },
+    {
+      "trackName": "24 Heures du Mans Racing Circuit No Chicane",
+      "slug": "24-heures-du-mans-no-chicane"
+    },
+    {
+      "trackName": "Alsace - Test Course",
+      "slug": "alsace-test"
+    },
+    {
+      "trackName": "Alsace - Test Course Reverse",
+      "slug": "alsace-test-2"
+    },
+    {
+      "trackName": "Alsace - Village",
+      "slug": "alsace-village"
+    },
+    {
+      "trackName": "Alsace - Village Reverse",
+      "slug": "alsace-village-2"
+    },
+    {
+      "trackName": "Autodrome Lago Maggiore - Centre",
+      "slug": "lago-maggiore-centre"
+    },
+    {
+      "trackName": "Autodrome Lago Maggiore - Centre Reverse",
+      "slug": "lago-maggiore-centre-2"
+    },
+    {
+      "trackName": "Autodrome Lago Maggiore - East",
+      "slug": "lago-maggiore-east"
+    },
+    {
+      "trackName": "Autodrome Lago Maggiore - East End",
+      "slug": "lago-maggiore-east-end"
+    },
+    {
+      "trackName": "Autodrome Lago Maggiore - East End Reverse",
+      "slug": "lago-maggiore-east-end-2"
+    },
+    {
+      "trackName": "Autodrome Lago Maggiore - East Reverse",
+      "slug": "lago-maggiore-east-2"
+    },
+    {
+      "trackName": "Autodrome Lago Maggiore - Full Course",
+      "slug": "lago-maggiore-full"
+    },
+    {
+      "trackName": "Autodrome Lago Maggiore - Full Course Reverse",
+      "slug": "lago-maggiore-full-2"
+    },
+    {
+      "trackName": "Autodrome Lago Maggiore - West",
+      "slug": "lago-maggiore-west"
+    },
+    {
+      "trackName": "Autodrome Lago Maggiore - West End",
+      "slug": "lago-maggiore-west-end"
+    },
+    {
+      "trackName": "Autodrome Lago Maggiore - West End Reverse",
+      "slug": "lago-maggiore-west-end-2"
+    },
+    {
+      "trackName": "Autodrome Lago Maggiore - West Reverse",
+      "slug": "lago-maggiore-west-2"
+    },
+    {
+      "trackName": "Autodromo Nazionale Monza",
+      "slug": "monza"
+    },
+    {
+      "trackName": "Autodromo Nazionale Monza No Chicane",
+      "slug": "monza-no-chicane"
+    },
+    {
+      "trackName": "Autopolis International Racing Course",
+      "slug": "autopolis"
+    },
+    {
+      "trackName": "Autopolis International Racing Course - Short Course",
+      "slug": "autopolis-shortcut"
+    },
+    {
+      "trackName": "Autódromo de Interlagos",
+      "slug": "interlagos"
+    },
+    {
+      "trackName": "BB Raceway",
+      "slug": "broad-bean"
+    },
+    {
+      "trackName": "BB Raceway Reverse",
+      "slug": "broad-bean-2"
+    },
+    {
+      "trackName": "Blue Moon Bay Speedway",
+      "slug": "blue-moon-speedway"
+    },
+    {
+      "trackName": "Blue Moon Bay Speedway - Infield A",
+      "slug": "blue-moon-infield-a"
+    },
+    {
+      "trackName": "Blue Moon Bay Speedway - Infield A Reverse",
+      "slug": "blue-moon-infield-a2"
+    },
+    {
+      "trackName": "Blue Moon Bay Speedway - Infield B",
+      "slug": "blue-moon-infield-b"
+    },
+    {
+      "trackName": "Blue Moon Bay Speedway - Infield B Reverse",
+      "slug": "blue-moon-infield-b2"
+    },
+    {
+      "trackName": "Blue Moon Bay Speedway Reverse",
+      "slug": "blue-moon-speedway-2"
+    },
+    {
+      "trackName": "Brands Hatch Grand Prix Circuit",
+      "slug": "brands-hatch-gp"
+    },
+    {
+      "trackName": "Brands Hatch Indy Circuit",
+      "slug": "brands-hatch-indy"
+    },
+    {
+      "trackName": "Circuit Gilles-Villeneuve",
+      "slug": "gilles-villeneuve"
+    },
+    {
+      "trackName": "Circuit de Barcelona-Catalunya GP Layout",
+      "slug": "barcelona-catalunya-gp"
+    },
+    {
+      "trackName": "Circuit de Barcelona-Catalunya GP Layout No Chicane",
+      "slug": "barcelona-catalunya-gp-no-chicane"
+    },
+    {
+      "trackName": "Circuit de Barcelona-Catalunya National Layout",
+      "slug": "barcelona-catalunya-national"
+    },
+    {
+      "trackName": "Circuit de Barcelona-Catalunya Rallycross Layout",
+      "slug": "barcelona-catalunya-rallycross"
+    },
+    {
+      "trackName": "Circuit de Sainte-Croix - A",
+      "slug": "sainte-croix-a"
+    },
+    {
+      "trackName": "Circuit de Sainte-Croix - A Reverse",
+      "slug": "sainte-croix-a2"
+    },
+    {
+      "trackName": "Circuit de Sainte-Croix - B",
+      "slug": "sainte-croix-b"
+    },
+    {
+      "trackName": "Circuit de Sainte-Croix - B Reverse",
+      "slug": "sainte-croix-b2"
+    },
+    {
+      "trackName": "Circuit de Sainte-Croix - C",
+      "slug": "sainte-croix-c"
+    },
+    {
+      "trackName": "Circuit de Sainte-Croix - C Reverse",
+      "slug": "sainte-croix-c2"
+    },
+    {
+      "trackName": "Circuit de Spa-Francorchamps",
+      "slug": "spa-francorchamps"
+    },
+    {
+      "trackName": "Circuit de Spa-Francorchamps 24h Layout",
+      "slug": "spa-24h"
+    },
+    {
+      "trackName": "Colorado Springs - Lake",
+      "slug": "colorado-springs-lake"
+    },
+    {
+      "trackName": "Colorado Springs - Lake Reverse",
+      "slug": "colorado-springs-lake-2"
+    },
+    {
+      "trackName": "Daytona Road Course",
+      "slug": "daytona-road"
+    },
+    {
+      "trackName": "Daytona Tri-Oval",
+      "slug": "daytona-tri-oval"
+    },
+    {
+      "trackName": "Deep Forest Raceway",
+      "slug": "deep-forest"
+    },
+    {
+      "trackName": "Deep Forest Raceway Reverse",
+      "slug": "deep-forest-2"
+    },
+    {
+      "trackName": "Dragon Trail - Gardens",
+      "slug": "dragon-trail-gardens"
+    },
+    {
+      "trackName": "Dragon Trail - Gardens Reverse",
+      "slug": "dragon-trail-gardens-2"
+    },
+    {
+      "trackName": "Dragon Trail - Seaside",
+      "slug": "dragon-trail-seaside"
+    },
+    {
+      "trackName": "Dragon Trail - Seaside Reverse",
+      "slug": "dragon-trail-seaside-2"
+    },
+    {
+      "trackName": "Eiger Nordwand",
+      "slug": "eiger-nordwand"
+    },
+    {
+      "trackName": "Eiger Nordwand Reverse",
+      "slug": "eiger-nordwand-2"
+    },
+    {
+      "trackName": "Fishermans Ranch",
+      "slug": "fishermans-ranch"
+    },
+    {
+      "trackName": "Fishermans Ranch Reverse",
+      "slug": "fishermans-ranch-2"
+    },
+    {
+      "trackName": "Fuji International Speedway",
+      "slug": "fuji"
+    },
+    {
+      "trackName": "Fuji International Speedway (Short)",
+      "slug": "fuji-short"
+    },
+    {
+      "trackName": "Goodwood Motor Circuit",
+      "slug": "goodwood"
+    },
+    {
+      "trackName": "Grand Valley - Highway 1",
+      "slug": "grand-valley-highway-1"
+    },
+    {
+      "trackName": "Grand Valley - Highway 1 Reverse",
+      "slug": "grand-valley-highway-1-2"
+    },
+    {
+      "trackName": "Grand Valley - South",
+      "slug": "grand-valley-south"
+    },
+    {
+      "trackName": "Grand Valley - South Reverse",
+      "slug": "grand-valley-south-2"
+    },
+    {
+      "trackName": "High Speed Ring",
+      "slug": "high-speed-ring"
+    },
+    {
+      "trackName": "High Speed Ring Reverse",
+      "slug": "high-speed-ring-2"
+    },
+    {
+      "trackName": "Kyoto Driving Park - Miyabi",
+      "slug": "kyoto-miyabi"
+    },
+    {
+      "trackName": "Kyoto Driving Park - Yamagiwa",
+      "slug": "kyoto-yamagiwa"
+    },
+    {
+      "trackName": "Kyoto Driving Park - Yamagiwa Reverse",
+      "slug": "kyoto-yamagiwa-2"
+    },
+    {
+      "trackName": "Kyoto Driving Park - Yamagiwa+Miyabi",
+      "slug": "kyoto-yamagiwa-miyabi"
+    },
+    {
+      "trackName": "Kyoto Driving Park - Yamagiwa+Miyabi Reverse",
+      "slug": "kyoto-yamagiwa-miyabi-2"
+    },
+    {
+      "trackName": "Lake Louise Long Track",
+      "slug": "lake-louise-long"
+    },
+    {
+      "trackName": "Lake Louise Long Track Reverse",
+      "slug": "lake-louise-long-2"
+    },
+    {
+      "trackName": "Lake Louise Short Track",
+      "slug": "lake-louise-short"
+    },
+    {
+      "trackName": "Lake Louise Short Track Reverse",
+      "slug": "lake-louise-short-2"
+    },
+    {
+      "trackName": "Lake Louise Tri-Oval",
+      "slug": "lake-louise-tri-oval"
+    },
+    {
+      "trackName": "Lake Louise Tri-Oval Reverse",
+      "slug": "lake-louise-tri-oval-2"
+    },
+    {
+      "trackName": "Michelin Raceway Road Atlanta",
+      "slug": "road-atlanta"
+    },
+    {
+      "trackName": "Mount Panorama Motor Racing Circuit",
+      "slug": "mount-panorama"
+    },
+    {
+      "trackName": "Northern Isle Speedway",
+      "slug": "northern-isle"
+    },
+    {
+      "trackName": "Nürburgring 24h",
+      "slug": "nurburgring-24h"
+    },
+    {
+      "trackName": "Nürburgring Endurance",
+      "slug": "nurburgring-endurance"
+    },
+    {
+      "trackName": "Nürburgring Endurance II",
+      "slug": "nurburgring-endurance-2"
+    },
+    {
+      "trackName": "Nürburgring GP",
+      "slug": "nurburgring-gp"
+    },
+    {
+      "trackName": "Nürburgring Nordschleife",
+      "slug": "nurburgring-nordschleife"
+    },
+    {
+      "trackName": "Nürburgring Nordschleife Tourist",
+      "slug": "nurburgring-nordschleife-tourist"
+    },
+    {
+      "trackName": "Nürburgring Sprint",
+      "slug": "nurburgring-sprint"
+    },
+    {
+      "trackName": "Red Bull Ring",
+      "slug": "red-bull-ring"
+    },
+    {
+      "trackName": "Red Bull Ring Short Track",
+      "slug": "red-bull-ring-short"
+    },
+    {
+      "trackName": "Sardegna - Road Track - A",
+      "slug": "sardegna-road-a"
+    },
+    {
+      "trackName": "Sardegna - Road Track - A Reverse",
+      "slug": "sardegna-road-a2"
+    },
+    {
+      "trackName": "Sardegna - Road Track - B",
+      "slug": "sardegna-road-b"
+    },
+    {
+      "trackName": "Sardegna - Road Track - B Reverse",
+      "slug": "sardegna-road-b2"
+    },
+    {
+      "trackName": "Sardegna - Road Track - C",
+      "slug": "sardegna-road-c"
+    },
+    {
+      "trackName": "Sardegna - Road Track - C Reverse",
+      "slug": "sardegna-road-c2"
+    },
+    {
+      "trackName": "Sardegna - Windmills",
+      "slug": "sardegna-windmills"
+    },
+    {
+      "trackName": "Sardegna - Windmills Reverse",
+      "slug": "sardegna-windmills-2"
+    },
+    {
+      "trackName": "Spa 24h Layout",
+      "slug": "spa-24h"
+    },
+    {
+      "trackName": "Special Stage Route X",
+      "slug": "special-stage-route-x"
+    },
+    {
+      "trackName": "Suzuka Circuit",
+      "slug": "suzuka"
+    },
+    {
+      "trackName": "Suzuka Circuit East Course",
+      "slug": "suzuka-east"
+    },
+    {
+      "trackName": "Tokyo Expressway - Central Clockwise",
+      "slug": "tokyo-express-central-cw"
+    },
+    {
+      "trackName": "Tokyo Expressway - Central Counterclockwise",
+      "slug": "tokyo-express-central-ccw"
+    },
+    {
+      "trackName": "Tokyo Expressway - East Clockwise",
+      "slug": "tokyo-express-east-cw"
+    },
+    {
+      "trackName": "Tokyo Expressway - East Counterclockwise",
+      "slug": "tokyo-express-east-ccw"
+    },
+    {
+      "trackName": "Tokyo Expressway - South Clockwise",
+      "slug": "tokyo-express-south-cw"
+    },
+    {
+      "trackName": "Tokyo Expressway - South Counterclockwise",
+      "slug": "tokyo-express-south-ccw"
+    },
+    {
+      "trackName": "Trial Mountain Circuit",
+      "slug": "trial-mountain"
+    },
+    {
+      "trackName": "Trial Mountain Circuit Reverse",
+      "slug": "trial-mountain-2"
+    },
+    {
+      "trackName": "Tsukuba Circuit",
+      "slug": "tsukuba"
+    },
+    {
+      "trackName": "Watkins Glen Long Course",
+      "slug": "watkins-glen-long"
+    },
+    {
+      "trackName": "Watkins Glen Short Course",
+      "slug": "watkins-glen-short"
+    },
+    {
+      "trackName": "WeatherTech Raceway Laguna Seca",
+      "slug": "laguna-seca"
+    },
+    {
+      "trackName": "Willow Springs International Raceway: Big Willow",
+      "slug": "willow-springs-big-willow"
+    },
+    {
+      "trackName": "Willow Springs International Raceway: Horse Thief Mile",
+      "slug": "willow-springs-horse-thief-mile"
+    },
+    {
+      "trackName": "Willow Springs International Raceway: Horse Thief Mile Reverse",
+      "slug": "willow-springs-horse-thief-mile-2"
+    },
+    {
+      "trackName": "Willow Springs International Raceway: Streets of Willow Springs",
+      "slug": "willow-springs-streets-of-willow-springs"
+    },
+    {
+      "trackName": "Willow Springs International Raceway: Streets of Willow Springs Reverse",
+      "slug": "willow-springs-streets-of-willow-springs-2"
+    },
+    {
+      "trackName": "Yas Marina Circuit",
+      "slug": "yas-marina"
+    }
+  ],
+  "unmappedLayouts": [
+    "northern-isle-infield"
+  ],
+  "unmappedTracks": [
+    "SUGO International Racing Course",
+    "Test Circuit"
+  ]
+}

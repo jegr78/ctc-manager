@@ -10,6 +10,20 @@
         </div>
     </div>
     <p class="admin-list-intro text-dim">Manage circuits and layouts available for race setup.</p>
+    <div class="card catalog-source">
+        <h2>Layout maps</h2>
+        <p class="form-hint">Layout maps come from <a th:href="${gtEngine.source}" class="detail-link" rel="noopener noreferrer">GT-Engine</a>,
+            reviewed for game version <span th:text="${gtEngine.gameVersion}"></span>. Loading stores them in the track galleries;
+            the comparison only reports changes on GT-Engine.</p>
+        <div class="actions">
+            <form th:action="@{/admin/tracks/gt-engine-maps}" method="post">
+                <button type="submit" class="btn btn-secondary btn-sm">Load all GT-Engine maps</button>
+            </form>
+            <form th:action="@{/admin/tracks/gt-engine-maps/compare}" method="post">
+                <button type="submit" class="btn btn-secondary btn-sm">Compare with GT-Engine</button>
+            </form>
+        </div>
+    </div>
     <div class="card admin-list-card">
         <div class="admin-list-controls catalog-list-controls" data-list-tools hidden>
             <label for="trackSearch"><span>Search</span><input type="search" id="trackSearch" data-list-search placeholder="Track name or country" autocomplete="off"></label>

@@ -38,11 +38,11 @@ class CatalogImageBackupValidatorTest {
     void givenSourceAndKeyThatDoNotPair_whenValidating_thenReject() {
         // when / then
         assertThatThrownBy(() -> validator(24).accept("car_images", carImage("GT7", null, "/uploads/car-images/a/1.jpg")))
-                .hasMessage("A GT7 image needs its source key and a manual image must not have one");
+                .hasMessage("A downloaded image needs its source key and a manual image must not have one");
         assertThatThrownBy(() -> validator(24).accept("car_images", carImage("MANUAL", "2_01", "/uploads/car-images/a/1.jpg")))
-                .hasMessage("A GT7 image needs its source key and a manual image must not have one");
+                .hasMessage("A downloaded image needs its source key and a manual image must not have one");
         assertThatThrownBy(() -> validator(24).accept("car_images", carImage("MANUAL", " ", "/uploads/car-images/a/1.jpg")))
-                .as("the database accepts only a null key for manual images").hasMessage("A GT7 image needs its source key and a manual image must not have one");
+                .as("the database accepts only a null key for manual images").hasMessage("A downloaded image needs its source key and a manual image must not have one");
     }
 
     @Test
@@ -53,6 +53,31 @@ class CatalogImageBackupValidatorTest {
         // when / then
         assertThatThrownBy(() -> validator.accept("car_images", carImage("GT7", "2_01", "/uploads/car-images/a/2.png")))
                 .hasMessage("A car has two GT7 images for slot 2_01");
+    }
+
+    @Test
+    void givenGtEngineMapsInSchema25_whenValidating_thenAcceptOneMapPerTrack() {
+        // given
+        var validator = validator(25);
+        validator.accept("track_images", trackImage().put("source", "GTENGINE").put("sourceKey", "map"));
+        // when / then
+        assertThatThrownBy(() -> validator.accept("track_images", trackImage().put("source", "GTENGINE").put("sourceKey", "map")))
+                .hasMessage("A track has two GT-Engine maps");
+        assertThatThrownBy(() -> validator(25).accept("track_images", trackImage().put("source", "GTENGINE").put("sourceKey", "other")))
+                .hasMessage("A GT-Engine map needs source key map and kind LAYOUT");
+        assertThatThrownBy(() -> validator(25).accept("track_images", trackImage().put("source", "GTENGINE").put("sourceKey", "map").put("kind", "BACKGROUND")))
+                .hasMessage("A GT-Engine map needs source key map and kind LAYOUT");
+        assertThatThrownBy(() -> validator(25).accept("track_images", trackImage().put("source", "GTENGINE").putNull("sourceKey")))
+                .hasMessage("A downloaded image needs its source key and a manual image must not have one");
+    }
+
+    @Test
+    void givenGtEngineMapInAnOlderSchemaOrOnACar_whenValidating_thenReject() {
+        // when / then
+        assertThatThrownBy(() -> validator(24).accept("track_images", trackImage().put("source", "GTENGINE").put("sourceKey", "map")))
+                .hasMessage("GT-Engine maps belong to tracks and require backup schema 25");
+        assertThatThrownBy(() -> validator(25).accept("car_images", carImage("GTENGINE", "map", "/uploads/car-images/a/1.jpg")))
+                .hasMessage("GT-Engine maps belong to tracks and require backup schema 25");
     }
 
     @Test
