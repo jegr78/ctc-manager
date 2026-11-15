@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.ctc.domain.model.CarImageKind;
 import org.ctc.domain.model.ImageSource;
 import org.ctc.domain.model.TrackImageKind;
+import org.ctc.domain.service.CatalogImageService;
 import java.time.DateTimeException;
 import java.time.LocalDateTime;
 
@@ -75,7 +76,10 @@ public final class CatalogImageBackupValidator {
         if (source == ImageSource.GT7 && !slots.add(owner + ':' + ownerId + ':' + key)) {
             throw new IllegalArgumentException("A " + owner + " has two GT7 images for slot " + key);
         }
-        if (source == ImageSource.GTENGINE && !slots.add(owner + ':' + ownerId + ":GTENGINE")) {
+        if (source == ImageSource.GTENGINE && (!CatalogImageService.GT_ENGINE_KEY.equals(key) || !"LAYOUT".equals(text(row, "kind")))) {
+            throw new IllegalArgumentException("A GT-Engine map needs source key " + CatalogImageService.GT_ENGINE_KEY + " and kind LAYOUT");
+        }
+        if (source == ImageSource.GTENGINE && !slots.add("gtengine:" + ownerId)) {
             throw new IllegalArgumentException("A track has two GT-Engine maps");
         }
         String label = text(row, "label");

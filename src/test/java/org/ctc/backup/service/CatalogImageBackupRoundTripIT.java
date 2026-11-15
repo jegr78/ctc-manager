@@ -118,6 +118,8 @@ class CatalogImageBackupRoundTripIT {
         gallery.applyGtEngineMap(track, storageService.storeBytes("track-images", track, "gtengine_monza.png", TestImages.png(1500, 1500)), 1500, 1500);
         var mapId = gallery.trackImages(track).getLast().getId();
         byte[] archive = export();
+        assertThat(JSON.readTree(unzip(archive).get("data/track-images.json"))).allSatisfy(row ->
+                assertThat(row.has("slot")).as("the derived slot is not part of the archive").isFalse());
         var older = unzip(archive);
         var manifest = (ObjectNode) JSON.readTree(older.get("manifest.json"));
         manifest.put("schema_version", 24);

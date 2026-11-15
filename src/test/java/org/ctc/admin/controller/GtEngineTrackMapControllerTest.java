@@ -34,6 +34,16 @@ class GtEngineTrackMapControllerTest {
     }
 
     @Test
+    void givenFailedTracks_whenLoadingAll_thenReportTheSummaryAsError() {
+        // given
+        when(trackMaps.loadAll()).thenReturn(new BulkResult(1, 0, 0, 0, List.of("Suzuka Circuit")));
+        // when
+        controller.loadAll(redirect);
+        // then
+        assertThat(flash()).containsKey("errorMessage").doesNotContainKey("successMessage");
+    }
+
+    @Test
     void givenUnreachablePage_whenComparing_thenShowTheReasonAsError() {
         // given
         when(trackMaps.compare()).thenThrow(new BusinessRuleException("GT-Engine could not be compared: HTTP 503"));

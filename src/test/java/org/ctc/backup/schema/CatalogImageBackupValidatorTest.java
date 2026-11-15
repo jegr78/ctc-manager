@@ -61,8 +61,12 @@ class CatalogImageBackupValidatorTest {
         var validator = validator(25);
         validator.accept("track_images", trackImage().put("source", "GTENGINE").put("sourceKey", "map"));
         // when / then
-        assertThatThrownBy(() -> validator.accept("track_images", trackImage().put("source", "GTENGINE").put("sourceKey", "other")))
+        assertThatThrownBy(() -> validator.accept("track_images", trackImage().put("source", "GTENGINE").put("sourceKey", "map")))
                 .hasMessage("A track has two GT-Engine maps");
+        assertThatThrownBy(() -> validator(25).accept("track_images", trackImage().put("source", "GTENGINE").put("sourceKey", "other")))
+                .hasMessage("A GT-Engine map needs source key map and kind LAYOUT");
+        assertThatThrownBy(() -> validator(25).accept("track_images", trackImage().put("source", "GTENGINE").put("sourceKey", "map").put("kind", "BACKGROUND")))
+                .hasMessage("A GT-Engine map needs source key map and kind LAYOUT");
         assertThatThrownBy(() -> validator(25).accept("track_images", trackImage().put("source", "GTENGINE").putNull("sourceKey")))
                 .hasMessage("A downloaded image needs its source key and a manual image must not have one");
     }

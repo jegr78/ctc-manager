@@ -1,6 +1,7 @@
 package org.ctc.gt7sync;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -70,7 +71,7 @@ public class GtEngineTrackMapService {
         try {
             outbound.requireEnabled();
             return reference().compare(GtEngineTrackMaps.parsePage(pages.fetch(GtEngineTrackMaps.PAGE_URL, MAX_PAGE_BYTES)));
-        } catch (IOException | IllegalArgumentException failure) {
+        } catch (IOException | UncheckedIOException | IllegalArgumentException failure) {
             log.warn("Comparing the GT-Engine layout list failed", failure);
             throw new BusinessRuleException("GT-Engine could not be compared: " + failure.getMessage());
         }
@@ -92,8 +93,11 @@ public class GtEngineTrackMapService {
             stored = files.storeBytes("track-images", track.getId(), "gtengine_" + layout.slug() + ".png", data);
         } catch (IOException | RuntimeException failure) {
             log.warn("Loading the GT-Engine map of track {} failed", track.getId(), failure);
-            throw new BusinessRuleException("The GT-Engine map could not be loaded: "
-                    + (failure instanceof IOException ? failure.getMessage() : "the file is not a readable map"));
+            throw new BusinessRuleException("The GT-Engine map could not be loaded: " + switch (failure) {
+                case IOException io -> io.getMessage();
+                case IllegalArgumentException rejected -> rejected.getMessage();
+                default -> "the file is not a readable map";
+            });
         }
         try {
             return gallery.applyGtEngineMap(track.getId(), stored, width, height) ? Outcome.REPLACED : Outcome.ADDED;
@@ -118,9 +122,16 @@ public class GtEngineTrackMapService {
     }
 
     public record BulkResult(int added, int replaced, int unchanged, int unmapped, List<String> failed) {
+        private static final int LISTED_FAILURES = 10;
+
+        public boolean failures() { return !failed.isEmpty(); }
+
         public String message() {
             String text = "GT-Engine maps: added " + added + ", replaced " + replaced + ", unchanged " + unchanged + ", tracks without a map " + unmapped;
-            return failed.isEmpty() ? text + "." : text + "; failed: " + String.join(", ", failed) + ".";
+            if (failed.isEmpty()) return text + ".";
+            String listed = String.join(", ", failed.subList(0, Math.min(LISTED_FAILURES, failed.size())));
+            String more = failed.size() > LISTED_FAILURES ? " and " + (failed.size() - LISTED_FAILURES) + " more" : "";
+            return text + "; failed " + failed.size() + ": " + listed + more + ". Load a single track for its reason.";
         }
     }
 
@@ -137,7 +148,9 @@ public class GtEngineTrackMapService {
             return (url, maxBytes) -> {
                 var response = Jsoup.connect(url).timeout(10_000).maxBodySize(maxBytes).followRedirects(false).execute();
                 if (response.statusCode() != 200) throw new IOException("GT-Engine answered with HTTP " + response.statusCode());
-                return response.body();
+                String body = response.body();
+                if (body.length() >= maxBytes) throw new IOException("GT-Engine page exceeds its size limit");
+                return body;
             };
         }
     }

@@ -281,6 +281,14 @@ class CatalogImageIT {
     }
 
     @Test
+    void givenTrackWithoutAReviewedLayout_whenPostingTheGtEngineAction_thenReturnToTheGalleryWithTheReason() throws Exception {
+        // when / then
+        mvc.perform(post("/admin/tracks/{id}/images/gt-engine", track))
+                .andExpect(redirectedUrl("/admin/tracks/" + track + "/edit#track-images"))
+                .andExpect(flash().attribute("galleryError", "GT-Engine has no map for this track"));
+    }
+
+    @Test
     void givenTrackWithAReviewedLayout_whenOpeningTheEditorAndTheList_thenOfferGtEngineActions() throws Exception {
         // given
         var mapped = tracks.saveAndFlush(new Track("Tsukuba Circuit "));

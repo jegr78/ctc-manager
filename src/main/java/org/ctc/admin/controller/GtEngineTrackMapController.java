@@ -16,7 +16,13 @@ public class GtEngineTrackMapController {
 
     @PostMapping("/admin/tracks/gt-engine-maps")
     public String loadAll(RedirectAttributes redirect) {
-        return run(redirect, () -> trackMaps.loadAll().message());
+        try {
+            var result = trackMaps.loadAll();
+            redirect.addFlashAttribute(result.failures() ? "errorMessage" : "successMessage", result.message());
+        } catch (BusinessRuleException rejected) {
+            redirect.addFlashAttribute("errorMessage", rejected.getMessage());
+        }
+        return "redirect:/admin/tracks";
     }
 
     @PostMapping("/admin/tracks/gt-engine-maps/compare")

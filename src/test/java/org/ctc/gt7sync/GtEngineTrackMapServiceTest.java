@@ -128,7 +128,29 @@ class GtEngineTrackMapServiceTest {
         // when
         var result = service.loadAll();
         // then
-        assertThat(result.message()).isEqualTo("GT-Engine maps: added 1, replaced 1, unchanged 0, tracks without a map 1; failed: Suzuka Circuit.");
+        assertThat(result.message()).isEqualTo("GT-Engine maps: added 1, replaced 1, unchanged 0, tracks without a map 1; failed 1: Suzuka Circuit. Load a single track for its reason.");
+    }
+
+    @Test
+    void givenUrlRejectedByTheDownloadPolicy_whenLoading_thenNameTheRejection() throws IOException {
+        // given
+        when(tracks.findById(monza.getId())).thenReturn(Optional.of(monza));
+        when(files.downloadTrackMap(MONZA_URL)).thenThrow(new IllegalArgumentException("URL host resolves to a blocked address: gt-engine.com"));
+        // when / then
+        assertThatThrownBy(() -> service.load(monza.getId()))
+                .hasMessage("The GT-Engine map could not be loaded: URL host resolves to a blocked address: gt-engine.com");
+    }
+
+    @Test
+    void givenManyFailedTracks_whenSummarizing_thenListTenAndCountTheRest() {
+        // given
+        var failed = java.util.stream.IntStream.rangeClosed(1, 12).mapToObj(i -> "Track " + i).toList();
+        // when
+        var result = new GtEngineTrackMapService.BulkResult(0, 0, 0, 0, failed);
+        // then
+        assertThat(result.failures()).isTrue();
+        assertThat(result.message()).isEqualTo("GT-Engine maps: added 0, replaced 0, unchanged 0, tracks without a map 0; failed 12: "
+                + "Track 1, Track 2, Track 3, Track 4, Track 5, Track 6, Track 7, Track 8, Track 9, Track 10 and 2 more. Load a single track for its reason.");
     }
 
     @Test
