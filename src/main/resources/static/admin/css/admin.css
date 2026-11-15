@@ -2957,5 +2957,5 @@ body:has(.archive-dialog[open]) { overflow: hidden; }
 .gallery-item--layout img { object-fit: contain; }
 .catalog-source { margin-bottom: 16px; }
 .catalog-source h2 { margin-top: 0; }
-.catalog-source .actions { flex-wrap: wrap; }
+.catalog-source .actions { flex-wrap: wrap; margin-top: 12px; }
 .catalog-source form { margin: 0; }
