@@ -22,7 +22,7 @@ class FileStorageServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		fileStorageService = new FileStorageService(org.ctc.TestHelper.enabledOutboundPolicy(), tempDir.toString());
+		fileStorageService = new FileStorageService(org.ctc.TestHelper.enabledOutboundPolicy(), new org.ctc.integration.ImageDownloadClient(), tempDir.toString());
 	}
 
 	@Test
@@ -192,19 +192,13 @@ class FileStorageServiceTest {
 	}
 
 	@Test
-	void givenHttpsUrl_whenStoreFromUrl_thenFileStoredAndUrlReturned() throws IOException {
+	void givenFileUri_whenStoreFromUrl_thenRejectIt() throws IOException {
 		// given
-		// Use a file:// URI for actual I/O but we need to test with HTTPS prefix
-		// We test the validation separately; this test verifies HTTPS URLs are accepted structurally
-		// Note: actual HTTPS download would require a running server, so we skip I/O verification here
-		// The existing file-based test is replaced by validation-focused tests below
 		Path sourceFile = tempDir.resolve("source-image.png");
 		Files.write(sourceFile, new byte[]{10, 20, 30});
-
 		var entityId = UUID.randomUUID();
 
-		// when - use file URI (which will be rejected after SSRF protection)
-		// This test now validates that file:// URIs are rejected
+		// when / then
 		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", entityId,
 				sourceFile.toUri().toString(), "car-photo.png"))
 				.isInstanceOf(IllegalArgumentException.class)

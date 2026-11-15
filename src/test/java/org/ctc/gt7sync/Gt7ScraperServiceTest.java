@@ -265,6 +265,22 @@ class Gt7ScraperServiceTest {
     }
 
     @Test
+    void givenPreloadHelperNamedWithDollar_whenSelectingCarShots_thenStillFindTheModule() {
+        // given
+        String bundle = "\"../../generated-assets/images/car_shots/2k/car365_2_01.jpg\":()=>$e(()=>import(`./car365_2_01-Ab.js`),[])";
+        // when / then
+        assertThat(scraperService.carShotModules(bundle, "car365")).containsExactly(Map.entry("2_01", "car365_2_01-Ab.js"));
+    }
+
+    @Test
+    void givenBundleWithoutAnyCarShot_whenCheckingTheFormat_thenFailInsteadOfReportingNoShots() throws IOException {
+        // when / then
+        assertThatThrownBy(() -> scraperService.requireCarShotFormat("var e=`car_thumbnails/car365.png`;"))
+                .isInstanceOf(IOException.class).hasMessage("The GT7 car list no longer lists car shots in the expected format");
+        scraperService.requireCarShotFormat(loadFixture("gt7/carlist-index-car-shots.js"));
+    }
+
+    @Test
     void givenProductionShotModule_whenReadingIt_thenReturnTheHashedImageUrl() throws IOException {
         // given
         String module = loadFixture("gt7/carlist-car-shot-module.js");

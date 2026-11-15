@@ -9,10 +9,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -134,8 +136,17 @@ public class BackupArchiveService {
 		try (ZipOutputStream zip = new ZipOutputStream(out)) {
 			zip.setLevel(Deflater.DEFAULT_COMPRESSION);
 
+			// Gallery rows, their manifest counts and their files come from one snapshot.
+			Map<Class<?>, List<?>> gallery = new HashMap<>();
+			Map<String, Long> tableCounts = new LinkedHashMap<>(backupExportService.countRowsPerTable());
+			for (EntityRef ref : exportOrder) {
+				if (!BackupExportService.isGallery(ref.entityClass())) continue;
+				var rows = backupExportService.fetchAllForBackup(ref.entityClass());
+				gallery.put(ref.entityClass(), rows);
+				tableCounts.put(ref.tableName(), (long) rows.size());
+			}
+
 			// Step 1 — manifest.json must be entry #0 (wire contract).
-			Map<String, Long> tableCounts = backupExportService.countRowsPerTable();
 			BackupManifest manifest = new BackupManifest(
 					BackupSchema.SCHEMA_VERSION, appVersion, exportDate, tableCounts);
 			zip.putNextEntry(new ZipEntry("manifest.json"));
@@ -145,7 +156,8 @@ public class BackupArchiveService {
 			// Step 2 — data/<slug>.json per entity in EXPORT_ORDER.
 			int dataEntries = 0;
 			for (EntityRef ref : exportOrder) {
-				List<?> rows = backupExportService.fetchAllForBackup(ref.entityClass());
+				List<?> rows = gallery.containsKey(ref.entityClass()) ? gallery.get(ref.entityClass())
+						: backupExportService.fetchAllForBackup(ref.entityClass());
 				zip.putNextEntry(new ZipEntry(ref.fileName()));
 				writeJson(zip, rows, /* pretty= */ false);
 				zip.closeEntry();
@@ -166,6 +178,19 @@ public class BackupArchiveService {
 				Files.copy(entry.absolutePath(), zip);
 				zip.closeEntry();
 				uploadEntries++;
+			}
+			for (List<?> rows : gallery.values()) {
+				for (UploadEntry entry : backupExportService.galleryUploads(rows)) {
+					zip.putNextEntry(new ZipEntry("uploads/" + entry.relativePath()));
+					try {
+						Files.copy(entry.absolutePath(), zip);
+					} catch (NoSuchFileException removed) {
+						throw new IOException("Gallery image file " + entry.relativePath()
+								+ " was removed during the export; run the export again", removed);
+					}
+					zip.closeEntry();
+					uploadEntries++;
+				}
 			}
 
 			zip.finish();

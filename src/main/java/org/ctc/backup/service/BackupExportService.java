@@ -16,6 +16,7 @@ import org.ctc.discord.model.DiscordPost;
 import org.ctc.discord.repository.DiscordGlobalConfigRepository;
 import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.domain.model.*;
+import org.ctc.domain.service.FileStorageService;
 import org.ctc.domain.repository.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -93,6 +94,7 @@ public class BackupExportService {
     private final LineupSubmissionRevisionRepository lineupRevisions;
     private final LineupWindowEventRepository lineupWindows;
     private final CarImageRepository carImages;
+    private final FileStorageService files;
     private final TrackImageRepository trackImages;
     private final PickPublicationAttemptRepository publicationAttempts;
     private final PickPublicationSnapshotRepository publicationSnapshots;
@@ -168,6 +170,7 @@ public class BackupExportService {
             LineupWindowEventRepository lineupWindows,
             CarImageRepository carImages,
             TrackImageRepository trackImages,
+            FileStorageService files,
 			@Value("${app.upload-dir:data/dev/uploads}") String uploadDirRaw
 	) {
 		this.backupSchema = backupSchema;
@@ -222,6 +225,7 @@ public class BackupExportService {
         this.incidentRulings = incidentRulings; this.rulingRevisions = rulingRevisions; this.rulingPublications = rulingPublications;
         this.penaltyRevisions = penaltyRevisions;
         this.disqualificationRevisions = disqualificationRevisions;
+		this.files = files;
 		this.uploadDirRaw = uploadDirRaw;
 	}
 
@@ -296,8 +300,7 @@ public class BackupExportService {
 		Map<String, Long> counts = new LinkedHashMap<>();
 		for (EntityRef ref : backupSchema.getExportOrder()) {
 			JpaRepository<?, ?> repo = lookupRepository(ref.entityClass());
-			boolean gallery = ref.entityClass() == CarImage.class || ref.entityClass() == TrackImage.class;
-			counts.put(ref.tableName(), gallery ? fetchAllForBackup(ref.entityClass()).size() : repo.count());
+			counts.put(ref.tableName(), repo.count());
 		}
 		log.debug("countRowsPerTable computed {} entries", counts.size());
 		return counts;
@@ -315,7 +318,7 @@ public class BackupExportService {
 		try {
 			Method method = repo.getClass().getMethod("findAllForBackup");
 			List<?> result = (List<?>) method.invoke(repo);
-			return entityClass == CarImage.class || entityClass == TrackImage.class ? withStoredFile(result) : result;
+			return isGallery(entityClass) ? withStoredFile(result) : result;
 		} catch (NoSuchMethodException ex) {
 			throw new IllegalStateException(
 					"Repository for " + entityClass.getSimpleName()
@@ -355,8 +358,6 @@ public class BackupExportService {
 				addIfPresent(relativePaths, car.getImageUrl()));
 		trackRepository.findAll().forEach(track ->
 				addIfPresent(relativePaths, track.getImageUrl()));
-		carImages.findAll().forEach(image -> addIfPresent(relativePaths, image.getImagePath()));
-		trackImages.findAll().forEach(image -> addIfPresent(relativePaths, image.getImagePath()));
 		raceAttachmentRepository.findAll().forEach(attachment -> {
 			if (attachment.getType() == AttachmentType.FILE) {
 				addIfPresent(relativePaths, attachment.getUrl());
@@ -408,15 +409,25 @@ public class BackupExportService {
 		set.add(relative);
 	}
 
+	/** Gallery tables, whose rows and files the archive writer takes from one snapshot. */
+	public static boolean isGallery(Class<?> entityClass) {
+		return entityClass == CarImage.class || entityClass == TrackImage.class;
+	}
+
+	/** The upload files of exactly these gallery rows. */
+	public List<UploadEntry> galleryUploads(List<?> images) {
+		return images.stream().map(row -> {
+			String relative = ((GalleryImage) row).getImagePath().substring("/uploads/".length());
+			return new UploadEntry(uploadRoot.resolve(relative).toAbsolutePath().normalize(), relative);
+		}).toList();
+	}
+
 	/** Gallery rows whose file is gone cannot be restored, so the export leaves them out; the data audit lists them. */
 	private List<?> withStoredFile(List<?> images) {
 		var kept = new ArrayList<Object>();
 		for (Object row : images) {
 			var image = (GalleryImage) row;
-			var relative = new LinkedHashSet<String>();
-			addIfPresent(relative, image.getImagePath());
-			Path absolute = relative.isEmpty() ? null : uploadRoot.resolve(relative.getFirst()).toAbsolutePath().normalize();
-			if (absolute != null && absolute.startsWith(uploadRoot) && Files.isRegularFile(absolute)) {
+			if (files.exists(image.getImagePath())) {
 				kept.add(row);
 			} else {
 				log.warn("Leaving gallery image {} out of the backup because its file {} is missing; see the data audit",

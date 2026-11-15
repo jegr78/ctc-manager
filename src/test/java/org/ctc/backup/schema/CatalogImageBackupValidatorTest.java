@@ -86,6 +86,22 @@ class CatalogImageBackupValidatorTest {
     }
 
     @Test
+    void givenMissingTimestampDuplicateIdOrOversizedNumber_whenValidating_thenRejectBeforeTheWipe() {
+        // given
+        var image = carImage("MANUAL", null, "/uploads/car-images/a/1.jpg");
+        var validator = validator(24);
+        validator.accept("car_images", image);
+        // when / then
+        assertThatThrownBy(() -> validator.accept("car_images", image)).hasMessage("Image " + image.get("id").asText() + " appears twice");
+        assertThatThrownBy(() -> validator(24).accept("car_images", carImage("MANUAL", null, "/uploads/car-images/a/1.jpg").putNull("createdAt")))
+                .hasMessage("Invalid image timestamp createdAt");
+        assertThatThrownBy(() -> validator(24).accept("car_images", carImage("MANUAL", null, "/uploads/car-images/a/1.jpg").put("updatedAt", "yesterday")))
+                .hasMessage("Invalid image timestamp updatedAt");
+        assertThatThrownBy(() -> validator(24).accept("car_images", carImage("MANUAL", null, "/uploads/car-images/a/1.jpg").put("width", 4294967297L)))
+                .as("a long would truncate to 1 in the restorer").hasMessageContaining("needs a positive size");
+    }
+
+    @Test
     void givenImageOfAMissingOwner_whenValidating_thenReject() {
         // given
         var validator = new CatalogImageBackupValidator(24, Set.of("uploads/car-images/a/1.jpg"));
@@ -104,11 +120,13 @@ class CatalogImageBackupValidatorTest {
 
     private ObjectNode carImage(String source, String key, String path) {
         return JSON.createObjectNode().put("id", UUID.randomUUID().toString()).put("car", car.toString()).put("kind", "STUDIO")
-                .put("source", source).put("sourceKey", key).put("imagePath", path).put("width", 640).put("height", 360).put("sortIndex", 0);
+                .put("source", source).put("sourceKey", key).put("imagePath", path).put("width", 640).put("height", 360).put("sortIndex", 0)
+                .put("createdAt", "2035-01-01T12:00:00.123456").put("updatedAt", "2035-01-01T12:00:00.123456");
     }
 
     private ObjectNode trackImage() {
         return JSON.createObjectNode().put("id", UUID.randomUUID().toString()).put("track", track.toString()).put("kind", "LAYOUT")
-                .put("source", "MANUAL").putNull("sourceKey").put("imagePath", "/uploads/track-images/b/1.png").put("width", 640).put("height", 360).put("sortIndex", 0);
+                .put("source", "MANUAL").putNull("sourceKey").put("imagePath", "/uploads/track-images/b/1.png").put("width", 640).put("height", 360).put("sortIndex", 0)
+                .put("createdAt", "2035-01-01T12:00:00.123456").put("updatedAt", "2035-01-01T12:00:00.123456");
     }
 }

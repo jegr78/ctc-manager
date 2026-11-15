@@ -1,5 +1,8 @@
 package org.ctc.admin.controller;
 
+import org.ctc.domain.model.CarImageKind;
+import org.ctc.domain.service.CatalogImageService;
+import org.ctc.gt7sync.Gt7ScraperService;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +27,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class CarController {
 
 	private final CarService carService;
-	private final org.ctc.domain.service.CatalogImageService gallery;
+	private final CatalogImageService gallery;
 
 	@GetMapping
 	public String list(Model model) {
@@ -105,11 +108,11 @@ public class CarController {
         if (form.getId() != null) {
             var car = carService.findById(form.getId());
             model.addAttribute("car", car);
-            model.addAttribute("galleryGt7", org.ctc.gt7sync.Gt7ScraperService.isCarId(car.getGt7Id()));
+            model.addAttribute("galleryGt7", Gt7ScraperService.isCarId(car.getGt7Id()));
             model.addAttribute("galleryImages", gallery.carImages(form.getId()));
-            model.addAttribute("galleryKinds", org.ctc.domain.model.CarImageKind.values());
+            model.addAttribute("galleryKinds", CarImageKind.values());
             model.addAttribute("galleryBasePath", "/admin/cars/" + form.getId());
-            model.addAttribute("galleryOwner", form.getManufacturer() + " " + form.getName());
+            model.addAttribute("galleryOwner", car.getManufacturer() + " " + car.getName());
             model.addAttribute("galleryPrefix", "car");
         }
     }

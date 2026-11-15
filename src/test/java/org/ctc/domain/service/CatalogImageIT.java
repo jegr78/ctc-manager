@@ -1,6 +1,8 @@
 package org.ctc.domain.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -45,6 +47,7 @@ class CatalogImageIT {
     @Autowired CatalogImageService gallery;
     @Autowired FileStorageService files;
     @Autowired CarService carService;
+    @Autowired TrackService trackService;
     @Autowired CarRepository cars;
     @Autowired TrackRepository tracks;
     @Autowired CarImageRepository carImages;
@@ -64,9 +67,9 @@ class CatalogImageIT {
     @AfterEach
     void cleanUp() {
         if (cars.existsById(car)) gallery.deleteAllForCar(car);
-        gallery.deleteAllForTrack(track);
+        if (tracks.existsById(track)) gallery.deleteAllForTrack(track);
         cars.findById(car).ifPresent(cars::delete);
-        tracks.deleteById(track);
+        tracks.findById(track).ifPresent(tracks::delete);
     }
 
     @Test
@@ -103,6 +106,51 @@ class CatalogImageIT {
         assertThatThrownBy(() -> gallery.uploadCarImages(car, List.of(disguised), CarImageKind.STUDIO, null))
                 .isInstanceOf(BusinessRuleException.class).hasMessage("photo.pdf is a JPEG image; its file extension must be .jpg");
         assertThat(gallery.carImages(car)).isEmpty();
+    }
+
+    @Test
+    void givenWebpSentAsOctetStream_whenUploading_thenTrustTheCheckedContent() {
+        // given
+        var webp = new MockMultipartFile("files", "track.webp", "application/octet-stream", TestImages.webpLossy(800, 450));
+        // when
+        gallery.uploadTrackImages(track, List.of(webp), TrackImageKind.BACKGROUND, null);
+        // then
+        assertThat(gallery.trackImages(track)).singleElement().satisfies(image -> {
+            assertThat(image.getWidth()).isEqualTo(800);
+            assertThat(image.getImagePath()).endsWith(".webp");
+            assertThat(file(image.getImagePath())).exists();
+        });
+    }
+
+    @Test
+    void givenTrackGallery_whenMovingDeletingAndDeletingTheTrack_thenKeepOrderAndRemoveFiles() throws Exception {
+        // given
+        gallery.uploadTrackImages(track, List.of(png("a.png", 10, 10), png("b.png", 10, 10)), TrackImageKind.LAYOUT, null);
+        var images = gallery.trackImages(track);
+        // when
+        mvc.perform(post("/admin/tracks/{id}/images/{image}/move", track, images.get(1).getId()).param("direction", "up"))
+                .andExpect(redirectedUrl("/admin/tracks/" + track + "/edit#image-" + images.get(1).getId() + "-up"))
+                .andExpect(flash().attribute("galleryStatus", "Image moved to position 1."));
+        mvc.perform(post("/admin/tracks/{id}/images/{image}/delete", track, images.get(0).getId()))
+                .andExpect(flash().attribute("galleryStatus", "Image deleted."));
+        String remaining = gallery.trackImages(track).getFirst().getImagePath();
+        trackService.delete(track);
+        // then
+        assertThat(file(images.get(0).getImagePath())).doesNotExist();
+        assertThat(file(remaining)).as("deleting the track removes its gallery files").doesNotExist();
+        assertThat(trackImages.findByTrackIdOrderBySortIndexAscIdAsc(track)).isEmpty();
+    }
+
+    @Test
+    void givenRejectedUpload_whenReturningToTheEditor_thenKeepTheChosenKindAndLabel() throws Exception {
+        // when
+        var result = mvc.perform(multipart("/admin/cars/{id}/images", car).file(new MockMultipartFile("files", "x.png", "image/png", "GIF89a....".getBytes()))
+                        .param("kind", "COCKPIT").param("label", "Night race"))
+                .andExpect(flash().attribute("galleryKind", "COCKPIT")).andExpect(flash().attribute("galleryLabel", "Night race")).andReturn();
+        // then
+        mvc.perform(get("/admin/cars/{id}/edit", car).flashAttrs(result.getFlashMap()))
+                .andExpect(content().string(containsString("value=\"COCKPIT\" selected")))
+                .andExpect(content().string(containsString("value=\"Night race\"")));
     }
 
     @Test
@@ -188,13 +236,13 @@ class CatalogImageIT {
     @Test
     void givenCarWithoutGt7Id_whenOpeningOrLoadingGt7Images_thenHideTheButtonAndExplain() throws Exception {
         // when / then
-        mvc.perform(get("/admin/cars/{id}/edit", car)).andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Load GT7 images"))));
+        mvc.perform(get("/admin/cars/{id}/edit", car)).andExpect(content().string(not(containsString("Load GT7 images"))));
         mvc.perform(post("/admin/cars/{id}/images/gt7", car))
                 .andExpect(redirectedUrl("/admin/cars/" + car + "/edit#car-images")).andExpect(flash().attribute("galleryError", "This car has no GT7 ID"));
         var withId = cars.findById(car).orElseThrow();
         withId.setGt7Id("car365");
         cars.saveAndFlush(withId);
-        mvc.perform(get("/admin/cars/{id}/edit", car)).andExpect(content().string(org.hamcrest.Matchers.containsString("Load GT7 images")));
+        mvc.perform(get("/admin/cars/{id}/edit", car)).andExpect(content().string(containsString("Load GT7 images")));
     }
 
     @Test
@@ -223,10 +271,10 @@ class CatalogImageIT {
                 .andExpect(redirectedUrl("/admin/tracks/" + track + "/edit#track-images"))
                 .andExpect(flash().attribute("galleryError", "Choose an image kind"));
         mvc.perform(get("/admin/cars/{id}/edit", car))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"image-" + first + "-up\"")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Move image 2 of 2 up")));
-        mvc.perform(get("/admin/cars/new")).andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("-images\""))));
-        mvc.perform(get("/admin/tracks/new")).andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("-images\""))));
+                .andExpect(content().string(containsString("id=\"image-" + first + "-up\"")))
+                .andExpect(content().string(containsString("Move image 2 of 2 up")));
+        mvc.perform(get("/admin/cars/new")).andExpect(content().string(not(containsString("-images\""))));
+        mvc.perform(get("/admin/tracks/new")).andExpect(content().string(not(containsString("-images\""))));
     }
 
     private String storeGt7(String name) throws java.io.IOException {

@@ -2946,8 +2946,8 @@ body:has(.archive-dialog[open]) { overflow: hidden; }
 .swiss-round-editor fieldset { min-width: 0; }
 
 /* Car and track image galleries */
-.gallery-grid { list-style: none; margin: 0 0 var(--space-md, 16px); padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-.gallery-item { border: 1px solid var(--border-color, #333); border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.gallery-grid { list-style: none; margin: 0 0 16px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.gallery-item { border: 1px solid var(--border); border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
 .gallery-item img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; background: #000; }
 .gallery-meta { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
 .gallery-actions { display: flex; flex-wrap: wrap; gap: 6px; }

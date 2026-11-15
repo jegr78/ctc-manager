@@ -14,6 +14,7 @@ import org.ctc.domain.service.CatalogImageService.Gt7Shot;
 import org.ctc.domain.service.FileStorageService;
 import org.ctc.domain.service.ImageContent;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.CannotCreateTransactionException;
 
 /**
  * Loads the official GT7 car shots of one car into its gallery. Scraping and downloads run outside any transaction;
@@ -54,6 +55,10 @@ public class Gt7CarShotService {
         try {
             var applied = gallery.applyGt7CarImages(carId, staged);
             return new Result(applied.added(), applied.replaced(), List.copyOf(unchanged));
+        } catch (CannotCreateTransactionException notStarted) {
+            staged.forEach(shot -> files.delete(shot.imagePath()));
+            log.warn("Saving GT7 images for car {} could not start", carId, notStarted);
+            throw new BusinessRuleException("GT7 images could not be saved; try again.");
         } catch (RuntimeException failure) {
             log.warn("Saving GT7 images for car {} failed", carId, failure);
             throw new BusinessRuleException("GT7 images could not be saved; try again.");

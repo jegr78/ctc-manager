@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import java.util.Arrays;
 
 @Slf4j
 @Service
@@ -40,10 +41,6 @@ public class FileStorageService {
 		this.outboundPolicy = outboundPolicy;
 		this.downloads = downloads;
 		this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
-	}
-
-	public FileStorageService(OutboundPolicy outboundPolicy, String uploadDir) {
-		this(outboundPolicy, new ImageDownloadClient(), uploadDir);
 	}
 
 	public String store(UUID raceId, MultipartFile file) throws IOException {
@@ -144,7 +141,7 @@ public class FileStorageService {
 	public boolean hasContent(String url, byte[] data) {
 		if (!exists(url)) return false;
 		try {
-			return java.util.Arrays.equals(Files.readAllBytes(uploadDir.resolve(url.substring("/uploads/".length())).normalize()), data);
+			return Arrays.equals(Files.readAllBytes(uploadDir.resolve(url.substring("/uploads/".length())).normalize()), data);
 		} catch (IOException unreadable) {
 			return false;
 		}
@@ -165,14 +162,7 @@ public class FileStorageService {
             delete(url);
             throw failure;
         }
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCompletion(int status) {
-                    if (status == STATUS_ROLLED_BACK) delete(url);
-                }
-            });
-        }
+        deleteOnRollback(url);
 		log.info("Stored image: {} ({} bytes)", target, file.getSize());
 		return url;
 	}

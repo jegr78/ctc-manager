@@ -49,6 +49,7 @@ class CatalogImageBackupRoundTripIT {
     @Autowired CatalogImageService gallery;
     @Autowired BackupArchiveService archives;
     @MockitoSpyBean BackupImportService imports;
+    @MockitoSpyBean BackupExportService exports;
     UUID car;
     UUID track;
 
@@ -61,6 +62,7 @@ class CatalogImageBackupRoundTripIT {
         track = tracks.saveAndFlush(new Track("Backup gallery track " + suffix)).getId();
         gallery.uploadCarImages(car, List.of(png("a.png"), png("b.png")), CarImageKind.STUDIO, "Front");
         gallery.uploadTrackImages(track, List.of(png("t.png")), TrackImageKind.LAYOUT, null);
+        org.mockito.Mockito.reset(exports);
         org.mockito.Mockito.clearInvocations(imports);
     }
 
@@ -102,9 +104,51 @@ class CatalogImageBackupRoundTripIT {
         manifest.put("schema_version", 23);
         files.put("manifest.json", JSON.writeValueAsBytes(manifest));
         // when / then
-        assertThatThrownBy(() -> imports.stage(upload(zip(files)))).isInstanceOfSatisfying(BackupArchiveException.class,
-                failure -> assertThat(failure.reason()).isEqualTo(BackupArchiveException.Reason.DATA_MISMATCH));
+        assertThatThrownBy(() -> imports.stage(upload(zip(files)))).isInstanceOfSatisfying(BackupArchiveException.class, failure -> {
+            assertThat(failure.reason()).isEqualTo(BackupArchiveException.Reason.DATA_MISMATCH);
+            assertThat(failure.getMessage()).contains("Gallery images require backup schema 24");
+        });
         verify(imports, never()).wipeAllTables(anyMap());
+    }
+
+    @Test
+    void givenGenuineSchema23Archive_whenRestoring_thenRestoreWithoutGalleries() throws Exception {
+        // given
+        var files = unzip(export());
+        for (var path : gallery.carImages(car)) files.remove("uploads/" + path.getImagePath().substring("/uploads/".length()));
+        for (var path : gallery.trackImages(track)) files.remove("uploads/" + path.getImagePath().substring("/uploads/".length()));
+        files.remove("data/car-images.json");
+        files.remove("data/track-images.json");
+        var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
+        manifest.put("schema_version", 23);
+        ((ObjectNode) manifest.get("table_counts")).remove(List.of("car_images", "track_images"));
+        files.put("manifest.json", JSON.writeValueAsBytes(manifest));
+        // when
+        imports.execute(imports.stage(upload(zip(files))).stagingId());
+        // then
+        assertThat(cars.existsById(car)).as("the rest of the archive restores").isTrue();
+        assertThat(gallery.carImages(car)).isEmpty();
+        assertThat(gallery.trackImages(track)).isEmpty();
+    }
+
+    @Test
+    void givenSchema24ArchiveWithoutTheGalleryFile_whenRestoring_thenRejectBeforeWiping() throws Exception {
+        // given
+        var files = unzip(export());
+        files.remove("data/car-images.json");
+        // when / then
+        assertThatThrownBy(() -> imports.stage(upload(zip(files)))).isInstanceOf(BackupArchiveException.class);
+        verify(imports, never()).wipeAllTables(anyMap());
+    }
+
+    @Test
+    void givenGalleryFileRemovedWhileExporting_whenWritingTheArchive_thenFailInsteadOfWritingAnUnrestorableArchive() {
+        // given
+        org.mockito.Mockito.doReturn(List.of(new UploadEntry(ROOT.resolve("uploads/car-images/gone.png"), "car-images/gone.png")))
+                .when(exports).galleryUploads(org.mockito.ArgumentMatchers.any());
+        // when / then
+        assertThatThrownBy(this::export).isInstanceOf(IOException.class)
+                .hasMessage("Gallery image file car-images/gone.png was removed during the export; run the export again");
     }
 
     @Test

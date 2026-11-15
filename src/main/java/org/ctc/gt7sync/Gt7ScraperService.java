@@ -128,6 +128,7 @@ public class Gt7ScraperService {
     public List<CarShot> scrapeCarShots(String gt7Id) throws IOException {
         String html = externalConnection(CARS_PAGE).get().html();
         String indexJs = fetchText(BASE_URL + extractScriptSrc(html, "/common/dist/gt7/carlist/assets/index-"));
+        requireCarShotFormat(indexJs);
         var shots = new ArrayList<CarShot>();
         for (var module : carShotModules(indexJs, gt7Id).entrySet()) {
             String imageUrl = carShotImageUrl(fetchText(BASE_URL + "/common/dist/gt7/carlist/assets/" + module.getValue()), gt7Id, module.getKey());
@@ -142,12 +143,19 @@ public class Gt7ScraperService {
         return gt7Id != null && gt7Id.matches("car[1-9]\\d{0,9}");
     }
 
+    /** Fails when the bundle lists no 2K car shot at all, so a format change is not reported as a car without shots. */
+    void requireCarShotFormat(String indexJs) throws IOException {
+        if (!Pattern.compile("car_shots/2k/car\\d+_\\d+_\\d+\\.jpg").matcher(indexJs).find()) {
+            throw new IOException("The GT7 car list no longer lists car shots in the expected format");
+        }
+    }
+
     /** Slot such as {@code 2_01} to the module file of every 2K car shot of the car, in slot order. */
     Map<String, String> carShotModules(String indexJs, String gt7Id) {
         if (!isCarId(gt7Id)) throw new IllegalArgumentException("Invalid GT7 car ID: " + gt7Id);
-        var pattern = Pattern.compile("car_shots/2k/" + gt7Id + "_(\\d+_\\d+)\\.jpg[\"'`]\\s*:\\s*\\(\\)\\s*=>\\s*\\w+\\(\\s*\\(\\)\\s*=>\\s*import\\(\\s*([\"'`])\\./("
+        var pattern = Pattern.compile("car_shots/2k/" + gt7Id + "_(\\d+_\\d+)\\.jpg[\"'`]\\s*:\\s*\\(\\)\\s*=>\\s*[\\w$]+\\(\\s*\\(\\)\\s*=>\\s*import\\(\\s*([\"'`])\\./("
                 + gt7Id + "_\\1-[\\w-]+\\.js)\\2");
-        var modules = new java.util.TreeMap<String, String>();
+        var modules = new TreeMap<String, String>();
         var match = pattern.matcher(indexJs);
         while (match.find()) modules.putIfAbsent(match.group(1), match.group(3));
         return modules;

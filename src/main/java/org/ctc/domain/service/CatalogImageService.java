@@ -3,17 +3,21 @@ package org.ctc.domain.service;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
+import org.ctc.domain.model.Car;
 import org.ctc.domain.model.CarImage;
 import org.ctc.domain.model.CarImageKind;
 import org.ctc.domain.model.GalleryImage;
 import org.ctc.domain.model.ImageSource;
+import org.ctc.domain.model.Track;
 import org.ctc.domain.model.TrackImage;
 import org.ctc.domain.model.TrackImageKind;
 import org.ctc.domain.repository.CarImageRepository;
@@ -60,7 +64,7 @@ public class CatalogImageService {
 
     /** Stores every file as a manual image of the kind and returns the number added. */
     public int uploadCarImages(UUID carId, List<MultipartFile> uploads, CarImageKind kind, String label) {
-        var car = cars.findById(carId).orElseThrow(() -> new EntityNotFoundException("Car", carId));
+        var car = lockCar(carId);
         if (kind == null) throw new BusinessRuleException("Choose an image kind");
         var checked = check(uploads, label);
         int next = next(carImages(carId));
@@ -68,7 +72,7 @@ public class CatalogImageService {
             var image = new CarImage();
             image.setCar(car);
             image.setKind(kind);
-            fill(image, upload, store("car-images", carId, upload.file()), next++);
+            fill(image, upload, store("car-images", carId, upload), next++);
             carImages.save(image);
         }
         log.info("Added {} images to car {}", checked.size(), carId);
@@ -76,7 +80,7 @@ public class CatalogImageService {
     }
 
     public int uploadTrackImages(UUID trackId, List<MultipartFile> uploads, TrackImageKind kind, String label) {
-        var track = tracks.findById(trackId).orElseThrow(() -> new EntityNotFoundException("Track", trackId));
+        var track = lockTrack(trackId);
         if (kind == null) throw new BusinessRuleException("Choose an image kind");
         var checked = check(uploads, label);
         int next = next(trackImages(trackId));
@@ -84,7 +88,7 @@ public class CatalogImageService {
             var image = new TrackImage();
             image.setTrack(track);
             image.setKind(kind);
-            fill(image, upload, store("track-images", trackId, upload.file()), next++);
+            fill(image, upload, store("track-images", trackId, upload), next++);
             trackImages.save(image);
         }
         log.info("Added {} images to track {}", checked.size(), trackId);
@@ -97,7 +101,7 @@ public class CatalogImageService {
      */
     public Gt7Applied applyGt7CarImages(UUID carId, List<Gt7Shot> shots) {
         shots.forEach(shot -> files.deleteOnRollback(shot.imagePath()));
-        var car = cars.findByIdForUpdate(carId).orElseThrow(() -> new EntityNotFoundException("Car", carId));
+        var car = lockCar(carId);
         var existing = carImages(carId);
         int next = next(existing);
         var added = new ArrayList<String>();
@@ -125,6 +129,14 @@ public class CatalogImageService {
         return new Gt7Applied(List.copyOf(added), List.copyOf(replaced));
     }
 
+    /** Slot and stored path of the car's GT7 images, without loading entities. */
+    @Transactional(readOnly = true)
+    public Map<String, String> gt7Slots(UUID carId) {
+        var slots = new HashMap<String, String>();
+        carImages.findGt7Slots(carId).forEach(row -> slots.put(row.getSlot(), row.getImagePath()));
+        return slots;
+    }
+
     public void deleteCarImage(UUID carId, UUID imageId) {
         var image = carImages.findById(imageId).filter(row -> row.getCar().getId().equals(carId))
                 .orElseThrow(() -> new EntityNotFoundException("Car image", imageId));
@@ -141,10 +153,12 @@ public class CatalogImageService {
 
     /** Moves the image one place and returns its new 1-based position. */
     public int moveCarImage(UUID carId, UUID imageId, boolean up) {
+        lockCar(carId);
         return move(carImages(carId), imageId, up, "Car image");
     }
 
     public int moveTrackImage(UUID trackId, UUID imageId, boolean up) {
+        lockTrack(trackId);
         return move(trackImages(trackId), imageId, up, "Track image");
     }
 
@@ -204,7 +218,7 @@ public class CatalogImageService {
             } catch (IllegalArgumentException unreadable) {
                 throw new BusinessRuleException(name(file) + ": " + unreadable.getMessage());
             }
-            checked.add(new Checked(file, cleanLabel, size));
+            checked.add(new Checked(file, cleanLabel, size, data, format));
         }
         return checked;
     }
@@ -217,15 +231,24 @@ public class CatalogImageService {
         }
     }
 
-    private String store(String folder, UUID ownerId, MultipartFile file) {
+    /** Writes the checked bytes; uploads pass only the content checks above, never the browser's content type. */
+    private String store(String folder, UUID ownerId, Checked upload) {
         try {
-            return files.storeImage(folder, ownerId, file);
+            String path = files.storeBytes(folder, ownerId, "image" + upload.format().extension(), upload.data());
+            files.deleteOnRollback(path);
+            return path;
         } catch (IOException failure) {
             log.warn("Could not store gallery image for {}", ownerId, failure);
-            throw new BusinessRuleException(name(file) + " could not be stored; no image was added");
-        } catch (IllegalArgumentException rejected) {
-            throw new BusinessRuleException(name(file) + ": " + rejected.getMessage());
+            throw new BusinessRuleException(name(upload.file()) + " could not be stored; no image was added");
         }
+    }
+
+    private Car lockCar(UUID carId) {
+        return cars.findByIdForUpdate(carId).orElseThrow(() -> new EntityNotFoundException("Car", carId));
+    }
+
+    private Track lockTrack(UUID trackId) {
+        return tracks.findByIdForEnvironmentUpdate(trackId).orElseThrow(() -> new EntityNotFoundException("Track", trackId));
     }
 
     private static void fill(GalleryImage image, Checked upload, String storedPath, int position) {
@@ -242,18 +265,11 @@ public class CatalogImageService {
         return original == null || original.isBlank() ? "The file" : original.replaceAll("\\p{Cntrl}", "");
     }
 
-    /** Slot and stored path of the car's GT7 images, without loading entities. */
-    @Transactional(readOnly = true)
-    public java.util.Map<String, String> gt7Slots(UUID carId) {
-        var slots = new java.util.HashMap<String, String>();
-        carImages.findGt7Slots(carId).forEach(row -> slots.put(row.getSlot(), row.getImagePath()));
-        return slots;
-    }
 
     /** A downloaded GT7 car shot already stored under {@code imagePath}. */
     public record Gt7Shot(String slot, String imagePath, int width, int height) { }
 
     public record Gt7Applied(List<String> added, List<String> replaced) { }
 
-    private record Checked(MultipartFile file, String label, ImageContent.Dimensions size) { }
+    private record Checked(MultipartFile file, String label, ImageContent.Dimensions size, byte[] data, ImageContent.Format format) { }
 }

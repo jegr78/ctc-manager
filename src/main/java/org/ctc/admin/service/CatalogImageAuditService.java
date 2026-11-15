@@ -12,6 +12,7 @@ import org.ctc.domain.repository.TrackImageRepository;
 import org.ctc.domain.service.FileStorageService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.UUID;
 
 /** Reports gallery images whose stored file is missing, without deleting the rows or inventing a file. */
 @Service
@@ -33,7 +34,7 @@ public class CatalogImageAuditService {
         return findings;
     }
 
-    private static DataAuditFinding missing(String owner, java.util.UUID id, String path) {
+    private static DataAuditFinding missing(String owner, UUID id, String path) {
         return new DataAuditFinding(CATALOG_IMAGES, UNDETERMINABLE, owner, "Image " + id + " points to " + path + ", which is not stored",
                 "Upload the picture again and delete the empty entry in the car or track editor");
     }
