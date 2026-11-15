@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.stats.StatsCache;
 import org.ctc.domain.stats.StatsChoice;
 import org.ctc.domain.stats.StatsLookupException;
 import org.ctc.domain.stats.StatsPeriod;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class StatsSeasonService {
     private final SeasonRepository seasons;
     private final SeasonPhaseService phases;
+    private final StatsCache<List<StatsChoice>> choices = new StatsCache<>();
 
     public List<Season> counted() {
         return seasons.findAll().stream()
@@ -49,9 +51,9 @@ public class StatsSeasonService {
 
     public List<StatsChoice> choices(String query) {
         String needle = query == null ? "" : query.strip().toLowerCase(Locale.ROOT);
-        return counted().reversed().stream()
-                .filter(season -> season.getDisplayLabel().toLowerCase(Locale.ROOT).contains(needle))
-                .limit(25).map(season -> new StatsChoice(season.getDisplayLabel(), season.getId().toString())).toList();
+        return choices.get("seasons", () -> counted().reversed().stream()
+                        .map(season -> new StatsChoice(season.getDisplayLabel(), season.getId().toString())).toList()).stream()
+                .filter(choice -> choice.label().toLowerCase(Locale.ROOT).contains(needle)).limit(25).toList();
     }
 
     private static boolean matches(Season season, String option) {

@@ -27,14 +27,15 @@ class StatsInteractionHandlerTest {
     final PickGatewayResponse.Continuation continuation = mock(PickGatewayResponse.Continuation.class);
     final DriverStatsService drivers = mock(DriverStatsService.class);
     final StatsSeasonService seasons = mock(StatsSeasonService.class);
-    final StatsInteractionHandler handler = new StatsInteractionHandler(drivers, seasons);
+    final java.util.concurrent.atomic.AtomicLong nanos = new java.util.concurrent.atomic.AtomicLong();
+    final StatsInteractionHandler handler = new StatsInteractionHandler(drivers, seasons, nanos::get);
 
     @Test
     void givenDriverCommand_whenFiguresExist_thenAnswerWithAPrivateEscapedEmbed() {
         // given
         when(response.deferPrivate()).thenReturn(CompletableFuture.completedFuture(continuation));
         var season = new Season("CTC *Spring*", 2026, 1);
-        when(drivers.stats("Test_driver", StatsScope.SEASON, "s1")).thenReturn(new DriverStats(UUID.randomUUID(), "Test_*driver*", "Test", 
+        when(drivers.stats("Test_driver", StatsScope.SEASON, "s1")).thenReturn(new DriverStats(UUID.randomUUID(), "Test_*driver*", "Test",
                 new StatsPeriod(season, List.of(season), false), 4, 62, 412, 12, 3, 5, 2, 1, 1, 3.44, 1, 1, 1, List.of("Test @everyone"), 0));
         // when
         handler.onInteraction(event(PickGatewayInteraction.Kind.COMMAND, "driver", null,
@@ -72,6 +73,46 @@ class StatsInteractionHandlerTest {
         handler.onInteraction(event(PickGatewayInteraction.Kind.COMMAND, "driver", null, Map.of("name", List.of("Test"))), reply());
         // then
         verify(continuation).replyPrivate("No driver found");
+    }
+
+    @Test
+    void givenUnexpectedFailure_whenAnswering_thenReplyWithTheStatsFailureText() {
+        // given
+        when(response.deferPrivate()).thenReturn(CompletableFuture.completedFuture(continuation));
+        when(drivers.stats(any(), any(StatsScope.class), any())).thenThrow(new IllegalStateException("Test database failure"));
+        // when
+        handler.onInteraction(event(PickGatewayInteraction.Kind.COMMAND, "driver", null, Map.of("name", List.of("Test"))), reply());
+        // then
+        verify(continuation).replyPrivate(StatsInteractionHandler.FAILED);
+    }
+
+    @Test
+    void givenRunningAnswer_whenAnotherArrives_thenSayBusyUntilTheClaimExpires() {
+        // given
+        when(response.deferPrivate()).thenReturn(new CompletableFuture<>());
+        var command = event(PickGatewayInteraction.Kind.COMMAND, "driver", null, Map.of("name", List.of("Test")));
+        handler.onInteraction(command, reply());
+        // when
+        var busy = mock(PickGatewayResponse.class);
+        handler.onInteraction(command, new PickGatewayReply(busy, clock, PickGatewayReplyTest.NOW, new AtomicLong()::get, Runnable::run));
+        nanos.addAndGet(30_000_000_000L);
+        handler.onInteraction(command, reply());
+        // then
+        verify(busy).replyPrivate(StatsInteractionHandler.BUSY);
+        verify(response, times(2)).deferPrivate();
+    }
+
+    @Test
+    void givenFinishedAnswer_whenAnotherArrives_thenComputeItAgain() {
+        // given
+        when(response.deferPrivate()).thenReturn(CompletableFuture.completedFuture(continuation));
+        when(drivers.stats(any(), any(StatsScope.class), any())).thenThrow(new StatsLookupException("No driver found"));
+        var command = event(PickGatewayInteraction.Kind.COMMAND, "driver", null, Map.of("name", List.of("Test")));
+        // when
+        handler.onInteraction(command, reply());
+        handler.onInteraction(command, reply());
+        // then
+        verify(continuation, times(2)).replyPrivate("No driver found");
     }
 
     @Test

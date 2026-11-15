@@ -4,6 +4,6 @@ package org.ctc.domain.stats;
 public record StatsChoice(String label, String value) {
     public StatsChoice {
         label = label.replaceAll("\\p{Cntrl}", " ").strip();
-        if (label.length() > 100) label = label.substring(0, 97) + "...";
+        if (label.length() > 100) label = label.substring(0, Character.isHighSurrogate(label.charAt(96)) ? 96 : 97) + "...";
     }
 }

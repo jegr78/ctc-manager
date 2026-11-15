@@ -52,40 +52,55 @@ class DriverStatsServiceIT {
     @Autowired PhaseTeamRepository phaseTeams;
     @Autowired PlayoffService playoffService;
     @Autowired PlayoffSeedingService seeding;
+    @Autowired org.ctc.domain.repository.PsnAliasRepository aliases;
     final List<UUID> driverIds = new ArrayList<>();
     String suffix;
     TestHelper.SeasonFixture fixture;
     UUID playoff;
+    org.ctc.domain.model.Season later;
+    org.ctc.domain.model.Team subTeam;
 
     @BeforeEach
     void setUp() {
         // given
         suffix = UUID.randomUUID().toString().substring(0, 8);
         tx.executeWithoutResult(status -> {
-            fixture = helper.createFullSeasonFixture("TSTS" + suffix);
+            fixture = helper.createFullSeasonFixture("T-STS" + suffix);
             var target = driver("TSD" + suffix, "Test stats target " + suffix);
             var rival = driver("TSX" + suffix, "Test stats rival " + suffix);
             driver("TSZ" + suffix, "Test stats idle " + suffix);
-            driver("TST1" + suffix, "Test stats twin " + suffix);
-            driver("TST2" + suffix, "Test stats twin " + suffix);
+            var twinOne = driver("TST1" + suffix, "Test stats twin " + suffix);
+            var twinTwo = driver("TST2" + suffix, "Test stats twin " + suffix);
             helper.createSeasonDriver(fixture.season(), target, fixture.homeTeam());
             helper.createSeasonDriver(fixture.season(), rival, fixture.awayTeam());
             var first = fixture.race();
             lineups.save(new RaceLineup(first, target, fixture.homeTeam()));
             result(first, rival, 1, 1, false, 0, true);
             result(first, target, 2, 2, true, 20, false);
-            result(helper.createRace(fixture.matchday(), fixture.match()), target, 3, 3, false, 14, false);
-            var walkoverDay = helper.createMatchday(fixture.season(), "TSTS" + suffix + " MD2", 2);
+            var second = helper.createRace(fixture.matchday(), fixture.match());
+            result(second, target, 3, 3, false, 14, false);
+            result(second, twinOne, 4, 4, false, 12, false);
+            result(second, twinTwo, 5, 5, false, 10, false);
+            var walkoverDay = helper.createMatchday(fixture.season(), "T-STS" + suffix + " MD2", 2);
             var walkover = helper.createMatch(walkoverDay, fixture.homeTeam(), fixture.awayTeam());
             walkover.setWalkoverTeam(fixture.awayTeam());
             matches.save(walkover);
             var forfeited = helper.createRace(walkoverDay, walkover);
             result(forfeited, target, 1, 1, true, 25, false);
             result(forfeited, rival, 2, 2, false, 17, false);
-            var guestDay = helper.createMatchday(fixture.season(), "TSTS" + suffix + " MD3", 3);
+            var guestDay = helper.createMatchday(fixture.season(), "T-STS" + suffix + " MD3", 3);
             var guestRace = helper.createRace(guestDay, helper.createMatch(guestDay, fixture.awayTeam(), fixture.homeTeam()));
             lineups.save(new RaceLineup(guestRace, target, fixture.awayTeam(), true));
             result(guestRace, target, 2, 1, false, 17, false);
+            aliases.save(new org.ctc.domain.model.PsnAlias(target, "TSA" + suffix));
+            var walkoverOnly = driver("TSW" + suffix, "Test stats walkover " + suffix);
+            result(forfeited, walkoverOnly, 3, 3, false, 14, false);
+            later = helper.createSeason("T-STS" + suffix + "_Later", 2027, 1);
+            subTeam = helper.createSubTeam("T-STS" + suffix + " Away B", "T-STS" + suffix + "_AWB", fixture.awayTeam());
+            var laterDay = helper.createMatchday(later, "T-STS" + suffix + " L1", 1);
+            var laterRace = helper.createRace(laterDay, helper.createMatch(laterDay, subTeam, fixture.homeTeam()));
+            lineups.save(new RaceLineup(laterRace, target, subTeam));
+            result(laterRace, target, 4, 4, false, 10, false);
         });
         playoff = playoffService.createPlayoff(fixture.season().getId(), "Test stats playoff", 4).getId();
         UUID opening = tx.execute(status -> playoffs.findById(playoff).orElseThrow().getRounds().stream()
@@ -114,8 +129,12 @@ class DriverStatsServiceIT {
             season.getPhases().forEach(phase -> phaseTeams.deleteAll(phaseTeams.findByPhaseId(phase.getId())));
             phaseTeams.flush();
             helper.deleteSeasonCascade(season);
+            helper.deleteSeasonCascade(seasons.findById(later.getId()).orElseThrow());
             seasons.flush();
+            driverIds.forEach(id -> aliases.deleteAll(aliases.findByDriverId(id)));
             drivers.deleteAllById(driverIds);
+            teams.deleteById(subTeam.getId());
+            teams.flush();
             teams.deleteAllById(List.of(fixture.homeTeam().getId(), fixture.awayTeam().getId()));
         });
     }
@@ -136,7 +155,7 @@ class DriverStatsServiceIT {
         assertThat(stats.guestRaces()).isEqualTo(1);
         assertThat(stats.disqualifications()).isZero();
         assertThat(stats.rank()).isEqualTo(1);
-        assertThat(stats.ranked()).isEqualTo(2);
+        assertThat(stats.ranked()).isEqualTo(4);
         assertThat(stats.teams()).as("the latest regular lineup names the season team").containsExactly(fixture.homeTeam().getName());
     }
 
@@ -152,7 +171,7 @@ class DriverStatsServiceIT {
         assertThat(stats.disqualifications()).isEqualTo(1);
         assertThat(stats.bestPosition()).isZero();
         assertThat(stats.averagePosition()).as("the average position ignores DSQ results").isNull();
-        assertThat(stats.rank()).isEqualTo(2);
+        assertThat(stats.rank()).isEqualTo(4);
     }
 
     @Test
@@ -161,8 +180,25 @@ class DriverStatsServiceIT {
         assertThatThrownBy(() -> service.stats("TSNONE" + suffix, period())).isInstanceOf(StatsLookupException.class).hasMessage("No driver found");
         assertThatThrownBy(() -> service.stats("test stats twin " + suffix, period())).isInstanceOf(StatsLookupException.class)
                 .hasMessage("Several drivers match, pick one from the list");
-        assertThatThrownBy(() -> service.stats("TSZ" + suffix, period())).isInstanceOf(StatsLookupException.class)
-                .hasMessage("No results for TSZ" + suffix + " in " + fixture.season().getDisplayLabel());
+        assertThatThrownBy(() -> service.stats("TSZ" + suffix, period())).as("a driver without counted results is not public")
+                .isInstanceOf(StatsLookupException.class).hasMessage("No driver found");
+        assertThatThrownBy(() -> service.stats("TSX" + suffix, laterPeriod())).isInstanceOf(StatsLookupException.class)
+                .hasMessage("No results for TSX" + suffix + " in " + later.getDisplayLabel());
+    }
+
+    @Test
+    void givenTwoSeasonsWithSubteam_whenReadingAlltimeStats_thenRollUpTeamsAndCountSeasons() {
+        // when
+        var stats = service.stats("TSA" + suffix, new StatsPeriod(null, List.of(period().season(), laterPeriod().season()), false));
+        // then
+        assertThat(stats.psnId()).as("an alias resolves to its driver").isEqualTo("TSD" + suffix);
+        assertThat(stats.races()).isEqualTo(5);
+        assertThat(stats.points()).isEqualTo(81);
+        assertThat(stats.seasons()).isEqualTo(2);
+        assertThat(stats.rank()).isEqualTo(1);
+        assertThat(stats.teams()).as("alltime names the parent of a subteam in season order")
+                .containsExactly(fixture.homeTeam().getName(), fixture.awayTeam().getName());
+        assertThat(stats.moreTeams()).isZero();
     }
 
     @Test
@@ -176,7 +212,12 @@ class DriverStatsServiceIT {
         // when
         var found = tx.execute(status -> drivers.findWithResultsInSeasons(List.of(fixture.season().getId())).stream().map(Driver::getPsnId).toList());
         // then
-        assertThat(found).containsExactlyInAnyOrder("TSD" + suffix, "TSX" + suffix);
+        assertThat(found).as("drivers whose only results are walkovers are not listed").containsExactlyInAnyOrder("TSD" + suffix, "TSX" + suffix, "TST1" + suffix, "TST2" + suffix);
+    }
+
+    private StatsPeriod laterPeriod() {
+        var season = seasons.findById(later.getId()).orElseThrow();
+        return new StatsPeriod(season, List.of(season), false);
     }
 
     private StatsPeriod period() {
