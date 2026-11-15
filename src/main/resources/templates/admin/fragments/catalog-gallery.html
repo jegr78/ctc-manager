@@ -35,6 +35,10 @@
             </div>
         </li>
     </ol>
+    <form th:if="${galleryGt7 == true}" th:action="@{|${galleryBasePath}/images/gt7|}" method="post" class="gallery-gt7 mt-xs">
+        <button type="submit" class="btn btn-secondary btn-sm" aria-describedby="gallery-gt7-hint">Load GT7 images</button>
+        <small class="form-hint" id="gallery-gt7-hint">Loads every official 2K car shot. GT7 images of the same slot are replaced; your own uploads stay.</small>
+    </form>
     <form th:action="@{|${galleryBasePath}/images|}" method="post" enctype="multipart/form-data" class="gallery-upload mt-xs">
         <fieldset>
             <legend>Add images</legend>

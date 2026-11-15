@@ -336,6 +336,18 @@ class FileStorageServiceTest {
 	}
 
 	@Test
+	void givenStoredBytes_whenComparingContent_thenMatchOnlyTheSameBytesInsideTheUploadDir() throws IOException {
+		// given
+		String url = fileStorageService.storeBytes("car-images", UUID.randomUUID(), "gt7_2_01.jpg", new byte[] {1, 2, 3});
+		// when / then
+		assertThat(url).endsWith("_gt7_2_01.jpg");
+		assertThat(fileStorageService.hasContent(url, new byte[] {1, 2, 3})).isTrue();
+		assertThat(fileStorageService.hasContent(url, new byte[] {1, 2})).isFalse();
+		assertThat(fileStorageService.hasContent("/uploads/car-images/missing.jpg", new byte[] {1})).isFalse();
+		assertThat(fileStorageService.hasContent("/uploads/../outside.jpg", new byte[] {1})).isFalse();
+	}
+
+	@Test
 	void givenPathTraversalFilename_whenStore_thenThrowsIllegalArgument() {
 		// given
 		var file = new MockMultipartFile("file", "../../../etc/passwd.png", "image/png", new byte[]{1});
