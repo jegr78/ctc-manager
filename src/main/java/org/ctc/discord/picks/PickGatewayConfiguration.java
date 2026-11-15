@@ -40,7 +40,7 @@ public class PickGatewayConfiguration {
                 case "stats" -> statistics.onInteraction(event, reply);
                 default -> picks.onInteraction(event, reply);
             }
-        }, imports, clock, epoch, command -> "stats".equals(command) ? stats.isEnabled() : settings.isEnabled());
+        }, imports, clock, epoch, command -> "stats".equals(command) ? stats.isEnabled() : settings.isEnabled() || !stats.isEnabled());
     }
 
     @Bean

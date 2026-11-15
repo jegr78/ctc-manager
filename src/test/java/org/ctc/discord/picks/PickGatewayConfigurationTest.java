@@ -50,6 +50,17 @@ class PickGatewayConfigurationTest {
     }
 
     @Test
+    void givenNoStatsOnlyGateway_whenIncidentArrives_thenRouteItToTheIncidentHandler() {
+        // given
+        var routing = routing(false, false);
+        // when
+        routing.dispatch(PickGatewayInteraction.Kind.COMMAND, "incidents");
+        // then
+        org.mockito.Mockito.verify(routing.incidents).onInteraction(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        org.mockito.Mockito.verifyNoInteractions(routing.picks, routing.lineups, routing.stats);
+    }
+
+    @Test
     void givenStatsDisabled_whenAutocompleteArrives_thenAnswerWithoutChoicesAndSkipTheHandler() {
         // given
         var routing = routing(true, false);
