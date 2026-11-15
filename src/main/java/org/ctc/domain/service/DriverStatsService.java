@@ -54,11 +54,11 @@ public class DriverStatsService {
 
     public DriverStats stats(String nameOption, StatsPeriod period) {
         var known = new LinkedHashSet<>(ids(seasons.counted()));
-        known.addAll(ids(period.seasons()));
+        known.addAll(period.seasonIds());
         var driver = resolve(nameOption, known);
-        var ranking = period.alltime() ? rankings.calculateAlltimeRanking(ids(period.seasons()))
-                : rankings.aggregateAcrossPhases(phases.findBySeasonIdOrderBySortIndex(period.season().getId()).stream().map(SeasonPhase::getId).toList(),
-                        period.season().getId());
+        var ranking = period.alltime() ? rankings.calculateAlltimeRanking(period.seasonIds())
+                : rankings.aggregateAcrossPhases(phases.findBySeasonIdOrderBySortIndex(period.season().id()).stream().map(SeasonPhase::getId).toList(),
+                        period.season().id());
         for (int index = 0; index < ranking.size(); index++) {
             var entry = ranking.get(index);
             if (entry.getDriver().getId().equals(driver.getId())) {
@@ -78,14 +78,14 @@ public class DriverStatsService {
     }
 
     private List<Candidate> candidates(String seasonOption) {
-        List<Season> scoped;
+        List<UUID> scoped;
         try {
-            scoped = seasonOption != null ? seasons.period(StatsScope.SEASON, seasonOption).seasons() : seasons.counted();
+            scoped = seasonOption != null ? seasons.period(StatsScope.SEASON, seasonOption).seasonIds() : ids(seasons.counted());
         } catch (StatsLookupException unknownSeason) {
-            scoped = seasons.counted();
+            scoped = ids(seasons.counted());
         }
         if (scoped.isEmpty()) return List.of();
-        return drivers.findWithResultsInSeasons(ids(scoped)).stream()
+        return drivers.findWithResultsInSeasons(scoped).stream()
                 .sorted(Comparator.comparing(Driver::getPsnId, String.CASE_INSENSITIVE_ORDER).thenComparing(Driver::getId))
                 .map(driver -> new Candidate(driver.getId(), label(driver), names(driver).stream().map(name -> name.toLowerCase(Locale.ROOT)).toList()))
                 .toList();
@@ -139,8 +139,8 @@ public class DriverStatsService {
     private List<String> teams(Driver driver, StatsPeriod period, Set<UUID> raced, java.util.Map<UUID, List<RaceLineup>> seasonLineups) {
         var names = new ArrayList<String>();
         for (var season : period.seasons()) {
-            if (!raced.contains(season.getId())) continue;
-            var team = seasonTeam(driver, season, seasonLineups.getOrDefault(season.getId(), List.of()));
+            if (!raced.contains(season.id())) continue;
+            var team = seasonTeam(driver, season.id(), seasonLineups.getOrDefault(season.id(), List.of()));
             if (team != null && period.alltime()) team = team.getParentOrSelf();
             if (team != null && (names.isEmpty() || !names.getLast().equals(team.getName()))) names.add(team.getName());
         }
@@ -148,7 +148,7 @@ public class DriverStatsService {
     }
 
     /** The team of the driver's latest non-guest lineup in the season, else the season roster, else the latest guest lineup. */
-    private Team seasonTeam(Driver driver, Season season, List<RaceLineup> lineupRows) {
+    private Team seasonTeam(Driver driver, UUID seasonId, List<RaceLineup> lineupRows) {
         var rows = lineupRows.stream()
                 .sorted(Comparator.comparingInt((RaceLineup row) -> row.getRace().getMatchday().getPhase().getSortIndex())
                         .thenComparingInt(row -> row.getRace().getMatchday().getSortIndex())
@@ -156,7 +156,7 @@ public class DriverStatsService {
                 .toList();
         var regular = rows.stream().filter(row -> !row.isGuest()).reduce((first, second) -> second);
         if (regular.isPresent()) return regular.get().getTeam();
-        var roster = seasonDrivers.findBySeasonIdAndDriverId(season.getId(), driver.getId());
+        var roster = seasonDrivers.findBySeasonIdAndDriverId(seasonId, driver.getId());
         if (roster.isPresent()) return roster.get().getTeam();
         return rows.isEmpty() ? null : rows.getLast().getTeam();
     }

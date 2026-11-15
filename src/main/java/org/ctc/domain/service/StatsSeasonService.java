@@ -36,15 +36,15 @@ public class StatsSeasonService {
     public StatsPeriod period(StatsScope scope, String seasonOption) {
         var counted = counted();
         return switch (scope) {
-            case ALLTIME -> new StatsPeriod(null, counted, false);
+            case ALLTIME -> StatsPeriod.of(null, counted, false);
             case CURRENT -> counted.stream().filter(Season::isActive).findFirst()
-                    .map(season -> new StatsPeriod(season, List.of(season), false))
-                    .orElseGet(() -> new StatsPeriod(null, counted, true));
+                    .map(season -> StatsPeriod.of(season, List.of(season), false))
+                    .orElseGet(() -> StatsPeriod.of(null, counted, true));
             case SEASON -> {
                 if (seasonOption == null) throw new StatsLookupException("Choose a season for the Season scope");
                 var season = counted.stream().filter(row -> matches(row, seasonOption)).toList();
                 if (season.size() != 1) throw new StatsLookupException("No season found");
-                yield new StatsPeriod(season.getFirst(), season, false);
+                yield StatsPeriod.of(season.getFirst(), season, false);
             }
         };
     }

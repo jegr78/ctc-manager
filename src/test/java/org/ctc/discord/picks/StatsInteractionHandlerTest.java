@@ -36,7 +36,7 @@ class StatsInteractionHandlerTest {
         when(response.deferPrivate()).thenReturn(CompletableFuture.completedFuture(continuation));
         var season = new Season("CTC *Spring*", 2026, 1);
         when(drivers.stats("Test_driver", StatsScope.SEASON, "s1")).thenReturn(new DriverStats(UUID.randomUUID(), "Test_*driver*", "Test",
-                new StatsPeriod(season, List.of(season), false), 4, 62, 412, 12, 3, 5, 2, 1, 1, 3.44, 1, 1, 1, List.of("Test @everyone"), 0));
+                StatsPeriod.of(season, List.of(season), false), 4, 62, 412, 12, 3, 5, 2, 1, 1, 3.44, 1, 1, 1, List.of("Test @everyone"), 0));
         // when
         handler.onInteraction(event(PickGatewayInteraction.Kind.COMMAND, "driver", null,
                 Map.of("name", List.of("Test_driver"), "scope", List.of("season"), "season", List.of("s1"))), reply());
@@ -55,7 +55,7 @@ class StatsInteractionHandlerTest {
     @Test
     void givenNoActiveSeason_whenRenderingAlltimeFallback_thenSayItAndListTheLastTeams() {
         // when
-        var embed = StatsEmbeds.driver(new DriverStats(UUID.randomUUID(), "Test", "Test", new StatsPeriod(null, List.of(), true),
+        var embed = StatsEmbeds.driver(new DriverStats(UUID.randomUUID(), "Test", "Test", StatsPeriod.of(null, List.of(), true),
                 0, 0, 0, 1, 0, 0, 0, 0, 0, null, 0, 1, 2, List.of("Test A", "Test B", "Test C"), 2));
         // then
         assertThat(embed.description()).isEqualTo("Alltime · no season is active");

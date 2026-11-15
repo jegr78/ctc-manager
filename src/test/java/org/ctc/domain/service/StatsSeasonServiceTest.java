@@ -45,7 +45,7 @@ class StatsSeasonServiceTest {
         // then
         assertThat(period.alltime()).isTrue();
         assertThat(period.fallback()).as("the answer says that no season is active").isTrue();
-        assertThat(period.seasons()).containsExactly(older, newer);
+        assertThat(period.seasonIds()).containsExactly(older.getId(), newer.getId());
     }
 
     @Test
@@ -56,7 +56,7 @@ class StatsSeasonServiceTest {
         // when
         var period = service.period(StatsScope.CURRENT, null);
         // then
-        assertThat(period.season()).isEqualTo(newer);
+        assertThat(period.season().id()).isEqualTo(newer.getId());
         assertThat(period.fallback()).isFalse();
     }
 
@@ -65,8 +65,8 @@ class StatsSeasonServiceTest {
         // given
         when(repository.findAll()).thenReturn(List.of(older, newer, test));
         // when / then
-        assertThat(service.period(StatsScope.SEASON, newer.getId().toString()).season()).isEqualTo(newer);
-        assertThat(service.period(StatsScope.SEASON, " 2025 | #2 | ctc spring ").season()).isEqualTo(older);
+        assertThat(service.period(StatsScope.SEASON, newer.getId().toString()).season().id()).isEqualTo(newer.getId());
+        assertThat(service.period(StatsScope.SEASON, " 2025 | #2 | ctc spring ").season().label()).isEqualTo("2025 | #2 | CTC Spring");
         assertThatThrownBy(() -> service.period(StatsScope.SEASON, test.getId().toString()))
                 .isInstanceOf(StatsLookupException.class).hasMessage("No season found");
         assertThatThrownBy(() -> service.period(StatsScope.SEASON, null))

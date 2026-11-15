@@ -189,7 +189,7 @@ class DriverStatsServiceIT {
     @Test
     void givenTwoSeasonsWithSubteam_whenReadingAlltimeStats_thenRollUpTeamsAndCountSeasons() {
         // when
-        var stats = service.stats("TSA" + suffix, new StatsPeriod(null, List.of(period().season(), laterPeriod().season()), false));
+        var stats = service.stats("TSA" + suffix, StatsPeriod.of(null, List.of(season(fixture.season().getId()), season(later.getId())), false));
         // then
         assertThat(stats.psnId()).as("an alias resolves to its driver").isEqualTo("TSD" + suffix);
         assertThat(stats.races()).isEqualTo(5);
@@ -216,14 +216,16 @@ class DriverStatsServiceIT {
     }
 
     private StatsPeriod laterPeriod() {
-        var season = seasons.findById(later.getId()).orElseThrow();
-        return new StatsPeriod(season, List.of(season), false);
+        var season = season(later.getId());
+        return StatsPeriod.of(season, List.of(season), false);
     }
 
     private StatsPeriod period() {
-        var season = seasons.findById(fixture.season().getId()).orElseThrow();
-        return new StatsPeriod(season, List.of(season), false);
+        var season = season(fixture.season().getId());
+        return StatsPeriod.of(season, List.of(season), false);
     }
+
+    private org.ctc.domain.model.Season season(UUID id) { return seasons.findById(id).orElseThrow(); }
 
     private Driver driver(String psn, String nickname) {
         var driver = helper.createDriver(psn, nickname);
