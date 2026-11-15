@@ -127,7 +127,7 @@ public class TeamStatsService {
 
     private TeamStats alltime(Team team, StatsPeriod period) {
         var counted = seasonRows.findAllById(period.seasonIds()).stream()
-                .sorted(Comparator.comparingInt(Season::getYear).thenComparingInt(Season::getNumber).thenComparing(Season::getId)).toList();
+                .sorted(Season.CHRONOLOGICAL).toList();
         var table = standings.calculateAlltimeStandings(counted);
         int index = indexOf(table, standing -> standing.getTeam().getId().equals(team.getId()));
         if (index < 0) throw new StatsLookupException("No results for " + team.getName() + " in any season");
