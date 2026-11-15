@@ -265,15 +265,16 @@
 
     <!-- ========== Intentional-pattern suppressions (D-11) ========== -->
 
-    <!-- FileStorageService.storeFromUrl(): SSRF hostname blocklist (validateHostname method,
-         lines 125-153) implements a blocklist via if/startsWith chains covering localhost,
-         127.x, 10.x, 192.168.x, 169.254.x, and 172.16-31.x ranges.
-         find-sec-bugs cannot recognize startsWith-chain blocklists as SSRF sanitizers
-         (only allowlist-style sanitizers are recognized). The defense is intentional.
-         See FileStorageService.java:87-103 and :125-153 for the full defense implementation. -->
+    <!-- ImageDownloadClient.download()/fetch(): the request URI passes validate() first, which allows only HTTPS to
+         www.gran-turismo.com without user info and rejects hosts resolving to loopback, private, link-local,
+         multicast or unspecified addresses; redirects are not followed. find-sec-bugs does not recognise this
+         allowlist as an SSRF sanitizer. See ImageDownloadClient.java validate() and ImageDownloadClientTest. -->
     <Match>
-        <Class name="org.ctc.domain.service.FileStorageService"/>
-        <Method name="storeFromUrl"/>
+        <Class name="org.ctc.integration.ImageDownloadClient"/>
+        <Or>
+            <Method name="download"/>
+            <Method name="fetch"/>
+        </Or>
         <Bug pattern="SSRF_SPRING,SSRF,URLCONNECTION_SSRF_FD"/>
     </Match>
 
