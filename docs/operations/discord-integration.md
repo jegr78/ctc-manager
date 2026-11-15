@@ -788,6 +788,19 @@ before the next website snapshot is published. One answer is computed at a time;
 meanwhile answers that stats are busy, so the private commands keep their workers. Autocomplete
 lists are cached for one minute.
 
+`/stats team name:<team> [scope] [season]` matches team names and short names. A season answer is
+the team's row of the website's regular-season standings, with its group and playoff result; an
+alltime answer is its row of the alltime standings with subteams rolled up to the parent, plus
+seasons, best regular-season result, playoff appearances and titles. Both answers list the top
+three drivers. Every answer carries **Share in channel**: the button recomputes the figures and
+posts them visibly with "Shared by <display name>", without mentions. It answers "No longer
+available" when the driver or team was removed.
+
+`CTC_SITE_PUBLIC_BASE_URL` maps to `ctc.site.public-base-url`. The `prod` profile defaults it to
+the GitHub Pages URL. When set, embed titles link to the season profile page, or for alltime to
+the newest season profile, using the slugs stored by the last site generation. Without it the
+embeds carry no link.
+
 Use the explicit **Register /picks for this guild**, **Register /lineup for this guild** and
 **Register /stats for this guild** actions.
 Each upserts only its own guild command. Startup and backup restore never register commands.
