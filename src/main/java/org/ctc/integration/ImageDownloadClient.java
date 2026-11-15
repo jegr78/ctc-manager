@@ -19,23 +19,31 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 /**
- * Downloads images from the GT7 website only: one allowed host over HTTPS, resolved addresses outside private ranges,
- * no redirects, bounded time and size, and file content that matches the expected image type.
+ * Downloads images from two fixed sources, each with its own host allowlist: the GT7 website for catalog images and
+ * GT-Engine for track layout maps. Both require HTTPS, resolved addresses outside private ranges, no redirects, bounded
+ * time and size, and file content that matches the expected image type.
  */
 @Slf4j
 @Component
 public class ImageDownloadClient {
     public static final long MAX_BYTES = 15L * 1024 * 1024;
     static final Policy GT7 = new Policy("https", Set.of("www.gran-turismo.com"), 443, ImageDownloadClient::publicAddress, InetAddress::getAllByName);
+    static final Policy GT_ENGINE = new Policy("https", Set.of("gt-engine.com"), 443, ImageDownloadClient::publicAddress, InetAddress::getAllByName);
     private final Policy policy;
+    private final Policy trackMapPolicy;
     private final RestClient client;
 
     public ImageDownloadClient() {
-        this(GT7, Duration.ofSeconds(5), Duration.ofSeconds(20));
+        this(GT7, GT_ENGINE, Duration.ofSeconds(5), Duration.ofSeconds(20));
     }
 
     ImageDownloadClient(Policy policy, Duration connectTimeout, Duration readTimeout) {
+        this(policy, policy, connectTimeout, readTimeout);
+    }
+
+    ImageDownloadClient(Policy policy, Policy trackMapPolicy, Duration connectTimeout, Duration readTimeout) {
         this.policy = policy;
+        this.trackMapPolicy = trackMapPolicy;
         var requestFactory = new JdkClientHttpRequestFactory(HttpClient.newBuilder()
                 .followRedirects(HttpClient.Redirect.NEVER).connectTimeout(connectTimeout).build());
         requestFactory.setReadTimeout(readTimeout);
@@ -52,7 +60,16 @@ public class ImageDownloadClient {
 
     // CodeQL FP: java/ssrf — host allowlist plus resolved-address check in validate() precede the request; see docs/security/sast-acceptance.md
     public byte[] download(String url, ImageContent.Format expected) throws IOException {
-        URI uri = validate(url);
+        return download(validate(url, policy), expected);
+    }
+
+    /** Downloads a GT-Engine track layout map, which must be a PNG. */
+    // CodeQL FP: java/ssrf — host allowlist plus resolved-address check in validate() precede the request; see docs/security/sast-acceptance.md
+    public byte[] downloadTrackMap(String url) throws IOException {
+        return download(validate(url, trackMapPolicy), ImageContent.Format.PNG);
+    }
+
+    private byte[] download(URI uri, ImageContent.Format expected) throws IOException {
         byte[] data;
         try {
             data = fetch(uri);
@@ -75,7 +92,7 @@ public class ImageDownloadClient {
         }, true);
     }
 
-    private URI validate(String url) throws UnknownHostException {
+    private static URI validate(String url, Policy policy) throws UnknownHostException {
         URI uri;
         try {
             uri = URI.create(url == null ? "" : url.strip());

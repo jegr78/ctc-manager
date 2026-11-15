@@ -14,10 +14,12 @@ import java.time.LocalDateTime;
 
 /**
  * Bounded prewipe checks for car and track gallery images: schema 24 or later, existing owners, known kinds and
- * sources, a GT7 source key exactly for GT7 images, one image per GT7 slot and owner, and the file in the archive.
+ * sources, a source key exactly for downloaded images, one image per GT7 slot and owner, at most one GT-Engine map per
+ * track from schema 25 on, and the file in the archive.
  */
 public final class CatalogImageBackupValidator {
     public static final int IMAGE_VERSION = 24;
+    public static final int GT_ENGINE_VERSION = 25;
     private static final Set<String> TABLES = Set.of("cars", "tracks", "car_images", "track_images");
     private static final int BUDGET = 100_000;
     private final int version;
@@ -63,12 +65,18 @@ public final class CatalogImageBackupValidator {
         enumValue(row, "kind", kinds);
         var source = enumValue(row, "source", ImageSource.class);
         String key = text(row, "sourceKey");
-        boolean paired = source == ImageSource.GT7 ? key != null && !key.isBlank() : key == null;
+        if (source == ImageSource.GTENGINE && (version < GT_ENGINE_VERSION || !"track".equals(owner))) {
+            throw new IllegalArgumentException("GT-Engine maps belong to tracks and require backup schema " + GT_ENGINE_VERSION);
+        }
+        boolean paired = source.isDownloaded() ? key != null && !key.isBlank() : key == null;
         if (!paired) {
-            throw new IllegalArgumentException("A GT7 image needs its source key and a manual image must not have one");
+            throw new IllegalArgumentException("A downloaded image needs its source key and a manual image must not have one");
         }
         if (source == ImageSource.GT7 && !slots.add(owner + ':' + ownerId + ':' + key)) {
             throw new IllegalArgumentException("A " + owner + " has two GT7 images for slot " + key);
+        }
+        if (source == ImageSource.GTENGINE && !slots.add(owner + ':' + ownerId + ":GTENGINE")) {
+            throw new IllegalArgumentException("A track has two GT-Engine maps");
         }
         String label = text(row, "label");
         if (label != null && label.length() > 100) throw new IllegalArgumentException("An image label exceeds 100 characters");

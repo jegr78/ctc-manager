@@ -27,10 +27,12 @@ public class TrackController {
 	private final TrackService trackService;
     private final TrackEnvironmentService environments;
     private final org.ctc.domain.service.CatalogImageService gallery;
+    private final org.ctc.gt7sync.GtEngineTrackMapService trackMaps;
 
 	@GetMapping
 	public String list(Model model) {
 		model.addAttribute("tracks", trackService.findAllSorted());
+		model.addAttribute("gtEngine", trackMaps.reference());
 		return "admin/tracks";
 	}
 
@@ -101,7 +103,9 @@ public class TrackController {
         model.addAttribute("galleryImages", gallery.trackImages(id));
         model.addAttribute("galleryKinds", TrackImageKind.values());
         model.addAttribute("galleryBasePath", "/admin/tracks/" + id);
-        model.addAttribute("galleryOwner", trackService.findById(id).getName());
+        String name = trackService.findById(id).getName();
+        model.addAttribute("galleryOwner", name);
+        model.addAttribute("galleryGtEngine", trackMaps.hasMap(name));
         model.addAttribute("galleryPrefix", "track");
     }
 

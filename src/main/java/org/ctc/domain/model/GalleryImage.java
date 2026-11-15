@@ -21,6 +21,11 @@ public interface GalleryImage {
     void setWidth(int width);
     void setHeight(int height);
 
+    /** The GT7 slot shown next to the source, or null for other sources. */
+    default String getSlot() {
+        return getSource() == ImageSource.GT7 ? getSourceKey() : null;
+    }
+
     /** Alternative text naming the owner, kind, optional label and 1-based position. */
     default String altText(String owner, int position) {
         String kind = getKindName() == null ? "image" : getKindName().toLowerCase(Locale.ROOT);

@@ -39,6 +39,8 @@ import org.springframework.web.multipart.MultipartFile;
 public class CatalogImageService {
     public static final long MAX_UPLOAD_BYTES = 10L * 1024 * 1024;
     public static final int MAX_LABEL_LENGTH = 100;
+    public static final String GT_ENGINE_KEY = "map";
+    public static final String GT_ENGINE_LABEL = "Layout map by GT-Engine (gt-engine.com)";
     private final CarRepository cars;
     private final TrackRepository tracks;
     private final CarImageRepository carImages;
@@ -127,6 +129,42 @@ public class CatalogImageService {
         }
         log.info("Applied GT7 images to car {}: added {}, replaced {}", carId, added, replaced);
         return new Gt7Applied(List.copyOf(added), List.copyOf(replaced));
+    }
+
+    /**
+     * Stores the track's GT-Engine layout map: an existing GT-Engine map gets the new file, otherwise the map is
+     * appended. Other images stay untouched; the replaced file is deleted after commit.
+     *
+     * @return true when an earlier GT-Engine map was replaced
+     */
+    public boolean applyGtEngineMap(UUID trackId, String imagePath, int width, int height) {
+        files.deleteOnRollback(imagePath);
+        var track = lockTrack(trackId);
+        var existing = trackImages(trackId);
+        var current = existing.stream().filter(image -> image.getSource() == ImageSource.GTENGINE).findFirst();
+        var image = current.orElseGet(TrackImage::new);
+        if (current.isPresent()) {
+            files.deleteAfterCommit(image.getImagePath());
+        } else {
+            image.setTrack(track);
+            image.setKind(TrackImageKind.LAYOUT);
+            image.setSource(ImageSource.GTENGINE);
+            image.setSourceKey(GT_ENGINE_KEY);
+            image.setSortIndex(next(existing));
+        }
+        image.setLabel(GT_ENGINE_LABEL);
+        image.setImagePath(imagePath);
+        image.setWidth(width);
+        image.setHeight(height);
+        trackImages.save(image);
+        log.info("{} GT-Engine map of track {}", current.isPresent() ? "Replaced" : "Added", trackId);
+        return current.isPresent();
+    }
+
+    /** Stored path of the track's GT-Engine map, if it has one. */
+    @Transactional(readOnly = true)
+    public Optional<String> gtEngineMapPath(UUID trackId) {
+        return trackImages(trackId).stream().filter(image -> image.getSource() == ImageSource.GTENGINE).map(TrackImage::getImagePath).findFirst();
     }
 
     /** Slot and stored path of the car's GT7 images, without loading entities. */

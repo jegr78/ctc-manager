@@ -17,7 +17,7 @@ class TyreArchiveValidationTest {
     @Test
     void givenNewTypedCompounds_whenExporting_thenDeclareSchema15() {
         // when / then
-        assertThat(BackupSchema.SCHEMA_VERSION).isEqualTo(24);
+        assertThat(BackupSchema.SCHEMA_VERSION).isEqualTo(25);
     }
 
     @ParameterizedTest

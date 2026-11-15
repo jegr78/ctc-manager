@@ -128,6 +128,40 @@ class ImageDownloadClientTest {
     }
 
     @Test
+    void givenProductionPolicies_whenEachSourceUsesTheOtherHost_thenRejectBeforeAnyRequest() {
+        // given
+        var production = new ImageDownloadClient();
+        // when / then
+        assertThatThrownBy(() -> production.downloadTrackMap("https://www.gran-turismo.com/a.png"))
+                .isInstanceOf(IllegalArgumentException.class).hasMessage("URL host not allowed: www.gran-turismo.com");
+        assertThatThrownBy(() -> production.download("https://gt-engine.com/gt7/tracks/images/md/monza.png", Format.PNG))
+                .isInstanceOf(IllegalArgumentException.class).hasMessage("URL host not allowed: gt-engine.com");
+        assertThatThrownBy(() -> production.downloadTrackMap("http://gt-engine.com/gt7/tracks/images/md/monza.png"))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Only HTTPS URLs allowed");
+        assertThatThrownBy(() -> production.downloadTrackMap("https://www.gt-engine.com/gt7/tracks/images/md/monza.png"))
+                .isInstanceOf(IllegalArgumentException.class).hasMessage("URL host not allowed: www.gt-engine.com");
+        assertThat(requests).hasValue(0);
+    }
+
+    @Test
+    void givenTrackMapPolicy_whenTheMapIsNotAPng_thenRejectIt() throws IOException {
+        // when / then
+        assertThat(stub.downloadTrackMap(base + "/car.png")).isEqualTo(PNG);
+        assertThatThrownBy(() -> stub.downloadTrackMap(base + "/car.jpg"))
+                .isInstanceOf(IOException.class).hasMessage("Downloaded file is not a PNG image");
+    }
+
+    @Test
+    void givenGtEngineHostResolvingToAPrivateAddress_whenDownloadingAMap_thenRejectIt() {
+        // given
+        var rebound = new ImageDownloadClient(ImageDownloadClient.GT7, new Policy("https", Set.of("gt-engine.com"), 443, ImageDownloadClient::publicAddress,
+                host -> new InetAddress[] {InetAddress.getByName("192.168.0.4")}), Duration.ofSeconds(1), Duration.ofSeconds(1));
+        // when / then
+        assertThatThrownBy(() -> rebound.downloadTrackMap("https://gt-engine.com/gt7/tracks/images/md/monza.png"))
+                .isInstanceOf(IllegalArgumentException.class).hasMessage("URL host resolves to a blocked address: gt-engine.com");
+    }
+
+    @Test
     void givenAllowedHostResolvingToAPrivateAddress_whenDownloading_thenRejectIt() {
         // given
         var rebound = new ImageDownloadClient(new Policy("https", Set.of("www.gran-turismo.com"), 443, ImageDownloadClient::publicAddress,

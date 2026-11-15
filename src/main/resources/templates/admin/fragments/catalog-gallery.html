@@ -9,12 +9,13 @@
     <div class="sr-only" aria-live="polite" data-gallery-announcer></div>
     <div th:if="${#lists.isEmpty(galleryImages)}" class="empty-state empty-state--compact"><p>No images yet.</p></div>
     <ol th:unless="${#lists.isEmpty(galleryImages)}" class="gallery-grid" th:aria-label="${'Images of ' + galleryOwner}">
-        <li th:each="image, row : ${galleryImages}" class="gallery-item" th:id="${'image-' + image.id}">
+        <li th:each="image, row : ${galleryImages}" class="gallery-item" th:classappend="${image.kindName == 'LAYOUT'} ? 'gallery-item--layout'" th:id="${'image-' + image.id}">
             <img th:src="${image.imagePath}" loading="lazy"
                  th:alt="${image.altText(galleryOwner, row.count)}">
             <p class="gallery-meta">
                 <span th:text="${image.kindName}"></span> ·
-                <span th:text="${image.source}"></span><span th:if="${image.sourceKey != null}" th:text="${' ' + image.sourceKey}"></span> ·
+                <a th:if="${image.source.attributionUrl != null}" th:href="${image.source.attributionUrl}" class="detail-link" rel="noopener noreferrer"
+                   th:text="${image.source.displayName}"></a><span th:unless="${image.source.attributionUrl != null}" th:text="${image.source.displayName}"></span><span th:if="${image.slot != null}" th:text="${' ' + image.slot}"></span> ·
                 <span th:text="${image.width + '×' + image.height}"></span>
                 <br th:if="${image.label != null}"><span th:if="${image.label != null}" th:text="${image.label}"></span>
             </p>
@@ -39,6 +40,12 @@
     <form th:if="${galleryGt7 == true}" th:action="@{|${galleryBasePath}/images/gt7|}" method="post" class="gallery-gt7 mt-xs">
         <button type="submit" class="btn btn-secondary btn-sm" aria-describedby="gallery-gt7-hint">Load GT7 images</button>
         <small class="form-hint" id="gallery-gt7-hint">Loads every official 2K car shot. GT7 images of the same slot are replaced; your own uploads stay.</small>
+    </form>
+    <form th:if="${galleryGtEngine == true}" th:action="@{|${galleryBasePath}/images/gt-engine|}" method="post" class="gallery-gt7 mt-xs">
+        <button type="submit" class="btn btn-secondary btn-sm" aria-describedby="gallery-gtengine-hint">Load GT-Engine map</button>
+        <small class="form-hint" id="gallery-gtengine-hint">Loads the layout map of this track from
+            <a href="https://gt-engine.com/gt7/tracks/track-maps.html" class="detail-link" rel="noopener noreferrer">GT-Engine</a>.
+            A newer map replaces the previous GT-Engine map; your own uploads stay.</small>
     </form>
     <form th:action="@{|${galleryBasePath}/images|}" method="post" enctype="multipart/form-data" class="gallery-upload mt-xs">
         <fieldset>
