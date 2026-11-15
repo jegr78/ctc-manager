@@ -2,32 +2,24 @@ package org.ctc.discord.picks;
 
 import java.time.Clock;
 import java.util.function.LongSupplier;
+import java.util.function.Predicate;
+import lombok.RequiredArgsConstructor;
 import org.ctc.backup.lock.ImportLockService;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+@RequiredArgsConstructor
 public class PickGatewayDispatcher {
     private final PickGatewaySettings settings;
     private final PickGatewayInteractionHandler handler;
     private final ImportLockService imports;
     private final Clock clock;
     private final LongSupplier epoch;
-    private final java.util.function.Predicate<String> enabled;
+    private final Predicate<String> enabled;
     private volatile ThreadPoolTaskExecutor executor;
 
     public PickGatewayDispatcher(PickGatewaySettings settings, PickGatewayInteractionHandler handler, ImportLockService imports,
                                  Clock clock, LongSupplier epoch) {
         this(settings, handler, imports, clock, epoch, command -> true);
-    }
-
-    /** @param enabled whether the command an interaction belongs to is switched on */
-    public PickGatewayDispatcher(PickGatewaySettings settings, PickGatewayInteractionHandler handler, ImportLockService imports,
-                                 Clock clock, LongSupplier epoch, java.util.function.Predicate<String> enabled) {
-        this.settings = settings;
-        this.handler = handler;
-        this.imports = imports;
-        this.clock = clock;
-        this.epoch = epoch;
-        this.enabled = enabled;
     }
 
     public synchronized void start() {
