@@ -71,9 +71,20 @@ class FfmpegGraphBuilderTest {
         // then
         assertThat(args).doesNotContain("-stream_loop");
         String graph = args.get(args.indexOf("-filter_complex") + 1);
-        assertThat(graph).contains("atrim=0:11.500", "afade=t=out:st=9.500:d=2");
+        assertThat(graph).contains("atrim=0:11.500", "afade=t=out:st=9.500:d=2.000");
         assertThat(args).containsSubsequence("-c:v", "libx264", "-crf", "20", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
                 "-movflags", "+faststart");
+    }
+
+    @Test
+    void givenVideoShorterThanFadeOut_whenFinalArgs_thenFadeCoversHalfTheVideoFromZero() {
+        // when
+        var args = FfmpegGraphBuilder.finalArgs(List.of(DIR.resolve("a.mp4"), DIR.resolve("b.mp4")),
+                List.of(Duration.ofSeconds(1), Duration.ofSeconds(1)), DIR.resolve("m.mp3"), Duration.ofSeconds(60), DIR.resolve("out.mp4"));
+
+        // then
+        String graph = args.get(args.indexOf("-filter_complex") + 1);
+        assertThat(graph).contains("afade=t=out:st=0.750:d=0.750");
     }
 
     private static TrailerLayer layer(String scene, String name) {

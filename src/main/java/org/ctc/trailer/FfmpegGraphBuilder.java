@@ -68,8 +68,10 @@ public final class FfmpegGraphBuilder {
                 previous = label;
             }
         }
+        double fade = Math.min(FADE_OUT, totalSeconds / 2);
         graph.append("[").append(clips.size()).append(":a]atrim=0:").append(seconds(totalSeconds))
-                .append(",asetpts=PTS-STARTPTS,afade=t=out:st=").append(seconds(totalSeconds - FADE_OUT)).append(":d=2[a]");
+                .append(",asetpts=PTS-STARTPTS,afade=t=out:st=").append(seconds(totalSeconds - fade)).append(":d=")
+                .append(seconds(fade)).append("[a]");
         args.addAll(List.of("-filter_complex", graph.toString(), "-map", "[v]", "-map", "[a]", "-t", seconds(totalSeconds),
                 "-r", String.valueOf(FPS), "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
                 "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-y", out.toAbsolutePath().toString()));
