@@ -26,6 +26,7 @@ public class CatalogImageController {
     private final CatalogImageService gallery;
     private final Gt7CarShotService gt7Shots;
     private final GtEngineTrackMapService trackMaps;
+    private final org.ctc.domain.service.CarCutoutService cutouts;
 
     @PostMapping("/admin/cars/{id}/images")
     public String uploadCarImages(@PathVariable UUID id, @RequestParam(name = "files", required = false) List<MultipartFile> files,
@@ -42,6 +43,14 @@ public class CatalogImageController {
     @PostMapping("/admin/cars/{id}/images/gt7")
     public String loadGt7CarImages(@PathVariable UUID id, RedirectAttributes redirect) {
         return run(redirect, carEditor(id) + "#car-images", () -> gt7Shots.load(id).message());
+    }
+
+    @PostMapping("/admin/cars/{id}/images/cutout")
+    public String createCarCutout(@PathVariable UUID id, RedirectAttributes redirect) {
+        return run(redirect, carEditor(id) + "#car-images", () -> {
+            cutouts.start(id);
+            return "Creating the cutout in the background. Reload the page to see it.";
+        });
     }
 
     @PostMapping("/admin/cars/{id}/images/{imageId}/delete")

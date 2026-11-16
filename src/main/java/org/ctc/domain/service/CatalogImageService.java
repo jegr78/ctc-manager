@@ -169,6 +169,35 @@ public class CatalogImageService {
         return current.isPresent();
     }
 
+    /**
+     * Stores the car's automatic cutout: an existing one gets the new file, otherwise it is appended after the other
+     * images, so a manual cutout sorted earlier keeps priority. The replaced file is deleted after commit.
+     *
+     * @return true when an earlier automatic cutout was replaced
+     */
+    public boolean applyAutoCutout(UUID carId, String imagePath, int width, int height) {
+        files.deleteOnRollback(imagePath);
+        var car = lockCar(carId);
+        var existing = carImages(carId);
+        var current = existing.stream().filter(image -> image.getSource() == ImageSource.AUTO).findFirst();
+        var image = current.orElseGet(CarImage::new);
+        if (current.isPresent()) {
+            files.deleteAfterCommit(image.getImagePath());
+        } else {
+            image.setCar(car);
+            image.setKind(CarImageKind.CUTOUT);
+            image.setSource(ImageSource.AUTO);
+            image.setSourceKey(AUTO_CUTOUT_KEY);
+            image.setSortIndex(next(existing));
+        }
+        image.setImagePath(imagePath);
+        image.setWidth(width);
+        image.setHeight(height);
+        carImages.save(image);
+        log.info("{} automatic cutout of car {}", current.isPresent() ? "Replaced" : "Added", carId);
+        return current.isPresent();
+    }
+
     /** Stored path of the track's GT-Engine map, if it has one. */
     @Transactional(readOnly = true)
     public Optional<String> gtEngineMapPath(UUID trackId) {
