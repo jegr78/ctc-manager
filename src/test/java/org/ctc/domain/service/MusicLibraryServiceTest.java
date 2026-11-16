@@ -73,6 +73,17 @@ class MusicLibraryServiceTest {
     }
 
     @Test
+    void givenAdtsAacRenamedToMp3_whenUpload_thenRejected() {
+        // given
+        var file = mp3("aac.mp3", new byte[] {(byte) 0xFF, (byte) 0xF1, 0x50, (byte) 0x80});
+
+        // when / then
+        assertThatThrownBy(() -> service.upload(file, "Aac", "Artist", null))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Only MP3 files are accepted.");
+    }
+
+    @Test
     void givenPngRenamedToMp3_whenUpload_thenRejectedWithMessage() throws Exception {
         // given
         var file = mp3("fake.mp3", new byte[] {(byte) 0x89, 'P', 'N', 'G'});

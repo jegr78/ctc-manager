@@ -104,7 +104,7 @@ public class MusicLibraryService {
             throw new BusinessRuleException("MP3 files may be at most 20 MB.");
         }
         boolean id3 = data.length >= 3 && data[0] == 'I' && data[1] == 'D' && data[2] == '3';
-        boolean frameSync = data.length >= 2 && (data[0] & 0xFF) == 0xFF && (data[1] & 0xE0) == 0xE0;
+        boolean frameSync = data.length >= 2 && (data[0] & 0xFF) == 0xFF && (data[1] & 0xE0) == 0xE0 && (data[1] & 0x06) != 0;
         if (!id3 && !frameSync) {
             throw new BusinessRuleException("Only MP3 files are accepted.");
         }

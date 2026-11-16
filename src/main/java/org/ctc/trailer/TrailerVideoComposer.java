@@ -23,7 +23,7 @@ public class TrailerVideoComposer {
 
     private final MediaTool media;
 
-    public Path compose(List<TrailerLayer> layers, Path music, Duration musicLength, Path out, Path workDir, MediaJobContext ctx)
+    public Path compose(List<TrailerLayer> layers, Path music, Path out, Path workDir, MediaJobContext ctx)
             throws IOException {
         Files.createDirectories(workDir);
         Map<Integer, List<TrailerLayer>> scenes = new TreeMap<>();
@@ -41,7 +41,7 @@ public class TrailerVideoComposer {
         }
         ctx.checkNotAbandoned();
         ctx.progress(scenes.size() + 1, scenes.size() + 1, "Joining scenes and music");
-        media.run(FfmpegGraphBuilder.finalArgs(clips, lengths, music, musicLength, out), FINAL_TIMEOUT);
+        media.run(FfmpegGraphBuilder.finalArgs(clips, lengths, music, out), FINAL_TIMEOUT);
         return out;
     }
 }

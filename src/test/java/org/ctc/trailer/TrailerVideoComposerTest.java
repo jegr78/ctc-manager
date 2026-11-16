@@ -35,7 +35,7 @@ class TrailerVideoComposerTest {
         media.run(List.of("-f", "lavfi", "-i", "sine=d=1", "-y", music.toString()), Duration.ofSeconds(30));
 
         // when
-        Path video = composer.compose(layers, music, Duration.ofSeconds(1), dir.resolve("trailer.mp4"), dir.resolve("work"),
+        Path video = composer.compose(layers, music, dir.resolve("trailer.mp4"), dir.resolve("work"),
                 mock(MediaJobContext.class));
 
         // then

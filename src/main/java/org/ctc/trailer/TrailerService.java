@@ -6,7 +6,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.Optional;
@@ -122,11 +121,11 @@ public class TrailerService {
         Path work = Files.createTempDirectory("ctc-trailer-");
         Path staged = target.resolveSibling(".new-" + UUID.randomUUID());
         try {
+            Path musicCopy = Files.copy(music.resolveFile(song), work.resolve("music.mp3"));
             var layers = renderer.render(plan, work.resolve("layers"), ctx);
             ctx.checkNotAbandoned();
             TrailerSceneRenderer.zipLayers(layers, work.resolve(ZIP));
-            composer.compose(layers, music.resolveFile(song), Duration.ofSeconds(song.getDurationSeconds()), work.resolve(MP4),
-                    work.resolve("clips"), ctx);
+            composer.compose(layers, musicCopy, work.resolve(MP4), work.resolve("clips"), ctx);
             ctx.checkNotAbandoned();
             Files.writeString(work.resolve(TEXT), YoutubeTextBuilder.build(plan, song).asFile());
             writeMeta(work.resolve(META), song, downloadName(plan));

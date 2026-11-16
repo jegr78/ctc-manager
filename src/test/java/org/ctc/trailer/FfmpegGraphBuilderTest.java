@@ -32,7 +32,7 @@ class FfmpegGraphBuilderTest {
     void givenTwoScenes_whenFinalArgs_thenXfadeAtBoundaryMinusHalfSecond() {
         // when
         var args = FfmpegGraphBuilder.finalArgs(List.of(DIR.resolve("a.mp4"), DIR.resolve("b.mp4")),
-                List.of(Duration.ofSeconds(4), Duration.ofSeconds(8)), DIR.resolve("m.mp3"), Duration.ofSeconds(60), DIR.resolve("out.mp4"));
+                List.of(Duration.ofSeconds(4), Duration.ofSeconds(8)), DIR.resolve("m.mp3"), DIR.resolve("out.mp4"));
 
         // then
         String graph = args.get(args.indexOf("-filter_complex") + 1);
@@ -44,7 +44,7 @@ class FfmpegGraphBuilderTest {
     void givenThreeScenes_whenFinalArgs_thenOffsetsAccumulate() {
         // when
         var args = FfmpegGraphBuilder.finalArgs(List.of(DIR.resolve("a.mp4"), DIR.resolve("b.mp4"), DIR.resolve("c.mp4")),
-                List.of(Duration.ofSeconds(4), Duration.ofSeconds(8), Duration.ofSeconds(6)), DIR.resolve("m.mp3"), Duration.ofSeconds(60),
+                List.of(Duration.ofSeconds(4), Duration.ofSeconds(8), Duration.ofSeconds(6)), DIR.resolve("m.mp3"),
                 DIR.resolve("out.mp4"));
 
         // then
@@ -56,20 +56,20 @@ class FfmpegGraphBuilderTest {
     void givenMusicShorterThanVideo_whenFinalArgs_thenStreamLoopPresent() {
         // when
         var args = FfmpegGraphBuilder.finalArgs(List.of(DIR.resolve("a.mp4"), DIR.resolve("b.mp4")),
-                List.of(Duration.ofSeconds(40), Duration.ofSeconds(40)), DIR.resolve("m.mp3"), Duration.ofSeconds(30), DIR.resolve("out.mp4"));
+                List.of(Duration.ofSeconds(40), Duration.ofSeconds(40)), DIR.resolve("m.mp3"), DIR.resolve("out.mp4"));
 
         // then
         assertThat(args).containsSubsequence("-stream_loop", "-1", "-i", "/work/m.mp3");
     }
 
     @Test
-    void givenMusicLongerThanVideo_whenFinalArgs_thenNoLoopAndFadeOutOverLastTwoSeconds() {
+    void givenMusicOfAnyLength_whenFinalArgs_thenLoopedAndCutWithFadeOutOverLastTwoSeconds() {
         // when
         var args = FfmpegGraphBuilder.finalArgs(List.of(DIR.resolve("a.mp4"), DIR.resolve("b.mp4")),
-                List.of(Duration.ofSeconds(4), Duration.ofSeconds(8)), DIR.resolve("m.mp3"), Duration.ofSeconds(120), DIR.resolve("out.mp4"));
+                List.of(Duration.ofSeconds(4), Duration.ofSeconds(8)), DIR.resolve("m.mp3"), DIR.resolve("out.mp4"));
 
         // then
-        assertThat(args).doesNotContain("-stream_loop");
+        assertThat(args).as("atrim cuts long music, so looping is always safe").containsSubsequence("-stream_loop", "-1", "-i", "/work/m.mp3");
         String graph = args.get(args.indexOf("-filter_complex") + 1);
         assertThat(graph).contains("atrim=0:11.500", "afade=t=out:st=9.500:d=2.000");
         assertThat(args).containsSubsequence("-c:v", "libx264", "-crf", "20", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
@@ -80,7 +80,7 @@ class FfmpegGraphBuilderTest {
     void givenVideoShorterThanFadeOut_whenFinalArgs_thenFadeCoversHalfTheVideoFromZero() {
         // when
         var args = FfmpegGraphBuilder.finalArgs(List.of(DIR.resolve("a.mp4"), DIR.resolve("b.mp4")),
-                List.of(Duration.ofSeconds(1), Duration.ofSeconds(1)), DIR.resolve("m.mp3"), Duration.ofSeconds(60), DIR.resolve("out.mp4"));
+                List.of(Duration.ofSeconds(1), Duration.ofSeconds(1)), DIR.resolve("m.mp3"), DIR.resolve("out.mp4"));
 
         // then
         String graph = args.get(args.indexOf("-filter_complex") + 1);
