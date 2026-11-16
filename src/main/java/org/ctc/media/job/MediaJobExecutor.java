@@ -77,7 +77,7 @@ public class MediaJobExecutor {
             ctx.finish(MediaJobState.DONE, ctx.last.message());
         } catch (MediaJobAbandonedException abandoned) {
             ctx.finish(MediaJobState.ABANDONED, abandoned.getMessage());
-        } catch (Exception | LinkageError failure) {
+        } catch (Exception | Error failure) {
             log.warn("Media job {} for {} failed", queued.kind(), LogSanitizer.sanitize(queued.scopeKey()), failure);
             String reason = failure.getMessage() == null ? failure.getClass().getSimpleName() : failure.getMessage();
             ctx.finish(MediaJobState.FAILED, LogSanitizer.sanitize(reason));
