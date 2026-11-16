@@ -45,10 +45,12 @@ class BrowserCacheWorkflowTest {
             var step = steps.get(i);
             if ("browser".equals(step.get("id"))) resolve = i;
             if (String.valueOf(step.get("uses")).startsWith("actions/cache@")) {
-                cache = i;
                 var inputs = (Map<String, Object>) step.get("with");
-                assertThat(inputs.get("key")).isEqualTo("${{ steps.browser.outputs.key }}-all");
-                assertThat(inputs).doesNotContainKey("restore-keys");
+                assertThat(inputs).as("exact cache keys only").doesNotContainKey("restore-keys");
+                if (String.valueOf(inputs.get("key")).contains("steps.browser")) {
+                    cache = i;
+                    assertThat(inputs.get("key")).isEqualTo("${{ steps.browser.outputs.key }}-all");
+                }
             }
             if (String.valueOf(step.get("run")).contains("CLI install --with-deps")) install = i;
             if (String.valueOf(step.get("run")).contains("run-partition.py")) tests = i;
