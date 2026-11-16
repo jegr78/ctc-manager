@@ -1653,6 +1653,32 @@ class SiteGeneratorFixtureIsolationIT {
         assertNull(doc.selectFirst("meta[http-equiv=refresh]"));
     }
 
+    @Test
+    void givenActiveSeason_whenGenerate_thenSecondHeroActionOpensItsStandings() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var link = Jsoup.parse(Files.readString(tempDir.resolve("index.html"))).selectFirst(".hero .landing-season-link");
+        assertEquals("Current season →", link.text());
+        assertEquals("./season/" + slugify(season.getDisplayLabel()) + "/standings.html", link.attr("href"));
+        assertTrue(Files.exists(tempDir.resolve(link.attr("href"))), "The current season link must open an existing page");
+    }
+
+    @Test
+    void givenNoActiveSeason_whenGenerate_thenSecondHeroActionOpensTheArchive() throws IOException {
+        // given
+        assertEquals(1, jdbc.update("update seasons set active = false where id = ?", season.getId()));
+
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var link = Jsoup.parse(Files.readString(tempDir.resolve("index.html"))).selectFirst(".hero .landing-season-link");
+        assertEquals("All seasons →", link.text());
+        assertEquals("./archive.html", link.attr("href"));
+    }
+
     // LAND-03b: Index page has no match-grid
     @Test
     void whenGenerate_thenIndexHasNoMatchGrid() throws IOException {
