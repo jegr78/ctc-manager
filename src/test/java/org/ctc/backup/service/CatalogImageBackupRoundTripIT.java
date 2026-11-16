@@ -138,6 +138,25 @@ class CatalogImageBackupRoundTripIT {
     }
 
     @Test
+    void givenTrackShortName_whenRestoring_thenRestoreItOrRejectItInSchema25() throws Exception {
+        // given
+        var named = tracks.findById(track).orElseThrow();
+        named.setDisplayShortName("SPA");
+        tracks.saveAndFlush(named);
+        byte[] archive = export();
+        var older = unzip(archive);
+        var manifest = (ObjectNode) JSON.readTree(older.get("manifest.json"));
+        manifest.put("schema_version", 25);
+        older.put("manifest.json", JSON.writeValueAsBytes(manifest));
+        // when / then
+        assertThatThrownBy(() -> imports.stage(upload(zip(older)))).isInstanceOfSatisfying(BackupArchiveException.class, failure ->
+                assertThat(failure.getMessage()).contains("Track short names require backup schema 26"));
+        verify(imports, never()).wipeAllTables(anyMap());
+        imports.execute(imports.stage(upload(archive)).stagingId());
+        assertThat(tracks.findById(track).orElseThrow().getDisplayShortName()).isEqualTo("SPA");
+    }
+
+    @Test
     void givenGenuineSchema23Archive_whenRestoring_thenRestoreWithoutGalleries() throws Exception {
         // given
         var files = unzip(export());

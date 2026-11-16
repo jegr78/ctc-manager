@@ -51,6 +51,7 @@ public class TrackController {
 		form.setId(track.getId());
 		form.setName(track.getName());
 		form.setCountry(track.getCountry());
+		form.setDisplayShortName(track.getDisplayShortName());
 		model.addAttribute("trackForm", form);
         model.addAttribute("pageTitle", "Edit Track");
 		model.addAttribute("track", track);
@@ -81,7 +82,8 @@ public class TrackController {
 			return "admin/track-form";
 		}
 		try {
-			trackService.save(trackForm.getId(), trackForm.getName(), trackForm.getCountry(), trackForm.getTimeOfDayText(), trackForm.getRainCapability());
+			trackService.save(trackForm.getId(), trackForm.getName(), trackForm.getCountry(), trackForm.getTimeOfDayText(), trackForm.getRainCapability(),
+					trackForm.getDisplayShortName());
 			redirectAttributes.addFlashAttribute("successMessage",
 					"Track saved: " + trackForm.getName());
 		} catch (BusinessRuleException e) {

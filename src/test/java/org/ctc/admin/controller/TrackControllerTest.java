@@ -117,6 +117,35 @@ class TrackControllerTest {
 	}
 
 	@Test
+	void givenShortName_whenSaveExistingTrack_thenStoresAndShowsItOnEdit() throws Exception {
+		// when
+		mockMvc.perform(post("/admin/tracks/save")
+						.param("id", track.getId().toString())
+						.param("name", "Tsukuba Circuit")
+						.param("country", "Japan")
+						.param("displayShortName", " TSUKUBA "))
+				.andExpect(status().is3xxRedirection());
+
+		// then
+		assertEquals("TSUKUBA", trackRepository.findById(track.getId()).orElseThrow().getDisplayShortName());
+		mockMvc.perform(get("/admin/tracks/" + track.getId() + "/edit"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("value=\"TSUKUBA\"")));
+	}
+
+	@Test
+	void givenShortNameOver30Chars_whenSaveTrack_thenReturnsFormWithFieldError() throws Exception {
+		// when / then
+		mockMvc.perform(post("/admin/tracks/save")
+						.param("name", "Long short name track")
+						.param("displayShortName", "X".repeat(31)))
+				.andExpect(status().isOk())
+				.andExpect(view().name("admin/track-form"))
+				.andExpect(model().attributeHasFieldErrors("trackForm", "displayShortName"))
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"displayShortName-error\"")));
+	}
+
+	@Test
 	void givenBlankName_whenSaveTrack_thenReturnsFormWithErrors() throws Exception {
 		mockMvc.perform(post("/admin/tracks/save")
 						.param("name", "")

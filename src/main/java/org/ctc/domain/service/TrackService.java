@@ -40,11 +40,12 @@ public class TrackService {
 
 	@Transactional
 	public Track save(UUID id, String name, String country) {
-        return save(id, name, country, null, org.ctc.domain.model.TrackRainCapability.UNKNOWN);
+        return save(id, name, country, null, org.ctc.domain.model.TrackRainCapability.UNKNOWN, null);
     }
 
     @Transactional
-    public Track save(UUID id, String name, String country, String timeOfDayText, org.ctc.domain.model.TrackRainCapability rain) {
+    public Track save(UUID id, String name, String country, String timeOfDayText, org.ctc.domain.model.TrackRainCapability rain,
+                      String displayShortName) {
 		Track track;
 		if (id != null) {
 			track = trackRepository.findById(id)
@@ -57,6 +58,7 @@ public class TrackService {
             track.setTimeOfDayOptions(environment.timeOfDayOptions()); track.setRainCapability(environment.rainCapability().name());
             if (!environment.timeOfDayOptions().isEmpty() || rain != org.ctc.domain.model.TrackRainCapability.UNKNOWN) { track.setEnvironmentVersion(1); track.setEnvironmentOverride(true); }
 		}
+		track.setDisplayShortName(displayShortName == null || displayShortName.isBlank() ? null : displayShortName.trim());
 		try {
 			track = trackRepository.saveAndFlush(track);
 		} catch (DataIntegrityViolationException e) {
