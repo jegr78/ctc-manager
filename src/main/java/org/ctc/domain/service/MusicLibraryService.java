@@ -26,6 +26,7 @@ public class MusicLibraryService {
 
     public static final int MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
     private static final String FOLDER = "music";
+    private static final String STORED_NAME = "track.mp3";
 
     private final MusicTrackRepository repository;
     private final FileStorageService files;
@@ -42,7 +43,7 @@ public class MusicLibraryService {
         UUID id = UUID.randomUUID();
         String path;
         try {
-            path = files.storeBytes(FOLDER, id, filename(file), data);
+            path = files.storeBytes(FOLDER, id, STORED_NAME, data);
         } catch (IOException e) {
             throw new BusinessRuleException("The MP3 file could not be stored.");
         }
@@ -108,10 +109,5 @@ public class MusicLibraryService {
             throw new BusinessRuleException("Only MP3 files are accepted.");
         }
         return data;
-    }
-
-    private static String filename(MultipartFile file) {
-        String name = file.getOriginalFilename();
-        return name == null || name.isBlank() ? "music.mp3" : name;
     }
 }

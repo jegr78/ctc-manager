@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.ctc.util.LogSanitizer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -75,6 +76,9 @@ public class MediaTool {
         }
     }
 
+    @SuppressFBWarnings(value = "COMMAND_INJECTION", justification =
+            "Runs the configured ffmpeg/ffprobe executable with an argument list and no shell; arguments are application-built "
+                    + "options and absolute paths of generated files. See docs/security/sast-acceptance.md.")
     private String execute(List<String> command, Duration timeout) {
         Process process;
         try {

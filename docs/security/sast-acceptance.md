@@ -115,3 +115,9 @@ Every finding was triaged by hand. Two led to source changes; the rest are struc
 | SQL_INJECTION_JDBC | `db.migration.V45__AddLineupSubmissions.migrate` | 1 | suppressed | Executes only fixed bundled `/db/schema/lineup_submissions.sql` DDL. The trusted JDBC dialect selects the literal `TIMESTAMP(6)` to `DATETIME(6)` rewrite; no request, archive, database value or external path enters SQL text. The resource checksum covers its contents. Reevaluate if the source or rewrite becomes input-controlled. |
 | SQL_INJECTION_JDBC | `db.migration.V46__AddCatalogImages.migrate` | 1 | suppressed | Executes only fixed bundled `/db/schema/catalog_images.sql` DDL. The trusted JDBC dialect selects the literal `TIMESTAMP(6)` to `DATETIME(6)` rewrite; no request, archive, database value or external path enters SQL text. The resource checksum covers its contents. Reevaluate if the source or rewrite becomes input-controlled. |
 | SQL_INJECTION_JDBC | `db.migration.V48__TrackShortNameAndMusic.migrate` | 1 | suppressed | Executes only fixed bundled `/db/schema/track_short_name_and_music.sql` DDL. The trusted JDBC dialect selects the literal `TIMESTAMP(6)` to `DATETIME(6)` rewrite; no request, archive, database value or external path enters SQL text. The resource checksum covers its contents. Reevaluate if the source or rewrite becomes input-controlled. |
+
+## Media tool process execution, 2026-11-16
+
+| Rule | Location | Count | Decision | Rationale |
+|---|---|---|---|---|
+| COMMAND_INJECTION | `org.ctc.media.MediaTool.execute` | 1 | suppressed | Starts only the configured `ffmpeg`/`ffprobe` executable (`app.media.*-path`) through `ProcessBuilder` with an argument list, never a shell. Every argument is an application-built option or the absolute path of a file the application generated; uploaded music is stored under the fixed name `track.mp3`, so no request text reaches the command line. Reevaluate if a caller passes request-controlled arguments. |

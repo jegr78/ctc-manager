@@ -39,7 +39,7 @@ class MusicLibraryServiceTest {
     void givenId3TaggedMp3_whenUpload_thenStoredWithProbedDuration() throws Exception {
         // given
         var file = mp3("song.mp3", new byte[] {'I', 'D', '3', 4, 0, 0});
-        when(files.storeBytes(eq("music"), any(UUID.class), eq("song.mp3"), any())).thenReturn("/uploads/music/x/a_song.mp3");
+        when(files.storeBytes(eq("music"), any(UUID.class), eq("track.mp3"), any())).thenReturn("/uploads/music/x/a_song.mp3");
         when(files.resolve("/uploads/music/x/a_song.mp3")).thenReturn(Path.of("/tmp/a_song.mp3"));
         when(media.probeDuration(Path.of("/tmp/a_song.mp3"))).thenReturn(Duration.ofMillis(151_600));
         when(repository.saveAndFlush(any(MusicTrack.class))).thenAnswer(inv -> inv.getArgument(0));
