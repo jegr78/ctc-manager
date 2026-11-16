@@ -16,6 +16,8 @@ spring:
 
 app:
   upload-dir: /app/data/uploads
+  trailer:
+    cutout-model-path: /opt/ctc/models/cutout.onnx
   backup:
     staging-dir: /app/data/backup-staging
     import-backups-dir: /app/data/import-backups

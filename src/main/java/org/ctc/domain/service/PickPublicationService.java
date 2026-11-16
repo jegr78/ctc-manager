@@ -200,10 +200,27 @@ public class PickPublicationService {
      */
     public PublicPickProjection publicProjection(Race race) {
         if (PickTargetRules.isFinished(race)) return PickPublicationContent.from(race).project(race.getId(), PickDisclosureField.all());
+        return latestRelease(race).map(release -> release.content().project(race.getId(), release.fields()))
+                .orElseGet(() -> new PublicPickProjection(race.getId(), null, null, null, null));
+    }
+
+    /**
+     * The published setup with car and track IDs, present only when a finished leg stores it or when the latest
+     * confirmed content releases every field.
+     */
+    public java.util.Optional<PickPublicationContent> releasedContent(Race race) {
+        if (PickTargetRules.isFinished(race)) return java.util.Optional.of(PickPublicationContent.from(race));
+        return latestRelease(race).filter(release -> release.fields().containsAll(PickDisclosureField.all()))
+                .map(LatestRelease::content);
+    }
+
+    private record LatestRelease(PickPublicationContent content, Set<PickDisclosureField> fields) { }
+
+    private java.util.Optional<LatestRelease> latestRelease(Race race) {
         var confirmed = confirmed(race);
         long version = confirmed.stream().mapToLong(PickPublicationAttempt::getContentVersion).max().orElse(0);
         var latest = confirmed.stream().filter(attempt -> attempt.getContentVersion() == version).toList();
-        if (latest.isEmpty()) return new PublicPickProjection(race.getId(), null, null, null, null);
+        if (latest.isEmpty()) return java.util.Optional.empty();
         var first = latest.getFirst();
         for (var attempt : latest) {
             if (!first.getContentHash().equals(attempt.getContentHash())
@@ -215,7 +232,7 @@ public class PickPublicationService {
         var fields = java.util.EnumSet.noneOf(PickDisclosureField.class);
         confirmed.stream().filter(attempt -> attempt.getContentHash().equals(first.getContentHash()))
                 .forEach(attempt -> fields.addAll(released(attempt.getOutput())));
-        return first.getContent().project(race.getId(), fields);
+        return java.util.Optional.of(new LatestRelease(first.getContent(), fields));
     }
 
     /** Whether automatic edits may attach the complete settings graphic without disclosing unpublished choices. */

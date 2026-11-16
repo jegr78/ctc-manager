@@ -30,6 +30,8 @@ public class CarController {
 	private final CarService carService;
 	private final CatalogImageService gallery;
 	private final Gt7CarShotBulkService carShotRun;
+	private final org.ctc.domain.service.CarCutoutService cutouts;
+	private final org.ctc.media.job.MediaJobExecutor cutoutJobs;
 
 	@GetMapping
 	public String list(Model model) {
@@ -120,6 +122,9 @@ public class CarController {
             model.addAttribute("galleryBasePath", "/admin/cars/" + form.getId());
             model.addAttribute("galleryOwner", car.getManufacturer() + " " + car.getName());
             model.addAttribute("galleryPrefix", "car");
+            model.addAttribute("galleryCutout", cutouts.available(form.getId()));
+            cutoutJobs.status(org.ctc.domain.service.CarCutoutService.scopeKey(form.getId()))
+                    .ifPresent(status -> model.addAttribute("galleryCutoutStatus", status));
         }
     }
 

@@ -31,6 +31,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ffmpeg lib
 
 RUN groupadd -r ctc && useradd -r -g ctc ctc
 
+RUN --mount=type=bind,source=config/cutout-model.properties,target=/tmp/cutout-model.properties \
+    url="$(sed -n 's/^url=//p' /tmp/cutout-model.properties)" \
+    && sha="$(sed -n 's/^sha256=//p' /tmp/cutout-model.properties)" \
+    && mkdir -p /opt/ctc/models \
+    && curl -fsSL --retry 3 -o /opt/ctc/models/cutout.onnx "$url" \
+    && echo "$sha  /opt/ctc/models/cutout.onnx" | sha256sum -c - \
+    && chmod 0444 /opt/ctc/models/cutout.onnx
+
 WORKDIR /app
 
 # Volume mount points; a fresh named volume inherits this content and ownership.
@@ -49,7 +57,8 @@ RUN --mount=type=bind,from=build-dependencies,source=/playwright,target=/opt/ctc
     --browser chromium --timeout 30000 about:blank /tmp/ctc-chromium-smoke.png \
     && test -s /tmp/ctc-chromium-smoke.png && rm /tmp/ctc-chromium-smoke.png
 
-RUN ffmpeg -hide_banner -version >/dev/null && ffprobe -hide_banner -version >/dev/null
+RUN ffmpeg -hide_banner -version >/dev/null && ffprobe -hide_banner -version >/dev/null \
+    && test -r /opt/ctc/models/cutout.onnx
 
 FROM browser-runtime AS runtime
 

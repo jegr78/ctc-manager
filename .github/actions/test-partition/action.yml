@@ -40,6 +40,21 @@ runs:
         sudo apt-get install -y --no-install-recommends ffmpeg
         ffmpeg -hide_banner -version | head -1
 
+    - name: Resolve cutout model identity
+      id: cutout
+      shell: bash
+      run: echo "sha=$(sed -n 's/^sha256=//p' config/cutout-model.properties)" >> "$GITHUB_OUTPUT"
+    - name: Cache cutout model
+      uses: actions/cache@v6
+      with:
+        path: ~/.cache/ctc-models
+        key: cutout-model-${{ steps.cutout.outputs.sha }}
+    - name: Install cutout model
+      shell: bash
+      run: |
+        ./scripts/fetch-cutout-model.sh "$HOME/.cache/ctc-models/cutout.onnx"
+        echo "APP_TRAILER_CUTOUT_MODEL_PATH=$HOME/.cache/ctc-models/cutout.onnx" >> "$GITHUB_ENV"
+
     - name: Run the assigned tests
       shell: bash
       env:

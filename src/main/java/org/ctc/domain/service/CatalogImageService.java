@@ -40,6 +40,7 @@ public class CatalogImageService {
     public static final long MAX_UPLOAD_BYTES = 10L * 1024 * 1024;
     public static final int MAX_LABEL_LENGTH = 100;
     public static final String GT_ENGINE_KEY = "map";
+    public static final String AUTO_CUTOUT_KEY = "cutout";
     public static final String GT_ENGINE_LABEL = "Layout map by GT-Engine (gt-engine.com)";
     private final CarRepository cars;
     private final TrackRepository tracks;
@@ -69,6 +70,13 @@ public class CatalogImageService {
         var car = lockCar(carId);
         if (kind == null) throw new BusinessRuleException("Choose an image kind");
         var checked = check(uploads, label);
+        if (kind == CarImageKind.CUTOUT) {
+            for (var upload : checked) {
+                if (upload.format() != ImageContent.Format.PNG) {
+                    throw new BusinessRuleException("Cutouts must be PNG files with transparency; " + upload.file().getOriginalFilename() + " is not");
+                }
+            }
+        }
         int next = next(carImages(carId));
         for (var upload : checked) {
             var image = new CarImage();
@@ -158,6 +166,35 @@ public class CatalogImageService {
         image.setHeight(height);
         trackImages.save(image);
         log.info("{} GT-Engine map of track {}", current.isPresent() ? "Replaced" : "Added", trackId);
+        return current.isPresent();
+    }
+
+    /**
+     * Stores the car's automatic cutout: an existing one gets the new file, otherwise it is appended after the other
+     * images, so a manual cutout sorted earlier keeps priority. The replaced file is deleted after commit.
+     *
+     * @return true when an earlier automatic cutout was replaced
+     */
+    public boolean applyAutoCutout(UUID carId, String imagePath, int width, int height) {
+        files.deleteOnRollback(imagePath);
+        var car = lockCar(carId);
+        var existing = carImages(carId);
+        var current = existing.stream().filter(image -> image.getSource() == ImageSource.AUTO).findFirst();
+        var image = current.orElseGet(CarImage::new);
+        if (current.isPresent()) {
+            files.deleteAfterCommit(image.getImagePath());
+        } else {
+            image.setCar(car);
+            image.setKind(CarImageKind.CUTOUT);
+            image.setSource(ImageSource.AUTO);
+            image.setSourceKey(AUTO_CUTOUT_KEY);
+            image.setSortIndex(next(existing));
+        }
+        image.setImagePath(imagePath);
+        image.setWidth(width);
+        image.setHeight(height);
+        carImages.save(image);
+        log.info("{} automatic cutout of car {}", current.isPresent() ? "Replaced" : "Added", carId);
         return current.isPresent();
     }
 

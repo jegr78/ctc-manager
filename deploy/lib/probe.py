@@ -82,7 +82,7 @@ class Probe:
                 if '\n' in value or '\r' in value or '\x00' in value:
                     raise ValueError('invalid probe environment value')
                 output.write(key + '=' + value + '\n')
-        args = self.container_arguments('app') + ['--memory', '2g', '--read-only', '--cap-drop', 'ALL',
+        args = self.container_arguments('app') + ['--memory', '3g', '--read-only', '--cap-drop', 'ALL',
                                                  '--tmpfs', '/tmp:rw,exec,nosuid,nodev,size=512m', '--env-file', str(path)]
         for role, target in [('data', '/app/data'), ('logs', '/app/logs'), ('credentials', '/run/ctc')]:
             args += ['--mount', 'type=volume,src=' + self.volume(role) + ',dst=' + target + (',readonly' if role == 'credentials' else '')]

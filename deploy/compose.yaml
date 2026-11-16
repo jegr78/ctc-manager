@@ -94,14 +94,14 @@ services:
   app:
     image: ${CTC_APP_IMAGE:?Select a released CTC digest}
     restart: unless-stopped
-    mem_limit: 2g
+    mem_limit: 3g
     env_file: ["${CTC_APP_ENV_FILE:?Missing private app environment}"]
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SERVER_FORWARD_HEADERS_STRATEGY: framework
       CTC_OUTBOUND_ENABLED: ${CTC_OUTBOUND_ENABLED:-true}
       DATABASE_URL: jdbc:mariadb://db:3306/ctcdb?rewriteBatchedStatements=true
-      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=50.0 -XX:+ExitOnOutOfMemoryError -Duser.timezone=Europe/Berlin
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=33.0 -XX:+ExitOnOutOfMemoryError -Duser.timezone=Europe/Berlin
       TZ: Europe/Berlin
       GOOGLE_SHEETS_CREDENTIALS_PATH: /run/ctc/google-credentials.json
       MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: never

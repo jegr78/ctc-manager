@@ -41,6 +41,13 @@
         <button type="submit" class="btn btn-secondary btn-sm" aria-describedby="gallery-gt7-hint">Load GT7 images</button>
         <small class="form-hint" id="gallery-gt7-hint">Loads every official 2K car shot. GT7 images of the same slot are replaced; your own uploads stay.</small>
     </form>
+    <form th:if="${galleryCutout == true}" th:action="@{|${galleryBasePath}/images/cutout|}" method="post" class="gallery-gt7 mt-xs">
+        <button type="submit" class="btn btn-secondary btn-sm" aria-describedby="gallery-cutout-hint">Create cutout</button>
+        <small class="form-hint" id="gallery-cutout-hint">Cuts the car out of the first studio image for trailers.
+            A new cutout replaces the previous automatic one; a cutout you uploaded and sorted first stays in use.</small>
+    </form>
+    <p th:if="${galleryCutoutStatus != null}" class="form-hint mt-xs" data-cutout-status role="status"
+       th:text="|Cutout: ${galleryCutoutStatus.message}|"></p>
     <form th:if="${galleryGtEngine == true}" th:action="@{|${galleryBasePath}/images/gt-engine|}" method="post" class="gallery-gt7 mt-xs">
         <button type="submit" class="btn btn-secondary btn-sm" aria-describedby="gallery-gtengine-hint">Load GT-Engine map</button>
         <small class="form-hint" id="gallery-gtengine-hint">Loads the layout map of this track from
