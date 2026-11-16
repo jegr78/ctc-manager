@@ -38,6 +38,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class MatchdayController {
 
     private final MatchdayService matchdayService;
+    private final org.ctc.trailer.TrailerViewService trailerViews;
     private final org.ctc.admin.service.PickWindowAdminService pickWindows;
     private final MatchdayOverviewGraphicService overviewGraphicService;
     private final MatchdayScheduleGraphicService scheduleGraphicService;
@@ -71,6 +72,7 @@ public class MatchdayController {
         model.addAttribute("hasResults", data.hasResults());
         model.addAttribute("pageTitle", "Matchday: " + matchday.getLabel());
         model.addAllAttributes(discordMatchdayViewService.buildMatchdayDiscordModel(matchday));
+        model.addAttribute("trailer", trailerViews.view(new org.ctc.trailer.TrailerScope.MatchdayScope(id)));
         return "admin/matchday-detail";
     }
 

@@ -95,7 +95,7 @@ Custom-template overrides through `TemplateManageable` are not offered for trail
 - Each automatic cutout commits on its own, under restore writer admission and a fresh read of the car, before the read-only scene capture. Cutouts stay when the trailer later fails.
 - Job state stays in memory: queued, rendering scene n of m, encoding, done, failed. The management page polls a small status endpoint, and a native reload shows the same state without JavaScript.
 - The job captures all scene data in one read-only transaction at start. Rendering and encoding run outside any transaction.
-- A committed restore or an application restart abandons a running job and deletes its partial output.
+- A committed restore or an application restart abandons a running job and deletes its partial output. Work happens outside the upload tree. Since trailers are not in backups, a restore leaves no trailer files behind; they are rendered again.
 - The job respects `ImportLockService`: it does not start while a restore holds the lock.
 - Failures keep the previous trailer and show the ffmpeg or renderer error in sanitized form.
 

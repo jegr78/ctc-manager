@@ -2962,3 +2962,49 @@ body:has(.archive-dialog[open]) { overflow: hidden; }
 .catalog-source h2 { margin-top: 0; }
 .catalog-source .actions { flex-wrap: wrap; margin-top: 12px; }
 .catalog-source form { margin: 0; }
+
+.trailer-controls {
+    display: grid;
+    gap: var(--space-sm, 0.5rem);
+}
+
+.trailer-controls p {
+    margin: 0;
+}
+
+.trailer-blockers ul {
+    margin: var(--space-xs, 0.25rem) 0 0;
+    padding-left: 1.25rem;
+}
+
+.trailer-blockers li + li {
+    margin-top: var(--space-xs, 0.25rem);
+}
+
+.trailer-start {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm, 0.5rem);
+}
+
+.trailer-start select {
+    max-width: 100%;
+}
+
+.trailer-status:empty {
+    display: none;
+}
+
+.trailer-round {
+    margin-top: var(--space-sm, 0.5rem);
+}
+
+.trailer-round > summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.trailer-round > .trailer-controls {
+    margin-top: var(--space-sm, 0.5rem);
+}

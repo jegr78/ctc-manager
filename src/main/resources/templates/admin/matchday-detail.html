@@ -177,6 +177,13 @@
             <p class="text-dim graphics-hint">Graphics are generated on-the-fly and downloaded as PNG (1920&#215;1080).</p>
         </div>
 
+        <div th:if="${trailer != null}" class="detail-section mt-lg" id="matchday-trailer">
+            <h2>Trailer</h2>
+            <th:block th:with="view=${trailer}, key='matchday-trailer'">
+                <div th:replace="~{admin/fragments/trailer-section :: controls}"></div>
+            </th:block>
+        </div>
+
         <div th:if="${!lineupsByTeam.isEmpty()}" class="detail-section mt-lg" id="matchday-lineup">
             <h2>Lineup</h2>
             <div th:each="entry : ${lineupsByTeam}" class="lineup-entry">
@@ -278,6 +285,7 @@
         </div>
     </div>
     <script defer th:src="@{/admin/js/matchday-workspace.js}"></script>
+    <script defer th:src="@{/admin/js/trailer-status.js}"></script>
 </section>
 </body>
 </html>

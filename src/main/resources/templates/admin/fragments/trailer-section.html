@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="controls" class="trailer-controls">
+    <p class="text-dim" th:if="${view.hasRaces()}" th:text="|Estimated length ${view.lengthLabel()}. Intro, pairings, then track, car and settings for every race.|"></p>
+    <div th:if="${!view.blockers.isEmpty()}" class="trailer-blockers" data-trailer-blockers>
+        <p th:id="|${key}-blockers-title|">Before the trailer can start:</p>
+        <ul th:attr="aria-labelledby=|${key}-blockers-title|">
+            <li th:each="item : ${view.blockers}">
+                <a th:if="${item.fixUrl() != null}" th:href="${item.fixUrl()}" th:text="${item.message()}" class="detail-link"></a>
+                <span th:if="${item.fixUrl() == null}" th:text="${item.message()}"></span>
+            </li>
+        </ul>
+    </div>
+    <form th:action="@{${view.basePath()}}" method="post" class="trailer-start">
+        <label th:for="|${key}-music|">Music</label>
+        <select th:id="|${key}-music|" name="musicId">
+            <option value="">Random track</option>
+            <option th:each="track : ${view.music()}" th:value="${track.id}" th:text="|${track.title} · ${track.artist}|"></option>
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm" th:disabled="${!view.startEnabled()}">Render trailer</button>
+    </form>
+    <p class="trailer-status" data-trailer-status role="status" aria-live="polite"
+       th:attr="data-running=${view.running()},data-status-url=@{${view.basePath() + '/status'}}"
+       th:text="${view.statusLabel()}"></p>
+    <div th:if="${view.latest().isPresent()}" class="trailer-latest">
+        <p th:text="|Latest trailer: ${view.latestLabel()}|"></p>
+        <div class="actions--tight">
+            <a class="btn btn-secondary btn-sm" th:href="@{${view.basePath() + '/video'}}">Download video</a>
+            <a class="btn btn-secondary btn-sm" th:href="@{${view.basePath() + '/layers'}}">Download layers (ZIP)</a>
+            <a class="btn btn-secondary btn-sm" th:href="@{${view.basePath() + '/youtube'}}">Download YouTube text</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>
