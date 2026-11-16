@@ -86,12 +86,14 @@ public class TrailerService {
     @EventListener(ApplicationReadyEvent.class)
     public void removeInterruptedWork() {
         for (String kind : new String[] {"matchday", "round"}) {
-            Path parent = files.resolve("/uploads/trailers/" + kind);
-            if (!Files.isDirectory(parent)) continue;
-            try (var entries = Files.list(parent)) {
-                entries.filter(path -> path.getFileName().toString().startsWith(".")).forEach(TrailerService::deleteTree);
-            } catch (IOException e) {
-                log.warn("Could not clean interrupted trailer work in {}", parent, e);
+            try {
+                Path parent = files.resolve("/uploads/trailers/" + kind);
+                if (parent == null || !Files.isDirectory(parent)) continue;
+                try (var entries = Files.list(parent)) {
+                    entries.filter(path -> path.getFileName().toString().startsWith(".")).forEach(TrailerService::deleteTree);
+                }
+            } catch (IOException | RuntimeException e) {
+                log.warn("Could not clean interrupted trailer work for {}", kind, e);
             }
         }
     }
