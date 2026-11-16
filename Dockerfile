@@ -26,7 +26,7 @@ FROM eclipse-temurin:25.0.5_8-jre-noble AS browser-runtime
 
 LABEL org.ctc.recovery.version="1"
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl libatomic1 \
+RUN apt-get update && apt-get install -y --no-install-recommends curl ffmpeg libatomic1 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -r ctc && useradd -r -g ctc ctc
@@ -48,6 +48,8 @@ RUN --mount=type=bind,from=build-dependencies,source=/playwright,target=/opt/ctc
     java -cp '/opt/ctc-playwright/*' com.microsoft.playwright.CLI screenshot \
     --browser chromium --timeout 30000 about:blank /tmp/ctc-chromium-smoke.png \
     && test -s /tmp/ctc-chromium-smoke.png && rm /tmp/ctc-chromium-smoke.png
+
+RUN ffmpeg -hide_banner -version >/dev/null && ffprobe -hide_banner -version >/dev/null
 
 FROM browser-runtime AS runtime
 

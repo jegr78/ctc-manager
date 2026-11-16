@@ -33,6 +33,13 @@ runs:
       run: |
         java -cp "$(cat "$RUNNER_TEMP/ctc-browser-classpath.txt")" com.microsoft.playwright.CLI install --with-deps
 
+    - name: Install ffmpeg
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends ffmpeg
+        ffmpeg -hide_banner -version | head -1
+
     - name: Run the assigned tests
       shell: bash
       env:
