@@ -28,26 +28,25 @@
         </dl>
     </div>
 
-    <div class="section section-gap career-seasons">
+    <div class="section section-gap profile-history career-seasons">
         <h2 class="section-title">Seasons</h2>
         <div class="table-wrap">
             <table>
                 <thead>
-                    <tr><th scope="col">Season</th><th scope="col">Team</th><th scope="col" class="text-right">Rank</th>
+                    <tr><th scope="col">Season</th><th scope="col">Team</th><th scope="col" class="text-right">Points</th><th scope="col" class="text-right">Rank</th>
                         <th scope="col" class="text-right">Races</th><th scope="col" class="text-right">Wins</th>
-                        <th scope="col" class="text-right">Podiums</th><th scope="col" class="text-right">Best</th>
-                        <th scope="col" class="text-right">Points</th></tr>
+                        <th scope="col" class="text-right">Podiums</th><th scope="col" class="text-right">Best</th></tr>
                 </thead>
                 <tbody>
                     <tr th:each="row : ${seasonRows}">
                         <td><a class="entity-link font-bold" th:href="${row.url}" th:text="${row.season}"></a></td>
                         <td th:text="${row.team ?: '-'}"></td>
+                        <td class="text-right font-bold text-white" th:text="${row.points}"></td>
                         <td class="text-right" th:text="${row.rank} + ' / ' + ${row.ranked}"></td>
                         <td class="text-right" th:text="${row.races}"></td>
                         <td class="text-right" th:text="${row.wins}"></td>
                         <td class="text-right" th:text="${row.podiums}"></td>
                         <td class="text-right" th:text="${row.best > 0 ? 'P' + row.best : '-'}"></td>
-                        <td class="text-right font-bold text-white" th:text="${row.points}"></td>
                     </tr>
                 </tbody>
             </table>

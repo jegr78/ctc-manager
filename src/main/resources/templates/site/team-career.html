@@ -9,6 +9,7 @@
             <h1 class="text-white" th:text="${teamShortName}"></h1>
             <p class="profile-team-name" th:text="${teamName}"></p>
             <p class="season-meta">Career · all seasons</p>
+            <p class="text-dim career-best" th:if="${stats.bestResult != null}" th:text="'Best result: ' + ${stats.bestResult}"></p>
         </div>
     </header>
 
@@ -25,7 +26,6 @@
             <div><dt>Conceded</dt><dd th:text="${stats.pointsAgainst}"></dd></div>
             <div><dt>Races</dt><dd th:text="${stats.races}"></dd></div>
             <div><dt>Seasons</dt><dd th:text="${stats.seasons}"></dd></div>
-            <div th:if="${stats.bestResult != null}"><dt>Best result</dt><dd th:text="${stats.bestResult}"></dd></div>
             <div th:if="${stats.playoffAppearances > 0}"><dt>Playoff appearances</dt><dd th:text="${stats.playoffAppearances}"></dd></div>
             <div th:if="${stats.titles > 0}"><dt>Titles</dt><dd th:text="${stats.titles}"></dd></div>
         </dl>
@@ -53,16 +53,16 @@
         <div class="table-wrap">
             <table>
                 <thead>
-                    <tr><th scope="col">Season</th><th scope="col" class="text-right">Rank</th><th scope="col" class="text-right">Played</th>
-                        <th scope="col" class="text-right">W-D-L</th><th scope="col" class="text-right">Points</th><th scope="col">Playoffs</th></tr>
+                    <tr><th scope="col">Season</th><th scope="col" class="text-right">Points</th><th scope="col" class="text-right">Rank</th>
+                        <th scope="col" class="text-right">Played</th><th scope="col" class="text-right">W-D-L</th><th scope="col">Playoffs</th></tr>
                 </thead>
                 <tbody>
                     <tr th:each="row : ${seasonRows}">
                         <td><a class="entity-link font-bold" th:href="${row.url}" th:text="${row.season}"></a></td>
+                        <td class="text-right font-bold text-white" th:text="${row.matchPoints}"></td>
                         <td class="text-right" th:text="${row.rank} + ' / ' + ${row.ranked} + ${row.group != null ? ' · ' + row.group : ''}"></td>
                         <td class="text-right" th:text="${row.played}"></td>
                         <td class="text-right" th:text="${row.wins} + '-' + ${row.draws} + '-' + ${row.losses}"></td>
-                        <td class="text-right font-bold text-white" th:text="${row.matchPoints}"></td>
                         <td th:text="${row.playoffResult ?: '-'}"></td>
                     </tr>
                 </tbody>
