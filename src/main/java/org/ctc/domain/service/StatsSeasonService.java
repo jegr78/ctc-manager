@@ -12,6 +12,7 @@ import org.ctc.domain.stats.StatsChoice;
 import org.ctc.domain.stats.StatsLookupException;
 import org.ctc.domain.stats.StatsPeriod;
 import org.ctc.domain.stats.StatsScope;
+import org.ctc.sitegen.SiteProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,11 +23,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class StatsSeasonService {
     private final SeasonRepository seasons;
     private final SeasonPhaseService phases;
+    private final SiteProperties site;
     private final StatsCache<List<StatsChoice>> choices = new StatsCache<>();
 
     public List<Season> counted() {
         return seasons.findAll().stream()
-                .filter(season -> !season.getName().contains("Test"))
+                .filter(season -> site.isIncludeTestSeasons() || !season.getName().contains("Test"))
                 .filter(season -> phases.findByType(season.getId(), PhaseType.REGULAR).isPresent())
                 .sorted(Season.CHRONOLOGICAL)
                 .toList();
