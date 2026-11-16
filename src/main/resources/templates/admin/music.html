@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Music', ~{::section})}">
+<body>
+<section class="admin-list">
+    <div class="toolbar">
+        <h1>Music</h1>
+    </div>
+    <p class="admin-list-intro text-dim">Music for matchday trailers. Each trailer plays one track, chosen by you or at random.</p>
+    <div class="card">
+        <h2>Add music</h2>
+        <form th:action="@{/admin/music}" th:object="${musicTrackForm}" method="post" enctype="multipart/form-data" class="entity-editor-form">
+            <fieldset>
+                <legend>MP3 file and credits</legend>
+                <div class="form-group">
+                    <label for="music-file">MP3 file</label>
+                    <input type="file" id="music-file" name="file" accept="audio/mpeg,.mp3" required class="file-input"
+                           th:attr="aria-invalid=${fileError != null},aria-describedby=${fileError != null ? 'music-file-hint music-file-error' : 'music-file-hint'}">
+                    <small class="form-hint" id="music-file-hint" th:text="|MP3 only, at most ${maxUploadMegabytes} MB.|">MP3 only.</small>
+                    <p id="music-file-error" class="field-error" th:if="${fileError != null}" th:text="${fileError}"></p>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="music-title">Title</label>
+                        <input type="text" id="music-title" th:field="*{title}" maxlength="150" required
+                               th:attr="aria-invalid=${#fields.hasErrors('title')},aria-describedby=${#fields.hasErrors('title') ? 'music-title-error' : null}">
+                        <p id="music-title-error" class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+                    </div>
+                    <div class="form-group">
+                        <label for="music-artist">Artist</label>
+                        <input type="text" id="music-artist" th:field="*{artist}" maxlength="150" required
+                               th:attr="aria-invalid=${#fields.hasErrors('artist')},aria-describedby=${#fields.hasErrors('artist') ? 'music-artist-error' : null}">
+                        <p id="music-artist-error" class="field-error" th:if="${#fields.hasErrors('artist')}" th:errors="*{artist}"></p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="music-credit">Credit for the YouTube description</label>
+                    <textarea id="music-credit" th:field="*{credit}" maxlength="500" rows="2"
+                              th:attr="aria-invalid=${#fields.hasErrors('credit')},aria-describedby=${#fields.hasErrors('credit') ? 'music-credit-hint music-credit-error' : 'music-credit-hint'}"></textarea>
+                    <small class="form-hint" id="music-credit-hint">Optional. Without it the description names title and artist.</small>
+                    <p id="music-credit-error" class="field-error" th:if="${#fields.hasErrors('credit')}" th:errors="*{credit}"></p>
+                </div>
+            </fieldset>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Add music</button>
+            </div>
+        </form>
+    </div>
+    <div class="card admin-list-card">
+        <h2>Library</h2>
+        <p th:if="${musicTracks.isEmpty()}" class="empty-state">No music yet. Trailers need at least one track.</p>
+        <table th:unless="${musicTracks.isEmpty()}" id="musicTable">
+            <thead>
+                <tr>
+                    <th scope="col">Title</th>
+                    <th scope="col">Artist</th>
+                    <th scope="col">Length</th>
+                    <th scope="col">Credit</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="track : ${musicTracks}" data-music-track>
+                    <td th:text="${track.title}"></td>
+                    <td th:text="${track.artist}"></td>
+                    <td class="numeric" th:text="${track.duration}"></td>
+                    <td th:text="${track.credit}"></td>
+                    <td class="actions">
+                        <form th:action="@{/admin/music/{id}/delete(id=${track.id})}" method="post">
+                            <button type="submit" class="btn btn-danger btn-sm" th:attr="aria-label=|Delete ${track.title}|">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+</body>
+</html>

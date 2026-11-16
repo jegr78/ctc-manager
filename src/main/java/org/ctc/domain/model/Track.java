@@ -29,6 +29,9 @@ public class Track extends BaseEntity {
 	@Column(name = "image_url", length = 500)
 	private String imageUrl;
 
+	@Column(name = "display_short_name", length = 30)
+	private String displayShortName;
+
     @Convert(converter = TrackTimeOptionsConverter.class)
     @Column(name = "time_of_day_options", length = 3000)
     private java.util.List<String> timeOfDayOptions = java.util.List.of();

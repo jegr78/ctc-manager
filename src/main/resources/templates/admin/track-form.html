@@ -20,6 +20,12 @@
                     <label for="country">Country</label>
                     <input type="text" id="country" th:field="*{country}" placeholder="e.g. Japan">
                 </div>
+                <div class="form-group">
+                    <label for="displayShortName">Short name</label>
+                    <input type="text" id="displayShortName" th:field="*{displayShortName}" maxlength="30" th:attr="aria-invalid=${#fields.hasErrors('displayShortName')},aria-describedby=${#fields.hasErrors('displayShortName') ? 'displayShortName-hint displayShortName-error' : 'displayShortName-hint'}" placeholder="e.g. SPA">
+                    <p id="displayShortName-hint" class="text-dim">Optional. Shown large in matchday trailers, with the full name below.</p>
+                    <p id="displayShortName-error" class="field-error" th:if="${#fields.hasErrors('displayShortName')}" th:errors="*{displayShortName}"></p>
+                </div>
             </div>
             </fieldset>
             <fieldset th:if="${trackForm.id == null}" id="track-environment"><legend>Time &amp; weather for this layout</legend>

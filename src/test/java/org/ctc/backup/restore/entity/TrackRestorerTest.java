@@ -75,8 +75,8 @@ class TrackRestorerTest {
 
         assertThat(sqlCaptor.getValue())
                 .contains("INSERT INTO tracks")
-                .contains("(id, name, country, image_url, created_at, updated_at, time_of_day_options, rain_capability, environment_version, environment_source, environment_import_hash, environment_override)")
-                .contains("VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                .contains("(id, name, country, image_url, created_at, updated_at, time_of_day_options, rain_capability, environment_version, environment_source, environment_import_hash, environment_override, display_short_name)")
+                .contains("VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         PreparedStatement ps = mock(PreparedStatement.class);
         setterCaptor.getValue().setValues(ps, row);
@@ -91,6 +91,7 @@ class TrackRestorerTest {
         verify(ps).setString(8, "RAIN");
         verify(ps).setLong(9, 3L);
         verify(ps).setNull(10, java.sql.Types.VARCHAR);verify(ps).setNull(11, java.sql.Types.VARCHAR);verify(ps).setBoolean(12,true);
+        verify(ps).setNull(13, java.sql.Types.VARCHAR);
     }
 
     @Test

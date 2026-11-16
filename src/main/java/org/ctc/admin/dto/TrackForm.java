@@ -18,6 +18,9 @@ public class TrackForm {
 
 	private String country;
 
+	@jakarta.validation.constraints.Size(max = 30)
+	private String displayShortName;
+
     @jakarta.validation.constraints.Size(max = 3000)
     private String timeOfDayText;
     @jakarta.validation.constraints.NotNull

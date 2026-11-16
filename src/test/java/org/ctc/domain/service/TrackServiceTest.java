@@ -8,6 +8,7 @@ import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.Track;
+import org.ctc.domain.model.TrackRainCapability;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TrackRepository;
@@ -125,6 +126,34 @@ class TrackServiceTest {
 			// then
 			assertThat(result.getName()).isEqualTo("New Name");
 			assertThat(result.getCountry()).isEqualTo("New Country");
+		}
+
+		@Test
+		void givenBlankShortName_whenSave_thenStoredAsNull() {
+			// given
+			when(trackRepository.saveAndFlush(any(Track.class))).thenAnswer(inv -> inv.getArgument(0));
+
+			// when
+			var result = trackService.save(null, "Fuji Speedway", "Japan", null, TrackRainCapability.UNKNOWN, "   ");
+
+			// then
+			assertThat(result.getDisplayShortName()).as("blank short name is not stored").isNull();
+		}
+
+		@Test
+		void givenShortNameWithSpaces_whenSave_thenTrimmed() {
+			// given
+			var id = UUID.randomUUID();
+			var existing = new Track("Circuit de Spa-Francorchamps", "Belgium");
+			existing.setId(id);
+			when(trackRepository.findById(id)).thenReturn(Optional.of(existing));
+			when(trackRepository.saveAndFlush(any(Track.class))).thenAnswer(inv -> inv.getArgument(0));
+
+			// when
+			var result = trackService.save(id, "Circuit de Spa-Francorchamps", "Belgium", null, TrackRainCapability.UNKNOWN, "  SPA ");
+
+			// then
+			assertThat(result.getDisplayShortName()).isEqualTo("SPA");
 		}
 
 		@Test

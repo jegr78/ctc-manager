@@ -66,6 +66,25 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class DataAuditServiceIT {
     @Test
+    void givenMusicTrackWithoutItsFile_whenAuditing_thenReportItWithoutDeletingTheRow() {
+        // given
+        var track = new org.ctc.domain.model.MusicTrack();
+        track.setTitle("Test_Audit music " + id); track.setArtist("Test artist");
+        track.setFilePath("/uploads/music/" + id + "/missing.mp3"); track.setDurationSeconds(30);
+        track = entityManager.merge(track);
+        entityManager.flush(); entityManager.clear();
+        // when
+        var findings = dataAuditService.audit().findings(Category.MUSIC_LIBRARY);
+        // then
+        var trackId = track.getId();
+        assertThat(findings).anySatisfy(finding -> {
+            assertThat(finding.subject()).isEqualTo("Music Test_Audit music " + id);
+            assertThat(finding.evidence()).contains(trackId.toString(), "missing.mp3");
+        });
+        assertThat(entityManager.find(org.ctc.domain.model.MusicTrack.class, trackId)).as("the audit changes nothing").isNotNull();
+    }
+
+    @Test
     void givenGalleryImageWithoutItsFile_whenAuditing_thenReportItWithoutDeletingTheRow() {
         // given
         var car = entityManager.merge(new org.ctc.domain.model.Car("Test", "Test audit gallery " + id));
