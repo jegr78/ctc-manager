@@ -18,9 +18,18 @@
          font-size: 36px; letter-spacing: 3px; }
   .tag .a { background: var(--yellow); color: #0b0b0b; padding: 0 22px; display: flex; align-items: center; }
   .tag .b { background: #fff; color: #0b0b0b; padding: 0 22px; display: flex; align-items: center; max-width: 520px; }
-  .logo { position: absolute; left: 112px; top: 300px; width: 340px; height: 120px; background: #fff; padding: 14px 20px;
-          display: flex; align-items: center; justify-content: center; }
-  .logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .logo { position: absolute; left: 112px; top: 300px; width: 340px; height: 120px; display: flex; align-items: center; }
+  .logo img { max-width: 100%; max-height: 100%; object-fit: contain;
+              filter: drop-shadow(0 0 1px rgba(255,255,255,.95)) drop-shadow(0 0 8px rgba(255,255,255,.45)); }
+  .teams { position: absolute; right: 112px; top: 300px; width: 760px; height: 120px; background: rgba(11,11,11,.82);
+           border-top: 4px solid #fff; display: grid; grid-template-columns: 1fr 64px 1fr; align-items: center; padding: 0 20px; }
+  .side { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .side.away { flex-direction: row-reverse; text-align: right; }
+  .side img { width: 76px; height: 76px; object-fit: contain; flex: none; }
+  .side .text { min-width: 0; }
+  .side .short { font-family: "Conthrax"; font-size: 30px; line-height: 1.1; }
+  .side .standing { font-family: "Barlow Condensed"; font-weight: 600; font-size: 22px; letter-spacing: 3px; color: var(--grey); }
+  .teams .vs { text-align: center; font-family: "Barlow Condensed"; font-weight: 700; font-size: 28px; letter-spacing: 3px; color: var(--yellow); }
   .headline { position: absolute; left: 106px; width: 760px; top: 440px; font-family: "Conthrax"; line-height: 1.02; }
   .headline.fit-xl { font-size: 150px; }
   .headline.fit-l { font-size: 104px; }
@@ -56,6 +65,15 @@
     <div class="headline clip" th:classappend="${headlineSize}" th:text="${#strings.toUpperCase(headline)}">SPA</div>
     <div class="subline clip" th:if="${subline != null}" th:text="${subline}">Circuit de Spa-Francorchamps</div>
     <div class="map" th:if="${trackLayout != null}"><img th:src="${trackLayout}" alt=""></div>
+    <div class="teams">
+        <div class="side"><img th:if="${homeLogo != null}" th:src="${homeLogo}" alt="">
+            <div class="text"><div class="short clip" th:text="${homeShort}">HOM</div>
+                <div class="standing clip" th:if="${homeStanding != null}" th:text="${homeStanding}">SEED 1</div></div></div>
+        <div class="vs">VS</div>
+        <div class="side away"><img th:if="${awayLogo != null}" th:src="${awayLogo}" alt="">
+            <div class="text"><div class="short clip" th:text="${awayShort}">AWY</div>
+                <div class="standing clip" th:if="${awayStanding != null}" th:text="${awayStanding}">SEED 2</div></div></div>
+    </div>
     <div class="carname" th:classappend="${carNameSize}"><span class="label">Car</span><span class="value clip" th:text="${carName}">Car</span></div>
 </th:block>
 </body>

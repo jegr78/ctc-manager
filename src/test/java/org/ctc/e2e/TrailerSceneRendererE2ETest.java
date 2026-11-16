@@ -132,7 +132,7 @@ class TrailerSceneRendererE2ETest {
                 12, 2, 3, 4, "Default", 1, TimeProgressionMode.MULTIPLIER, 1, "S01, S02, S03, S04, S05, S06, S07, S08", "Afternoon",
                 "RS, RM, RH, IM, W", "RM", LobbyRulesProfile.LEGACY, RaceStartType.values()[0], RaceSlipstream.values()[0]);
         var scene = new TrailerRaceScene(UUID.randomUUID(), "HOM vs AWY", homeTeam, "Test_Away", null, null, List.of(1), content,
-                trackId, "Michelin Raceway Road Atlanta", null, carId, carName);
+                trackId, "Michelin Raceway Road Atlanta", null, carId, carName, "SEED 1 · 4-1-0", "SEED 2 · 3-2-0");
         return new TrailerPlan(new TrailerScope.MatchdayScope(UUID.randomUUID()), "Test_Trailer MD1", "Test_Trailer Season",
                 overview, List.of(scene), List.of(), Set.of());
     }

@@ -107,7 +107,8 @@ public class TrailerPlanService {
                 if (checkedCars.add(car.getId())) checkCar(car, blockers, needingCutout);
                 previous = new TrailerRaceScene(race.getId(), pairing, row.homeTeamName(), row.awayTeamName(),
                         row.homeLogoBase64(), row.awayLogoBase64(), List.of(leg), content, track.getId(), track.getName(),
-                        track.getDisplayShortName(), car.getId(), car.getName());
+                        track.getDisplayShortName(), car.getId(), car.getName(), standing(row.homeSeed(), row.homeRecord()),
+                        standing(row.awaySeed(), row.awayRecord()));
                 scenes.add(previous);
             }
         }
@@ -116,6 +117,13 @@ public class TrailerPlanService {
         if (music.list().isEmpty()) blockers.add(new TrailerChecklistItem("No music in the library", "/admin/music"));
         return new TrailerPlan(scope, overview.matchdayLabel(), overview.seasonName(), overview, List.copyOf(scenes),
                 List.copyOf(blockers), Set.copyOf(needingCutout));
+    }
+
+    /** "SEED 1 · 4-1-0"; parts without a seed or a record are left out, and null means neither is known. */
+    static String standing(int seed, String record) {
+        boolean hasRecord = record != null && !record.isBlank() && !"—".equals(record);
+        if (seed <= 0) return hasRecord ? record : null;
+        return hasRecord ? "SEED " + seed + " · " + record : "SEED " + seed;
     }
 
     public Duration estimatedLength(TrailerPlan plan) {
@@ -147,6 +155,6 @@ public class TrailerPlanService {
     private static TrailerRaceScene withLegs(TrailerRaceScene scene, List<Integer> legs) {
         return new TrailerRaceScene(scene.raceId(), scene.pairingLabel(), scene.homeTeam(), scene.awayTeam(), scene.homeLogo(),
                 scene.awayLogo(), List.copyOf(legs), scene.content(), scene.trackId(), scene.trackName(), scene.trackShortName(),
-                scene.carId(), scene.carName());
+                scene.carId(), scene.carName(), scene.homeStanding(), scene.awayStanding());
     }
 }

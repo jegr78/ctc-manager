@@ -81,6 +81,8 @@ class TrailerPlanServiceTest {
             assertThat(scene.legNumbers()).containsExactly(1, 2);
             assertThat(scene.trackShortName()).isEqualTo("SPA");
             assertThat(scene.carName()).isEqualTo("GT-R NISMO GT3 '18");
+            assertThat(scene.homeStanding()).isEqualTo("SEED 1 · 1-0-0");
+            assertThat(scene.awayStanding()).isEqualTo("SEED 2 · 0-1-0");
         });
         assertThat(plan.blockers()).isEmpty();
     }
@@ -241,6 +243,14 @@ class TrailerPlanServiceTest {
 
         // then
         assertThat(service.estimatedLength(plan)).isEqualTo(Duration.ofSeconds(101));
+    }
+
+    @Test
+    void givenNoSeedAndNoRecord_whenStanding_thenNull() {
+        // when / then
+        assertThat(TrailerPlanService.standing(0, "—")).isNull();
+        assertThat(TrailerPlanService.standing(3, "—")).isEqualTo("SEED 3");
+        assertThat(TrailerPlanService.standing(0, "2-1-0")).isEqualTo("2-1-0");
     }
 
     private Match match(String home, String away) {

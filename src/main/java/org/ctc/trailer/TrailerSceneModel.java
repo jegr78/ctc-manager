@@ -85,10 +85,15 @@ public class TrailerSceneModel {
         vars.put("carName", race.carName());
         vars.put("carNameSize", fit(race.carName().length(), 24, 34));
         vars.put("pairing", race.pairingLabel());
+        var shorts = race.pairingLabel().split(" vs ", 2);
+        vars.put("homeShort", shorts[0]);
+        vars.put("awayShort", shorts.length > 1 ? shorts[1] : "");
         vars.put("homeTeam", race.homeTeam());
         vars.put("awayTeam", race.awayTeam());
         vars.put("homeLogo", race.homeLogo());
         vars.put("awayLogo", race.awayLogo());
+        vars.put("homeStanding", race.homeStanding());
+        vars.put("awayStanding", race.awayStanding());
         var legs = race.legNumbers();
         vars.put("legLabel", legs.size() == 1 ? "LEG " + legs.getFirst()
                 : "LEGS " + String.join(" & ", legs.stream().map(String::valueOf).toList()));
@@ -112,9 +117,11 @@ public class TrailerSceneModel {
                 new Tile("Initial fuel", text(content.initialFuel()), 1),
                 new Tile("Time of day", text(content.timeOfDay()), 1),
                 new Tile("Progression", progression, 1),
-                new Tile("Tyres", text(content.availableTyres()), 2),
+                new Tile("Slipstream", content.slipstream() == null ? MISSING : content.slipstream().getLabel(), 1),
                 new Tile("Mandatory", text(content.mandatoryTyres()), 1),
-                new Tile("Weather", text(content.weather()), 4));
+                new Tile("Start type", content.startType() == null ? MISSING : content.startType().getLabel(), 2),
+                new Tile("Tyres", text(content.availableTyres()), 3),
+                new Tile("Weather", text(content.weather()), 5));
     }
 
     static String fit(int length, int... limits) {

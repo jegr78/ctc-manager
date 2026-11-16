@@ -76,6 +76,10 @@ class TrailerSceneModelTest {
         assertThat(visual.get("subline")).isEqualTo("Circuit de Spa-Francorchamps");
         assertThat(visual.get("headlineSize")).isEqualTo("fit-xl");
         assertThat(visual.get("legLabel")).isEqualTo("LEGS 1 & 2");
+        assertThat(visual.get("homeShort")).isEqualTo("HOM");
+        assertThat(visual.get("awayShort")).isEqualTo("AWY");
+        assertThat(visual.get("homeStanding")).isEqualTo("SEED 1 · 4-1-0");
+        assertThat(visual.get("awayStanding")).isEqualTo("SEED 2 · 3-2-0");
     }
 
     @Test
@@ -119,10 +123,12 @@ class TrailerSceneModelTest {
                 org.assertj.core.groups.Tuple.tuple("Initial fuel", "Default"),
                 org.assertj.core.groups.Tuple.tuple("Time of day", "Afternoon"),
                 org.assertj.core.groups.Tuple.tuple("Progression", "1x"),
-                org.assertj.core.groups.Tuple.tuple("Tyres", "RS"),
+                org.assertj.core.groups.Tuple.tuple("Slipstream", "Real"),
                 org.assertj.core.groups.Tuple.tuple("Mandatory", "None"),
+                org.assertj.core.groups.Tuple.tuple("Start type", "Grid Start With False Start Check"),
+                org.assertj.core.groups.Tuple.tuple("Tyres", "RS"),
                 org.assertj.core.groups.Tuple.tuple("Weather", "S01"));
-        assertThat(tiles).extracting(TrailerSceneModel.Tile::span).containsExactly(1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 4);
+        assertThat(tiles).extracting(TrailerSceneModel.Tile::span).containsExactly(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 5);
         assertThat(settings.get("carName")).isEqualTo("Nissan GT-R NISMO GT3 '18");
     }
 
@@ -131,7 +137,7 @@ class TrailerSceneModelTest {
         // given
         var long60 = "Test_" + "X".repeat(55);
         var scene = new TrailerRaceScene(UUID.randomUUID(), "LNG vs OTH", long60, "Test_Other", "logo", "logo", List.of(1),
-                content(), trackId, "Michelin Raceway Road Atlanta", null, carId, "Y".repeat(45));
+                content(), trackId, "Michelin Raceway Road Atlanta", null, carId, "Y".repeat(45), "SEED 1 · 4-1-0", "SEED 2 · 3-2-0");
 
         // when
         var vars = model.scenes(plan(scene)).get(2).variables();
@@ -163,7 +169,7 @@ class TrailerSceneModelTest {
 
     private TrailerRaceScene scene(String shortName, List<Integer> legs) {
         return new TrailerRaceScene(UUID.randomUUID(), "HOM vs AWY", "Test_Home", "Test_Away", "logo", "logo", legs, content(),
-                trackId, "Circuit de Spa-Francorchamps", shortName, carId, "Nissan GT-R NISMO GT3 '18");
+                trackId, "Circuit de Spa-Francorchamps", shortName, carId, "Nissan GT-R NISMO GT3 '18", "SEED 1 · 4-1-0", "SEED 2 · 3-2-0");
     }
 
     private PickPublicationContent content() {
