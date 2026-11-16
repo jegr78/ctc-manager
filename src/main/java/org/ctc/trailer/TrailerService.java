@@ -6,7 +6,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.Optional;
@@ -42,6 +41,8 @@ public class TrailerService {
     private static final String ZIP = "layers.zip";
     private static final String TEXT = "youtube.txt";
     private static final String META = "trailer.properties";
+    private static final String OLD_PREFIX = ".old-";
+    private static final int SCOPE_ID_LENGTH = 36;
 
     private final TrailerPlanService plans;
     private final TrailerSceneRenderer renderer;
@@ -82,7 +83,7 @@ public class TrailerService {
         }
     }
 
-    /** Removes work directories a restart interrupted. */
+    /** Removes work directories a restart interrupted and restores a previous trailer a crash left mid-swap. */
     @EventListener(ApplicationReadyEvent.class)
     public void removeInterruptedWork() {
         for (String kind : new String[] {"matchday", "round"}) {
@@ -90,7 +91,7 @@ public class TrailerService {
                 Path parent = files.resolve("/uploads/trailers/" + kind);
                 if (parent == null || !Files.isDirectory(parent)) continue;
                 try (var entries = Files.list(parent)) {
-                    entries.filter(TrailerService::isHidden).forEach(TrailerService::deleteTree);
+                    entries.filter(TrailerService::isHidden).toList().forEach(TrailerService::recoverOrDelete);
                 }
             } catch (IOException | RuntimeException e) {
                 log.warn("Could not clean interrupted trailer work for {}", kind, e);
@@ -120,11 +121,11 @@ public class TrailerService {
         Path work = Files.createTempDirectory("ctc-trailer-");
         Path staged = target.resolveSibling(".new-" + UUID.randomUUID());
         try {
+            Path musicCopy = Files.copy(music.resolveFile(song), work.resolve("music.mp3"));
             var layers = renderer.render(plan, work.resolve("layers"), ctx);
             ctx.checkNotAbandoned();
             TrailerSceneRenderer.zipLayers(layers, work.resolve(ZIP));
-            composer.compose(layers, music.resolveFile(song), Duration.ofSeconds(song.getDurationSeconds()), work.resolve(MP4),
-                    work.resolve("clips"), ctx);
+            composer.compose(layers, musicCopy, work.resolve(MP4), work.resolve("clips"), ctx);
             ctx.checkNotAbandoned();
             Files.writeString(work.resolve(TEXT), YoutubeTextBuilder.build(plan, song).asFile());
             writeMeta(work.resolve(META), song, downloadName(plan));
@@ -157,7 +158,7 @@ public class TrailerService {
     }
 
     private static void replace(Path target, Path work) throws IOException {
-        Path old = target.resolveSibling(".old-" + UUID.randomUUID());
+        Path old = target.resolveSibling(OLD_PREFIX + target.getFileName() + "-" + UUID.randomUUID());
         boolean hadPrevious = Files.exists(target);
         if (hadPrevious) Files.move(target, old, StandardCopyOption.ATOMIC_MOVE);
         try {
@@ -174,6 +175,23 @@ public class TrailerService {
             case TrailerScope.MatchdayScope matchday -> files.resolve("/uploads/trailers/matchday/" + matchday.matchdayId());
             case TrailerScope.PlayoffRoundScope round -> files.resolve("/uploads/trailers/round/" + round.roundId());
         };
+    }
+
+    private static void recoverOrDelete(Path hidden) {
+        String name = String.valueOf(hidden.getFileName());
+        if (name.startsWith(OLD_PREFIX) && name.length() > OLD_PREFIX.length() + SCOPE_ID_LENGTH) {
+            Path target = hidden.resolveSibling(name.substring(OLD_PREFIX.length(), OLD_PREFIX.length() + SCOPE_ID_LENGTH));
+            if (!Files.exists(target)) {
+                try {
+                    Files.move(hidden, target, StandardCopyOption.ATOMIC_MOVE);
+                    log.info("Restored the previous trailer {} after an interrupted swap", target.getFileName());
+                    return;
+                } catch (IOException e) {
+                    log.warn("Could not restore the previous trailer from {}", hidden, e);
+                }
+            }
+        }
+        deleteTree(hidden);
     }
 
     private static boolean isHidden(Path path) {

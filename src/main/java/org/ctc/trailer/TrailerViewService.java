@@ -28,7 +28,7 @@ public class TrailerViewService {
     public TrailerView view(TrailerScope scope) {
         TrailerPlan plan;
         try {
-            plan = plans.plan(scope);
+            plan = plans.checklist(scope);
         } catch (BusinessRuleException | EntityNotFoundException unplannable) {
             var blocker = new TrailerChecklistItem("The trailer checklist could not be prepared: " + unplannable.getMessage(), null);
             return new TrailerView(basePath(scope), false, List.of(blocker), music.list(), trailers.status(scope), trailers.latest(scope),

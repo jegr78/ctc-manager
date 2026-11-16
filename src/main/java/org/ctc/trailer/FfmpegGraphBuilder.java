@@ -46,13 +46,13 @@ public final class FfmpegGraphBuilder {
         return List.copyOf(args);
     }
 
-    /** All scene clips joined by cross-fades, with the music looped or cut to the video and faded out at the end. */
-    public static List<String> finalArgs(List<Path> clips, List<Duration> lengths, Path music, Duration musicLength, Path out) {
+    /** All scene clips joined by cross-fades, with the music looped, cut to the video and faded out at the end. */
+    public static List<String> finalArgs(List<Path> clips, List<Duration> lengths, Path music, Path out) {
         Duration total = totalLength(lengths);
         double totalSeconds = total.toMillis() / 1000.0;
         var args = new ArrayList<String>();
         for (var clip : clips) args.addAll(List.of("-i", clip.toAbsolutePath().toString()));
-        if (musicLength.compareTo(total) < 0) args.addAll(List.of("-stream_loop", "-1"));
+        args.addAll(List.of("-stream_loop", "-1"));
         args.addAll(List.of("-i", music.toAbsolutePath().toString()));
         var graph = new StringBuilder();
         if (clips.size() == 1) {

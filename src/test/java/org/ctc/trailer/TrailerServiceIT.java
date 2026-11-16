@@ -40,6 +40,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 class TrailerServiceIT {
     @Autowired TrailerService trailers;
     @Autowired MusicLibraryService music;
+    @Autowired org.ctc.domain.repository.MusicTrackRepository repository;
     @Autowired MediaJobExecutor jobs;
     @Autowired MediaTool media;
     @Autowired PickSessionEpoch epoch;
@@ -62,7 +63,7 @@ class TrailerServiceIT {
 
     @AfterEach
     void cleanUp() throws Exception {
-        music.delete(song.getId());
+        if (repository.existsById(song.getId())) music.delete(song.getId());
         trailers.latest(scope).ifPresent(outputs -> deleteTree(outputs.mp4().getParent()));
     }
 
@@ -128,6 +129,24 @@ class TrailerServiceIT {
                     .as("work happens outside the upload tree a restore swaps").isFalse();
         });
         assertThat(trailers.latest(scope)).hasValueSatisfying(kept -> assertThat(kept.createdAt()).isEqualTo(previous.createdAt()));
+    }
+
+    @Test
+    void givenMusicDeletedDuringRender_whenJobEnds_thenTrailerStillComposed() throws Exception {
+        // given
+        rendersLayers();
+        var layersAnswer = renderer.render(null, Files.createTempDirectory("trailer-layers"), null);
+        doAnswer(call -> {
+            music.delete(song.getId());
+            return layersAnswer;
+        }).when(renderer).render(any(), any(), any());
+
+        // when
+        var status = await(trailers.start(scope, song.getId()));
+
+        // then
+        assertThat(status.state()).as(status.message()).isEqualTo(MediaJobState.DONE);
+        assertThat(trailers.latest(scope)).isPresent();
     }
 
     @Test

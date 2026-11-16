@@ -96,6 +96,22 @@ class MediaJobExecutorTest {
     }
 
     @Test
+    void givenJobThrowsVirtualMachineError_whenFinished_thenFailedAndNextJobAccepted() {
+        // given
+        executor.submit(MediaJobKind.CUTOUT, "car:a", ctx -> {
+            throw new StackOverflowError();
+        });
+
+        // when
+        queued.removeFirst().run();
+
+        // then
+        assertThat(executor.status("car:a")).hasValueSatisfying(status -> assertThat(status.state()).isEqualTo(MediaJobState.FAILED));
+        assertThat(executor.submit(MediaJobKind.CUTOUT, "car:b", ctx -> { }).state()).as("executor is free again")
+                .isEqualTo(MediaJobState.QUEUED);
+    }
+
+    @Test
     void givenImportLockHeld_whenSubmit_thenRejected() {
         // given
         imports.tryLock();

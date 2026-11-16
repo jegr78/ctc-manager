@@ -17,6 +17,7 @@ import org.ctc.media.MediaToolException;
 import org.ctc.util.LogSanitizer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
@@ -31,13 +32,14 @@ public class MusicLibraryService {
     private final MusicTrackRepository repository;
     private final FileStorageService files;
     private final MediaTool media;
+    private final TransactionTemplate transactions;
 
     @Transactional(readOnly = true)
     public List<MusicTrack> list() {
         return repository.findAllByOrderByTitleAscIdAsc();
     }
 
-    @Transactional
+    /** Stores and probes the file outside any transaction, then saves the row; the file is removed when a step fails. */
     public MusicTrack upload(MultipartFile file, String title, String artist, String credit) {
         byte[] data = readMp3(file);
         UUID id = UUID.randomUUID();
@@ -47,23 +49,27 @@ public class MusicLibraryService {
         } catch (IOException e) {
             throw new BusinessRuleException("The MP3 file could not be stored.");
         }
-        files.deleteOnRollback(path);
-        long millis;
         try {
-            millis = media.probeDuration(files.resolve(path)).toMillis();
-        } catch (MediaToolException e) {
-            log.warn("Rejected music upload {}: {}", LogSanitizer.sanitize(file.getOriginalFilename()), e.getMessage());
-            throw new BusinessRuleException("The MP3 file could not be read.");
+            long millis;
+            try {
+                millis = media.probeDuration(files.resolve(path)).toMillis();
+            } catch (MediaToolException e) {
+                log.warn("Rejected music upload {}: {}", LogSanitizer.sanitize(file.getOriginalFilename()), e.getMessage());
+                throw new BusinessRuleException("The MP3 file could not be read.");
+            }
+            var track = new MusicTrack();
+            track.setTitle(title.trim());
+            track.setArtist(artist.trim());
+            track.setCredit(credit == null || credit.isBlank() ? null : credit.trim());
+            track.setFilePath(path);
+            track.setDurationSeconds((int) Math.max(1, Math.round(millis / 1000.0)));
+            var saved = transactions.execute(status -> repository.saveAndFlush(track));
+            log.info("Added music track {} by {}", LogSanitizer.sanitize(saved.getTitle()), LogSanitizer.sanitize(saved.getArtist()));
+            return saved;
+        } catch (RuntimeException failure) {
+            files.delete(path);
+            throw failure;
         }
-        var track = new MusicTrack();
-        track.setTitle(title.trim());
-        track.setArtist(artist.trim());
-        track.setCredit(credit == null || credit.isBlank() ? null : credit.trim());
-        track.setFilePath(path);
-        track.setDurationSeconds((int) Math.max(1, Math.round(millis / 1000.0)));
-        track = repository.saveAndFlush(track);
-        log.info("Added music track {} by {}", LogSanitizer.sanitize(track.getTitle()), LogSanitizer.sanitize(track.getArtist()));
-        return track;
     }
 
     @Transactional
@@ -104,7 +110,7 @@ public class MusicLibraryService {
             throw new BusinessRuleException("MP3 files may be at most 20 MB.");
         }
         boolean id3 = data.length >= 3 && data[0] == 'I' && data[1] == 'D' && data[2] == '3';
-        boolean frameSync = data.length >= 2 && (data[0] & 0xFF) == 0xFF && (data[1] & 0xE0) == 0xE0;
+        boolean frameSync = data.length >= 2 && (data[0] & 0xFF) == 0xFF && (data[1] & 0xE0) == 0xE0 && (data[1] & 0x06) != 0;
         if (!id3 && !frameSync) {
             throw new BusinessRuleException("Only MP3 files are accepted.");
         }
