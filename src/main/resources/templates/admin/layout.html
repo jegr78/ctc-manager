@@ -12,6 +12,7 @@
         <meta name="_csrf_header" th:content="${_csrf.headerName}">
     </th:block>
     <script>
+    document.documentElement.classList.add('js');
     function csrfFetch(url, options) {
         var csrfMeta = document.querySelector('meta[name="_csrf"]');
         var headerMeta = document.querySelector('meta[name="_csrf_header"]');

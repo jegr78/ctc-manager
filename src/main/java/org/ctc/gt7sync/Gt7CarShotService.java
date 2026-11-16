@@ -30,6 +30,15 @@ public class Gt7CarShotService {
     private final CatalogImageService gallery;
 
     public Result load(UUID carId) {
+        return load(carId, scraper::scrapeCarShots);
+    }
+
+    /** Loads one car's shots from a car list bundle fetched once for a bulk run. */
+    public Result load(UUID carId, Gt7ScraperService.CarShotIndex index) {
+        return load(carId, gt7Id -> scraper.scrapeCarShots(index, gt7Id));
+    }
+
+    private Result load(UUID carId, ShotLister lister) {
         var car = cars.findById(carId).orElseThrow(() -> new EntityNotFoundException("Car", carId));
         String gt7Id = car.getGt7Id();
         if (!Gt7ScraperService.isCarId(gt7Id)) throw new BusinessRuleException("This car has no GT7 ID");
@@ -37,7 +46,7 @@ public class Gt7CarShotService {
         var staged = new ArrayList<Gt7Shot>();
         var unchanged = new ArrayList<String>();
         try {
-            for (var shot : scraper.scrapeCarShots(gt7Id)) {
+            for (var shot : lister.shots(gt7Id)) {
                 byte[] data = files.downloadImage(shot.imageUrl(), "gt7.jpg");
                 String stored = current.get(shot.slot());
                 if (stored != null && files.hasContent(stored, data)) {
@@ -63,6 +72,10 @@ public class Gt7CarShotService {
             log.warn("Saving GT7 images for car {} failed", carId, failure);
             throw new BusinessRuleException("GT7 images could not be saved; try again.");
         }
+    }
+
+    private interface ShotLister {
+        List<Gt7ScraperService.CarShot> shots(String gt7Id) throws IOException;
     }
 
     public record Result(List<String> added, List<String> replaced, List<String> unchanged) {

@@ -1,5 +1,7 @@
 package org.ctc.admin;
 
+import java.util.List;
+import org.ctc.testsupport.TestImages;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +16,7 @@ import org.springframework.web.client.RestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class SecurityIntegrationTest {
@@ -26,7 +29,8 @@ class SecurityIntegrationTest {
 			"spring.datasource.password=",
 			"spring.jpa.hibernate.ddl-auto=validate",
 			"spring.flyway.locations=classpath:db/migration",
-			"logging.config=classpath:logback-test.xml"
+			"logging.config=classpath:logback-test.xml",
+			"app.upload-dir=target/security-test-uploads"
 	})
 	@AutoConfigureMockMvc
 	@ActiveProfiles("prod")
@@ -46,6 +50,26 @@ class SecurityIntegrationTest {
 		void givenValidCredentials_whenAccessAdmin_thenOk() throws Exception {
 			mockMvc.perform(get("/admin/seasons"))
 					.andExpect(status().isOk());
+		}
+
+		@Test
+		@WithMockUser
+		void givenCatalogAndGraphicUploads_whenFetching_thenCacheOnlyTheImmutableCatalogFilesPrivately() throws Exception {
+			// given
+			var root = java.nio.file.Path.of("target/security-test-uploads");
+			for (String path : List.of("cars/c1/1a2b3c4d_car1.png", "track-images/t1/1a2b3c4d_map.png", "graphics/settings.png")) {
+				java.nio.file.Files.createDirectories(root.resolve(path).getParent());
+				java.nio.file.Files.write(root.resolve(path), TestImages.png(2, 2));
+			}
+			// when / then
+			for (String catalog : List.of("/uploads/cars/c1/1a2b3c4d_car1.png", "/uploads/track-images/t1/1a2b3c4d_map.png")) {
+				mockMvc.perform(get(catalog))
+						.andExpect(status().isOk())
+						.andExpect(header().string("Cache-Control", "max-age=2592000, private"));
+			}
+			mockMvc.perform(get("/uploads/graphics/settings.png"))
+					.andExpect(status().isOk())
+					.andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-cache")));
 		}
 
 		@Test

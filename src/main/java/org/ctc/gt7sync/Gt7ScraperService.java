@@ -126,9 +126,20 @@ public class Gt7ScraperService {
 
     /** The official 2K car shots of one car, ordered by slot; an empty list when GT7 lists none. */
     public List<CarShot> scrapeCarShots(String gt7Id) throws IOException {
+        return scrapeCarShots(carShotIndex(), gt7Id);
+    }
+
+    /** The GT7 car list bundle that names every car shot module, fetched once for several cars. */
+    public CarShotIndex carShotIndex() throws IOException {
         String html = externalConnection(CARS_PAGE).get().html();
         String indexJs = fetchText(BASE_URL + extractScriptSrc(html, "/common/dist/gt7/carlist/assets/index-"));
         requireCarShotFormat(indexJs);
+        return new CarShotIndex(indexJs);
+    }
+
+    /** The official 2K car shots of one car from an already fetched car list bundle. */
+    public List<CarShot> scrapeCarShots(CarShotIndex index, String gt7Id) throws IOException {
+        String indexJs = index.indexJs();
         var shots = new ArrayList<CarShot>();
         for (var module : carShotModules(indexJs, gt7Id).entrySet()) {
             String imageUrl = carShotImageUrl(fetchText(BASE_URL + "/common/dist/gt7/carlist/assets/" + module.getValue()), gt7Id, module.getKey());
@@ -291,4 +302,6 @@ public class Gt7ScraperService {
 
 	public record ScrapedTrack(String id, String name, String country, String baseId, String imageUrl) {
 	}
+
+    public record CarShotIndex(String indexJs) { }
 }

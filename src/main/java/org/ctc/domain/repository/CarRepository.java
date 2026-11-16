@@ -21,6 +21,16 @@ public interface CarRepository extends JpaRepository<Car, UUID>, CarLockingRepos
 
 	boolean existsByGt7Id(String gt7Id);
 
+	/** Cars with a GT7 ID that have no GT7 gallery image yet, in list order. */
+	@Query("SELECT c.id AS id, c.gt7Id AS gt7Id FROM Car c WHERE c.gt7Id LIKE 'car%' AND NOT EXISTS (SELECT 1 FROM CarImage i WHERE i.car = c "
+			+ "AND i.source = org.ctc.domain.model.ImageSource.GT7) ORDER BY c.manufacturer, c.name, c.id")
+	List<Gt7CarId> findWithoutGt7Images();
+
+	interface Gt7CarId {
+		UUID getId();
+		String getGt7Id();
+	}
+
 	/**
 	 * Full-table finder used by {@code BackupExportService}.
 	 *

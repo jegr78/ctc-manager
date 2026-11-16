@@ -2,6 +2,7 @@ package org.ctc.admin.controller;
 
 import org.ctc.domain.model.CarImageKind;
 import org.ctc.domain.service.CatalogImageService;
+import org.ctc.gt7sync.Gt7CarShotBulkService;
 import org.ctc.gt7sync.Gt7ScraperService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -28,10 +29,15 @@ public class CarController {
 
 	private final CarService carService;
 	private final CatalogImageService gallery;
+	private final Gt7CarShotBulkService carShotRun;
 
 	@GetMapping
 	public String list(Model model) {
 		model.addAttribute("cars", carService.findAllSorted());
+		var run = carShotRun.status();
+		model.addAttribute("carShotRun", run);
+		model.addAttribute("carShotRunning", run != null && run.running());
+		model.addAttribute("carShotPending", carShotRun.pendingCars());
 		return "admin/cars";
 	}
 

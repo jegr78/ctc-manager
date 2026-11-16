@@ -2293,6 +2293,8 @@ input:not([type='checkbox']):not([type='radio']):not([type='color']), select { b
 .admin-list-count { grid-column: 1 / -1; font-size: 13px; margin: 0; }
 .catalog-list-controls { grid-template-columns: minmax(220px, 420px) auto; justify-content: start; }
 .catalog-list .col-thumb { width: 100px; }
+/* Until management-list.js has paginated, show only the first page; without JavaScript every row stays visible. */
+.js .catalog-list:not([data-list-ready]) [data-list-entry]:nth-child(n+21) { display: none; }
 .catalog-image-status { font-size: 12px; }
 .admin-list [hidden] { display: none; }
 .admin-list table { min-width: 680px; }
