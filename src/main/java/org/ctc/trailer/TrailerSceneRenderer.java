@@ -48,7 +48,9 @@ public class TrailerSceneRenderer {
     public static Path zipLayers(List<TrailerLayer> layers, Path zipFile) throws IOException {
         try (var zip = new ZipOutputStream(Files.newOutputStream(zipFile))) {
             for (var layer : layers) {
-                zip.putNextEntry(new ZipEntry(layer.png().getFileName().toString()));
+                Path name = layer.png().getFileName();
+                if (name == null) throw new IOException("Layer path has no file name: " + layer.png());
+                zip.putNextEntry(new ZipEntry(name.toString()));
                 Files.copy(layer.png(), zip);
                 zip.closeEntry();
             }
