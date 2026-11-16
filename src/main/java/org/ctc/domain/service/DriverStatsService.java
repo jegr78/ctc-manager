@@ -61,9 +61,7 @@ public class DriverStatsService {
 
     private DriverStats stats(String nameOption, StatsPeriod period, Collection<UUID> known) {
         var driver = resolve(nameOption, known);
-        var ranking = period.alltime() ? rankings.calculateAlltimeRanking(period.seasonIds())
-                : rankings.aggregateAcrossPhases(phases.findBySeasonIdOrderBySortIndex(period.season().id()).stream().map(SeasonPhase::getId).toList(),
-                        period.season().id());
+        var ranking = ranking(period);
         for (int index = 0; index < ranking.size(); index++) {
             var entry = ranking.get(index);
             if (entry.getDriver().getId().equals(driver.getId())) {
@@ -71,6 +69,23 @@ public class DriverStatsService {
             }
         }
         throw new StatsLookupException("No results for " + driver.getPsnId() + " in " + (period.alltime() ? "any season" : period.title()));
+    }
+
+    /** Figures of every ranked driver of the period, keyed by driver ID in ranking order; one ranking for all. */
+    public java.util.Map<UUID, DriverStats> ranked(StatsPeriod period) {
+        var ranking = ranking(period);
+        var figures = new java.util.LinkedHashMap<UUID, DriverStats>();
+        for (int index = 0; index < ranking.size(); index++) {
+            var entry = ranking.get(index);
+            figures.put(entry.getDriver().getId(), figures(entry.getDriver(), period, entry.getRaceResults(), index + 1, ranking.size()));
+        }
+        return figures;
+    }
+
+    private List<DriverRankingService.DriverRanking> ranking(StatsPeriod period) {
+        return period.alltime() ? rankings.calculateAlltimeRanking(period.seasonIds())
+                : rankings.aggregateAcrossPhases(phases.findBySeasonIdOrderBySortIndex(period.season().id()).stream().map(SeasonPhase::getId).toList(),
+                        period.season().id());
     }
 
     public boolean exists(UUID driverId) { return drivers.existsById(driverId); }

@@ -1104,6 +1104,7 @@ a.season-tag:hover { background: var(--bg-hover); border-color: var(--text-dim);
 .profile-metrics dt { color: var(--text-dim); font-size: 13px; line-height: 1.5; }
 .profile-metrics dd { margin: 10px 0 0; font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .profile-statistics .section-title, .profile-history .section-title { font: 600 18px/1.5 system-ui, sans-serif; text-transform: none; letter-spacing: 0; }
+.career-seasons th, .career-seasons td { white-space: nowrap; }
 .profile-roster table { table-layout: fixed; }
 .profile-roster th:last-child, .profile-roster td:last-child { width: 90px; }
 .profile-roster td:first-child { overflow-wrap: anywhere; }

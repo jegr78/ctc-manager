@@ -58,6 +58,7 @@ public class SiteGeneratorService {
     private final MatchdaysPageGenerator matchdaysPageGenerator;
     private final TeamProfilePageGenerator teamProfilePageGenerator;
     private final DriverProfilePageGenerator driverProfilePageGenerator;
+    private final CareerProfilePageGenerator careerProfilePageGenerator;
     private final SiteSlugService siteSlugService;
     private final SitePublicationService publicationService;
     private final IncidentPageGenerator incidentPageGenerator;
@@ -220,13 +221,19 @@ public class SiteGeneratorService {
         // Generate links page
         generateLinks(outPath, siteProperties.getLinks(), activeSeasonSlug, activeSeasonName, result);
 
+        var careerSeasons = productionSeasons.stream()
+                .filter(s -> seasonPhaseService.findByType(s.getId(), org.ctc.domain.model.PhaseType.REGULAR).isPresent())
+                .sorted(Season.CHRONOLOGICAL).toList();
+        var careerTeams = careerProfilePageGenerator.generateTeams(outPath, careerSeasons, slugs, activeSeasonSlug, activeSeasonName, result);
+        var careerDrivers = careerProfilePageGenerator.generateDrivers(outPath, careerSeasons, slugs, activeSeasonSlug, activeSeasonName, result);
+
         // Generate overview pages
-        generateTeamsOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, result);
-        generateDriversOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, result);
+        generateTeamsOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, careerTeams, result);
+        generateDriversOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, careerDrivers, result);
 
         // Generate alltime pages (filtered to production seasons only)
-        generateAlltimeStandings(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, result);
-        generateAlltimeDriverRanking(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, result);
+        generateAlltimeStandings(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, careerTeams, result);
+        generateAlltimeDriverRanking(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, careerDrivers, result);
 
         // Copy static assets
         copyAssets(outPath, result);
@@ -422,7 +429,7 @@ public class SiteGeneratorService {
 
     private void generateTeamsOverview(Path outPath, List<Season> productionSeasons,
                                        String activeSeasonSlug, String activeSeasonName,
-                                       SiteSlugs slugs, GenerationResult result) throws IOException {
+                                       SiteSlugs slugs, java.util.Set<java.util.UUID> careers, GenerationResult result) throws IOException {
         var sortedSeasons = productionSeasons.stream()
                 .sorted(java.util.Comparator.comparing(Season::getYear).thenComparing(Season::getNumber))
                 .toList();
@@ -463,8 +470,8 @@ public class SiteGeneratorService {
                     var seasons = new java.util.ArrayList<>(e.getValue());
                     boolean hasProfile = teamsWithProfiles.contains(team.getId());
                     // Find the latest season where the team HAS a profile (standings exist)
-                    String profileUrl = null;
-                    if (hasProfile) {
+                    String profileUrl = careers.contains(team.getId()) ? "team/" + slugs.team(team.getId()) + ".html" : null;
+                    if (profileUrl == null && hasProfile) {
                         for (int i = seasons.size() - 1; i >= 0; i--) {
                             var s = seasons.get(i);
                             if (standingsBySeasonId.getOrDefault(s.getId(), java.util.Set.of()).contains(team.getId())) {
@@ -503,7 +510,7 @@ public class SiteGeneratorService {
 
     private void generateDriversOverview(Path outPath, List<Season> productionSeasons,
                                          String activeSeasonSlug, String activeSeasonName,
-                                         SiteSlugs slugs, GenerationResult result) throws IOException {
+                                         SiteSlugs slugs, java.util.Set<java.util.UUID> careers, GenerationResult result) throws IOException {
         var sortedSeasons = productionSeasons.stream()
                 .sorted(java.util.Comparator.comparing(Season::getYear).thenComparing(Season::getNumber))
                 .toList();
@@ -522,7 +529,8 @@ public class SiteGeneratorService {
                     var driver = e.getKey();
                     var infos = e.getValue();
                     var latestInfo = infos.getLast();
-                    String profileUrl = "season/" + siteSlugger.slugify(latestInfo.season().getDisplayLabel())
+                    String profileUrl = careers.contains(driver.getId()) ? "driver/" + slugs.driver(driver.getId()) + ".html"
+                            : "season/" + siteSlugger.slugify(latestInfo.season().getDisplayLabel())
                             + "/driver/" + slugs.driver(driver.getId()) + ".html";
                     String teamName = latestInfo.team().getShortName();
                     return new DriverOverviewEntry(
@@ -553,7 +561,7 @@ public class SiteGeneratorService {
 
     private void generateAlltimeStandings(Path outPath, List<Season> productionSeasons,
                                            String activeSeasonSlug, String activeSeasonName,
-                                           SiteSlugs slugs, GenerationResult result) throws IOException {
+                                           SiteSlugs slugs, java.util.Set<java.util.UUID> careers, GenerationResult result) throws IOException {
         var ctx = new Context(Locale.ENGLISH);
         var standings = standingsService.calculateAlltimeStandings(productionSeasons);
 
@@ -564,6 +572,10 @@ public class SiteGeneratorService {
         var teamSlugMap = new java.util.HashMap<java.util.UUID, String>();
         for (var s : standings) {
             var teamId = s.getTeam().getId();
+            if (careers.contains(teamId)) {
+                teamSlugMap.put(teamId, "team/" + slugs.team(teamId) + ".html");
+                continue;
+            }
             for (var season : sortedSeasons) {
                 // Phase-aware standings via the REGULAR phase. Seasons without a REGULAR
                 // phase are skipped by the outer generate() loop, so the empty case here is
@@ -594,7 +606,7 @@ public class SiteGeneratorService {
 
     private void generateAlltimeDriverRanking(Path outPath, List<Season> productionSeasons,
                                                String activeSeasonSlug, String activeSeasonName,
-                                               SiteSlugs slugs, GenerationResult result) throws IOException {
+                                               SiteSlugs slugs, java.util.Set<java.util.UUID> careers, GenerationResult result) throws IOException {
         var ctx = new Context(Locale.ENGLISH);
         var seasonIds = productionSeasons.stream().map(Season::getId).toList();
         var driverRanking = driverRankingService.calculateAlltimeRanking(seasonIds);
@@ -620,6 +632,7 @@ public class SiteGeneratorService {
             }
         }
 
+        careers.forEach(driverId -> driverSlugMap.put(driverId, "driver/" + slugs.driver(driverId) + ".html"));
         ctx.setVariable("driverRanking", driverRanking);
         ctx.setVariable("driverSlugMap", driverSlugMap);
         ctx.setVariable("driverTeamsMap", driverTeamsMap);

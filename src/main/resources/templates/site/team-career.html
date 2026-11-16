@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{site/layout :: layout(${pageTitle}, ~{::section})}">
+<body>
+<section>
+    <header class="team-header profile-heading brand-stage">
+        <div>
+            <p class="season-brand">COMMUNITY TEAM CUP</p>
+            <h1 class="text-white" th:text="${teamShortName}"></h1>
+            <p class="profile-team-name" th:text="${teamName}"></p>
+            <p class="season-meta">Career · all seasons</p>
+            <p class="text-dim career-best" th:if="${stats.bestResult != null}" th:text="'Best result: ' + ${stats.bestResult}"></p>
+        </div>
+    </header>
+
+    <div class="section">
+        <h2 class="section-title">Record</h2>
+        <dl class="profile-metrics team-metrics">
+            <div><dt>Alltime rank</dt><dd class="career-rank" th:text="${stats.rank} + ' of ' + ${stats.ranked}"></dd></div>
+            <div><dt>Points</dt><dd class="profile-team-points" th:text="${stats.matchPoints}"></dd></div>
+            <div><dt>Matches played</dt><dd th:text="${stats.played}"></dd></div>
+            <div><dt>Wins</dt><dd th:text="${stats.wins}"></dd></div>
+            <div><dt>Draws</dt><dd th:text="${stats.draws}"></dd></div>
+            <div><dt>Losses</dt><dd th:text="${stats.losses}"></dd></div>
+            <div><dt>Scored</dt><dd th:text="${stats.pointsFor}"></dd></div>
+            <div><dt>Conceded</dt><dd th:text="${stats.pointsAgainst}"></dd></div>
+            <div><dt>Races</dt><dd th:text="${stats.races}"></dd></div>
+            <div><dt>Seasons</dt><dd th:text="${stats.seasons}"></dd></div>
+            <div th:if="${stats.playoffAppearances > 0}"><dt>Playoff appearances</dt><dd th:text="${stats.playoffAppearances}"></dd></div>
+            <div th:if="${stats.titles > 0}"><dt>Titles</dt><dd th:text="${stats.titles}"></dd></div>
+        </dl>
+    </div>
+
+    <div class="section section-gap profile-roster" th:if="${!stats.topDrivers.isEmpty()}">
+        <h2 class="section-title">Top drivers</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th scope="col">Driver</th><th scope="col" class="text-right">Points</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="driver : ${stats.topDrivers}">
+                        <td class="font-bold" th:text="${driver.psnId}"></td>
+                        <td class="text-right font-bold text-white" th:text="${driver.points}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section section-gap career-seasons">
+        <h2 class="section-title">Seasons</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th scope="col">Season</th><th scope="col" class="text-right">Points</th><th scope="col" class="text-right">Rank</th>
+                        <th scope="col" class="text-right">Played</th><th scope="col" class="text-right">W-D-L</th><th scope="col">Playoffs</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="row : ${seasonRows}">
+                        <td><a class="entity-link font-bold" th:href="${row.url}" th:text="${row.season}"></a></td>
+                        <td class="text-right font-bold text-white" th:text="${row.matchPoints}"></td>
+                        <td class="text-right" th:text="${row.rank} + ' / ' + ${row.ranked} + ${row.group != null ? ' · ' + row.group : ''}"></td>
+                        <td class="text-right" th:text="${row.played}"></td>
+                        <td class="text-right" th:text="${row.wins} + '-' + ${row.draws} + '-' + ${row.losses}"></td>
+                        <td th:text="${row.playoffResult ?: '-'}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+</body>
+</html>

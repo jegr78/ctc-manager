@@ -30,6 +30,19 @@ class SiteProfileLinksTest {
     }
 
     @Test
+    void givenBaseUrlAndStoredSlug_whenLinkingCareers_thenBuildTheRootLevelCareerPaths() {
+        // given
+        properties.setPublicBaseUrl("https://example.test/ctc/");
+        when(slugs.findFirstByKindAndEntityId(SiteSlugKind.TEAM, team)).thenReturn(Optional.of(slug("t-alf")));
+        var driver = UUID.randomUUID();
+        when(slugs.findFirstByKindAndEntityId(SiteSlugKind.DRIVER, driver)).thenReturn(Optional.of(slug("test-driver")));
+        // when / then
+        assertThat(links.teamCareer(team)).isEqualTo("https://example.test/ctc/team/t-alf.html");
+        assertThat(links.driverCareer(driver)).isEqualTo("https://example.test/ctc/driver/test-driver.html");
+        assertThat(links.driverCareer(UUID.randomUUID())).as("a driver without a stored slug has no page").isNull();
+    }
+
+    @Test
     void givenNoBaseUrlOrNoSlug_whenLinking_thenReturnNoLink() {
         // given
         when(slugs.findFirstByKindAndEntityId(SiteSlugKind.TEAM, team)).thenReturn(Optional.of(slug("t-alf")));

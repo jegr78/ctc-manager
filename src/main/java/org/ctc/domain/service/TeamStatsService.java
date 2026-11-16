@@ -66,7 +66,18 @@ public class TeamStatsService {
 
     private TeamStats stats(String nameOption, StatsPeriod period, Collection<UUID> known) {
         var team = resolve(nameOption, known);
-        return period.alltime() ? alltime(team.getParentOrSelf(), period) : season(team, period);
+        var found = figures(period.alltime() ? team.getParentOrSelf() : team, period);
+        if (found != null) return found;
+        throw new StatsLookupException("No results for " + team.getName() + " in " + (period.alltime() ? "any season" : period.title()));
+    }
+
+    /** Figures of a known team without a name lookup or an exception; empty when it has no standings row in the period. */
+    public java.util.Optional<TeamStats> find(UUID teamId, StatsPeriod period) {
+        return teams.findById(teamId).map(team -> figures(team, period));
+    }
+
+    private TeamStats figures(Team team, StatsPeriod period) {
+        return period.alltime() ? alltime(team, period) : season(team, period);
     }
 
     public boolean exists(UUID teamId) { return teams.existsById(teamId); }
@@ -115,7 +126,7 @@ public class TeamStatsService {
         UUID seasonId = period.season().id();
         var table = regularStandings(seasonId);
         int index = indexOf(table, standing -> standing.getTeam().getId().equals(team.getId()));
-        if (index < 0) throw new StatsLookupException("No results for " + team.getName() + " in " + period.title());
+        if (index < 0) return null;
         var row = table.get(index);
         Predicate<Team> own = candidate -> candidate != null && candidate.getId().equals(team.getId());
         var playoffResult = playoffs.findBySeasonId(seasonId).map(playoff -> playoffResult(playoff.getRounds(), own)).orElse(null);
@@ -130,7 +141,7 @@ public class TeamStatsService {
                 .sorted(Season.CHRONOLOGICAL).toList();
         var table = standings.calculateAlltimeStandings(counted);
         int index = indexOf(table, standing -> standing.getTeam().getId().equals(team.getId()));
-        if (index < 0) throw new StatsLookupException("No results for " + team.getName() + " in any season");
+        if (index < 0) return null;
         var row = table.get(index);
         Predicate<Team> own = candidate -> candidate != null && candidate.getParentOrSelf().getId().equals(team.getId());
         int seasonCount = 0, bestRank = 0, bestCount = 0, appearances = 0, titles = 0;

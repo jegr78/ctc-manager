@@ -73,7 +73,7 @@ class SiteGeneratorPublishTest {
 				phases, new SiteSlugger(), templateWriter,
 				mock(StandingsPageGenerator.class), mock(DriverRankingPageGenerator.class),
 				mock(MatchdaysPageGenerator.class), mock(TeamProfilePageGenerator.class),
-				mock(DriverProfilePageGenerator.class), siteSlugService, publication, incidents);
+				mock(DriverProfilePageGenerator.class), mock(CareerProfilePageGenerator.class), siteSlugService, publication, incidents);
 	}
 
     @org.junit.jupiter.params.ParameterizedTest

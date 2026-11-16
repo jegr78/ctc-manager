@@ -109,11 +109,13 @@ public class StatsInteractionHandler implements PickGatewayInteractionHandler {
         var scope = StatsScope.parse(scopeOption);
         if (driver) {
             var stats = drivers.stats(name, scope, seasonOption);
-            return new Answer(StatsEmbeds.driver(stats, links.driver(stats.driverId(), stats.profileSeasonLabel())),
+            String url = stats.period().alltime() ? links.driverCareer(stats.driverId()) : links.driver(stats.driverId(), stats.profileSeasonLabel());
+            return new Answer(StatsEmbeds.driver(stats, url),
                     ShareRequest.id(true, stats.driverId(), stats.period()));
         }
         var stats = teams.stats(name, scope, seasonOption);
-        return new Answer(StatsEmbeds.team(stats, links.team(stats.teamId(), stats.profileSeasonLabel())),
+        String url = stats.period().alltime() ? links.teamCareer(stats.teamId()) : links.team(stats.teamId(), stats.profileSeasonLabel());
+        return new Answer(StatsEmbeds.team(stats, url),
                 ShareRequest.id(false, stats.teamId(), stats.period()));
     }
 
