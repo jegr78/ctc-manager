@@ -1668,8 +1668,7 @@ class SiteGeneratorFixtureIsolationIT {
     @Test
     void givenNoActiveSeason_whenGenerate_thenSecondHeroActionOpensTheArchive() throws IOException {
         // given
-        season.setActive(false);
-        ownSeason(season);
+        assertEquals(1, jdbc.update("update seasons set active = false where id = ?", season.getId()));
 
         // when
         siteGeneratorService.generate();
