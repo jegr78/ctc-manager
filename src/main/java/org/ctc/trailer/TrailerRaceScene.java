@@ -9,4 +9,8 @@ public record TrailerRaceScene(UUID raceId, String pairingLabel, String homeTeam
                                String awayLogo, List<Integer> legNumbers, PickPublicationContent content, UUID trackId,
                                String trackName, String trackShortName, UUID carId, String carName, String homeStanding,
                                String awayStanding) {
+
+    public TrailerRaceScene {
+        legNumbers = List.copyOf(legNumbers);
+    }
 }
