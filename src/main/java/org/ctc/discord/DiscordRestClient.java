@@ -78,8 +78,8 @@ public class DiscordRestClient {
     private static Map<String, Object> statsSubcommand(String name, String description, String nameHelp) {
         return Map.of("type", 1, "name", name, "description", description, "options", List.of(
                 Map.of("type", 3, "name", "name", "description", nameHelp, "required", true, "autocomplete", true),
-                Map.of("type", 3, "name", "scope", "description", "Current season, alltime or a chosen season", "required", false,
-                        "choices", List.of(Map.of("name", "Current season", "value", "current"), Map.of("name", "Alltime", "value", "alltime"),
+                Map.of("type", 3, "name", "scope", "description", "Alltime (default), the current season or a chosen season", "required", false,
+                        "choices", List.of(Map.of("name", "Alltime", "value", "alltime"), Map.of("name", "Current season", "value", "current"),
                                 Map.of("name", "Season", "value", "season"))),
                 Map.of("type", 3, "name", "season", "description", "Season for the Season scope", "required", false, "autocomplete", true)));
     }

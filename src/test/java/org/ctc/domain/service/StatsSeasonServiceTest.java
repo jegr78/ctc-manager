@@ -15,6 +15,7 @@ import org.ctc.domain.model.SeasonPhase;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.stats.StatsChoice;
 import org.ctc.domain.stats.StatsLookupException;
+import org.ctc.domain.stats.StatsPeriod;
 import org.ctc.domain.stats.StatsScope;
 import org.ctc.sitegen.SiteProperties;
 import org.junit.jupiter.api.Test;
@@ -78,6 +79,9 @@ class StatsSeasonServiceTest {
         // when / then
         assertThat(service.period(StatsScope.SEASON, newer.getId().toString()).season().id()).isEqualTo(newer.getId());
         assertThat(service.period(StatsScope.SEASON, " 2025 | #2 | ctc spring ").season().label()).isEqualTo("2025 | #2 | CTC Spring");
+        assertThat(service.period(StatsScope.SEASON, " 2025 | #2 | ctc spring ").title()).as("members see the short title").isEqualTo("CTC Spring (2025)");
+        assertThat(StatsPeriod.StatsSeason.title(season("Test CTC Archive 2025", 2025, 1, true))).as("a name with its year stays as it is")
+                .isEqualTo("Test CTC Archive 2025");
         assertThatThrownBy(() -> service.period(StatsScope.SEASON, test.getId().toString()))
                 .isInstanceOf(StatsLookupException.class).hasMessage("No season found");
         assertThatThrownBy(() -> service.period(StatsScope.SEASON, null))
@@ -98,7 +102,7 @@ class StatsSeasonServiceTest {
     @Test
     void whenParsingScope_thenDefaultToCurrentAndRejectUnknownValues() {
         // when / then
-        assertThat(StatsScope.parse(null)).isEqualTo(StatsScope.CURRENT);
+        assertThat(StatsScope.parse(null)).as("without a scope, stats cover all seasons").isEqualTo(StatsScope.ALLTIME);
         assertThat(StatsScope.parse("alltime")).isEqualTo(StatsScope.ALLTIME);
         assertThatThrownBy(() -> StatsScope.parse("forever")).isInstanceOf(StatsLookupException.class);
     }

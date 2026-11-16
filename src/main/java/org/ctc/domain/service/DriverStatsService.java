@@ -70,7 +70,7 @@ public class DriverStatsService {
                 return figures(driver, period, entry.getRaceResults(), index + 1, ranking.size());
             }
         }
-        throw new StatsLookupException("No results for " + driver.getPsnId() + " in " + (period.alltime() ? "any season" : period.label()));
+        throw new StatsLookupException("No results for " + driver.getPsnId() + " in " + (period.alltime() ? "any season" : period.title()));
     }
 
     public boolean exists(UUID driverId) { return drivers.existsById(driverId); }

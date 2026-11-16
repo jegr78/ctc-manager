@@ -18,7 +18,7 @@ final class StatsEmbeds {
             fields.add(new PickGatewayMessage.Field(stats.period().alltime() ? "Teams" : "Team", teams, false));
         }
         if (stats.rank() > 0) {
-            fields.add(new PickGatewayMessage.Field("Rank", "Rank " + stats.rank() + " of " + stats.ranked() + " · " + stats.points() + " pts", false));
+            fields.add(new PickGatewayMessage.Field("Rank", "Rank " + stats.rank() + " of " + stats.ranked(), false));
         }
         fields.add(new PickGatewayMessage.Field("Races", count(stats.races(), "race") + " · " + count(stats.wins(), "win") + " · "
                 + count(stats.podiums(), "podium") + " · " + count(stats.poles(), "pole") + " · " + count(stats.fastestLaps(), "fastest lap"), false));
@@ -37,18 +37,20 @@ final class StatsEmbeds {
         var fields = new ArrayList<PickGatewayMessage.Field>();
         String rank = "Rank " + stats.rank() + " of " + stats.ranked() + (stats.group() == null ? "" : " · " + PickInteractionViews.escape(stats.group()));
         fields.add(new PickGatewayMessage.Field("Rank", rank, false));
-        fields.add(new PickGatewayMessage.Field("Matches", count(stats.played(), "match", "matches") + " · " + count(stats.wins(), "win") + " · "
+        fields.add(new PickGatewayMessage.Field("Matches", count(stats.played(), "match", "matches") + " · " + count(stats.races(), "race") + " · "
+                + count(stats.wins(), "win") + " · "
                 + count(stats.draws(), "draw") + " · " + count(stats.losses(), "loss", "losses") + " · " + stats.winRate() + "% won", false));
         fields.add(new PickGatewayMessage.Field("Points", stats.pointsFor() + " scored · " + stats.pointsAgainst() + " conceded · "
                 + (stats.difference() > 0 ? "+" : "") + stats.difference() + " difference · " + stats.matchPoints() + " match points", false));
-        fields.add(new PickGatewayMessage.Field("Races", count(stats.races(), "race"), false));
         if (stats.playoffResult() != null) fields.add(new PickGatewayMessage.Field("Playoffs", PickInteractionViews.escape(stats.playoffResult()), false));
         if (stats.period().alltime()) {
             var history = new ArrayList<String>();
             history.add(count(stats.seasons(), "season"));
             if (stats.bestResult() != null) history.add("best " + PickInteractionViews.escape(stats.bestResult()));
-            history.add(count(stats.playoffAppearances(), "playoff appearance"));
-            history.add(count(stats.titles(), "title"));
+            if (stats.playoffAppearances() > 0 || stats.titles() > 0) {
+                history.add(count(stats.playoffAppearances(), "playoff appearance"));
+                history.add(count(stats.titles(), "title"));
+            }
             fields.add(new PickGatewayMessage.Field("History", String.join(" · ", history), false));
         }
         if (!stats.topDrivers().isEmpty()) {
@@ -60,7 +62,7 @@ final class StatsEmbeds {
 
     static String scope(StatsPeriod period) {
         if (period.fallback()) return "Alltime · no season is active";
-        return PickInteractionViews.escape(period.label());
+        return PickInteractionViews.escape(period.title());
     }
 
     private static String count(int value, String noun) {
