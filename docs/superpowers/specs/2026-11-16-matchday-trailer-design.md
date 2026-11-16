@@ -49,7 +49,7 @@ With six matches and identical legs, the trailer runs about 1:40.
 
 Scenes are generated per race. When both legs of a pairing have identical public setup content (car, track and every published setting), they share one track + car scene and one settings scene.
 
-Car and track images are looked up through the `carId` and `trackId` of the published `PickPublicationContent`, never through `race.getCar()` or `race.getTrack()`, which may hold a later unpublished change.
+Car and track images are looked up through the `carId` and `trackId` of the published `PickPublicationContent`, never through `race.getCar()` or `race.getTrack()`, which may hold a later unpublished change. `publicProjection` carries names only, so `PickPublicationService` gains a method that returns the published content of a race only when every field is released.
 
 Regular matchdays (league, groups and Swiss) and playoff rounds are both supported from the start. The overview reuses the data that `MatchdayOverviewGraphicService` and the playoff round graphic services already prepare, without the schedule column.
 
@@ -114,11 +114,11 @@ Missing cutouts are not blocking. The job creates them (see below).
 The gallery spec (`2026-11-15-car-track-image-gallery-design.md`) is extended:
 
 - Car image kind `CUTOUT`: a PNG with alpha channel.
-- Image source `AUTO` for cutouts the application produced. `sourceKey` is null for `AUTO`, and each car has at most one `AUTO` cutout.
+- Image source `AUTO` for cutouts the application produced. Its `sourceKey` is the fixed value `cutout`, so the existing unique constraint on car, source and key allows at most one `AUTO` cutout per car.
 
 Cutouts are produced with ONNX Runtime for Java on the CPU and a salient-object segmentation model (BiRefNet-lite, MIT, or ISNet general-use, Apache-2.0). The builder picks the model after comparing quality on the seven CLR studio shots against the Apple Vision cutouts in `~/Desktop/CLR-100km/_source/cutouts`. The Docker build downloads the model with a pinned URL and SHA-256 and places it in the image. Nothing is downloaded at runtime, so `OutboundPolicy` is not involved. The model loads on first use and is released after the job, so idle memory does not grow.
 
-Memory: the app container limit in `deploy/compose.yaml` rises from 2 GB to 3 GB, and `MaxRAMPercentage` drops so the heap stays at about 1 GB. The added memory goes to native use by ONNX Runtime, Chromium and ffmpeg, which allows BiRefNet-lite at full input resolution. Host setup and `doctor` memory checks are updated to the new limit, and the new limit fits the owner's host CPU/RAM limit setup without working around it. A CI test records peak container memory for one cutout and one trailer render on the fixture matchday.
+Memory: the app container limit in `deploy/compose.yaml` rises from 2 GB to 3 GB, and `MaxRAMPercentage` drops to 33 so the heap stays at about 1 GB. The added memory goes to native use by ONNX Runtime, Chromium and ffmpeg, which allows BiRefNet-lite at full input resolution. The recovery probe, recovery options and recipe tests follow the new values. The host setup minimum rises from 4 GiB to 5 GiB, because the container limits then sum to about 4.2 GB. The new limit has to fit the owner's host CPU/RAM limit setup, without working around it. A CI test records peak container memory for one cutout and one trailer render on the fixture matchday.
 
 Input is the first `STUDIO` image by `sortIndex`. The output is the original pixels with the predicted alpha mask, trimmed to the car's bounding box plus a margin.
 
@@ -133,11 +133,11 @@ Local development on macOS runs the same Java code. The Apple Vision script is n
 
 ## Data model
 
-Migration V46 (after the gallery's V45), backup schema 24:
+Migration V48 and backup schema 26 (delivery 1), migration V49 and backup schema 27 (delivery 2):
 
 - `Track.displayShortName`: optional, at most 30 characters, such as "SPA" or "ROAD ATLANTA". The track scene shows it large and the full name below. Without it, the full name is shown in a smaller size. It is editable in the track form.
-- Car image check constraints gain `CUTOUT` and `AUTO`, again as CASE-based checks.
-- New table `music_tracks` (entity `MusicTrack`, 51 entities in total) with these fields:
+- Car image check constraints gain `CUTOUT` and `AUTO` (V49), again as CASE-based checks.
+- New table `music_tracks` (entity `MusicTrack`, 54 exported entities in total) with these fields:
   - `id`
   - `title` (required, at most 150 characters)
   - `artist` (required, at most 150 characters)
@@ -148,15 +148,15 @@ Migration V46 (after the gallery's V45), backup schema 24:
 
 Backup and restore:
 
-- Schema 24 exports the new field and table. Music files enter the archive through `enumerateReferencedUploads`.
-- Schemas 1 to 23 restore without music and with a null short name.
+- Schema 26 exports the new field and table. Music files enter the archive through `enumerateReferencedUploads`.
+- Schemas 1 to 25 restore without music and with a null short name. Schemas 1 to 26 carry no `CUTOUT` or `AUTO` values.
 - Preflight before wipe checks the enum values, the at-most-one `AUTO` cutout per car, the music field limits and that every referenced music file is present.
 - The read-only data audit reports missing music files and invalid cutout pairings without repair.
 
 ## Management UI
 
 - **Music** (new admin page) lists the music tracks and offers MP3 upload with title, artist and credit, plus deletion. Uploads accept MP3 up to 20 MB, checked by magic bytes. Native forms with CSRF.
-- **Matchday and playoff round pages** get a "Trailer" section with:
+- **Matchday detail page and each round row of the playoff bracket page** get a "Trailer" section with:
   - the precondition checklist with links
   - a music select (one track or "Random")
   - a start button, disabled while the checklist is open or a job runs
@@ -177,7 +177,7 @@ All controls work without JavaScript. Labels, field errors and focus handling fo
 - Cutout: a small fixture image through the real ONNX session asserts alpha presence and bounding-box trimming.
 - CI: the worker that runs the cutout and trailer tests installs ffmpeg and fetches the pinned model with SHA-256 check and a cache keyed by that hash. Every test executes in its planned partition, as the CI partition contract requires; no conditional skips.
 - Integration:
-  - V46 constraints on H2 and MariaDB
+  - V48 and V49 constraints on H2 and MariaDB
   - backup round trip with music files
   - preflight rejections
   - audit findings
@@ -193,8 +193,6 @@ Prerequisite: the car and track image gallery is delivered.
 2. Car cutouts: container limit 3 GB, ONNX model in the image and CI, `CUTOUT`/`AUTO` kinds, the single-job executor, the gallery button.
 3. Scene templates and the scene plan, with PNG ZIP output only.
 4. Video composition, trailer job, trailer section and downloads.
-
-V46 can be split into V46 and V47 if deliveries 1 and 2 ship separately.
 
 Each delivery updates `CLAUDE.md`, `README.md` and the wiki.
 
