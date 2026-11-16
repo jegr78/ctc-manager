@@ -24,11 +24,18 @@ public class SiteProfileLinks {
 
     public String driver(UUID driverId, String seasonLabel) { return link(SiteSlugKind.DRIVER, "driver", driverId, seasonLabel); }
 
+    /** The alltime career page of a team, {@code team/<slug>.html}. */
+    public String teamCareer(UUID teamId) { return link(SiteSlugKind.TEAM, "team", teamId, ""); }
+
+    /** The alltime career page of a driver, {@code driver/<slug>.html}. */
+    public String driverCareer(UUID driverId) { return link(SiteSlugKind.DRIVER, "driver", driverId, ""); }
+
     private String link(SiteSlugKind kind, String folder, UUID entityId, String seasonLabel) {
         String base = properties.getPublicBaseUrl();
         if (base == null || base.isBlank() || entityId == null || seasonLabel == null) return null;
+        String season = seasonLabel.isEmpty() ? "" : "season/" + slugger.slugify(seasonLabel) + "/";
         return slugs.findFirstByKindAndEntityId(kind, entityId).map(SiteSlug::getSlug)
-                .map(slug -> (base.endsWith("/") ? base : base + "/") + "season/" + slugger.slugify(seasonLabel) + "/" + folder + "/" + slug + ".html")
+                .map(slug -> (base.endsWith("/") ? base : base + "/") + season + folder + "/" + slug + ".html")
                 .orElse(null);
     }
 }

@@ -36,6 +36,30 @@ class StatsInteractionHandlerTest {
     final StatsInteractionHandler handler = new StatsInteractionHandler(drivers, teams, seasons, links, slots);
 
     @Test
+    void givenAlltimeDriverAndTeam_whenAnswering_thenLinkTheCareerPagesInsteadOfASeasonProfile() {
+        // given
+        when(response.deferPrivate()).thenReturn(CompletableFuture.completedFuture(continuation));
+        var driverId = UUID.randomUUID();
+        var teamId = UUID.randomUUID();
+        when(drivers.stats("Test_driver", StatsScope.ALLTIME, null)).thenReturn(new DriverStats(driverId, "Test_driver", null,
+                StatsPeriod.of(null, List.of(), false), 1, 2, 10, 1, 1, 1, 0, 0, 1, 1.0, 0, 0, 1, List.of(), 0, "2027 | #1 | Current"));
+        when(teams.stats("Test Alpha", StatsScope.ALLTIME, null)).thenReturn(new TeamStats(teamId, "Test Alpha", StatsPeriod.of(null, List.of(), false),
+                1, 2, null, 1, 1, 0, 0, 10, 5, 3, 2, null, 1, null, 0, 0, List.of(), "2027 | #1 | Current"));
+        when(links.driverCareer(driverId)).thenReturn("https://example.test/driver/test-driver.html");
+        when(links.teamCareer(teamId)).thenReturn("https://example.test/team/t-alf.html");
+        // when
+        handler.onInteraction(event(PickGatewayInteraction.Kind.COMMAND, "driver", null, Map.of("name", List.of("Test_driver"))), reply());
+        handler.onInteraction(event(PickGatewayInteraction.Kind.COMMAND, "team", null, Map.of("name", List.of("Test Alpha"))), reply());
+        // then
+        var sent = ArgumentCaptor.forClass(PickGatewayMessage.class);
+        verify(continuation, times(2)).replyPrivate(sent.capture());
+        assertThat(sent.getAllValues()).extracting(message -> message.embed().url()).as("alltime answers open the career pages")
+                .containsExactly("https://example.test/driver/test-driver.html", "https://example.test/team/t-alf.html");
+        verify(links, never()).driver(any(), any());
+        verify(links, never()).team(any(), any());
+    }
+
+    @Test
     void givenDriverCommand_whenFiguresExist_thenAnswerWithAPrivateEscapedEmbed() {
         // given
         when(response.deferPrivate()).thenReturn(CompletableFuture.completedFuture(continuation));

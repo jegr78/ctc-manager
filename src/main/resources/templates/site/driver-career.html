@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{site/layout :: layout(${pageTitle}, ~{::section})}">
+<body>
+<section>
+    <header class="driver-header profile-heading brand-stage">
+        <p class="season-brand">COMMUNITY TEAM CUP</p>
+        <h1 class="text-white" th:text="${stats.psnId}"></h1>
+        <p class="text-dim" th:if="${stats.nickname != null and !#strings.isEmpty(stats.nickname)}" th:text="${stats.nickname}"></p>
+        <p class="season-meta">Career · all seasons</p>
+        <p class="text-dim" th:if="${!stats.teams.isEmpty()}" th:text="'Teams: ' + ${#strings.listJoin(stats.teams, ', ')} + ${stats.moreTeams > 0 ? ' +' + stats.moreTeams : ''}"></p>
+        <p class="text-dim driver-aliases" th:if="${!aliases.isEmpty()}" th:text="'Also known as: ' + ${#strings.listJoin(aliases, ', ')}"></p>
+    </header>
+
+    <div class="section profile-statistics">
+        <h2 class="section-title">Statistics</h2>
+        <dl class="profile-metrics">
+            <div><dt>Alltime rank</dt><dd class="career-rank" th:text="${stats.rank} + ' of ' + ${stats.ranked}"></dd></div>
+            <div><dt>Total points</dt><dd class="profile-total-points" th:text="${stats.points}"></dd></div>
+            <div><dt>Races</dt><dd class="profile-total-races" th:text="${stats.races}"></dd></div>
+            <div><dt>Wins</dt><dd th:text="${stats.wins}"></dd></div>
+            <div><dt>Podiums</dt><dd th:text="${stats.podiums}"></dd></div>
+            <div><dt>Poles</dt><dd th:text="${stats.poles}"></dd></div>
+            <div><dt>Fastest laps</dt><dd th:text="${stats.fastestLaps}"></dd></div>
+            <div><dt>Best position</dt><dd th:text="${stats.bestPosition > 0 ? 'P' + stats.bestPosition : '-'}"></dd></div>
+            <div><dt>Average position</dt><dd th:text="${stats.averagePosition != null ? 'P' + #numbers.formatDecimal(stats.averagePosition, 1, 1) : '-'}"></dd></div>
+            <div><dt>Seasons</dt><dd th:text="${stats.seasons}"></dd></div>
+        </dl>
+    </div>
+
+    <div class="section section-gap career-seasons">
+        <h2 class="section-title">Seasons</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th scope="col">Season</th><th scope="col">Team</th><th scope="col" class="text-right">Rank</th>
+                        <th scope="col" class="text-right">Races</th><th scope="col" class="text-right">Wins</th>
+                        <th scope="col" class="text-right">Podiums</th><th scope="col" class="text-right">Best</th>
+                        <th scope="col" class="text-right">Points</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="row : ${seasonRows}">
+                        <td><a class="entity-link font-bold" th:href="${row.url}" th:text="${row.season}"></a></td>
+                        <td th:text="${row.team ?: '-'}"></td>
+                        <td class="text-right" th:text="${row.rank} + ' / ' + ${row.ranked}"></td>
+                        <td class="text-right" th:text="${row.races}"></td>
+                        <td class="text-right" th:text="${row.wins}"></td>
+                        <td class="text-right" th:text="${row.podiums}"></td>
+                        <td class="text-right" th:text="${row.best > 0 ? 'P' + row.best : '-'}"></td>
+                        <td class="text-right font-bold text-white" th:text="${row.points}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+</body>
+</html>
