@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -20,12 +22,15 @@ import org.ctc.domain.model.MusicTrack;
 import org.ctc.domain.repository.MusicTrackRepository;
 import org.ctc.media.MediaTool;
 import org.ctc.media.MediaToolException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @ExtendWith(MockitoExtension.class)
 class MusicLibraryServiceTest {
@@ -33,7 +38,13 @@ class MusicLibraryServiceTest {
     @Mock MusicTrackRepository repository;
     @Mock FileStorageService files;
     @Mock MediaTool media;
+    @Mock TransactionTemplate transactions;
     @InjectMocks MusicLibraryService service;
+
+    @BeforeEach
+    void runCallbacksInline() {
+        lenient().when(transactions.execute(any())).thenAnswer(call -> call.<TransactionCallback<?>>getArgument(0).doInTransaction(null));
+    }
 
     @Test
     void givenId3TaggedMp3_whenUpload_thenStoredWithProbedDuration() throws Exception {
@@ -53,7 +64,9 @@ class MusicLibraryServiceTest {
         assertThat(stored.getCredit()).as("blank credit is not stored").isNull();
         assertThat(stored.getDurationSeconds()).as("duration rounds to whole seconds").isEqualTo(152);
         assertThat(stored.getFilePath()).isEqualTo("/uploads/music/x/a_song.mp3");
-        verify(files).deleteOnRollback("/uploads/music/x/a_song.mp3");
+        var order = inOrder(media, transactions);
+        order.verify(media).probeDuration(Path.of("/tmp/a_song.mp3"));
+        order.verify(transactions).execute(any());
     }
 
     @Test
@@ -111,7 +124,7 @@ class MusicLibraryServiceTest {
     }
 
     @Test
-    void givenProbeFailure_whenUpload_thenStoredFileRemovedOnRollback() throws Exception {
+    void givenProbeFailure_whenUpload_thenStoredFileRemoved() throws Exception {
         // given
         var file = mp3("broken.mp3", new byte[] {'I', 'D', '3', 4});
         when(files.storeBytes(anyString(), any(UUID.class), anyString(), any())).thenReturn("/uploads/music/x/broken.mp3");
@@ -122,8 +135,22 @@ class MusicLibraryServiceTest {
         assertThatThrownBy(() -> service.upload(file, "Broken", "Artist", null))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessage("The MP3 file could not be read.");
-        verify(files).deleteOnRollback("/uploads/music/x/broken.mp3");
+        verify(files).delete("/uploads/music/x/broken.mp3");
         verify(repository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void givenSaveFailure_whenUpload_thenStoredFileRemoved() throws Exception {
+        // given
+        var file = mp3("song.mp3", new byte[] {'I', 'D', '3', 4});
+        when(files.storeBytes(anyString(), any(UUID.class), anyString(), any())).thenReturn("/uploads/music/x/song.mp3");
+        when(files.resolve(anyString())).thenReturn(Path.of("/tmp/song.mp3"));
+        when(media.probeDuration(any())).thenReturn(Duration.ofSeconds(60));
+        when(repository.saveAndFlush(any(MusicTrack.class))).thenThrow(new IllegalStateException("database down"));
+
+        // when / then
+        assertThatThrownBy(() -> service.upload(file, "Song", "Artist", null)).isInstanceOf(IllegalStateException.class);
+        verify(files).delete("/uploads/music/x/song.mp3");
     }
 
     @Test
