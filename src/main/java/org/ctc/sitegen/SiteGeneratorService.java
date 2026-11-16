@@ -224,11 +224,15 @@ public class SiteGeneratorService {
         var careerSeasons = productionSeasons.stream()
                 .filter(s -> seasonPhaseService.findByType(s.getId(), org.ctc.domain.model.PhaseType.REGULAR).isPresent())
                 .sorted(Season.CHRONOLOGICAL).toList();
-        var careerTeams = careerProfilePageGenerator.generateTeams(outPath, careerSeasons, slugs, activeSeasonSlug, activeSeasonName, result);
+        var currentLogos = currentLogoUrls(productionSeasons);
+        java.util.function.Function<Team, String> currentLogo = team ->
+                copyLogoToAssets(currentLogos.getOrDefault(team.getId(), team.getLogoUrl()), outPath, "assets");
+        var careerTeams = careerProfilePageGenerator.generateTeams(outPath, careerSeasons, slugs, currentLogo, activeSeasonSlug,
+                activeSeasonName, result);
         var careerDrivers = careerProfilePageGenerator.generateDrivers(outPath, careerSeasons, slugs, activeSeasonSlug, activeSeasonName, result);
 
         // Generate overview pages
-        generateTeamsOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, careerTeams, result);
+        generateTeamsOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, careerTeams, currentLogo, result);
         generateDriversOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, slugs, careerDrivers, result);
 
         // Generate alltime pages (filtered to production seasons only)
@@ -429,7 +433,8 @@ public class SiteGeneratorService {
 
     private void generateTeamsOverview(Path outPath, List<Season> productionSeasons,
                                        String activeSeasonSlug, String activeSeasonName,
-                                       SiteSlugs slugs, java.util.Set<java.util.UUID> careers, GenerationResult result) throws IOException {
+                                       SiteSlugs slugs, java.util.Set<java.util.UUID> careers,
+                                       java.util.function.Function<Team, String> currentLogo, GenerationResult result) throws IOException {
         var sortedSeasons = productionSeasons.stream()
                 .sorted(java.util.Comparator.comparing(Season::getYear).thenComparing(Season::getNumber))
                 .toList();
@@ -481,7 +486,7 @@ public class SiteGeneratorService {
                             }
                         }
                     }
-                    String logoRelPath = copyLogoToAssets(team.getLogoUrl(), outPath, assetsPath);
+                    String logoRelPath = currentLogo.apply(team);
                     return new TeamOverviewEntry(
                             team.getShortName(),
                             slugs.team(team.getId()),
@@ -653,38 +658,20 @@ public class SiteGeneratorService {
         return null;
     }
 
+    /** The effective season logo of every team in its latest season of {@code seasons}, by team ID. */
+    private java.util.Map<java.util.UUID, String> currentLogoUrls(List<Season> seasons) {
+        var logos = new java.util.HashMap<java.util.UUID, String>();
+        for (var season : seasons.stream().sorted(Season.CHRONOLOGICAL).toList()) {
+            for (var row : seasonTeamRepository.findBySeasonId(season.getId())) {
+                String logo = row.getEffectiveLogoUrl();
+                if (logo != null) logos.put(row.getTeam().getId(), logo);
+            }
+        }
+        return logos;
+    }
+
     private String copyLogoToAssets(String logoUrl, Path outPath, String assetsPath) {
-        if (logoUrl == null || !logoUrl.startsWith("/uploads/")) {
-            return null;
-        }
-        try {
-            Path uploadBase = Path.of(uploadDir).toAbsolutePath().normalize();
-            Path logoFile = uploadBase.resolve(logoUrl.substring("/uploads/".length())).normalize();
-            if (!logoFile.startsWith(uploadBase)) {
-                log.warn("Path traversal attempt in logo URL: {}", logoUrl);
-                return null;
-            }
-            if (!Files.exists(logoFile)) {
-                log.warn("Logo file not found, skipping: {}", logoUrl);
-                return null;
-            }
-            Path realBase = uploadBase.toRealPath();
-            Path realLogo = logoFile.toRealPath();
-            if (logoFile.startsWith(uploadBase.resolve("races")) || !realLogo.startsWith(realBase)
-                    || realLogo.startsWith(realBase.resolve("races"))) return null;
-            // Preserve UUID-prefixed subdirectory to avoid filename collisions
-            String relativePart = logoUrl.substring("/uploads/".length());
-            Path target = outPath.resolve("assets").resolve("img").resolve("logos").resolve(relativePart);
-            // NP: target has at least 4 path components — parent is guaranteed non-null.
-            // See config/spotbugs-exclude.xml SiteGeneratorService.copyLogoToAssets NP_NULL entry.
-            Files.createDirectories(target.getParent());
-            Files.copy(logoFile, target, StandardCopyOption.REPLACE_EXISTING);
-            log.debug("Copied logo: {} -> {}", logoFile, target);
-            return assetsPath + "/img/logos/" + relativePart;
-        } catch (IOException e) {
-            log.warn("Failed to copy logo: {}", logoUrl, e);
-            return null;
-        }
+        return SiteLogos.copy(uploadDir, logoUrl, outPath, assetsPath);
     }
 
     private void copyAssets(Path outPath, GenerationResult result) throws IOException {
