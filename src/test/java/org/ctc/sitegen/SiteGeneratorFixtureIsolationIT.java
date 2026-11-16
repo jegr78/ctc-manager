@@ -1500,10 +1500,8 @@ class SiteGeneratorFixtureIsolationIT {
                 "Drivers overview must show team name(s)");
     }
 
-    // OVER-06: profile links resolve to season-specific paths
-
     @Test
-    void givenTeamsAndDrivers_whenGenerate_thenOverviewLinksResolveToSeasonProfiles() throws IOException {
+    void givenTeamsAndDrivers_whenGenerate_thenOverviewLinksResolveToCareerOrSeasonProfiles() throws IOException {
         // when
         siteGeneratorService.generate();
 
@@ -1512,20 +1510,18 @@ class SiteGeneratorFixtureIsolationIT {
         var teamLinks = teamsDoc.select(".overview-row-name[href]");
         assertFalse(teamLinks.isEmpty(), "Team rows must have profile links");
         for (var link : teamLinks) {
-            assertTrue(link.attr("href").startsWith("season/"),
-                    "Team profile link must start with season/: " + link.attr("href"));
-            assertTrue(link.attr("href").contains("/team/"),
-                    "Team profile link must contain /team/: " + link.attr("href"));
+            assertTrue(link.attr("href").matches("(season/[^/]+/)?team/[^/]+\\.html"),
+                    "Team link must open a career or season profile: " + link.attr("href"));
+            assertTrue(Files.exists(tempDir.resolve(link.attr("href"))), "Team link target must exist: " + link.attr("href"));
         }
 
         var driversDoc = Jsoup.parse(Files.readString(tempDir.resolve("drivers.html")));
         var driverLinks = driversDoc.select(".overview-row-name[href]");
         assertFalse(driverLinks.isEmpty(), "Driver rows must have profile links");
         for (var link : driverLinks) {
-            assertTrue(link.attr("href").startsWith("season/"),
-                    "Driver profile link must start with season/: " + link.attr("href"));
-            assertTrue(link.attr("href").contains("/driver/"),
-                    "Driver profile link must contain /driver/: " + link.attr("href"));
+            assertTrue(link.attr("href").matches("(season/[^/]+/)?driver/[^/]+\\.html"),
+                    "Driver link must open a career or season profile: " + link.attr("href"));
+            assertTrue(Files.exists(tempDir.resolve(link.attr("href"))), "Driver link target must exist: " + link.attr("href"));
         }
     }
 
@@ -1812,10 +1808,9 @@ class SiteGeneratorFixtureIsolationIT {
         assertFalse(entityLinks.isEmpty(),
                 "Alltime standings should have entity-link anchors on team names");
         var firstLink = entityLinks.first();
-        assertTrue(firstLink.attr("href").contains("/team/"),
-                "Alltime standings team link should point to a team profile page");
-        assertTrue(firstLink.attr("href").startsWith("season/"),
-                "Alltime standings team link should be relative starting with season/");
+        assertTrue(firstLink.attr("href").matches("team/[^/]+\\.html"),
+                "Alltime standings team link should open the team career page: " + firstLink.attr("href"));
+        assertTrue(Files.exists(tempDir.resolve(firstLink.attr("href"))), "Career page must exist");
     }
 
     @Test
@@ -1830,10 +1825,9 @@ class SiteGeneratorFixtureIsolationIT {
         assertFalse(entityLinks.isEmpty(),
                 "Alltime driver ranking should have entity-link anchors on driver names");
         var firstLink = entityLinks.first();
-        assertTrue(firstLink.attr("href").contains("/driver/"),
-                "Alltime driver ranking link should point to a driver profile page");
-        assertTrue(firstLink.attr("href").startsWith("season/"),
-                "Alltime driver ranking link should be relative starting with season/");
+        assertTrue(firstLink.attr("href").matches("driver/[^/]+\\.html"),
+                "Alltime driver ranking link should open the driver career page: " + firstLink.attr("href"));
+        assertTrue(Files.exists(tempDir.resolve(firstLink.attr("href"))), "Career page must exist");
     }
 
     @Test
