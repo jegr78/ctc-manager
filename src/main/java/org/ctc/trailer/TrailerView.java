@@ -13,6 +13,11 @@ import org.ctc.media.job.MediaJobStatus;
 public record TrailerView(String basePath, boolean hasRaces, List<TrailerChecklistItem> blockers, List<MusicTrack> music, Optional<MediaJobStatus> status,
                           Optional<TrailerOutputs> latest, Duration estimatedLength, boolean startEnabled) {
 
+    public TrailerView {
+        blockers = List.copyOf(blockers);
+        music = List.copyOf(music);
+    }
+
     public boolean running() {
         return status.map(MediaJobStatus::running).orElse(false);
     }
