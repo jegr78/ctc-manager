@@ -92,6 +92,7 @@ public class DataAuditService {
     private final IncidentIntegrityAuditService incidentIntegrity;
     private final LineupIntegrityAuditService lineupIntegrity;
     private final CatalogImageAuditService catalogImages;
+    private final MusicAuditService musicLibrary;
 
 	@Transactional(readOnly = true)
 	public DataAuditReport audit() {
@@ -140,6 +141,7 @@ public class DataAuditService {
         findings.get(Category.INCIDENT_REPORTS).addAll(incidentIntegrity.inspect());
         findings.get(Category.LINEUPS).addAll(lineupIntegrity.inspect());
         findings.get(Category.CATALOG_IMAGES).addAll(catalogImages.inspect());
+        findings.get(Category.MUSIC_LIBRARY).addAll(musicLibrary.inspect());
 
 		List<DataAuditReport.Section> sections = findings.entrySet().stream()
 				.map(entry -> new DataAuditReport.Section(entry.getKey(), List.copyOf(entry.getValue())))

@@ -96,6 +96,7 @@ public class BackupExportService {
     private final CarImageRepository carImages;
     private final FileStorageService files;
     private final TrackImageRepository trackImages;
+    private final org.ctc.domain.repository.MusicTrackRepository musicTracks;
     private final PickPublicationAttemptRepository publicationAttempts;
     private final PickPublicationSnapshotRepository publicationSnapshots;
     private final IncidentMatchContextRepository incidentContexts;
@@ -170,6 +171,7 @@ public class BackupExportService {
             LineupWindowEventRepository lineupWindows,
             CarImageRepository carImages,
             TrackImageRepository trackImages,
+            org.ctc.domain.repository.MusicTrackRepository musicTracks,
             FileStorageService files,
 			@Value("${app.upload-dir:data/dev/uploads}") String uploadDirRaw
 	) {
@@ -213,6 +215,7 @@ public class BackupExportService {
         this.lineupWindows = lineupWindows;
         this.carImages = carImages;
         this.trackImages = trackImages;
+        this.musicTracks = musicTracks;
         this.publicationAttempts = publicationAttempts;
         this.publicationSnapshots = publicationSnapshots;
         this.incidentContexts = incidentContexts;
@@ -274,6 +277,7 @@ public class BackupExportService {
         this.repositoriesByEntityClass.put(LineupWindowEvent.class, lineupWindows);
         this.repositoriesByEntityClass.put(CarImage.class, carImages);
         this.repositoriesByEntityClass.put(TrackImage.class, trackImages);
+        this.repositoriesByEntityClass.put(org.ctc.domain.model.MusicTrack.class, musicTracks);
         this.repositoriesByEntityClass.put(PickPublicationAttempt.class, publicationAttempts);
         this.repositoriesByEntityClass.put(PickPublicationSnapshot.class, publicationSnapshots);
         this.repositoriesByEntityClass.put(IncidentMatchContext.class, incidentContexts);
@@ -409,15 +413,15 @@ public class BackupExportService {
 		set.add(relative);
 	}
 
-	/** Gallery tables, whose rows and files the archive writer takes from one snapshot. */
+	/** Tables whose rows and files the archive writer takes from one snapshot. */
 	public static boolean isGallery(Class<?> entityClass) {
-		return entityClass == CarImage.class || entityClass == TrackImage.class;
+		return entityClass == CarImage.class || entityClass == TrackImage.class || entityClass == org.ctc.domain.model.MusicTrack.class;
 	}
 
-	/** The upload files of exactly these gallery rows. */
+	/** The upload files of exactly these snapshot rows. */
 	public List<UploadEntry> galleryUploads(List<?> images) {
 		return images.stream().map(row -> {
-			String relative = ((GalleryImage) row).getImagePath().substring("/uploads/".length());
+			String relative = ((org.ctc.domain.model.StoredFileRow) row).storedFilePath().substring("/uploads/".length());
 			return new UploadEntry(uploadRoot.resolve(relative).toAbsolutePath().normalize(), relative);
 		}).toList();
 	}
@@ -426,12 +430,12 @@ public class BackupExportService {
 	private List<?> withStoredFile(List<?> images) {
 		var kept = new ArrayList<Object>();
 		for (Object row : images) {
-			var image = (GalleryImage) row;
-			if (files.exists(image.getImagePath())) {
+			var image = (org.ctc.domain.model.StoredFileRow) row;
+			if (files.exists(image.storedFilePath())) {
 				kept.add(row);
 			} else {
-				log.warn("Leaving gallery image {} out of the backup because its file {} is missing; see the data audit",
-						image.getId(), sanitizeForLog(image.getImagePath()));
+				log.warn("Leaving row {} out of the backup because its file {} is missing; see the data audit",
+						image.getId(), sanitizeForLog(image.storedFilePath()));
 			}
 		}
 		return kept;

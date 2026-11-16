@@ -185,7 +185,7 @@ public class BackupArchiveService {
 					try {
 						Files.copy(entry.absolutePath(), zip);
 					} catch (NoSuchFileException removed) {
-						throw new IOException("Gallery image file " + entry.relativePath()
+						throw new IOException("Stored file " + entry.relativePath()
 								+ " was removed during the export; run the export again", removed);
 					}
 					zip.closeEntry();

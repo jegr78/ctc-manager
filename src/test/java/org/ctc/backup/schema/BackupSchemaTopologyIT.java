@@ -29,7 +29,7 @@ class BackupSchemaTopologyIT {
         // when
         List<EntityRef> exportOrder = backupSchema.getExportOrder();
         // then
-        assertThat(exportOrder).as("51 league entities plus DiscordGlobalConfig and DiscordPost").hasSize(53);
+        assertThat(exportOrder).as("52 league entities plus DiscordGlobalConfig and DiscordPost").hasSize(54);
     }
 
     @Test

@@ -47,6 +47,9 @@ class CatalogImageBackupRoundTripIT {
     @Autowired CarImageRepository carImages;
     @Autowired TrackImageRepository trackImages;
     @Autowired CatalogImageService gallery;
+    @Autowired org.ctc.domain.service.MusicLibraryService music;
+    @Autowired MusicTrackRepository musicTracks;
+    @Autowired org.ctc.media.MediaTool media;
     @Autowired org.ctc.domain.service.FileStorageService storageService;
     @Autowired BackupArchiveService archives;
     @MockitoSpyBean BackupImportService imports;
@@ -71,6 +74,7 @@ class CatalogImageBackupRoundTripIT {
     void cleanUp() {
         if (cars.existsById(car)) gallery.deleteAllForCar(car);
         if (tracks.existsById(track)) gallery.deleteAllForTrack(track);
+        musicTracks.findAll().forEach(track -> music.delete(track.getId()));
         cars.findById(car).ifPresent(cars::delete);
         tracks.findById(track).ifPresent(tracks::delete);
     }
@@ -138,6 +142,37 @@ class CatalogImageBackupRoundTripIT {
     }
 
     @Test
+    void givenMusicTrack_whenRestoring_thenRestoreRowAndIdenticalFile() throws Exception {
+        // given
+        byte[] mp3 = sineMp3();
+        var stored = music.upload(new MockMultipartFile("file", "test-sine.mp3", "audio/mpeg", mp3), "Test_Sine", "Test Artist", "Test credit");
+        byte[] archive = export();
+        music.delete(stored.getId());
+        // when
+        imports.execute(imports.stage(upload(archive)).stagingId());
+        // then
+        var restored = musicTracks.findById(stored.getId()).orElseThrow();
+        assertThat(restored.getCredit()).isEqualTo("Test credit");
+        assertThat(restored.getDurationSeconds()).isEqualTo(stored.getDurationSeconds());
+        assertThat(Files.readAllBytes(ROOT.resolve("uploads").resolve(restored.getFilePath().substring("/uploads/".length()))))
+                .as("restored MP3 bytes").isEqualTo(mp3);
+    }
+
+    @Test
+    void givenMusicTrackInSchema25Archive_whenStaging_thenRejectBeforeWiping() throws Exception {
+        // given
+        music.upload(new MockMultipartFile("file", "test-sine.mp3", "audio/mpeg", sineMp3()), "Test_Old", "Test Artist", null);
+        var files = unzip(export());
+        var manifest = (ObjectNode) JSON.readTree(files.get("manifest.json"));
+        manifest.put("schema_version", 25);
+        files.put("manifest.json", JSON.writeValueAsBytes(manifest));
+        // when / then
+        assertThatThrownBy(() -> imports.stage(upload(zip(files)))).isInstanceOfSatisfying(BackupArchiveException.class, failure ->
+                assertThat(failure.getMessage()).contains("Music tracks require backup schema 26"));
+        verify(imports, never()).wipeAllTables(anyMap());
+    }
+
+    @Test
     void givenTrackShortName_whenRestoring_thenRestoreItOrRejectItInSchema25() throws Exception {
         // given
         var named = tracks.findById(track).orElseThrow();
@@ -193,7 +228,7 @@ class CatalogImageBackupRoundTripIT {
                 .when(exports).galleryUploads(org.mockito.ArgumentMatchers.any());
         // when / then
         assertThatThrownBy(this::export).isInstanceOf(IOException.class)
-                .hasMessage("Gallery image file car-images/gone.png was removed during the export; run the export again");
+                .hasMessage("Stored file car-images/gone.png was removed during the export; run the export again");
     }
 
     @Test
@@ -222,6 +257,16 @@ class CatalogImageBackupRoundTripIT {
         assertThat(gallery.carImages(car)).extracting(CarImage::getId).as("only the image with its file survives")
                 .doesNotContain(lost.getId()).hasSize(1);
         assertThat(gallery.trackImages(track)).hasSize(1);
+    }
+
+    private byte[] sineMp3() throws IOException {
+        Path out = Files.createTempFile("test-sine", ".mp3");
+        try {
+            media.run(List.of("-f", "lavfi", "-i", "sine=d=2", "-y", out.toString()), java.time.Duration.ofSeconds(30));
+            return Files.readAllBytes(out);
+        } finally {
+            Files.deleteIfExists(out);
+        }
     }
 
     private static MockMultipartFile png(String name) { return new MockMultipartFile("files", name, "image/png", TestImages.png(640, 360)); }

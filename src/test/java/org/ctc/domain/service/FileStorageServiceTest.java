@@ -26,6 +26,22 @@ class FileStorageServiceTest {
 	}
 
 	@Test
+	void givenUploadUrl_whenResolve_thenPathInsideUploadDir() {
+		// when
+		Path resolved = fileStorageService.resolve("/uploads/music/a/song.mp3");
+
+		// then
+		assertEquals(tempDir.toAbsolutePath().normalize().resolve("music/a/song.mp3"), resolved);
+	}
+
+	@Test
+	void givenTraversalUrl_whenResolve_thenRejected() {
+		// when / then
+		assertThrows(IllegalArgumentException.class, () -> fileStorageService.resolve("/uploads/../outside.mp3"));
+		assertThrows(IllegalArgumentException.class, () -> fileStorageService.resolve("https://example.com/a.mp3"));
+	}
+
+	@Test
 	void givenValidFile_whenStore_thenFileStoredAndUrlReturned() throws IOException {
 		// given
 		var file = new MockMultipartFile("file", "test.png", "image/png", new byte[]{1, 2, 3});

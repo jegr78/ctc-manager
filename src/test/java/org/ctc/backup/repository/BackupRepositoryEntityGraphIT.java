@@ -57,7 +57,7 @@ class BackupRepositoryEntityGraphIT {
 	 */
 	private static final Set<String> ZERO_ASSOCIATION_ENTITIES = Set.of(
 			"Car", "Track", "RaceScoring", "MatchScoring", "Driver",
-			"DiscordGlobalConfig", "DiscordPost", "SiteSlug"
+			"DiscordGlobalConfig", "DiscordPost", "SiteSlug", "MusicTrack"
 	);
 
 	@Autowired
@@ -77,7 +77,7 @@ class BackupRepositoryEntityGraphIT {
 	void givenAllExportOrderEntities_whenInvokeFindAllForBackup_thenNoLazyInitExceptionOnDeclaredAttributePaths() {
 		// given
 		List<EntityRef> order = backupSchema.getExportOrder();
-		assertThat(order).as("export order must contain 53 entities").hasSize(53);
+		assertThat(order).as("export order must contain 54 entities").hasSize(54);
 
 		Set<String> missingRepositories = new HashSet<>();
 		Set<String> missingFinder = new HashSet<>();

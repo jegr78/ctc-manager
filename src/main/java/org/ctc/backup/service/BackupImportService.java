@@ -144,7 +144,8 @@ public class BackupImportService {
     static final Set<String> INCIDENT_TABLES = Set.of("incident_match_contexts", "incident_report_windows", "incident_reports", "incident_report_revisions", "incident_report_events", "incident_deliveries", "incident_thread_publications", "incident_rulings", "incident_ruling_revisions", "incident_ruling_publications");
     static final Set<String> LINEUP_TABLES = Set.of("lineup_submissions", "lineup_submission_revisions", "lineup_window_events");
     static final Set<String> IMAGE_TABLES = Set.of("car_images", "track_images");
-    static final Map<Integer, Set<String>> TABLES_ABSENT_IN_SCHEMA = beforeImages(beforeLineups(beforeDisqualifications(beforePenalties(Map.of(
+    static final Set<String> MUSIC_TABLES = Set.of("music_tracks");
+    static final Map<Integer, Set<String>> TABLES_ABSENT_IN_SCHEMA = beforeMusic(beforeImages(beforeLineups(beforeDisqualifications(beforePenalties(Map.of(
             1, beforeIncidents("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "discord_global_config", "discord_post", "site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
             2, beforeIncidents("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "site_slugs", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
             3, beforeIncidents("pick_publication_attempts", "pick_publication_snapshots", "team_pick_channel_bindings", "season_car_pool_entries", "season_car_pool_clauses", "season_car_pool_members", "matchday_picks", "matchday_pick_revisions", "matchday_pick_decisions"),
@@ -154,7 +155,16 @@ public class BackupImportService {
             7, beforeIncidents(),
             8, Set.of("incident_deliveries", "incident_thread_publications", "incident_rulings", "incident_ruling_revisions", "incident_ruling_publications"),
             9, Set.of("incident_thread_publications", "incident_rulings", "incident_ruling_revisions", "incident_ruling_publications"),
-            10, Set.of("incident_rulings", "incident_ruling_revisions", "incident_ruling_publications"))))));
+            10, Set.of("incident_rulings", "incident_ruling_revisions", "incident_ruling_publications")))))));
+
+    private static Map<Integer, Set<String>> beforeMusic(Map<Integer, Set<String>> previous) {
+        var versions = new LinkedHashMap<Integer, Set<String>>();
+        for (int version = 1; version < org.ctc.backup.schema.MusicTrackBackupValidator.MUSIC_VERSION; version++) {
+            var absent = new HashSet<>(previous.getOrDefault(version, Set.of()));
+            absent.addAll(MUSIC_TABLES); versions.put(version, Set.copyOf(absent));
+        }
+        return Map.copyOf(versions);
+    }
 
     private static Map<Integer, Set<String>> beforeImages(Map<Integer, Set<String>> previous) {
         var versions = new LinkedHashMap<Integer, Set<String>>();
@@ -847,6 +857,7 @@ public class BackupImportService {
         long[] inflatedBytes = {0L};
         try (ZipFile zf = new ZipFile(staged.toFile())) {
             var imageValidator = new CatalogImageBackupValidator(manifest.schemaVersion(), archivedUploads(zf));
+            var musicValidator = new org.ctc.backup.schema.MusicTrackBackupValidator(manifest.schemaVersion(), archivedUploads(zf));
             for (EntityRef ref : backupSchema.getExportOrder()) {
                 // CodeQL FP: java/path-injection — assertEntrySafe + PathTraversalGuard.assertWithin defense not traceable; see docs/security/sast-acceptance.md
                 ZipEntry entry = zf.getEntry(ref.fileName());
@@ -864,6 +875,7 @@ public class BackupImportService {
                         incidentValidator.accept(ref.tableName(), row);
                         lineupValidator.accept(ref.tableName(), row);
                         imageValidator.accept(ref.tableName(), row);
+                        musicValidator.accept(ref.tableName(), row);
                     }));
                 }
             }
@@ -878,6 +890,7 @@ public class BackupImportService {
             incidentValidator.validate();
             lineupValidator.validate();
             imageValidator.validate();
+            musicValidator.validate();
         } catch (BackupArchiveException ex) {
             throw ex;
         } catch (org.ctc.backup.schema.ActiveSeasonBackupValidator.ValidationException ex) {

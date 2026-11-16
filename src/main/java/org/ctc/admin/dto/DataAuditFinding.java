@@ -23,7 +23,8 @@ public record DataAuditFinding(Category category, Resolution resolution, String 
         PRIVATE_PICKS("Inconsistent confidential pick history", "#281"),
         INCIDENT_REPORTS("Incident history and delivery review", "#288, #293"),
         LINEUPS("Organisation lineup overlaps and lineup submissions", "#426"),
-        CATALOG_IMAGES("Car and track gallery images without their file", "#436");
+        CATALOG_IMAGES("Car and track gallery images without their file", "#436"),
+        MUSIC_LIBRARY("Trailer music without its file", "");
 
 		private final String label;
 		private final String relatedIssues;

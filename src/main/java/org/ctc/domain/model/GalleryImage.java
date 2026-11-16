@@ -4,7 +4,7 @@ import java.util.UUID;
 import java.util.Locale;
 
 /** The fields car and track gallery images share. */
-public interface GalleryImage {
+public interface GalleryImage extends StoredFileRow {
     UUID getId();
     String getKindName();
     ImageSource getSource();
@@ -20,6 +20,11 @@ public interface GalleryImage {
     void setImagePath(String imagePath);
     void setWidth(int width);
     void setHeight(int height);
+
+    @Override
+    default String storedFilePath() {
+        return getImagePath();
+    }
 
     /** The GT7 slot shown next to the source, or null for other sources. */
     default String getSlot() {
