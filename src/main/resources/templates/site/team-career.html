@@ -4,6 +4,7 @@
 <body>
 <section>
     <header class="team-header profile-heading brand-stage">
+        <img th:if="${teamLogo}" th:src="${rootPath + '/' + teamLogo}" class="team-logo" th:alt="${teamShortName}">
         <div>
             <p class="season-brand">COMMUNITY TEAM CUP</p>
             <h1 class="text-white" th:text="${teamShortName}"></h1>

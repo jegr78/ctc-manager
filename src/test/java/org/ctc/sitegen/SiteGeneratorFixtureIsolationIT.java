@@ -615,6 +615,35 @@ class SiteGeneratorFixtureIsolationIT {
 
 
     @Test
+    void givenSeasonLogo_whenGenerate_thenSeasonProfileDirectoryAndCareerShowItInsteadOfTheTeamLogo(@TempDir Path uploadBase) throws IOException {
+        // given
+        for (String file : List.of("teams/t/team-logo.png", "season-teams/s/season-logo.png")) {
+            Files.createDirectories(uploadBase.resolve(file).getParent());
+            Files.writeString(uploadBase.resolve(file), file);
+        }
+        siteGeneratorService.setUploadDir(uploadBase.toString());
+        var testTeam = teamRepository.findAll().stream()
+                .filter(t -> t.getShortName().startsWith("GTNR" + uniqueSuffix)).findFirst().orElseThrow();
+        testTeam.setLogoUrl("/uploads/teams/t/team-logo.png");
+        ownTeam(testTeam);
+        var seasonTeam = seasonTeamRepository.findBySeasonIdAndTeamId(season.getId(), testTeam.getId()).orElseThrow();
+        seasonTeam.setLogoUrl("/uploads/season-teams/s/season-logo.png");
+        seasonTeamRepository.save(seasonTeam);
+        // when
+        siteGeneratorService.generate();
+        // then
+        var slug = slugify(testTeam.getShortName());
+        var profile = Jsoup.parse(Files.readString(seasonDir().resolve("team").resolve(slug + ".html")));
+        assertTrue(profile.select("img.team-logo").attr("src").endsWith("img/logos/season-teams/s/season-logo.png"),
+                "The season profile shows the season logo: " + profile.select("img.team-logo").attr("src"));
+        var directory = Jsoup.parse(Files.readString(tempDir.resolve("teams.html")));
+        assertTrue(directory.select("img[src*=season-logo.png]").size() == 1, "The teams directory shows the current season logo");
+        var career = Jsoup.parse(Files.readString(tempDir.resolve("team").resolve(slug + ".html")));
+        assertTrue(career.select("img.team-logo").attr("src").equals("../assets/img/logos/season-teams/s/season-logo.png"),
+                "The career page shows the current logo: " + career.select("img.team-logo").attr("src"));
+    }
+
+    @Test
     void givenSeason_whenGenerate_thenHeroContainsCommunityTeamCupTitle() throws IOException {
         // when
         siteGeneratorService.generate();

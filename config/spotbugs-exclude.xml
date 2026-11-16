@@ -235,21 +235,11 @@
         <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
     </Match>
 
-    <!-- SiteGeneratorService.copyLogoToAssets: target.getParent() at line 486.
-         target = outPath.resolve("assets/img/logos/...") — always a multi-component path with
-         a non-null parent. See SiteGeneratorService.java:485-486. -->
+    <!-- SiteLogos.copy: target.getParent() of outPath.resolve("assets/img/logos/<upload path>"), a
+         multi-component path whose parent is never null. See SiteLogos.java. -->
     <Match>
-        <Class name="org.ctc.sitegen.SiteGeneratorService"/>
-        <Method name="copyLogoToAssets"/>
-        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
-    </Match>
-
-    <!-- TeamProfilePageGenerator.copyLogoToAssets: target.getParent() at line 238.
-         Same pattern as SiteGeneratorService.copyLogoToAssets — target is a multi-component
-         resolved path. See TeamProfilePageGenerator.java:237-238. -->
-    <Match>
-        <Class name="org.ctc.sitegen.TeamProfilePageGenerator"/>
-        <Method name="copyLogoToAssets"/>
+        <Class name="org.ctc.sitegen.SiteLogos"/>
+        <Method name="copy"/>
         <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
     </Match>
 

@@ -47,7 +47,7 @@ class CareerProfilePageGeneratorIT {
         var expected = driverStats.ranked(period).values().iterator().next();
         // when
         var drivers = careers.generateDrivers(out, counted, slugs, "", "", new SiteGeneratorService.GenerationResult());
-        var teams = careers.generateTeams(out, counted, slugs, "", "", new SiteGeneratorService.GenerationResult());
+        var teams = careers.generateTeams(out, counted, slugs, team -> null, "", "", new SiteGeneratorService.GenerationResult());
         // then
         assertThat(drivers).as("every ranked driver gets a career page").contains(expected.driverId());
         var page = Jsoup.parse(Files.readString(out.resolve("driver").resolve(slugs.driver(expected.driverId()) + ".html")));

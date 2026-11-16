@@ -68,9 +68,12 @@ public class CareerProfilePageGenerator {
         return alltime.keySet();
     }
 
-    /** Writes one page per team in the alltime standings over {@code seasons} (chronological) and returns their IDs. */
-    public Set<UUID> generateTeams(Path outPath, List<Season> seasons, SiteSlugs slugs, String activeSeasonSlug, String activeSeasonName,
-                                   SiteGeneratorService.GenerationResult result) throws IOException {
+    /**
+     * Writes one page per team in the alltime standings over {@code seasons} (chronological) and returns their IDs;
+     * {@code logo} copies a team's current logo into the assets and returns its root-relative path or null.
+     */
+    public Set<UUID> generateTeams(Path outPath, List<Season> seasons, SiteSlugs slugs, java.util.function.Function<org.ctc.domain.model.Team, String> logo,
+                                   String activeSeasonSlug, String activeSeasonName, SiteGeneratorService.GenerationResult result) throws IOException {
         var period = StatsPeriod.of(null, seasons, false);
         var written = new java.util.LinkedHashSet<UUID>();
         var dir = outPath.resolve("team");
@@ -92,6 +95,7 @@ public class CareerProfilePageGenerator {
             context.setVariable("stats", stats);
             context.setVariable("teamName", team.getName());
             context.setVariable("teamShortName", team.getShortName());
+            context.setVariable("teamLogo", logo.apply(team));
             context.setVariable("seasonRows", rows);
             templateWriter.write("site/team-career", context, dir.resolve(slug + ".html"), outPath, activeSeasonSlug, activeSeasonName);
             result.incrementPages();

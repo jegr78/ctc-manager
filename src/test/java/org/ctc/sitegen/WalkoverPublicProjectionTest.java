@@ -70,7 +70,8 @@ class WalkoverPublicProjectionTest {
         var teams = mock(TeamRepository.class); var standings = mock(StandingsService.class);
         when(teams.findAll()).thenReturn(List.of(home)); when(phases.findRegularPhase(season.getId())).thenReturn(phase);
         when(standings.calculateStandings(phase.getId(), null)).thenReturn(List.of(new StandingsService.TeamStanding(home)));
-        var generator = new TeamProfilePageGenerator(writer, slugger, teams, lineups, roster, results, standings, phases, mock(PhaseTeamRepository.class), shared);
+        var generator = new TeamProfilePageGenerator(writer, slugger, teams, lineups, roster, results, standings, phases, mock(PhaseTeamRepository.class), shared,
+                mock(org.ctc.domain.repository.SeasonTeamRepository.class));
         generator.setUploadDir(out.toString()); generator.generate(context(), new SiteGeneratorService.GenerationResult());
         var rendered = ArgumentCaptor.forClass(Context.class);
         verify(writer).write(eq("site/team-profile"), rendered.capture(), any(), eq(out), anyString(), anyString());

@@ -5,7 +5,6 @@ import static org.springframework.util.StringUtils.hasText;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -43,6 +42,7 @@ public class TeamProfilePageGenerator {
     private final SeasonPhaseService seasonPhaseService;
     private final PhaseTeamRepository phaseTeamRepository;
     private final SharedProfilePageGenerator sharedProfilePageGenerator;
+    private final org.ctc.domain.repository.SeasonTeamRepository seasonTeamRepository;
 
     @lombok.Setter
     @Value("${app.upload-dir:data/dev/uploads}")
@@ -184,8 +184,9 @@ public class TeamProfilePageGenerator {
             Path teamDir = outPath.resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel())).resolve("team");
             String assetsPath = teamDir.relativize(outPath.resolve("assets")).toString().replace('\\', '/');
 
-            // Copy logo and get relative path (null if no logo or file missing)
-            String teamLogoRelPath = copyLogoToAssets(team.getLogoUrl(), outPath, assetsPath);
+            String seasonLogo = seasonTeamRepository.findBySeasonIdAndTeamId(season.getId(), team.getId())
+                    .map(org.ctc.domain.model.SeasonTeam::getEffectiveLogoUrl).orElse(team.getLogoUrl());
+            String teamLogoRelPath = copyLogoToAssets(seasonLogo, outPath, assetsPath);
             context.setVariable("teamLogoRelPath", teamLogoRelPath);
 
             context.setVariable("currentPage", "team");
@@ -227,36 +228,6 @@ public class TeamProfilePageGenerator {
     }
 
     private String copyLogoToAssets(String logoUrl, Path outPath, String assetsPath) {
-        if (logoUrl == null || !logoUrl.startsWith("/uploads/")) {
-            return null;
-        }
-        try {
-            Path uploadBase = Path.of(uploadDir).toAbsolutePath().normalize();
-            Path logoFile = uploadBase.resolve(logoUrl.substring("/uploads/".length())).normalize();
-            if (!logoFile.startsWith(uploadBase)) {
-                log.warn("Path traversal attempt in logo URL: {}", logoUrl);
-                return null;
-            }
-            if (!Files.exists(logoFile)) {
-                log.warn("Logo file not found, skipping: {}", logoUrl);
-                return null;
-            }
-            Path realBase = uploadBase.toRealPath();
-            Path realLogo = logoFile.toRealPath();
-            if (logoFile.startsWith(uploadBase.resolve("races")) || !realLogo.startsWith(realBase)
-                    || realLogo.startsWith(realBase.resolve("races"))) return null;
-            // Preserve UUID-prefixed subdirectory to avoid filename collisions
-            String relativePart = logoUrl.substring("/uploads/".length());
-            Path target = outPath.resolve("assets").resolve("img").resolve("logos").resolve(relativePart);
-            // NP: target has at least 4 path components — parent is guaranteed non-null.
-            // See config/spotbugs-exclude.xml TeamProfilePageGenerator.copyLogoToAssets NP_NULL entry.
-            Files.createDirectories(target.getParent());
-            Files.copy(logoFile, target, StandardCopyOption.REPLACE_EXISTING);
-            log.debug("Copied logo: {} -> {}", logoFile, target);
-            return assetsPath + "/img/logos/" + relativePart;
-        } catch (IOException e) {
-            log.warn("Failed to copy logo: {}", logoUrl, e);
-            return null;
-        }
+        return SiteLogos.copy(uploadDir, logoUrl, outPath, assetsPath);
     }
 }
