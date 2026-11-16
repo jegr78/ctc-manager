@@ -22,6 +22,7 @@
 		<lombok.version>1.18.48</lombok.version>
 		<!-- Track connector security updates independently of the Spring Boot BOM. -->
 		<mariadb.version>4.0.0</mariadb.version>
+		<onnxruntime.version>1.31.1</onnxruntime.version>
 		<!-- Spring Boot 4.0.x does NOT manage Testcontainers BOM. Pinned to 2.0.5: Testcontainers
 		     1.x sends Docker API 1.32 which is rejected by Docker Engine 29+ (requires API >= 1.40).
 		     Testcontainers 2.x ships API 1.44. See gh:testcontainers/testcontainers-java#11235. -->
@@ -123,6 +124,11 @@
 			<artifactId>mariadb-java-client</artifactId>
 			<version>${mariadb.version}</version>
 			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.microsoft.onnxruntime</groupId>
+			<artifactId>onnxruntime</artifactId>
+			<version>${onnxruntime.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
