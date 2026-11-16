@@ -10,6 +10,27 @@
         </div>
     </div>
     <p class="admin-list-intro text-dim">Manage the cars available for race setup.</p>
+    <div class="card catalog-source" id="gt7-car-images">
+        <h2>GT7 car images</h2>
+        <p class="form-hint">Loads the official GT7 car shots into the gallery of every car with a GT7 ID that has none yet.
+            A car gets about five images of 1 MB in total, and every backup includes them. The run continues in the
+            background; loading again picks up the cars still missing.</p>
+        <p>Cars without GT7 images: <strong th:text="${carShotPending}"></strong></p>
+        <p class="text-dim" role="status" data-car-shot-status th:attr="data-running=${carShotRunning}"
+           th:text="${carShotRun != null ? carShotRun.message() : ''}"></p>
+        <ul th:if="${carShotRun != null && !carShotRun.failures().isEmpty()}" class="catalog-run-failures" aria-label="Cars whose GT7 images failed">
+            <li th:each="failure : ${carShotRun.failures()}"><a th:href="@{/admin/cars/{id}/edit(id=${failure.carId()})}" class="detail-link"
+                th:text="${failure.car()}"></a>: <span th:text="${failure.reason()}"></span></li>
+        </ul>
+        <div class="actions">
+            <form th:unless="${carShotRunning}" th:action="@{/admin/cars/gt7-images}" method="post">
+                <button type="submit" class="btn btn-secondary btn-sm" th:disabled="${carShotPending == 0}">Load GT7 images for all cars</button>
+            </form>
+            <form th:if="${carShotRunning}" th:action="@{/admin/cars/gt7-images/stop}" method="post">
+                <button type="submit" class="btn btn-secondary btn-sm">Stop loading</button>
+            </form>
+        </div>
+    </div>
     <div class="card admin-list-card">
         <div class="admin-list-controls catalog-list-controls" data-list-tools hidden>
             <label for="carSearch"><span>Search</span><input type="search" id="carSearch" data-list-search placeholder="Manufacturer or car name" autocomplete="off"></label>
@@ -29,7 +50,7 @@
             </thead>
             <tbody>
                 <tr th:each="car : ${cars}" class="car-row" data-list-entry th:attr="data-search=${car.name + ' ' + car.manufacturer}">
-                    <td class="col-thumb"><img th:if="${car.imageUrl}" th:src="${car.imageUrl}" alt="" class="thumb-sm"><span th:unless="${car.imageUrl}" class="text-dim catalog-image-status">Not set</span></td>
+                    <td class="col-thumb"><img th:if="${car.imageUrl}" th:src="${car.imageUrl}" alt="" class="thumb-sm" width="50" loading="lazy" decoding="async"><span th:unless="${car.imageUrl}" class="text-dim catalog-image-status">Not set</span></td>
                     <td th:text="${car.manufacturer}"></td>
                     <td><a th:href="@{/admin/cars/{id}/edit(id=${car.id})}" class="detail-link"><strong th:text="${car.name}"></strong></a></td>
                     <td th:text="${car.category != null ? car.category.label : 'Unknown'}"></td>
@@ -58,6 +79,7 @@
     </div>
 
     <script defer th:src="@{/admin/js/management-list.js}"></script>
+    <script defer th:src="@{/admin/js/car-shot-run.js}"></script>
 </section>
 </body>
 </html>

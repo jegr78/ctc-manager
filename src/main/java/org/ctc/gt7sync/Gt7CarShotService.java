@@ -29,28 +29,56 @@ public class Gt7CarShotService {
     private final FileStorageService files;
     private final CatalogImageService gallery;
 
+    /** Loads one car's shots inside a request that already holds the restore writer admission. */
     public Result load(UUID carId) {
+        return load(carId, scraper::scrapeCarShots, Admission.HELD);
+    }
+
+    /**
+     * Loads one car's shots from a car list bundle fetched once for a bulk run. Downloads run before {@code admission} is
+     * entered, so a restore waits only for storing and applying.
+     */
+    public Result load(UUID carId, Gt7ScraperService.CarShotIndex index, Admission admission) {
+        return load(carId, gt7Id -> scraper.scrapeCarShots(index, gt7Id), admission);
+    }
+
+    private Result load(UUID carId, ShotLister lister, Admission admission) {
         var car = cars.findById(carId).orElseThrow(() -> new EntityNotFoundException("Car", carId));
         String gt7Id = car.getGt7Id();
         if (!Gt7ScraperService.isCarId(gt7Id)) throw new BusinessRuleException("This car has no GT7 ID");
         var current = gallery.gt7Slots(carId);
-        var staged = new ArrayList<Gt7Shot>();
+        var downloaded = new ArrayList<Download>();
         var unchanged = new ArrayList<String>();
         try {
-            for (var shot : scraper.scrapeCarShots(gt7Id)) {
+            for (var shot : lister.shots(gt7Id)) {
                 byte[] data = files.downloadImage(shot.imageUrl(), "gt7.jpg");
                 String stored = current.get(shot.slot());
-                if (stored != null && files.hasContent(stored, data)) {
-                    unchanged.add(shot.slot());
-                    continue;
-                }
-                var size = ImageContent.dimensions(data);
-                staged.add(new Gt7Shot(shot.slot(), files.storeBytes("car-images", carId, "gt7_" + shot.slot() + ".jpg", data), size.width(), size.height()));
+                if (stored != null && files.hasContent(stored, data)) unchanged.add(shot.slot());
+                else downloaded.add(new Download(shot.slot(), data, ImageContent.dimensions(data)));
+            }
+        } catch (IOException | RuntimeException failure) {
+            log.warn("Loading GT7 images for car {} failed", carId, failure);
+            throw new BusinessRuleException("GT7 images could not be loaded: " + (failure instanceof IOException ? failure.getMessage() : "the GT7 data is not readable"));
+        }
+        if (!admission.enter()) throw new WriterRefusedException();
+        try {
+            return store(carId, downloaded, unchanged);
+        } finally {
+            admission.exit();
+        }
+    }
+
+    private Result store(UUID carId, List<Download> downloaded, List<String> unchanged) {
+        var staged = new ArrayList<Gt7Shot>();
+        try {
+            for (var shot : downloaded) {
+                staged.add(new Gt7Shot(shot.slot(), files.storeBytes("car-images", carId, "gt7_" + shot.slot() + ".jpg", shot.data()),
+                        shot.size().width(), shot.size().height()));
             }
         } catch (IOException | RuntimeException failure) {
             staged.forEach(shot -> files.delete(shot.imagePath()));
-            log.warn("Loading GT7 images for car {} failed", carId, failure);
-            throw new BusinessRuleException("GT7 images could not be loaded: " + (failure instanceof IOException ? failure.getMessage() : "the GT7 data is not readable"));
+            log.warn("Storing GT7 images for car {} failed", carId, failure);
+            throw new BusinessRuleException("GT7 images could not be saved; try again.");
         }
         try {
             var applied = gallery.applyGt7CarImages(carId, staged);
@@ -63,6 +91,29 @@ public class Gt7CarShotService {
             log.warn("Saving GT7 images for car {} failed", carId, failure);
             throw new BusinessRuleException("GT7 images could not be saved; try again.");
         }
+    }
+
+    /** The restore writer admission around storing and applying; {@link #HELD} when the caller already holds it. */
+    public interface Admission {
+        Admission HELD = new Admission() {
+            public boolean enter() { return true; }
+            public void exit() { }
+        };
+
+        boolean enter();
+
+        void exit();
+    }
+
+    /** Thrown when a backup restore holds the import lock, before any file is stored. */
+    public static final class WriterRefusedException extends RuntimeException {
+        WriterRefusedException() { super("A backup restore is in progress."); }
+    }
+
+    private record Download(String slot, byte[] data, ImageContent.Dimensions size) { }
+
+    private interface ShotLister {
+        List<Gt7ScraperService.CarShot> shots(String gt7Id) throws IOException;
     }
 
     public record Result(List<String> added, List<String> replaced, List<String> unchanged) {

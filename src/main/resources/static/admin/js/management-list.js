@@ -87,5 +87,6 @@
     });
     root.querySelector('[data-list-tools]').hidden = false;
     render();
+    root.dataset.listReady = '';
     });
 })();

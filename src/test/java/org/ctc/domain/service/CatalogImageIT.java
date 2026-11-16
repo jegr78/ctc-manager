@@ -220,6 +220,22 @@ class CatalogImageIT {
     }
 
     @Test
+    void givenCarWithGt7IdButNoGt7Image_whenListingBulkCandidates_thenIncludeItUntilAGt7ImageExists() throws Exception {
+        // given
+        var withId = cars.findById(car).orElseThrow();
+        withId.setGt7Id("car98765");
+        withId.setImageUrl("/uploads/cars/" + car + "/1a2b3c4d_car98765.png");
+        cars.saveAndFlush(withId);
+        gallery.uploadCarImages(car, List.of(png("own.png", 10, 10)), CarImageKind.STUDIO, "Own");
+        // when / then
+        assertThat(cars.findWithoutGt7Images()).extracting(CarRepository.Gt7CarId::getId).as("a manual image does not count").contains(car);
+        mvc.perform(get("/admin/cars")).andExpect(content().string(containsString("Load GT7 images for all cars")))
+                .andExpect(content().string(containsString("loading=\"lazy\"")));
+        gallery.applyGt7CarImages(car, List.of(new CatalogImageService.Gt7Shot("2_01", storeGt7("first.jpg"), 1920, 1080)));
+        assertThat(cars.findWithoutGt7Images()).extracting(CarRepository.Gt7CarId::getId).doesNotContain(car);
+    }
+
+    @Test
     void givenRolledBackGt7Apply_whenTheTransactionEnds_thenRemoveTheStagedFile() throws Exception {
         // given
         String staged = storeGt7("staged.jpg");

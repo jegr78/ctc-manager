@@ -72,6 +72,24 @@ class Gt7CarShotServiceTest {
     }
 
     @Test
+    void givenRefusedAdmissionInABulkRun_whenLoading_thenDownloadButStoreNothing() throws IOException {
+        // given
+        var index = new Gt7ScraperService.CarShotIndex("index");
+        when(gallery.gt7Slots(carId)).thenReturn(Map.of());
+        when(scraper.scrapeCarShots(index, "car365")).thenReturn(List.of(new CarShot("1_01", "https://gt7/a.jpg")));
+        when(files.downloadImage("https://gt7/a.jpg", "gt7.jpg")).thenReturn(scene);
+        var refused = new Gt7CarShotService.Admission() {
+            boolean exited;
+            public boolean enter() { return false; }
+            public void exit() { exited = true; }
+        };
+        // when / then
+        assertThatThrownBy(() -> service.load(carId, index, refused)).isInstanceOf(Gt7CarShotService.WriterRefusedException.class);
+        verify(files, never()).storeBytes(any(), any(), any(), any());
+        assertThat(refused.exited).as("a refused admission is not left").isFalse();
+    }
+
+    @Test
     void givenApplyingFails_whenLoading_thenLeaveCleanupToTheTransactionAndHideTheDatabaseError() throws IOException {
         // given
         when(gallery.gt7Slots(carId)).thenReturn(Map.of());
@@ -103,11 +121,10 @@ class Gt7CarShotServiceTest {
         when(gallery.gt7Slots(carId)).thenReturn(Map.of());
         when(scraper.scrapeCarShots("car365")).thenReturn(List.of(new CarShot("1_01", "https://gt7/a.jpg"), new CarShot("2_01", "https://gt7/b.jpg")));
         when(files.downloadImage("https://gt7/a.jpg", "gt7.jpg")).thenReturn(scene);
-        when(files.storeBytes(eq("car-images"), eq(carId), any(), any())).thenReturn("/uploads/car-images/new1.jpg");
         when(files.downloadImage("https://gt7/b.jpg", "gt7.jpg")).thenThrow(new IOException("Image download failed with HTTP 404"));
         // when / then
         assertThatThrownBy(() -> service.load(carId)).hasMessage("GT7 images could not be loaded: Image download failed with HTTP 404");
-        verify(files).delete("/uploads/car-images/new1.jpg");
+        verify(files, never()).storeBytes(any(), any(), any(), any());
         verify(gallery, never()).applyGt7CarImages(any(), any());
     }
 

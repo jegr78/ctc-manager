@@ -42,7 +42,7 @@
             </thead>
             <tbody>
                 <tr th:each="track : ${tracks}" class="track-row" data-list-entry th:attr="data-search=${track.name + ' ' + (track.country ?: '')}">
-                    <td class="col-thumb"><img th:if="${track.imageUrl}" th:src="${track.imageUrl}" alt="" class="thumb-sm"><span th:unless="${track.imageUrl}" class="text-dim catalog-image-status">Not set</span></td>
+                    <td class="col-thumb"><img th:if="${track.imageUrl}" th:src="${track.imageUrl}" alt="" class="thumb-sm" width="50" loading="lazy" decoding="async"><span th:unless="${track.imageUrl}" class="text-dim catalog-image-status">Not set</span></td>
                     <td><a th:href="@{/admin/tracks/{id}/edit(id=${track.id})}" class="detail-link"><strong th:text="${track.name}"></strong></a></td>
                     <td th:text="${track.country}"></td>
                     <td class="actions">
