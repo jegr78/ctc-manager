@@ -16,12 +16,14 @@ import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.stats.StatsChoice;
 import org.ctc.domain.stats.StatsLookupException;
 import org.ctc.domain.stats.StatsScope;
+import org.ctc.sitegen.SiteProperties;
 import org.junit.jupiter.api.Test;
 
 class StatsSeasonServiceTest {
     final SeasonRepository repository = mock(SeasonRepository.class);
     final SeasonPhaseService phases = mock(SeasonPhaseService.class);
-    final StatsSeasonService service = new StatsSeasonService(repository, phases);
+    final SiteProperties site = new SiteProperties();
+    final StatsSeasonService service = new StatsSeasonService(repository, phases, site);
     final Season older = season("CTC Spring", 2025, 2, true);
     final Season newer = season("CTC Autumn", 2026, 1, true);
     final Season test = season("Test Stats", 2027, 1, true);
@@ -33,6 +35,15 @@ class StatsSeasonServiceTest {
         when(repository.findAll()).thenReturn(List.of(withoutRegular, newer, test, older));
         // when / then
         assertThat(service.counted()).as("Test seasons and seasons without a regular phase are not public").containsExactly(older, newer);
+    }
+
+    @Test
+    void givenSiteIncludingTestSeasons_whenCountingSeasons_thenCountThemLikeTheWebsite() {
+        // given
+        site.setIncludeTestSeasons(true);
+        when(repository.findAll()).thenReturn(List.of(withoutRegular, newer, test, older));
+        // when / then
+        assertThat(service.counted()).as("stats count the seasons the website publishes").containsExactly(older, newer, test);
     }
 
     @Test
