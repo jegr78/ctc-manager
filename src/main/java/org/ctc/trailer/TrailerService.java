@@ -90,7 +90,7 @@ public class TrailerService {
                 Path parent = files.resolve("/uploads/trailers/" + kind);
                 if (parent == null || !Files.isDirectory(parent)) continue;
                 try (var entries = Files.list(parent)) {
-                    entries.filter(path -> path.getFileName().toString().startsWith(".")).forEach(TrailerService::deleteTree);
+                    entries.filter(TrailerService::isHidden).forEach(TrailerService::deleteTree);
                 }
             } catch (IOException | RuntimeException e) {
                 log.warn("Could not clean interrupted trailer work for {}", kind, e);
@@ -174,6 +174,11 @@ public class TrailerService {
             case TrailerScope.MatchdayScope matchday -> files.resolve("/uploads/trailers/matchday/" + matchday.matchdayId());
             case TrailerScope.PlayoffRoundScope round -> files.resolve("/uploads/trailers/round/" + round.roundId());
         };
+    }
+
+    private static boolean isHidden(Path path) {
+        Path name = path.getFileName();
+        return name != null && name.toString().startsWith(".");
     }
 
     private static void deleteTree(Path dir) {
