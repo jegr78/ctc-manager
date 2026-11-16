@@ -1,5 +1,6 @@
 package org.ctc.trailer;
 
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -9,6 +10,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.imageio.ImageIO;
 import lombok.RequiredArgsConstructor;
 import org.ctc.domain.model.CarImageKind;
 import org.ctc.domain.model.GalleryImage;
@@ -51,6 +53,7 @@ public class TrailerSceneModel {
         for (var race : plan.races()) {
             var shared = raceVariables(race);
             scenes.add(scene("race-visual", scenes.size(), TrailerPlanService.RACE_VISUAL, CAR_LAYERS, common, shared));
+            scenes.add(scene("race-car", scenes.size(), TrailerPlanService.RACE_CAR, PLAIN_LAYERS, common, shared));
             var settings = new HashMap<>(shared);
             settings.put("tiles", tiles(race.content()));
             settings.put("carName", race.content().carName());
@@ -98,10 +101,11 @@ public class TrailerSceneModel {
         vars.put("legLabel", legs.size() == 1 ? "LEG " + legs.getFirst()
                 : "LEGS " + String.join(" & ", legs.stream().map(String::valueOf).toList()));
         var track = tracks.findById(race.trackId()).orElseThrow();
-        vars.put("trackLogo", upload(track.getImageUrl()));
+        vars.put("trackLogo", logo(track.getImageUrl()));
         vars.put("trackBackground", gallery.firstTrackImage(race.trackId(), TrackImageKind.BACKGROUND).map(this::upload).orElse(null));
         vars.put("trackLayout", gallery.firstTrackImage(race.trackId(), TrackImageKind.LAYOUT).map(this::upload).orElse(null));
         vars.put("carCutout", gallery.firstCarImage(race.carId(), CarImageKind.CUTOUT).map(this::upload).orElse(null));
+        vars.put("carScene", gallery.firstCarImage(race.carId(), CarImageKind.SCENE).map(this::upload).orElse(null));
         return vars;
     }
 
@@ -122,6 +126,51 @@ public class TrailerSceneModel {
                 new Tile("Start type", content.startType() == null ? MISSING : content.startType().getLabel(), 2),
                 new Tile("Tyres", text(content.availableTyres()), 3),
                 new Tile("Weather", text(content.weather()), 5));
+    }
+
+    /** Whether the opaque pixels are dark on average, so the logo needs inverting on the dark scene. */
+    public static boolean isDark(BufferedImage image) {
+        double sum = 0;
+        long count = 0;
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                int argb = image.getRGB(x, y);
+                if ((argb >>> 24) < 128) continue;
+                sum += (0.2126 * ((argb >> 16) & 0xFF) + 0.7152 * ((argb >> 8) & 0xFF) + 0.0722 * (argb & 0xFF)) / 255;
+                count++;
+            }
+        }
+        return count > 0 && sum / count < 0.25;
+    }
+
+    /** Inverts grey pixels so dark text turns light; coloured pixels keep their colour. */
+    public static BufferedImage brighten(BufferedImage image) {
+        var out = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                int argb = image.getRGB(x, y);
+                int r = (argb >> 16) & 0xFF;
+                int g = (argb >> 8) & 0xFF;
+                int b = argb & 0xFF;
+                int chroma = Math.max(r, Math.max(g, b)) - Math.min(r, Math.min(g, b));
+                out.setRGB(x, y, chroma < 51 ? (argb & 0xFF000000) | ((255 - r) << 16) | ((255 - g) << 8) | (255 - b) : argb);
+            }
+        }
+        return out;
+    }
+
+    /** The track logo as data URI; a dark logo is brightened so it reads on the dark scene. */
+    private String logo(String url) {
+        if (url == null) return null;
+        try {
+            var image = ImageIO.read(files.resolve(url).toFile());
+            if (image == null || !isDark(image)) return upload(url);
+            var png = new java.io.ByteArrayOutputStream();
+            ImageIO.write(brighten(image), "png", png);
+            return "data:image/png;base64," + Base64.getEncoder().encodeToString(png.toByteArray());
+        } catch (IOException | IllegalArgumentException unreadable) {
+            return upload(url);
+        }
     }
 
     static String fit(int length, int... limits) {

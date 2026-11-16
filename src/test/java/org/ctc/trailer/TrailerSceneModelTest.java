@@ -56,14 +56,15 @@ class TrailerSceneModelTest {
         var scenes = model.scenes(plan(scene("SPA", List.of(1, 2)), scene(null, List.of(1))));
 
         // then
-        assertThat(scenes).extracting(TrailerScene::name).containsExactly(
-                "intro", "overview", "race-visual", "race-settings", "race-visual", "race-settings", "outro");
-        assertThat(scenes).extracting(TrailerScene::index).containsExactly(0, 1, 2, 3, 4, 5, 6);
+        assertThat(scenes).extracting(TrailerScene::name).containsExactly("intro", "overview",
+                "race-visual", "race-car", "race-settings", "race-visual", "race-car", "race-settings", "outro");
+        assertThat(scenes).extracting(TrailerScene::index).containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 8);
         assertThat(scenes).extracting(TrailerScene::length).containsExactly(TrailerPlanService.INTRO, TrailerPlanService.OVERVIEW,
-                TrailerPlanService.RACE_VISUAL, TrailerPlanService.RACE_SETTINGS, TrailerPlanService.RACE_VISUAL,
-                TrailerPlanService.RACE_SETTINGS, TrailerPlanService.OUTRO);
+                TrailerPlanService.RACE_VISUAL, TrailerPlanService.RACE_CAR, TrailerPlanService.RACE_SETTINGS,
+                TrailerPlanService.RACE_VISUAL, TrailerPlanService.RACE_CAR, TrailerPlanService.RACE_SETTINGS, TrailerPlanService.OUTRO);
         assertThat(scenes.get(2).layers()).containsExactly("background", "car", "foreground");
         assertThat(scenes.get(3).layers()).containsExactly("background", "foreground");
+        assertThat((String) scenes.get(3).variables().get("carScene")).as("scene photo without cutout").startsWith("data:image/");
     }
 
     @Test
@@ -80,6 +81,40 @@ class TrailerSceneModelTest {
         assertThat(visual.get("awayShort")).isEqualTo("AWY");
         assertThat(visual.get("homeStanding")).isEqualTo("SEED 1 · 4-1-0");
         assertThat(visual.get("awayStanding")).isEqualTo("SEED 2 · 3-2-0");
+    }
+
+    @Test
+    void givenDarkTransparentLogo_whenIsDark_thenTrue() {
+        // given
+        var dark = new java.awt.image.BufferedImage(40, 20, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        var g = dark.createGraphics();
+        g.setColor(new java.awt.Color(20, 20, 20));
+        g.fillRect(5, 5, 30, 10);
+        g.dispose();
+        var light = new java.awt.image.BufferedImage(40, 20, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        g = light.createGraphics();
+        g.setColor(new java.awt.Color(230, 40, 40));
+        g.fillRect(5, 5, 30, 10);
+        g.dispose();
+
+        // when / then
+        assertThat(TrailerSceneModel.isDark(dark)).as("black text on transparency").isTrue();
+        assertThat(TrailerSceneModel.isDark(light)).as("bright red logo").isFalse();
+    }
+
+    @Test
+    void givenDarkLogo_whenBrightened_thenGreyPixelsInvertAndColouredPixelsStay() {
+        // given
+        var logo = new java.awt.image.BufferedImage(2, 1, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        logo.setRGB(0, 0, 0xFF141414);
+        logo.setRGB(1, 0, 0xFFE02020);
+
+        // when
+        var bright = TrailerSceneModel.brighten(logo);
+
+        // then
+        assertThat(bright.getRGB(0, 0)).as("near-black becomes near-white").isEqualTo(0xFFEBEBEB);
+        assertThat(bright.getRGB(1, 0)).as("red stays red").isEqualTo(0xFFE02020);
     }
 
     @Test
@@ -109,7 +144,7 @@ class TrailerSceneModelTest {
     @Test
     void givenPublishedSettings_whenScenes_thenTilesShowFormattedValues() {
         // when
-        var settings = model.scenes(plan(scene("SPA", List.of(1)))).get(3).variables();
+        var settings = model.scenes(plan(scene("SPA", List.of(1)))).get(4).variables();
 
         // then
         @SuppressWarnings("unchecked")
@@ -145,7 +180,7 @@ class TrailerSceneModelTest {
         // then
         assertThat(vars.get("headlineSize")).isEqualTo("fit-s");
         assertThat(vars.get("carNameSize")).isEqualTo("fit-s");
-        assertThat(model.scenes(plan(scene)).get(3).variables().get("teamSize")).isEqualTo("fit-s");
+        assertThat(model.scenes(plan(scene)).get(4).variables().get("teamSize")).isEqualTo("fit-s");
     }
 
     @Test

@@ -186,6 +186,22 @@ class TrailerPlanServiceTest {
     }
 
     @Test
+    void givenCarWithoutSceneImage_whenPlan_thenBlocker() {
+        // given
+        when(gallery.firstCarImage(gtr.getId(), CarImageKind.SCENE)).thenReturn(Optional.empty());
+        released(race(match("HOM", "AWY"), spa, gtr, "S01"));
+
+        // when
+        var plan = service.plan(new TrailerScope.MatchdayScope(matchday.getId()));
+
+        // then
+        assertThat(plan.blockers()).singleElement().satisfies(item -> {
+            assertThat(item.message()).isEqualTo("Car Nissan GT-R NISMO GT3 '18 has no scene image");
+            assertThat(item.fixUrl()).isEqualTo("/admin/cars/" + gtr.getId() + "/edit#car-images");
+        });
+    }
+
+    @Test
     void givenCarWithStudioOnly_whenPlan_thenInCarsNeedingCutoutAndNoBlocker() {
         // given
         when(gallery.firstCarImage(gtr.getId(), CarImageKind.CUTOUT)).thenReturn(Optional.empty());
@@ -230,7 +246,7 @@ class TrailerPlanServiceTest {
     }
 
     @Test
-    void givenSixMatchesIdenticalLegs_whenEstimatedLength_then1m41s() {
+    void givenSixMatchesIdenticalLegs_whenEstimatedLength_then2m05s() {
         // given
         for (int i = 0; i < 6; i++) {
             var match = match("H" + i, "A" + i);
@@ -242,7 +258,7 @@ class TrailerPlanServiceTest {
         var plan = service.plan(new TrailerScope.MatchdayScope(matchday.getId()));
 
         // then
-        assertThat(service.estimatedLength(plan)).isEqualTo(Duration.ofSeconds(101));
+        assertThat(service.estimatedLength(plan)).isEqualTo(Duration.ofSeconds(125));
     }
 
     @Test

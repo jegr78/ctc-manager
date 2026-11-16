@@ -40,6 +40,7 @@ public class TrailerPlanService {
     public static final Duration INTRO = Duration.ofSeconds(4);
     public static final Duration OVERVIEW = Duration.ofSeconds(8);
     public static final Duration RACE_VISUAL = Duration.ofSeconds(6);
+    public static final Duration RACE_CAR = Duration.ofSeconds(4);
     public static final Duration RACE_SETTINGS = Duration.ofSeconds(8);
     public static final Duration OUTRO = Duration.ofSeconds(5);
 
@@ -127,7 +128,7 @@ public class TrailerPlanService {
     }
 
     public Duration estimatedLength(TrailerPlan plan) {
-        return INTRO.plus(OVERVIEW).plus(OUTRO).plus(RACE_VISUAL.plus(RACE_SETTINGS).multipliedBy(plan.races().size()));
+        return INTRO.plus(OVERVIEW).plus(OUTRO).plus(RACE_VISUAL.plus(RACE_CAR).plus(RACE_SETTINGS).multipliedBy(plan.races().size()));
     }
 
     private void checkTrack(Track track, List<TrailerChecklistItem> blockers) {
@@ -143,6 +144,10 @@ public class TrailerPlanService {
     }
 
     private void checkCar(Car car, List<TrailerChecklistItem> blockers, Set<UUID> needingCutout) {
+        if (gallery.firstCarImage(car.getId(), CarImageKind.SCENE).isEmpty()) {
+            blockers.add(new TrailerChecklistItem("Car " + car.getManufacturer() + " " + car.getName() + " has no scene image",
+                    "/admin/cars/" + car.getId() + "/edit#car-images"));
+        }
         if (gallery.firstCarImage(car.getId(), CarImageKind.CUTOUT).isPresent()) return;
         if (gallery.firstCarImage(car.getId(), CarImageKind.STUDIO).isPresent()) {
             needingCutout.add(car.getId());

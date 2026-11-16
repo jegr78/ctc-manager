@@ -74,7 +74,7 @@ class TrailerSceneRendererE2ETest {
         var layers = renderer.render(plan("Test_Home", "Y".repeat(10)), dir.resolve("work"), ctx);
 
         // then
-        assertThat(layers).hasSize(2 + 2 + 3 + 2 + 2);
+        assertThat(layers).hasSize(2 + 2 + 3 + 2 + 2 + 2);
         for (var layer : layers) {
             var image = ImageIO.read(layer.png().toFile());
             assertThat(image.getWidth()).as(layer.png().getFileName().toString()).isEqualTo(1920);
@@ -120,7 +120,7 @@ class TrailerSceneRendererE2ETest {
 
         // then
         try (var file = new ZipFile(zip.toFile())) {
-            assertThat(file.stream().map(e -> e.getName()).toList()).contains("00-intro-background.png", "02-race-visual-car.png", "04-outro-foreground.png");
+            assertThat(file.stream().map(e -> e.getName()).toList()).contains("00-intro-background.png", "02-race-visual-car.png", "05-outro-foreground.png");
         }
     }
 

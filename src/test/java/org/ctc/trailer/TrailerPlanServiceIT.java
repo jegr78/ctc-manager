@@ -42,6 +42,10 @@ class TrailerPlanServiceIT {
         studio.setCar(car); studio.setKind(CarImageKind.STUDIO); studio.setSource(ImageSource.MANUAL);
         studio.setImagePath("/uploads/car-images/test/studio.jpg"); studio.setWidth(1920); studio.setHeight(1080);
         entities.persist(studio);
+        var action = new CarImage();
+        action.setCar(car); action.setKind(CarImageKind.SCENE); action.setSource(ImageSource.MANUAL);
+        action.setImagePath("/uploads/car-images/test/scene.jpg"); action.setWidth(1920); action.setHeight(1080);
+        entities.persist(action);
         var music = new MusicTrack();
         music.setTitle("Test_Trailer Music"); music.setArtist("Test"); music.setFilePath("/uploads/music/test.mp3"); music.setDurationSeconds(90);
         entities.persist(music);
