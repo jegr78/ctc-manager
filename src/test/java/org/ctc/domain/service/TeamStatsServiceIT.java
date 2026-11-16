@@ -167,7 +167,7 @@ class TeamStatsServiceIT {
         assertThat(List.of(stats.played(), stats.wins(), stats.losses(), stats.pointsFor(), stats.pointsAgainst(), stats.matchPoints()))
                 .isEqualTo(List.of(row.getPlayed(), row.getWins(), row.getLosses(), row.getPointsFor(), row.getPointsAgainst(), row.getPoints()));
         assertThat(stats.seasons()).isEqualTo(1);
-        assertThat(stats.bestResult()).isEqualTo("1st in " + season().getDisplayLabel());
+        assertThat(stats.bestResult()).isEqualTo("1st in " + StatsPeriod.StatsSeason.title(season()));
         assertThat(stats.playoffAppearances()).isEqualTo(1);
         assertThat(stats.titles()).isZero();
         assertThat(stats.topDrivers()).containsExactly(new TeamStats.TopDriver("TSTC" + suffix, 33));
@@ -181,7 +181,7 @@ class TeamStatsServiceIT {
         // then
         assertThat(stats.titles()).isEqualTo(1);
         assertThat(stats.playoffAppearances()).isEqualTo(1);
-        assertThat(stats.bestResult()).isEqualTo("3rd in " + season().getDisplayLabel());
+        assertThat(stats.bestResult()).isEqualTo("3rd in " + StatsPeriod.StatsSeason.title(season()));
     }
 
     @Test
@@ -194,7 +194,7 @@ class TeamStatsServiceIT {
         assertThat(stats.seasons()).isEqualTo(1);
         assertThat(stats.profileSeasonLabel()).as("the website writes no profile page for a parent without its own standings row").isNull();
         assertThatThrownBy(() -> service.stats(parentOnly.getName(), period())).as("a season answer names the parent without its own row")
-                .isInstanceOf(StatsLookupException.class).hasMessage("No results for " + parentOnly.getName() + " in " + season().getDisplayLabel());
+                .isInstanceOf(StatsLookupException.class).hasMessage("No results for " + parentOnly.getName() + " in " + org.ctc.domain.stats.StatsPeriod.StatsSeason.title(season()));
     }
 
     @Test

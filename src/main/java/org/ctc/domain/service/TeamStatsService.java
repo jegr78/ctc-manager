@@ -115,7 +115,7 @@ public class TeamStatsService {
         UUID seasonId = period.season().id();
         var table = regularStandings(seasonId);
         int index = indexOf(table, standing -> standing.getTeam().getId().equals(team.getId()));
-        if (index < 0) throw new StatsLookupException("No results for " + team.getName() + " in " + period.label());
+        if (index < 0) throw new StatsLookupException("No results for " + team.getName() + " in " + period.title());
         var row = table.get(index);
         Predicate<Team> own = candidate -> candidate != null && candidate.getId().equals(team.getId());
         var playoffResult = playoffs.findBySeasonId(seasonId).map(playoff -> playoffResult(playoff.getRounds(), own)).orElse(null);
@@ -133,7 +133,7 @@ public class TeamStatsService {
         if (index < 0) throw new StatsLookupException("No results for " + team.getName() + " in any season");
         var row = table.get(index);
         Predicate<Team> own = candidate -> candidate != null && candidate.getParentOrSelf().getId().equals(team.getId());
-        int seasonCount = 0, bestRank = 0, appearances = 0, titles = 0;
+        int seasonCount = 0, bestRank = 0, bestCount = 0, appearances = 0, titles = 0;
         String bestSeason = null, profileSeason = null;
         for (var season : counted) {
             var regular = regularStandings(season.getId());
@@ -141,7 +141,8 @@ public class TeamStatsService {
             if (indexOf(regular, standing -> standing.getTeam().getId().equals(team.getId())) >= 0) profileSeason = season.getDisplayLabel();
             if (rank > 0) {
                 seasonCount++;
-                if (bestRank == 0 || rank < bestRank) { bestRank = rank; bestSeason = season.getDisplayLabel(); }
+                if (bestRank == 0 || rank < bestRank) { bestRank = rank; bestCount = 0; }
+                if (rank == bestRank) { bestCount++; bestSeason = StatsPeriod.StatsSeason.title(season); }
             }
             var playoff = playoffs.findBySeasonId(season.getId());
             if (playoff.isPresent()) {
@@ -150,10 +151,16 @@ public class TeamStatsService {
                 if ("Champion".equals(result)) titles++;
             }
         }
-        String best = bestRank == 0 ? null : ordinal(bestRank) + " in " + bestSeason;
+        String best = bestResult(bestRank, bestCount, bestSeason);
         return new TeamStats(team.getId(), team.getName(), period, index + 1, table.size(), null, row.getPlayed(), row.getWins(),
                 row.getDraws(), row.getLosses(), row.getPointsFor(), row.getPointsAgainst(), row.getPoints(),
                 races(period.seasonIds(), own), null, seasonCount, best, appearances, titles, topDrivers(period.seasonIds(), own), profileSeason);
+    }
+
+    /** "1st in X" for one season with the best rank, "1st (2×, latest X)" when several seasons share it; null without a rank. */
+    static String bestResult(int rank, int seasons, String latest) {
+        if (rank == 0) return null;
+        return seasons == 1 ? ordinal(rank) + " in " + latest : ordinal(rank) + " (" + seasons + "×, latest " + latest + ")";
     }
 
     private List<StandingsService.TeamStanding> regularStandings(UUID seasonId) {

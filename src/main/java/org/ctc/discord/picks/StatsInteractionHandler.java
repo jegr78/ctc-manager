@@ -140,7 +140,7 @@ public class StatsInteractionHandler implements PickGatewayInteractionHandler {
         try {
             return StatsScope.parse(option);
         } catch (StatsLookupException invalid) {
-            return StatsScope.CURRENT;
+            return StatsScope.ALLTIME;
         }
     }
 

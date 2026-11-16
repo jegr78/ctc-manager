@@ -51,8 +51,8 @@ class StatsInteractionHandlerTest {
         verify(continuation).replyPrivate(sent.capture());
         var embed = sent.getValue().embed();
         assertThat(embed.title()).as("markdown in names is escaped").isEqualTo("Test\\_\\*driver\\*");
-        assertThat(embed.description()).isEqualTo("2026 \\| \\#1 \\| CTC \\*Spring\\*");
-        assertThat(embed.fields()).extracting(PickGatewayMessage.Field::value).contains("Rank 4 of 62 · 412 pts",
+        assertThat(embed.description()).as("the subtitle shows the escaped short season title").isEqualTo("CTC \\*Spring\\* (2026)");
+        assertThat(embed.fields()).extracting(PickGatewayMessage.Field::value).contains("Rank 4 of 62",
                 "12 races · 3 wins · 5 podiums · 2 poles · 1 fastest lap", "Best P1 · Average P3.4", "412 total · 34.3 per race",
                 "1 guest race · 1 DSQ");
         assertThat(embed.fields().getFirst().value()).doesNotContain("@everyone").contains("@​everyone");
@@ -82,10 +82,25 @@ class StatsInteractionHandlerTest {
         assertThat(embed.title()).isEqualTo("Test\\_Alpha");
         assertThat(embed.url()).isEqualTo("https://example.test/season/2026-1-ctc/team/t-alf.html");
         assertThat(embed.fields()).extracting(PickGatewayMessage.Field::value).contains("Rank 3 of 10 · Group A",
-                "8 matches · 5 wins · 1 draw · 2 losses · 63% won", "400 scored · 350 conceded · +50 difference · 16 match points",
-                "16 races", "Semifinal", "Test\\_one 120 pts");
+                "8 matches · 16 races · 5 wins · 1 draw · 2 losses · 63% won", "400 scored · 350 conceded · +50 difference · 16 match points",
+                "Semifinal", "Test\\_one 120 pts");
+        assertThat(embed.fields()).extracting(PickGatewayMessage.Field::name).as("races belong to the matches line").doesNotContain("Races");
         assertThat(sent.getValue().buttons().getFirst().id())
                 .isEqualTo(StatsInteractionHandler.SHARE + "t:" + team.teamId() + ":s:" + season.getId());
+    }
+
+    @Test
+    void givenAlltimeTeamWithoutPlayoffs_whenRendering_thenLeaveOutZeroPlayoffFiguresAndShowTheShortTitles() {
+        // given
+        var team = new TeamStats(UUID.randomUUID(), "Test Alpha", StatsPeriod.of(null, List.of(), false), 1, 3, null, 6, 5, 0, 1,
+                499, 365, 15, 8, null, 2, "1st (2×, latest Test CTC Archive 2026)", 0, 0, List.of(), null);
+        // when
+        var embed = StatsEmbeds.team(team, null);
+        // then
+        assertThat(embed.description()).isEqualTo("Alltime");
+        assertThat(embed.fields()).extracting(PickGatewayMessage.Field::value)
+                .contains("6 matches · 8 races · 5 wins · 0 draws · 1 loss · 83% won", "2 seasons · best 1st (2×, latest Test CTC Archive 2026)")
+                .noneMatch(value -> value.contains("playoff appearance") || value.contains("title"));
     }
 
     @Test
@@ -247,9 +262,9 @@ class StatsInteractionHandlerTest {
     @Test
     void givenAutocomplete_whenFocusingNameOrSeason_thenOfferMatchingChoices() {
         // given
-        when(drivers.choices("tes", StatsScope.CURRENT, null)).thenReturn(List.of(new StatsChoice("Test driver", "d1")));
+        when(drivers.choices("tes", StatsScope.ALLTIME, null)).thenReturn(List.of(new StatsChoice("Test driver", "d1")));
         when(seasons.choices("20")).thenReturn(List.of(new StatsChoice("2026 | #1 | CTC", "s1")));
-        when(teams.choices("alp", StatsScope.CURRENT, null)).thenReturn(List.of(new StatsChoice("Test Alpha (T-ALF)", "t1")));
+        when(teams.choices("alp", StatsScope.ALLTIME, null)).thenReturn(List.of(new StatsChoice("Test Alpha (T-ALF)", "t1")));
         // when
         handler.onInteraction(event(PickGatewayInteraction.Kind.AUTOCOMPLETE, "driver", "name", Map.of("name", List.of("tes"), "scope", List.of("bogus"))), reply());
         handler.onInteraction(event(PickGatewayInteraction.Kind.AUTOCOMPLETE, "driver", "season", Map.of("season", List.of("20"))), reply());

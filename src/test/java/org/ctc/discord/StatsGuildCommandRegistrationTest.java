@@ -12,8 +12,8 @@ import org.springframework.web.client.RestClient;
 class StatsGuildCommandRegistrationTest {
     static final String OPTIONS = """
             [{"type":3,"name":"name","description":"%s","required":true,"autocomplete":true},
-             {"type":3,"name":"scope","description":"Current season, alltime or a chosen season","required":false,
-              "choices":[{"name":"Current season","value":"current"},{"name":"Alltime","value":"alltime"},{"name":"Season","value":"season"}]},
+             {"type":3,"name":"scope","description":"Alltime (default), the current season or a chosen season","required":false,
+              "choices":[{"name":"Alltime","value":"alltime"},{"name":"Current season","value":"current"},{"name":"Season","value":"season"}]},
              {"type":3,"name":"season","description":"Season for the Season scope","required":false,"autocomplete":true}]""";
 
     @Test

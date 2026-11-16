@@ -186,7 +186,7 @@ class DriverStatsServiceIT {
         assertThatThrownBy(() -> service.stats("TSZ" + suffix, period())).as("a driver without counted results is not public")
                 .isInstanceOf(StatsLookupException.class).hasMessage("No driver found");
         assertThatThrownBy(() -> service.stats("TSX" + suffix, laterPeriod())).isInstanceOf(StatsLookupException.class)
-                .hasMessage("No results for TSX" + suffix + " in " + later.getDisplayLabel());
+                .hasMessage("No results for TSX" + suffix + " in " + org.ctc.domain.stats.StatsPeriod.StatsSeason.title(later));
     }
 
     @Test
