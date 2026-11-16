@@ -102,6 +102,12 @@ public class TrailerPlanService {
                     previous = merged;
                     continue;
                 }
+                if (content.trackId() == null || content.carId() == null) {
+                    blockers.add(new TrailerChecklistItem("Setup of " + pairing + " leg " + leg + " has no track or car",
+                            "/admin/races/" + race.getId()));
+                    previous = null;
+                    continue;
+                }
                 var track = tracks.findById(content.trackId()).orElseThrow(() -> new EntityNotFoundException("Track", content.trackId()));
                 var car = cars.findById(content.carId()).orElseThrow(() -> new EntityNotFoundException("Car", content.carId()));
                 if (checkedTracks.add(track.getId())) checkTrack(track, blockers);

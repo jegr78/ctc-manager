@@ -73,11 +73,13 @@ public class TrailerService {
         var properties = new Properties();
         try (var in = Files.newBufferedReader(meta)) {
             properties.load(in);
-        } catch (IOException | IllegalArgumentException unreadable) {
+            String name = properties.getProperty("name");
+            if (name == null || !name.matches("[a-z0-9-]{1,120}")) return Optional.empty();
+            return Optional.of(new TrailerOutputs(dir.resolve(MP4), dir.resolve(ZIP), dir.resolve(TEXT),
+                    Instant.parse(properties.getProperty("createdAt")), properties.getProperty("music", ""), name));
+        } catch (IOException | RuntimeException unreadable) {
             return Optional.empty();
         }
-        return Optional.of(new TrailerOutputs(dir.resolve(MP4), dir.resolve(ZIP), dir.resolve(TEXT),
-                Instant.parse(properties.getProperty("createdAt")), properties.getProperty("music")));
     }
 
     /** Removes work directories a restart interrupted. */
@@ -122,7 +124,7 @@ public class TrailerService {
                     work.resolve("clips"), ctx);
             ctx.checkNotAbandoned();
             Files.writeString(work.resolve(TEXT), YoutubeTextBuilder.build(plan, song).asFile());
-            writeMeta(work.resolve(META), song);
+            writeMeta(work.resolve(META), song, downloadName(plan));
             deleteTree(work.resolve("layers"));
             deleteTree(work.resolve("clips"));
             replace(target, work);
@@ -133,8 +135,15 @@ public class TrailerService {
         }
     }
 
-    private void writeMeta(Path meta, MusicTrack song) throws IOException {
+    static String downloadName(TrailerPlan plan) {
+        String slug = ("ctc-trailer-" + plan.seasonLabel() + "-" + plan.title()).toLowerCase(java.util.Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "-").replaceAll("(^-+|-+$)", "");
+        return slug.length() > 120 ? slug.substring(0, 120).replaceAll("-+$", "") : slug;
+    }
+
+    private void writeMeta(Path meta, MusicTrack song, String name) throws IOException {
         var properties = new Properties();
+        properties.setProperty("name", name);
         properties.setProperty("createdAt", clock.instant().toString());
         properties.setProperty("music", song.getTitle());
         try (var out = Files.newBufferedWriter(meta)) {

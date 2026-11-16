@@ -41,6 +41,7 @@ class MatchdayControllerTest {
     @MockitoBean private MatchdayScheduleGraphicService scheduleGraphicService;
     @MockitoBean private MatchdayResultsGraphicService resultsGraphicService;
     @MockitoBean private MatchResultsGraphicService matchResultsGraphicService;
+    @MockitoBean private org.ctc.trailer.TrailerViewService trailerViews;
 
     @Test
     void givenOverlongWeekend_whenSavePairings_thenFieldErrorAndDeadlineRemainVisible() throws Exception {

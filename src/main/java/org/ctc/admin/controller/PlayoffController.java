@@ -33,6 +33,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class PlayoffController {
 
     private final PlayoffService playoffService;
+    private final org.ctc.trailer.TrailerViewService trailerViews;
     private final PlayoffSeedingService playoffSeedingService;
     private final PlayoffRoundOverviewGraphicService roundOverviewGraphicService;
     private final PlayoffRoundScheduleGraphicService roundScheduleGraphicService;
@@ -48,6 +49,7 @@ public class PlayoffController {
         if (data.playoff() != null) {
             model.addAttribute("playoff", data.playoff());
             model.addAttribute("bracket", data.bracketView());
+            model.addAttribute("roundTrailers", trailerViews.forPlayoff(data.playoff()));
         }
         return "admin/playoff-bracket";
     }
@@ -61,6 +63,7 @@ public class PlayoffController {
         }
         model.addAttribute("playoff", data.playoff());
         model.addAttribute("bracket", data.bracketView());
+        model.addAttribute("roundTrailers", trailerViews.forPlayoff(data.playoff()));
         return "admin/playoff-bracket";
     }
 

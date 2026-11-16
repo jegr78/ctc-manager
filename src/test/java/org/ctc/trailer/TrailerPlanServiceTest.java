@@ -186,6 +186,21 @@ class TrailerPlanServiceTest {
     }
 
     @Test
+    void givenFinishedRaceWithoutCarOrTrack_whenPlan_thenBlockerInsteadOfFailure() {
+        // given
+        var race = race(match("HOM", "AWY"), null, null, "S01");
+        released(race);
+
+        // when
+        var plan = service.plan(new TrailerScope.MatchdayScope(matchday.getId()));
+
+        // then
+        assertThat(plan.blockers()).extracting(TrailerChecklistItem::message)
+                .contains("Setup of HOM vs AWY leg 1 has no track or car");
+        assertThat(plan.races()).isEmpty();
+    }
+
+    @Test
     void givenCarWithoutSceneImage_whenPlan_thenBlocker() {
         // given
         when(gallery.firstCarImage(gtr.getId(), CarImageKind.SCENE)).thenReturn(Optional.empty());

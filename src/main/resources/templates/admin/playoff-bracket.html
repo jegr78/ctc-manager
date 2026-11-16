@@ -83,6 +83,15 @@
                     </tr>
                 </tbody>
             </table>
+            <div th:if="${roundTrailers != null}" class="mt-md">
+                <details th:each="round : ${playoff.rounds}" th:if="${roundTrailers.containsKey(round.id)}" class="trailer-round"
+                         th:id="|round-trailer-${round.id}|">
+                    <summary th:text="|Trailer: ${round.label}|">Trailer</summary>
+                    <th:block th:with="view=${roundTrailers.get(round.id)}, key=${'round-trailer-' + round.id}">
+                        <div th:replace="~{admin/fragments/trailer-section :: controls}"></div>
+                    </th:block>
+                </details>
+            </div>
         </div>
     </div>
 
@@ -93,6 +102,7 @@
     <div th:if="${selectedSeasonId == null}" class="card">
         <div class="empty-state"><p>Please select a season.</p></div>
     </div>
+    <script th:if="${roundTrailers != null}" defer th:src="@{/admin/js/trailer-status.js}"></script>
 </section>
 </body>
 </html>
