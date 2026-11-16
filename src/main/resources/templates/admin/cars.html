@@ -12,9 +12,10 @@
     <p class="admin-list-intro text-dim">Manage the cars available for race setup.</p>
     <div class="card catalog-source" id="gt7-car-images">
         <h2>GT7 car images</h2>
-        <p class="form-hint">Loads the official GT7 car shots into the gallery of every car with a GT7 ID that has none yet
-            (<span th:text="${carShotPending}"></span> cars). A car gets about five images of 1 MB in total, and every backup
-            includes them. The run continues in the background; loading again picks up the cars still missing.</p>
+        <p class="form-hint">Loads the official GT7 car shots into the gallery of every car with a GT7 ID that has none yet.
+            A car gets about five images of 1 MB in total, and every backup includes them. The run continues in the
+            background; loading again picks up the cars still missing.</p>
+        <p>Cars without GT7 images: <strong th:text="${carShotPending}"></strong></p>
         <p class="text-dim" role="status" data-car-shot-status th:attr="data-running=${carShotRunning}"
            th:text="${carShotRun != null ? carShotRun.message() : ''}"></p>
         <div class="actions">

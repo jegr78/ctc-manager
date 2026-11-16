@@ -224,6 +224,7 @@ class CatalogImageIT {
         // given
         var withId = cars.findById(car).orElseThrow();
         withId.setGt7Id("car98765");
+        withId.setImageUrl("/uploads/cars/" + car + "/1a2b3c4d_car98765.png");
         cars.saveAndFlush(withId);
         gallery.uploadCarImages(car, List.of(png("own.png", 10, 10)), CarImageKind.STUDIO, "Own");
         // when / then
