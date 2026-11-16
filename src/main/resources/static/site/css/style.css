@@ -92,7 +92,7 @@ body > * {
 }
 
 .nav-inner {
-    max-width: 1100px;
+    max-width: none;
     margin: 0 auto;
     display: flex;
     align-items: center;
@@ -141,7 +141,7 @@ body > * {
 /* Main */
 .main {
     overflow-wrap: anywhere;
-    max-width: 1100px;
+    max-width: none;
     margin: 0 auto;
     padding: 32px;
 }
@@ -515,7 +515,7 @@ tr:hover { background: var(--bg-hover); }
 
 /* Footer */
 .footer {
-    max-width: 1100px;
+    max-width: none;
     margin: 48px auto 0;
     padding: 24px 32px;
     border-top: 1px solid var(--border);
@@ -596,7 +596,7 @@ tr:hover { background: var(--bg-hover); }
 }
 
 .subnav-inner {
-    max-width: 1100px;
+    max-width: none;
     margin: 0 auto;
     display: flex;
     gap: 4px;
@@ -628,7 +628,7 @@ tr:hover { background: var(--bg-hover); }
 
 /* Breadcrumbs (UX-03) — per D-08 through D-11 */
 .breadcrumb {
-    max-width: 1100px;
+    max-width: none;
     margin: 0 auto;
     padding: 8px 32px;
     font-size: 13px;
@@ -764,6 +764,13 @@ a.season-tag:hover { background: var(--bg-hover); border-color: var(--text-dim);
     }
 }
 
+/* Desktop: as many tiles per row as the full width fits */
+@media (min-width: 1025px) {
+    .tile-grid {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+}
+
 /* === Phase 62: Phase + Group Tab Rows === */
 
 /* Phase-tab row (Row 1) — mirrors .subnav at 44px height. */
@@ -774,7 +781,7 @@ a.season-tag:hover { background: var(--bg-hover); border-color: var(--text-dim);
 }
 
 .phase-tab-row-inner {
-    max-width: 1100px;
+    max-width: none;
     margin: 0 auto;
     display: flex;
     gap: 4px;
@@ -811,7 +818,7 @@ a.season-tag:hover { background: var(--bg-hover); border-color: var(--text-dim);
 }
 
 .group-tab-row-inner {
-    max-width: 1100px;
+    max-width: none;
     margin: 0 auto;
     display: flex;
     gap: 4px;
@@ -1206,7 +1213,7 @@ a.season-tag:hover { background: var(--bg-hover); border-color: var(--text-dim);
 .pool-entry-label { overflow-wrap: anywhere; min-width: 0; }
 
 .matchday-navigation { display: flex; flex-wrap: wrap; gap: 0 24px; }
-.public-incidents { max-width: 1100px; margin-inline: auto; }
+.public-incidents { max-width: none; margin-inline: auto; }
 .public-incidents > .text-dim { margin-block: 20px; }
 .public-incident { margin-block: 24px; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
 .public-incident-heading { padding: 20px 24px; background: var(--bg-card); border-bottom: 1px solid var(--border); }
@@ -1226,4 +1233,10 @@ a.season-tag:hover { background: var(--bg-hover); border-color: var(--text-dim);
 @media (max-width: 600px) {
     .public-incident-heading, .public-incident-report, .public-incident-ruling { padding: 18px; }
     .public-incident-meta > div { grid-template-columns: 1fr; gap: 4px; }
+}
+
+/* Wide screens: the layout spans the full width, so grids gain columns */
+@media (min-width: 1600px) {
+    .profile-metrics { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .matchday-index { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
