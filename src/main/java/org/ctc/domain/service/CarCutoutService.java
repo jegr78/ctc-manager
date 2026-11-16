@@ -10,6 +10,7 @@ import org.ctc.backup.lock.ImportLockService;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.CarImageKind;
 import org.ctc.media.cutout.CutoutModel;
+import org.ctc.media.job.MediaJobAbandonedException;
 import org.ctc.media.job.MediaJobExecutor;
 import org.ctc.media.job.MediaJobKind;
 import org.ctc.media.job.MediaJobStatus;
@@ -29,6 +30,7 @@ public class CarCutoutService {
     private final CutoutModel model;
     private final ImportLockService imports;
     private final MediaJobExecutor jobs;
+    private final PickSessionEpoch epoch;
 
     public static String scopeKey(UUID carId) {
         return "car:" + carId;
@@ -54,6 +56,7 @@ public class CarCutoutService {
 
     /** @return false when the car has no studio image */
     public boolean createCutout(UUID carId) {
+        long generation = epoch.getAsLong();
         var studio = gallery.firstCarImage(carId, CarImageKind.STUDIO);
         if (studio.isEmpty()) return false;
         byte[] png;
@@ -73,6 +76,11 @@ public class CarCutoutService {
         }
         if (!imports.tryEnterWriter()) throw new BusinessRuleException("A restore is running.");
         try {
+            if (epoch.getAsLong() != generation) throw new MediaJobAbandonedException();
+            var current = gallery.firstCarImage(carId, CarImageKind.STUDIO);
+            if (current.isEmpty() || !current.get().getId().equals(studio.get().getId())) {
+                throw new BusinessRuleException("The studio image changed during the cutout; start again.");
+            }
             gallery.applyAutoCutout(carId, files.storeBytes("car-images", carId, "cutout.png", png), width, height);
             return true;
         } catch (IOException e) {
