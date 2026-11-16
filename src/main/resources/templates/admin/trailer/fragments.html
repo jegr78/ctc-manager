@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<style th:fragment="base" th:inline="css">
+  @font-face { font-family: "Conthrax"; src: url([[${fontConthrax}]]) format("woff2"); }
+  @font-face { font-family: "Barlow"; font-weight: 500; src: url([[${fontBarlow500}]]) format("woff2"); }
+  @font-face { font-family: "Barlow"; font-weight: 600; src: url([[${fontBarlow600}]]) format("woff2"); }
+  @font-face { font-family: "Barlow Condensed"; font-weight: 500; src: url([[${fontCondensed500}]]) format("woff2"); }
+  @font-face { font-family: "Barlow Condensed"; font-weight: 600; src: url([[${fontCondensed600}]]) format("woff2"); }
+  @font-face { font-family: "Barlow Condensed"; font-weight: 700; src: url([[${fontCondensed700}]]) format("woff2"); }
+  :root { --bg: #0b0b0b; --card: #161616; --yellow: #ffd400; --grey: #8a8a8a; --dim: #5c5c5c; --line: #2c2c2c; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  body { position: relative; color: #fff; font-family: "Barlow", sans-serif; }
+  body.layer-background { background: var(--bg); }
+  .watermark { position: absolute; right: -230px; top: 50px; width: 980px; height: 980px; opacity: .07; }
+  .brand { position: absolute; left: 112px; top: 88px; height: 97px; padding: 0 8px; background: #000;
+           display: flex; align-items: center; gap: 12px; }
+  .brand img { width: 86px; height: 86px; }
+  .brand .name { font-family: "Conthrax"; line-height: .9; }
+  .brand .name b { display: block; font-weight: normal; font-size: 47px; letter-spacing: 1px; }
+  .brand .name span { display: block; font-size: 31px; letter-spacing: 1px; }
+  .brand.small { top: 64px; height: 72px; }
+  .brand.small img { width: 62px; height: 62px; }
+  .brand.small .name b { font-size: 34px; }
+  .brand.small .name span { font-size: 22px; }
+  .kicker { display: flex; align-items: center; gap: 20px; font-family: "Barlow Condensed"; font-weight: 700;
+            font-size: 34px; letter-spacing: 13px; color: var(--yellow); white-space: nowrap; }
+  .kicker::before { content: ""; width: 64px; height: 6px; background: var(--yellow); flex: none; }
+  .label { font-family: "Barlow Condensed"; font-weight: 600; letter-spacing: 6px; color: var(--grey); text-transform: uppercase; }
+  .clip { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .footer { position: absolute; left: 112px; right: 112px; top: 982px; display: flex; justify-content: space-between;
+            font-family: "Barlow Condensed"; font-weight: 600; font-size: 26px; letter-spacing: 5px; color: var(--grey); }
+  .footer .hot { color: #fff; }
+</style>
+</head>
+<body>
+<img th:fragment="watermark" class="watermark" th:src="${ctcLogo}" alt="">
+<div th:fragment="brand(size)" class="brand" th:classappend="${size}">
+    <img th:src="${ctcLogo}" alt="">
+    <div class="name"><b>COMMUNITY</b><span>TEAM CUP</span></div>
+</div>
+</body>
+</html>

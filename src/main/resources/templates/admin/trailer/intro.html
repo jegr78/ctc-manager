@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="utf-8">
+<style th:replace="~{admin/trailer/fragments :: base}"></style>
+<style>
+  .kicker { position: absolute; left: 112px; top: 392px; }
+  .title { position: absolute; left: 106px; right: 112px; top: 462px; font-family: "Conthrax"; font-size: 150px; line-height: 1.05; letter-spacing: 2px; }
+  .outline { position: absolute; left: 112px; right: 112px; top: 650px; font-family: "Conthrax"; font-size: 64px; line-height: 1;
+             letter-spacing: 14px; color: transparent; -webkit-text-stroke: 2px #fff; }
+</style>
+</head>
+<body th:class="${'layer-' + layer}">
+<th:block th:if="${layer == 'background'}">
+    <img th:replace="~{admin/trailer/fragments :: watermark}">
+</th:block>
+<th:block th:if="${layer == 'foreground'}">
+    <div th:replace="~{admin/trailer/fragments :: brand('')}"></div>
+    <div class="kicker">MATCHDAY PREVIEW</div>
+    <div class="title clip" th:text="${#strings.toUpperCase(title)}">MATCHDAY 1</div>
+    <div class="outline clip" th:text="${#strings.toUpperCase(seasonLabel)}">SEASON 2027</div>
+    <div class="footer"><div><span class="hot">PAIRINGS · CARS · TRACKS</span> · SETTINGS</div><div>COMMUNITY TEAM CUP</div></div>
+</th:block>
+</body>
+</html>
