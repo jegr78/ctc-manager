@@ -3,9 +3,11 @@
     if (!status || status.dataset.running !== 'true') return;
     function poll() {
         fetch('/admin/cars/gt7-images/status', {headers: {Accept: 'application/json'}})
-            .then(function (response) { return response.ok ? response.json() : null; })
+            .then(function (response) {
+                if (!response.ok) throw new Error('status ' + response.status);
+                return response.json();
+            })
             .then(function (run) {
-                if (!run) return;
                 status.textContent = run.message;
                 if (run.running) setTimeout(poll, 5000);
                 else window.location.reload();

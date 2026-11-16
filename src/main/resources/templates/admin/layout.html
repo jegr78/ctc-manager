@@ -13,6 +13,9 @@
     </th:block>
     <script>
     document.documentElement.classList.add('js');
+    window.addEventListener('load', function () {
+        document.querySelectorAll('[data-admin-list]:not([data-list-ready])').forEach(function (list) { list.dataset.listReady = ''; });
+    });
     function csrfFetch(url, options) {
         var csrfMeta = document.querySelector('meta[name="_csrf"]');
         var headerMeta = document.querySelector('meta[name="_csrf_header"]');

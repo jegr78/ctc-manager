@@ -5,7 +5,9 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -23,7 +25,8 @@ import org.springframework.stereotype.Service;
 
 /**
  * Loads the GT7 car shots of every car with a GT7 ID and no GT7 image yet, as one background run. The car list bundle
- * is fetched once per run; each car takes the restore writer admission on its own, so a restore can drain between cars.
+ * is fetched once per run. Each car downloads first and takes the restore writer admission only to store and apply, so a
+ * restore never waits for GT7.
  */
 @Slf4j
 @Service
@@ -39,6 +42,11 @@ public class Gt7CarShotBulkService {
     private final Executor executor;
     private final Clock clock;
     private Run run;
+    private final Set<UUID> withoutShots = ConcurrentHashMap.newKeySet();
+    private final Gt7CarShotService.Admission admission = new Gt7CarShotService.Admission() {
+        public boolean enter() { return imports.tryEnterWriter(); }
+        public void exit() { imports.exitWriter(); }
+    };
 
     @Autowired
     public Gt7CarShotBulkService(CarRepository cars, Gt7ScraperService scraper, Gt7CarShotService shots, ImportLockService imports,
@@ -67,7 +75,7 @@ public class Gt7CarShotBulkService {
         return Executors.newSingleThreadExecutor(Thread.ofPlatform().name("gt7-car-shots").daemon().factory());
     }
 
-    /** Number of cars a new run would load. */
+    /** Number of cars a new run would load; cars GT7 lists without shots are left out until the next restart. */
     public int pendingCars() {
         return candidates().size();
     }
@@ -81,12 +89,12 @@ public class Gt7CarShotBulkService {
     public synchronized Status start() {
         if (run != null && run.status().running()) throw new BusinessRuleException("GT7 images are already loading for all cars.");
         if (!outbound.isEnabled()) throw new BusinessRuleException(ExternalIntegrationDisabledException.MESSAGE);
-        var ids = candidates();
-        if (ids.isEmpty()) throw new BusinessRuleException("Every car with a GT7 ID already has GT7 images.");
-        var started = new Run(ids.size(), clock.instant());
+        var pending = candidates();
+        if (pending.isEmpty()) throw new BusinessRuleException("Every car with a GT7 ID already has GT7 images.");
+        var started = new Run(pending.size(), clock.instant());
         run = started;
         try {
-            executor.execute(() -> process(started, ids));
+            executor.execute(() -> process(started, pending));
         } catch (RejectedExecutionException shuttingDown) {
             started.finish("the application is shutting down", clock.instant());
             throw new BusinessRuleException("GT7 images cannot load while the application shuts down.");
@@ -100,11 +108,13 @@ public class Gt7CarShotBulkService {
         run.stopRequested = true;
     }
 
-    private List<UUID> candidates() {
-        return cars.findWithoutGt7Images().stream().filter(car -> Gt7ScraperService.isCarId(car.getGt7Id())).map(CarRepository.Gt7CarId::getId).toList();
+    private List<Candidate> candidates() {
+        return cars.findWithoutGt7Images().stream()
+                .filter(car -> Gt7ScraperService.isCarId(car.getGt7Id()) && !withoutShots.contains(car.getId()))
+                .map(car -> new Candidate(car.getId(), car.getManufacturer() + " " + car.getName())).toList();
     }
 
-    private void process(Run current, List<UUID> ids) {
+    private void process(Run current, List<Candidate> candidates) {
         try {
             Gt7ScraperService.CarShotIndex index;
             try {
@@ -115,36 +125,36 @@ public class Gt7CarShotBulkService {
                 return;
             }
             int consecutiveFailures = 0;
-            for (UUID id : ids) {
+            for (var car : candidates) {
                 String reason = stopReason(current);
                 if (reason != null) {
                     current.finish(reason, clock.instant());
                     return;
                 }
-                if (!imports.tryEnterWriter()) {
-                    current.finish("a backup restore started", clock.instant());
-                    return;
-                }
                 try {
-                    var result = shots.load(id, index);
+                    var result = shots.load(car.id(), index, admission);
+                    if (result.empty()) withoutShots.add(car.id());
                     current.loaded(result.added().size() + result.replaced().size(), result.empty());
                     consecutiveFailures = 0;
+                } catch (Gt7CarShotService.WriterRefusedException restoring) {
+                    current.finish("a backup restore started", clock.instant());
+                    return;
                 } catch (EntityNotFoundException deleted) {
                     current.skipped();
                 } catch (BusinessRuleException failed) {
-                    current.failed(id, failed.getMessage());
+                    current.failed(car, failed.getMessage());
                     if (++consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
                         current.finish(MAX_CONSECUTIVE_FAILURES + " cars in a row failed", clock.instant());
                         return;
                     }
-                } finally {
-                    imports.exitWriter();
                 }
             }
             current.finish(null, clock.instant());
         } catch (RuntimeException unexpected) {
             log.error("Bulk car shot run failed", unexpected);
             current.finish("an unexpected error occurred", clock.instant());
+        } finally {
+            current.finishIfRunning("the run ended unexpectedly", clock.instant());
         }
     }
 
@@ -163,7 +173,7 @@ public class Gt7CarShotBulkService {
         private int images;
         private int withoutShots;
         private int skipped;
-        private final List<String> failures = new ArrayList<>();
+        private final List<Failure> failures = new ArrayList<>();
         private int failedCount;
         private boolean running = true;
         private String stopReason;
@@ -185,10 +195,14 @@ public class Gt7CarShotBulkService {
             skipped++;
         }
 
-        synchronized void failed(UUID car, String reason) {
+        synchronized void failed(Candidate car, String reason) {
             processed++;
             failedCount++;
-            if (failures.size() < LISTED_FAILURES) failures.add(car + ": " + reason);
+            if (failures.size() < LISTED_FAILURES) failures.add(new Failure(car.id(), car.label(), reason));
+        }
+
+        synchronized void finishIfRunning(String reason, Instant at) {
+            if (running) finish(reason, at);
         }
 
         synchronized void finish(String reason, Instant at) {
@@ -203,9 +217,14 @@ public class Gt7CarShotBulkService {
         }
     }
 
+    private record Candidate(UUID id, String label) { }
+
+    /** A car whose shots could not be loaded; only the first ten failures of a run are kept. */
+    public record Failure(UUID carId, String car, String reason) { }
+
     /** A snapshot of a run; {@code stopReason} is set when the run ended before processing every car. */
     public record Status(boolean running, int total, int processed, int images, int withoutShots, int skipped, int failed,
-                         List<String> failures, String stopReason, Instant startedAt, Instant finishedAt) {
+                         List<Failure> failures, String stopReason, Instant startedAt, Instant finishedAt) {
         public String message() {
             String progress = "processed " + processed + " of " + total + " cars, stored " + images + " images"
                     + (withoutShots > 0 ? ", " + withoutShots + " cars without GT7 shots" : "")

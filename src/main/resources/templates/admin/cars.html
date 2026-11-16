@@ -18,6 +18,10 @@
         <p>Cars without GT7 images: <strong th:text="${carShotPending}"></strong></p>
         <p class="text-dim" role="status" data-car-shot-status th:attr="data-running=${carShotRunning}"
            th:text="${carShotRun != null ? carShotRun.message() : ''}"></p>
+        <ul th:if="${carShotRun != null && !carShotRun.failures().isEmpty()}" class="catalog-run-failures" aria-label="Cars whose GT7 images failed">
+            <li th:each="failure : ${carShotRun.failures()}"><a th:href="@{/admin/cars/{id}/edit(id=${failure.carId()})}" class="detail-link"
+                th:text="${failure.car()}"></a>: <span th:text="${failure.reason()}"></span></li>
+        </ul>
         <div class="actions">
             <form th:unless="${carShotRunning}" th:action="@{/admin/cars/gt7-images}" method="post">
                 <button type="submit" class="btn btn-secondary btn-sm" th:disabled="${carShotPending == 0}">Load GT7 images for all cars</button>

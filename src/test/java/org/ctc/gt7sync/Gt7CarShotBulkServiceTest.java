@@ -3,6 +3,7 @@ package org.ctc.gt7sync;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -54,10 +55,9 @@ class Gt7CarShotBulkServiceTest {
         pending(first, second, third);
         when(cars.findWithoutGt7Images()).thenReturn(List.of(car(first, "car1"), car(UUID.randomUUID(), "carx"), car(second, "car2"), car(third, "car3")));
         when(scraper.carShotIndex()).thenReturn(index);
-        when(imports.tryEnterWriter()).thenReturn(true);
-        when(shots.load(first, index)).thenReturn(new Result(List.of("1_01", "2_01"), List.of(), List.of()));
-        when(shots.load(second, index)).thenReturn(new Result(List.of(), List.of(), List.of()));
-        when(shots.load(third, index)).thenThrow(new EntityNotFoundException("Car", third));
+        when(shots.load(eq(first), eq(index), any())).thenReturn(new Result(List.of("1_01", "2_01"), List.of(), List.of()));
+        when(shots.load(eq(second), eq(index), any())).thenReturn(new Result(List.of(), List.of(), List.of()));
+        when(shots.load(eq(third), eq(index), any())).thenThrow(new EntityNotFoundException("Car", third));
         // when
         var started = service.start();
         queued.getFirst().run();
@@ -66,7 +66,7 @@ class Gt7CarShotBulkServiceTest {
         assertThat(service.status().message()).isEqualTo("GT7 image run finished: processed 3 of 3 cars, stored 2 images, "
                 + "1 cars without GT7 shots, 1 cars deleted meanwhile.");
         verify(scraper, times(1)).carShotIndex();
-        verify(imports, times(3)).exitWriter();
+        assertThat(service.pendingCars()).as("a car GT7 lists without shots is not pending again until restart").isEqualTo(2);
     }
 
     @Test
@@ -74,15 +74,14 @@ class Gt7CarShotBulkServiceTest {
         // given
         pending(first, second);
         when(scraper.carShotIndex()).thenReturn(index);
-        when(imports.tryEnterWriter()).thenReturn(true, false);
-        when(shots.load(first, index)).thenReturn(new Result(List.of("1_01"), List.of(), List.of()));
+        when(shots.load(eq(first), eq(index), any())).thenReturn(new Result(List.of("1_01"), List.of(), List.of()));
+        when(shots.load(eq(second), eq(index), any())).thenThrow(new Gt7CarShotService.WriterRefusedException());
         // when
         service.start();
         queued.getFirst().run();
         // then
         assertThat(service.status().message()).isEqualTo("GT7 image run stopped (a backup restore started): processed 1 of 2 cars, stored 1 images.");
-        verify(shots, never()).load(second, index);
-        verify(imports, times(1)).exitWriter();
+        assertThat(service.status().running()).isFalse();
     }
 
     @Test
@@ -92,15 +91,15 @@ class Gt7CarShotBulkServiceTest {
         for (int i = 0; i < 7; i++) ids.add(UUID.randomUUID());
         pending(ids.toArray(UUID[]::new));
         when(scraper.carShotIndex()).thenReturn(index);
-        when(imports.tryEnterWriter()).thenReturn(true);
-        when(shots.load(any(), any())).thenThrow(new BusinessRuleException("GT7 images could not be loaded: HTTP 503"));
+        when(shots.load(any(), any(), any())).thenThrow(new BusinessRuleException("GT7 images could not be loaded: HTTP 503"));
         // when
         service.start();
         queued.getFirst().run();
         // then
         var status = service.status();
         assertThat(status.message()).isEqualTo("GT7 image run stopped (5 cars in a row failed): processed 5 of 7 cars, stored 0 images, 5 failed.");
-        assertThat(status.failures()).first().asString().isEqualTo(ids.getFirst() + ": GT7 images could not be loaded: HTTP 503");
+        assertThat(status.failures()).hasSize(5).first()
+                .isEqualTo(new Gt7CarShotBulkService.Failure(ids.getFirst(), "Seed car1", "GT7 images could not be loaded: HTTP 503"));
     }
 
     @Test
@@ -113,7 +112,7 @@ class Gt7CarShotBulkServiceTest {
         queued.getFirst().run();
         // then
         assertThat(service.status().message()).isEqualTo("GT7 image run stopped (the GT7 car list could not be read): processed 0 of 1 cars, stored 0 images.");
-        verify(imports, never()).tryEnterWriter();
+        verify(shots, never()).load(any(), any(), any());
     }
 
     @Test
@@ -127,7 +126,7 @@ class Gt7CarShotBulkServiceTest {
         when(scraper.carShotIndex()).thenReturn(index);
         queued.getFirst().run();
         assertThat(service.status().message()).isEqualTo("GT7 image run stopped (stopped by management): processed 0 of 1 cars, stored 0 images.");
-        verify(shots, never()).load(any(), any());
+        verify(shots, never()).load(any(), any(), any());
         assertThatThrownBy(() -> service.stop()).hasMessage("No GT7 image run is active.");
     }
 
@@ -163,10 +162,39 @@ class Gt7CarShotBulkServiceTest {
         when(cars.findWithoutGt7Images()).thenReturn(rows);
     }
 
+    @Test
+    void givenErrorInsideTheRun_whenRunning_thenEndTheRunSoALaterStartIsPossible() throws IOException {
+        // given
+        pending(first);
+        when(scraper.carShotIndex()).thenThrow(new StackOverflowError());
+        service.start();
+        // when / then
+        assertThatThrownBy(() -> queued.getFirst().run()).isInstanceOf(StackOverflowError.class);
+        assertThat(service.status().message()).isEqualTo("GT7 image run stopped (the run ended unexpectedly): processed 0 of 1 cars, stored 0 images.");
+    }
+
+    @Test
+    void givenRunAdmission_whenStoring_thenEnterAndLeaveTheRestoreWriterLock() throws IOException {
+        // given
+        pending(first);
+        when(scraper.carShotIndex()).thenReturn(index);
+        var admission = org.mockito.ArgumentCaptor.forClass(Gt7CarShotService.Admission.class);
+        when(shots.load(eq(first), eq(index), admission.capture())).thenReturn(new Result(List.of(), List.of(), List.of("1_01")));
+        service.start();
+        queued.getFirst().run();
+        when(imports.tryEnterWriter()).thenReturn(false);
+        // when / then
+        assertThat(admission.getValue().enter()).as("the admission delegates to the import lock").isFalse();
+        admission.getValue().exit();
+        verify(imports).exitWriter();
+    }
+
     private static CarRepository.Gt7CarId car(UUID id, String gt7Id) {
         return new CarRepository.Gt7CarId() {
             public UUID getId() { return id; }
             public String getGt7Id() { return gt7Id; }
+            public String getManufacturer() { return "Seed"; }
+            public String getName() { return gt7Id; }
         };
     }
 }
