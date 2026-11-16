@@ -30,8 +30,8 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 /**
- * Renders a trailer as a background media job. Files are written to a work directory next to the scope's output
- * directory, which replaces the previous trailer only after every step succeeded.
+ * Renders a trailer as a background media job in a temporary work directory. The finished files are copied next to the
+ * scope's output directory and replace the previous trailer only after every step succeeded.
  */
 @Slf4j
 @Service
@@ -117,7 +117,8 @@ public class TrailerService {
             if (!plan.ready()) throw new TrailerBlockedException(plan.blockers());
         }
         Path target = outputDir(scope);
-        Path work = target.resolveSibling(".work-" + UUID.randomUUID());
+        Path work = Files.createTempDirectory("ctc-trailer-");
+        Path staged = target.resolveSibling(".new-" + UUID.randomUUID());
         try {
             var layers = renderer.render(plan, work.resolve("layers"), ctx);
             ctx.checkNotAbandoned();
@@ -127,13 +128,15 @@ public class TrailerService {
             ctx.checkNotAbandoned();
             Files.writeString(work.resolve(TEXT), YoutubeTextBuilder.build(plan, song).asFile());
             writeMeta(work.resolve(META), song, downloadName(plan));
-            deleteTree(work.resolve("layers"));
-            deleteTree(work.resolve("clips"));
-            replace(target, work);
+            Files.createDirectories(staged);
+            for (String name : new String[] {MP4, ZIP, TEXT, META}) Files.copy(work.resolve(name), staged.resolve(name));
+            ctx.checkNotAbandoned();
+            replace(target, staged);
             ctx.progress(1, 1, "Trailer ready.");
             log.info("Rendered trailer for {}", scope.key());
         } finally {
             deleteTree(work);
+            deleteTree(staged);
         }
     }
 

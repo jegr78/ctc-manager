@@ -1,9 +1,13 @@
 package org.ctc.trailer;
 
+import java.time.Duration;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Playoff;
 import org.ctc.domain.service.MusicLibraryService;
 import org.ctc.domain.service.PlayoffService;
@@ -20,8 +24,16 @@ public class TrailerViewService {
     private final MusicLibraryService music;
     private final PlayoffService playoffs;
 
+    /** Never throws for planning problems, so the trailer section cannot break its host page. */
     public TrailerView view(TrailerScope scope) {
-        var plan = plans.plan(scope);
+        TrailerPlan plan;
+        try {
+            plan = plans.plan(scope);
+        } catch (BusinessRuleException | EntityNotFoundException unplannable) {
+            var blocker = new TrailerChecklistItem("The trailer checklist could not be prepared: " + unplannable.getMessage(), null);
+            return new TrailerView(basePath(scope), false, List.of(blocker), music.list(), trailers.status(scope), trailers.latest(scope),
+                    Duration.ZERO, false);
+        }
         var status = trailers.status(scope);
         boolean running = status.map(s -> s.running()).orElse(false);
         return new TrailerView(basePath(scope), !plan.races().isEmpty(), plan.blockers(), music.list(), status, trailers.latest(scope),

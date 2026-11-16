@@ -43,6 +43,7 @@ class TrailerServiceIT {
     @Autowired MediaJobExecutor jobs;
     @Autowired MediaTool media;
     @Autowired PickSessionEpoch epoch;
+    @Autowired org.ctc.domain.service.FileStorageService files;
     @MockitoBean TrailerPlanService plans;
     @MockitoBean TrailerSceneRenderer renderer;
 
@@ -121,7 +122,11 @@ class TrailerServiceIT {
 
         // then
         assertThat(status.state()).isEqualTo(MediaJobState.ABANDONED);
-        assertThat(workDirs).singleElement().satisfies(dir -> assertThat(dir).doesNotExist());
+        assertThat(workDirs).singleElement().satisfies(dir -> {
+            assertThat(dir).doesNotExist();
+            assertThat(dir.toAbsolutePath().startsWith(files.resolve("/uploads/trailers")))
+                    .as("work happens outside the upload tree a restore swaps").isFalse();
+        });
         assertThat(trailers.latest(scope)).hasValueSatisfying(kept -> assertThat(kept.createdAt()).isEqualTo(previous.createdAt()));
     }
 
