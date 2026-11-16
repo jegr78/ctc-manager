@@ -17,7 +17,7 @@ class TrailerViewServiceTest {
     void givenPlanFails_whenView_thenSingleBlockerAndStartDisabled() {
         // given
         var plans = mock(TrailerPlanService.class);
-        when(plans.plan(any())).thenThrow(new BusinessRuleException("Published pick content has inconsistent confirmation evidence"));
+        when(plans.checklist(any())).thenThrow(new BusinessRuleException("Published pick content has inconsistent confirmation evidence"));
         var service = new TrailerViewService(plans, mock(TrailerService.class), mock(MusicLibraryService.class), mock(PlayoffService.class));
 
         // when

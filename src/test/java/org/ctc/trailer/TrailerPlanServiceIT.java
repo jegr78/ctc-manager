@@ -3,6 +3,10 @@ package org.ctc.trailer;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import jakarta.persistence.EntityManager;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import org.ctc.TestHelper;
 import org.ctc.domain.model.Car;
 import org.ctc.domain.model.CarImage;
@@ -12,7 +16,9 @@ import org.ctc.domain.model.MusicTrack;
 import org.ctc.domain.model.Track;
 import org.ctc.domain.model.TrackImage;
 import org.ctc.domain.model.TrackImageKind;
+import org.ctc.domain.service.FileStorageService;
 import org.ctc.testsupport.CtcDevSpringBootContext;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,9 +31,16 @@ class TrailerPlanServiceIT {
     @Autowired TrailerPlanService plans;
     @Autowired TestHelper helper;
     @Autowired EntityManager entities;
+    @Autowired FileStorageService files;
+    private final List<Path> created = new ArrayList<>();
+
+    @AfterEach
+    void removeFiles() throws Exception {
+        for (Path file : created) Files.deleteIfExists(file);
+    }
 
     @Test
-    void givenTestSeasonMatchdayWithFinishedPairing_whenPlan_thenNoBlockersAndOneScene() {
+    void givenTestSeasonMatchdayWithFinishedPairing_whenPlan_thenNoBlockersAndOneScene() throws Exception {
         // given
         var fixture = helper.createFullSeasonFixture("Test_Trailer");
         var track = new Track("Test_Trailer Spa");
@@ -57,6 +70,13 @@ class TrailerPlanServiceIT {
         fixture.match().setAwayScore(8);
         entities.flush();
         entities.clear();
+        for (String path : List.of("/uploads/tracks/test/logo.png", "/uploads/track-images/test/BACKGROUND.jpg",
+                "/uploads/track-images/test/LAYOUT.jpg", "/uploads/car-images/test/studio.jpg", "/uploads/car-images/test/scene.jpg")) {
+            Path file = files.resolve(path);
+            Files.createDirectories(file.getParent());
+            Files.write(file, new byte[] {1});
+            created.add(file);
+        }
 
         // when
         var plan = plans.plan(new TrailerScope.MatchdayScope(fixture.matchday().getId()));

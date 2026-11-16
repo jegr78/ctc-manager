@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
@@ -39,8 +41,9 @@ class TrailerPlanServiceTest {
     final CarRepository cars = mock(CarRepository.class);
     final MusicLibraryService music = mock(MusicLibraryService.class);
     final CutoutModel model = mock(CutoutModel.class);
+    final org.ctc.domain.service.FileStorageService files = mock(org.ctc.domain.service.FileStorageService.class);
     final TrailerPlanService service = new TrailerPlanService(matchdays, rounds, matchdayOverview, roundOverview, publications,
-            gallery, tracks, cars, music, model);
+            gallery, tracks, cars, music, model, files);
 
     Matchday matchday;
     Track spa;
@@ -62,8 +65,9 @@ class TrailerPlanServiceTest {
         gtr = car("Nissan", "GT-R NISMO GT3 '18");
         lenient().when(music.list()).thenReturn(List.of(new MusicTrack()));
         lenient().when(model.isAvailable()).thenReturn(true);
-        lenient().when(gallery.firstTrackImage(any(), any())).thenReturn(Optional.of(new TrackImage()));
-        lenient().when(gallery.firstCarImage(any(), any())).thenReturn(Optional.of(new CarImage()));
+        lenient().when(files.exists(any())).thenAnswer(call -> call.getArgument(0) != null);
+        lenient().when(gallery.firstTrackImage(any(), any())).thenReturn(Optional.of(stored(new TrackImage())));
+        lenient().when(gallery.firstCarImage(any(), any())).thenReturn(Optional.of(stored(new CarImage())));
     }
 
     @Test
@@ -217,6 +221,55 @@ class TrailerPlanServiceTest {
     }
 
     @Test
+    void givenBackgroundRowWhoseFileIsMissing_whenPlan_thenBlocker() {
+        // given
+        var background = new TrackImage();
+        background.setImagePath("/uploads/track-images/spa/missing.jpg");
+        when(gallery.firstTrackImage(spa.getId(), TrackImageKind.BACKGROUND)).thenReturn(Optional.of(background));
+        when(files.exists("/uploads/track-images/spa/missing.jpg")).thenReturn(false);
+        released(race(match("HOM", "AWY"), spa, gtr, "S01"));
+
+        // when
+        var plan = service.plan(new TrailerScope.MatchdayScope(matchday.getId()));
+
+        // then
+        assertThat(plan.blockers()).extracting(TrailerChecklistItem::message)
+                .containsExactly("Track Circuit de Spa-Francorchamps has no background image");
+    }
+
+    @Test
+    void givenWalkoverPairing_whenPlan_thenSkippedWithoutBlocker() {
+        // given
+        var walkover = match("HOM", "AWY");
+        walkover.setWalkoverTeam(walkover.getAwayTeam());
+        race(walkover, null, null, "S01");
+        released(race(match("TWO", "THR"), spa, gtr, "S01"));
+
+        // when
+        var plan = service.plan(new TrailerScope.MatchdayScope(matchday.getId()));
+
+        // then
+        assertThat(plan.blockers()).isEmpty();
+        assertThat(plan.races()).extracting(TrailerRaceScene::pairingLabel).containsExactly("TWO vs THR");
+    }
+
+    @Test
+    void givenMatchday_whenChecklist_thenSameBlockersWithoutBuildingTheOverview() {
+        // given
+        race(match("HOM", "AWY"), spa, gtr, "S01");
+        released(race(match("TWO", "THR"), spa, gtr, "S01"));
+
+        // when
+        var checklist = service.checklist(new TrailerScope.MatchdayScope(matchday.getId()));
+
+        // then
+        assertThat(checklist.blockers()).extracting(TrailerChecklistItem::message)
+                .containsExactly("Setup of HOM vs AWY leg 1 is not published");
+        assertThat(checklist.races()).hasSize(1);
+        verify(matchdayOverview, never()).prepareBaseContext(any(org.ctc.domain.model.Matchday.class));
+    }
+
+    @Test
     void givenCarWithoutSceneImage_whenPlan_thenBlocker() {
         // given
         when(gallery.firstCarImage(gtr.getId(), CarImageKind.SCENE)).thenReturn(Optional.empty());
@@ -331,6 +384,12 @@ class TrailerPlanServiceTest {
 
     private void released(Race race) {
         when(publications.releasedContent(race)).thenReturn(Optional.of(PickPublicationContent.from(race)));
+    }
+
+    private static <T extends org.ctc.domain.model.GalleryImage> T stored(T image) {
+        if (image instanceof TrackImage track) track.setImagePath("/uploads/track-images/x/image.jpg");
+        if (image instanceof CarImage car) car.setImagePath("/uploads/car-images/x/image.jpg");
+        return image;
     }
 
     private Track track(String name, String shortName) {

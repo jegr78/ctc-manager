@@ -90,7 +90,7 @@ class TrailerControllerIT {
     @Test
     void givenBlockers_whenGetMatchday_thenChecklistLinksAndStartDisabled() throws Exception {
         // given
-        when(plans.plan(any())).thenReturn(plan(List.of(
+        planned(plan(List.of(
                 new TrailerChecklistItem("Setup of HOM vs AWY leg 1 is not published", "/admin/races/" + UUID.randomUUID()))));
 
         // when
@@ -107,7 +107,7 @@ class TrailerControllerIT {
     @Test
     void givenReady_whenPostTrailer_thenRedirectWithStatusRunning() throws Exception {
         // given
-        when(plans.plan(any())).thenReturn(plan(List.of()));
+        planned(plan(List.of()));
         heldRenderer();
         uploadMusic();
 
@@ -125,7 +125,7 @@ class TrailerControllerIT {
     @Test
     void givenBusy_whenPostTrailer_thenErrorMessage() throws Exception {
         // given
-        when(plans.plan(any())).thenReturn(plan(List.of()));
+        planned(plan(List.of()));
         uploadMusic();
         jobs.submit(MediaJobKind.CUTOUT, "test:busy", ctx -> release.await(30, TimeUnit.SECONDS));
 
@@ -160,7 +160,7 @@ class TrailerControllerIT {
     @Test
     void givenMalformedTrailerMetadata_whenGetMatchday_thenPageRendersWithoutLatestTrailer() throws Exception {
         // given
-        when(plans.plan(any())).thenReturn(plan(List.of()));
+        planned(plan(List.of()));
         writeOutputs("music=Test Song\n");
 
         // when
@@ -169,6 +169,11 @@ class TrailerControllerIT {
 
         // then
         assertThat(Jsoup.parse(html).select("#matchday-trailer a[href$=/trailer/video]")).isEmpty();
+    }
+
+    private void planned(TrailerPlan plan) {
+        when(plans.plan(any())).thenReturn(plan);
+        when(plans.checklist(any())).thenReturn(plan);
     }
 
     private void writeOutputs(String properties) throws Exception {
