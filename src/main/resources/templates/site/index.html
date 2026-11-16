@@ -15,7 +15,10 @@
             <p class="landing-description">Meet the community, discover the competition and follow each season of the cup.</p>
             <div class="landing-actions">
                 <a href="#about-cup" class="landing-primary">Discover CTC ↓</a>
-                <a href="#explore-cup" class="landing-season-link">Explore the cup →</a>
+                <a th:if="${activeSeasonSlug != null and !#strings.isEmpty(activeSeasonSlug)}" class="landing-season-link"
+                   th:href="${rootPath + '/season/' + activeSeasonSlug + '/standings.html'}">Current season →</a>
+                <a th:unless="${activeSeasonSlug != null and !#strings.isEmpty(activeSeasonSlug)}" class="landing-season-link"
+                   th:href="${rootPath + '/archive.html'}">All seasons →</a>
             </div>
         </div>
     </div>
