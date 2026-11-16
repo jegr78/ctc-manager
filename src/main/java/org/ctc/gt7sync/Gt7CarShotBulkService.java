@@ -9,6 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.backup.lock.ImportLockService;
@@ -84,7 +85,12 @@ public class Gt7CarShotBulkService {
         if (ids.isEmpty()) throw new BusinessRuleException("Every car with a GT7 ID already has GT7 images.");
         var started = new Run(ids.size(), clock.instant());
         run = started;
-        executor.execute(() -> process(started, ids));
+        try {
+            executor.execute(() -> process(started, ids));
+        } catch (RejectedExecutionException shuttingDown) {
+            started.finish("the application is shutting down", clock.instant());
+            throw new BusinessRuleException("GT7 images cannot load while the application shuts down.");
+        }
         return started.status();
     }
 

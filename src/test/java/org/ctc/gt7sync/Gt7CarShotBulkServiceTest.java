@@ -144,6 +144,18 @@ class Gt7CarShotBulkServiceTest {
         assertThat(service.status()).isNull();
     }
 
+    @Test
+    void givenExecutorThatRejects_whenStarting_thenEndTheRunSoALaterStartIsPossible() {
+        // given
+        pending(first);
+        service = new Gt7CarShotBulkService(cars, scraper, shots, imports, outbound, task -> {
+            throw new java.util.concurrent.RejectedExecutionException("shut down");
+        }, Clock.systemUTC());
+        // when / then
+        assertThatThrownBy(() -> service.start()).hasMessage("GT7 images cannot load while the application shuts down.");
+        assertThat(service.status().running()).as("a rejected run must not block later starts").isFalse();
+    }
+
     private void pending(UUID... ids) {
         when(outbound.isEnabled()).thenReturn(true);
         var rows = new ArrayList<CarRepository.Gt7CarId>();
