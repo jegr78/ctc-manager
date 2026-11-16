@@ -90,6 +90,23 @@ class CatalogImageIT {
     }
 
     @Test
+    void givenJpegUploadedAsCutout_whenUploading_thenRejectAndStoreNothing() {
+        // when / then
+        assertThatThrownBy(() -> gallery.uploadCarImages(car, List.of(png("ok.png", 10, 10), jpeg("cut.jpg", 10, 10)), CarImageKind.CUTOUT, null))
+                .isInstanceOf(BusinessRuleException.class).hasMessage("Cutouts must be PNG files with transparency; cut.jpg is not");
+        assertThat(gallery.carImages(car)).isEmpty();
+    }
+
+    @Test
+    void givenPngUploadedAsCutout_whenUploading_thenStoredAsManualCutout() {
+        // when
+        gallery.uploadCarImages(car, List.of(png("cut.png", 10, 10)), CarImageKind.CUTOUT, null);
+        // then
+        assertThat(gallery.firstCarImage(car, CarImageKind.CUTOUT)).hasValueSatisfying(image ->
+                assertThat(image.getSource()).isEqualTo(ImageSource.MANUAL));
+    }
+
+    @Test
     void givenOneInvalidFileAmongValidOnes_whenUploading_thenStoreNothing() {
         // when / then
         assertThatThrownBy(() -> gallery.uploadCarImages(car, List.of(png("ok.png", 10, 10), file("fake.png", "GIF89a....".getBytes())), CarImageKind.STUDIO, null))

@@ -135,6 +135,44 @@ class CatalogImageBackupValidatorTest {
         assertThatThrownBy(validator::validate).hasMessage("A car image references a missing car");
     }
 
+    @Test
+    void givenSchema26ArchiveWithCutout_whenValidating_thenReject() {
+        // when / then
+        assertThatThrownBy(() -> validator(26).accept("car_images", carImage("MANUAL", null, "/uploads/car-images/a/2.png").put("kind", "CUTOUT")))
+                .hasMessage("Car cutouts require backup schema 27");
+        assertThatThrownBy(() -> validator(26).accept("car_images", carImage("AUTO", "cutout", "/uploads/car-images/a/2.png").put("kind", "CUTOUT")))
+                .hasMessage("Car cutouts require backup schema 27");
+    }
+
+    @Test
+    void givenSchema27AutoCutout_whenValidating_thenAcceptOnePerCar() {
+        // given
+        var validator = validator(27);
+        // when / then
+        assertThatCode(() -> validator.accept("car_images", carImage("AUTO", "cutout", "/uploads/car-images/a/2.png").put("kind", "CUTOUT")))
+                .doesNotThrowAnyException();
+        assertThatThrownBy(() -> validator.accept("car_images", carImage("AUTO", "cutout", "/uploads/car-images/a/1.jpg").put("kind", "CUTOUT")))
+                .hasMessage("A car has two automatic cutouts");
+    }
+
+    @Test
+    void givenAutoImageWithOtherKeyOrKind_whenValidating_thenReject() {
+        // when / then
+        assertThatThrownBy(() -> validator(27).accept("car_images", carImage("AUTO", "cutout", "/uploads/car-images/a/2.png")))
+                .hasMessage("An automatic cutout needs source key cutout and kind CUTOUT");
+        assertThatThrownBy(() -> validator(27).accept("car_images", carImage("AUTO", "other", "/uploads/car-images/a/2.png").put("kind", "CUTOUT")))
+                .hasMessage("An automatic cutout needs source key cutout and kind CUTOUT");
+        assertThatThrownBy(() -> validator(27).accept("car_images", carImage("AUTO", null, "/uploads/car-images/a/2.png").put("kind", "CUTOUT")))
+                .hasMessage("A downloaded image needs its source key and a manual image must not have one");
+    }
+
+    @Test
+    void givenAutoTrackImage_whenValidating_thenReject() {
+        // when / then
+        assertThatThrownBy(() -> validator(27).accept("track_images", trackImage().put("source", "AUTO").put("sourceKey", "cutout")))
+                .hasMessage("An automatic cutout needs source key cutout and kind CUTOUT");
+    }
+
     private CatalogImageBackupValidator validator(int version) {
         var validator = new CatalogImageBackupValidator(version,
                 Set.of("uploads/car-images/a/1.jpg", "uploads/car-images/a/2.png", "uploads/track-images/b/1.png"));

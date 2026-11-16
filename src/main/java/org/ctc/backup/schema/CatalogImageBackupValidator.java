@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 public final class CatalogImageBackupValidator {
     public static final int IMAGE_VERSION = 24;
     public static final int GT_ENGINE_VERSION = 25;
+    public static final int CUTOUT_VERSION = 27;
     private static final Set<String> TABLES = Set.of("cars", "tracks", "car_images", "track_images");
     private static final int BUDGET = 100_000;
     private final int version;
@@ -63,13 +64,16 @@ public final class CatalogImageBackupValidator {
         time(row, "createdAt");
         time(row, "updatedAt");
         UUID ownerId = uuid(row, owner);
-        enumValue(row, "kind", kinds);
+        var kind = enumValue(row, "kind", kinds);
         var source = enumValue(row, "source", ImageSource.class);
         String key = text(row, "sourceKey");
+        if (version < CUTOUT_VERSION && (source == ImageSource.AUTO || kind == CarImageKind.CUTOUT)) {
+            throw new IllegalArgumentException("Car cutouts require backup schema " + CUTOUT_VERSION);
+        }
         if (source == ImageSource.GTENGINE && (version < GT_ENGINE_VERSION || !"track".equals(owner))) {
             throw new IllegalArgumentException("GT-Engine maps belong to tracks and require backup schema " + GT_ENGINE_VERSION);
         }
-        boolean paired = source.isDownloaded() ? key != null && !key.isBlank() : key == null;
+        boolean paired = source.requiresSourceKey() ? key != null && !key.isBlank() : key == null;
         if (!paired) {
             throw new IllegalArgumentException("A downloaded image needs its source key and a manual image must not have one");
         }
@@ -78,6 +82,12 @@ public final class CatalogImageBackupValidator {
         }
         if (source == ImageSource.GTENGINE && (!CatalogImageService.GT_ENGINE_KEY.equals(key) || !"LAYOUT".equals(text(row, "kind")))) {
             throw new IllegalArgumentException("A GT-Engine map needs source key " + CatalogImageService.GT_ENGINE_KEY + " and kind LAYOUT");
+        }
+        if (source == ImageSource.AUTO && (!"car".equals(owner) || !CatalogImageService.AUTO_CUTOUT_KEY.equals(key) || kind != CarImageKind.CUTOUT)) {
+            throw new IllegalArgumentException("An automatic cutout needs source key " + CatalogImageService.AUTO_CUTOUT_KEY + " and kind CUTOUT");
+        }
+        if (source == ImageSource.AUTO && !slots.add("auto:" + ownerId)) {
+            throw new IllegalArgumentException("A car has two automatic cutouts");
         }
         if (source == ImageSource.GTENGINE && !slots.add("gtengine:" + ownerId)) {
             throw new IllegalArgumentException("A track has two GT-Engine maps");

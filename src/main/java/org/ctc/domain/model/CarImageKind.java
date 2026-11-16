@@ -1,7 +1,7 @@
 package org.ctc.domain.model;
 
 public enum CarImageKind {
-    STUDIO, SCENE, COCKPIT, OTHER;
+    STUDIO, SCENE, COCKPIT, CUTOUT, OTHER;
 
     /** The kind of an official GT7 car shot slot such as {@code 2_01}: 1 scene, 2 studio, 3 cockpit. */
     public static CarImageKind forGt7Slot(String slot) {
