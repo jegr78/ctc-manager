@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="utf-8">
+<style th:replace="~{admin/trailer/fragments :: base}"></style>
+<style>
+  .kicker { position: absolute; left: 112px; top: 190px; }
+  .heading { position: absolute; left: 112px; right: 112px; top: 244px; font-family: "Conthrax"; font-size: 72px; line-height: 1.1; }
+  .pairings { position: absolute; left: 112px; right: 112px; top: 360px; bottom: 120px; display: grid;
+              grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 16px 24px; align-content: start; }
+  .rows-few { grid-template-columns: 1fr; padding: 0 220px; }
+  .rows-few .pairing { height: 140px; }
+  .rows-many .pairing { height: 130px; }
+  .rows-dense .pairing { height: 92px; }
+  .pairing { background: var(--card); border-top: 4px solid #fff; display: grid;
+             grid-template-columns: 1fr 72px 1fr; align-items: center; padding: 0 24px; gap: 12px; }
+  .team { display: flex; align-items: center; gap: 16px; min-width: 0; }
+  .team.away { flex-direction: row-reverse; text-align: right; }
+  .team img { width: 84px; height: 84px; object-fit: contain; flex: none; }
+  .rows-dense .team img { width: 56px; height: 56px; }
+  .team .text { min-width: 0; }
+  .team .short { font-family: "Conthrax"; font-size: 34px; line-height: 1.1; }
+  .rows-dense .team .short { font-size: 26px; }
+  .team .meta { font-family: "Barlow Condensed"; font-weight: 600; font-size: 22px; letter-spacing: 3px; color: var(--grey); }
+  .vs { font-family: "Barlow Condensed"; font-weight: 700; font-size: 30px; letter-spacing: 4px; color: var(--yellow); text-align: center; }
+</style>
+</head>
+<body th:class="${'layer-' + layer}">
+<th:block th:if="${layer == 'background'}">
+    <img th:replace="~{admin/trailer/fragments :: watermark}">
+</th:block>
+<th:block th:if="${layer == 'foreground'}">
+    <div th:replace="~{admin/trailer/fragments :: brand('small')}"></div>
+    <div class="kicker" th:text="${#strings.toUpperCase(seasonLabel)}">SEASON</div>
+    <div class="heading clip" th:text="${#strings.toUpperCase(title) + ' · PAIRINGS'}">MATCHDAY 1 · PAIRINGS</div>
+    <div class="pairings" th:classappend="${pairingsSize}">
+        <div class="pairing" th:each="row : ${pairings}">
+            <div class="team">
+                <img th:if="${row.homeLogoBase64 != null}" th:src="${row.homeLogoBase64}" alt="">
+                <div class="text">
+                    <div class="short clip" th:text="${row.homeTeamShortName}">HOM</div>
+                    <div class="meta clip" th:text="${row.homeTeamName}">Home team</div>
+                </div>
+            </div>
+            <div class="vs">VS</div>
+            <div class="team away">
+                <img th:if="${row.awayLogoBase64 != null}" th:src="${row.awayLogoBase64}" alt="">
+                <div class="text">
+                    <div class="short clip" th:text="${row.awayTeamShortName}">AWY</div>
+                    <div class="meta clip" th:text="${row.awayTeamName}">Away team</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</th:block>
+</body>
+</html>

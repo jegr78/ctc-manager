@@ -30,7 +30,8 @@ public record MatchdayGraphicData(
 			String awayRecord,
 			String scheduledDateTime,
 			Integer homeScore,
-			Integer awayScore
+			Integer awayScore,
+			java.util.UUID pairingId
 	) {
 	}
 }

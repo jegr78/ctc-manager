@@ -285,7 +285,7 @@ public class TemplatePreviewService {
                         "Team Bravo", "BRV", logo,
                         "#2A9D8F", "#264653", "#E9C46A", 2, "2 - 1 - 1",
                         withSchedule ? "Fri, 20 Mar. 19:30 GMT" : null,
-                        withScores ? 54 : null, withScores ? 42 : null
+                        withScores ? 54 : null, withScores ? 42 : null, null
                 ),
                 new MatchGraphicRow(
                         "Team Charlie", "CHL", logo,
@@ -293,7 +293,7 @@ public class TemplatePreviewService {
                         "Team Delta", "DLT", logo,
                         "#6A0572", "#AB83A1", "#E8D5B7", 4, "1 - 2 - 1",
                         withSchedule ? "Sat, 21 Mar. 20:00 GMT" : null,
-                        withScores ? 48 : null, withScores ? 50 : null
+                        withScores ? 48 : null, withScores ? 50 : null, null
                 ),
                 new MatchGraphicRow(
                         "Team Echo", "ECH", logo,
@@ -301,7 +301,7 @@ public class TemplatePreviewService {
                         "Team Foxtrot", "FXT", logo,
                         "#606C38", "#283618", "#DDA15E", 6, "0 - 3 - 1",
                         withSchedule ? "Sun, 22 Mar. 18:00 GMT" : null,
-                        withScores ? 51 : null, withScores ? 45 : null
+                        withScores ? 51 : null, withScores ? 45 : null, null
                 )
         );
 

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="utf-8">
+<style th:replace="~{admin/trailer/fragments :: base}"></style>
+<style>
+  .center { position: absolute; left: 0; right: 0; top: 250px; display: flex; flex-direction: column; align-items: center; gap: 34px; }
+  .center img { width: 300px; height: 300px; }
+  .title { font-family: "Conthrax"; font-size: 84px; max-width: 1700px; text-align: center; }
+  .call { font-family: "Barlow Condensed"; font-weight: 700; font-size: 44px; letter-spacing: 13px; color: var(--yellow); }
+</style>
+</head>
+<body th:class="${'layer-' + layer}">
+<th:block th:if="${layer == 'background'}">
+    <img th:replace="~{admin/trailer/fragments :: watermark}">
+</th:block>
+<th:block th:if="${layer == 'foreground'}">
+    <div class="center">
+        <img th:src="${ctcLogo}" alt="">
+        <div class="title clip" th:text="${#strings.toUpperCase(title)}">MATCHDAY 1</div>
+        <div class="call">GAME ON!</div>
+    </div>
+</th:block>
+</body>
+</html>

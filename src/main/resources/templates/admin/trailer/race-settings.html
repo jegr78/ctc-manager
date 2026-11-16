@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="utf-8">
+<style th:replace="~{admin/trailer/fragments :: base}"></style>
+<style>
+  .photo { position: absolute; inset: -40px; width: 2000px; height: 1160px; object-fit: cover; filter: blur(14px) brightness(.28); }
+  .teams { position: absolute; left: 112px; right: 112px; top: 190px; display: grid; grid-template-columns: 1fr 120px 1fr; align-items: center; }
+  .team { display: flex; align-items: center; gap: 22px; min-width: 0; }
+  .team.away { flex-direction: row-reverse; text-align: right; }
+  .team img { width: 110px; height: 110px; object-fit: contain; flex: none; }
+  .team .name { font-family: "Conthrax"; line-height: 1.1; min-width: 0; }
+  .fit-l .team .name { font-size: 44px; }
+  .fit-m .team .name { font-size: 34px; }
+  .fit-s .team .name { font-size: 26px; }
+  .team .standing { font-family: "Barlow Condensed"; font-weight: 600; font-size: 26px; letter-spacing: 4px; color: var(--grey); margin-top: 6px; }
+  .vs { text-align: center; font-family: "Barlow Condensed"; font-weight: 700; font-size: 40px; letter-spacing: 4px; color: var(--yellow); }
+  .meta { position: absolute; left: 112px; right: 112px; top: 340px; display: flex; gap: 40px; font-family: "Barlow Condensed";
+          font-weight: 700; font-size: 34px; letter-spacing: 3px; text-transform: uppercase; }
+  .meta .leg { color: var(--yellow); flex: none; }
+  .meta .what { min-width: 0; }
+  .divider { position: absolute; left: 112px; right: 112px; top: 404px; height: 6px; background: linear-gradient(90deg, #fff 92%, var(--yellow) 92%); }
+  .tiles { position: absolute; left: 112px; right: 112px; top: 440px; display: grid; grid-template-columns: repeat(5, 1fr);
+           grid-auto-rows: 118px; gap: 14px; }
+  .tile { background: rgba(22,22,22,.94); border-left: 6px solid #fff; padding: 16px 24px 0; min-width: 0; }
+  .tile.span-2 { grid-column: span 2; }
+  .tile.span-3 { grid-column: span 3; }
+  .tile.span-5 { grid-column: span 5; border-left-color: var(--yellow); }
+  .tile .value { font-family: "Barlow Condensed"; font-weight: 700; font-size: 44px; line-height: 1.05; }
+  .tile .label { font-size: 20px; margin-top: 8px; }
+  .footer { top: 1000px; }
+</style>
+</head>
+<body th:class="${'layer-' + layer}">
+<th:block th:if="${layer == 'background'}">
+    <img class="photo" th:src="${trackBackground}" alt="">
+</th:block>
+<th:block th:if="${layer == 'foreground'}">
+    <div th:replace="~{admin/trailer/fragments :: brand('small')}"></div>
+    <div class="teams" th:classappend="${teamSize}">
+        <div class="team"><img th:if="${homeLogo != null}" th:src="${homeLogo}" alt="">
+            <div class="name"><div class="clip" th:text="${homeTeam}">Home</div><div class="standing clip" th:if="${homeStanding != null}" th:text="${homeStanding}">SEED 1</div></div></div>
+        <div class="vs">VS</div>
+        <div class="team away"><img th:if="${awayLogo != null}" th:src="${awayLogo}" alt="">
+            <div class="name"><div class="clip" th:text="${awayTeam}">Away</div><div class="standing clip" th:if="${awayStanding != null}" th:text="${awayStanding}">SEED 2</div></div></div>
+    </div>
+    <div class="meta"><span class="leg" th:text="${legLabel}">LEG 1</span><span class="what clip" th:text="${carName + ' · ' + (subline != null ? subline : headline)}">Car · Track</span></div>
+    <div class="divider"></div>
+    <div class="tiles">
+        <div class="tile" th:each="tile : ${tiles}" th:classappend="${tile.span > 1 ? 'span-' + tile.span : ''}">
+            <div class="value clip" th:text="${tile.value}">12</div>
+            <div class="label clip" th:text="${tile.label}">Laps</div>
+        </div>
+    </div>
+    <div class="footer"><div><span class="hot" th:text="${#strings.toUpperCase(title)}">MATCHDAY</span> · SETTINGS</div><div>COMMUNITY TEAM CUP</div></div>
+</th:block>
+</body>
+</html>

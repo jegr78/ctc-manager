@@ -41,11 +41,12 @@ All three are downloads in management. Each matchday or playoff round keeps only
 |---|---|---|
 | Intro | 4 s | CTC brand block, season, matchday or playoff round name |
 | Overview | 8 s | All non-bye pairings with team logos, seeds and records; no times |
-| Track + car | 6 s per race | Track `BACKGROUND` full-bleed and darkened, track logo, track `LAYOUT` map, track short name, car cutout, car name |
-| Settings | 8 s per race | Settings tiles in the new look (laps, pit stops, tyre and fuel wear, refuel speed, initial fuel, tyres available/mandatory, time of day and progression, weather), both teams |
-| Outro | 5 s | CTC logo, matchday or round name, static "Join us on Discord" |
+| Track + car | 6 s per race | Track `BACKGROUND` full-bleed and darkened, track logo, track `LAYOUT` map, track short name, studio car cutout, car name, both team logos with seed and record |
+| Car in action | 4 s per race | First car `SCENE` image full-bleed without cutout, car name, leg, pairing and team logos |
+| Settings | 8 s per race | Settings tiles in the new look (laps, pit stops, tyre and fuel wear, refuel speed, initial fuel, time of day, progression, slipstream, mandatory tyres, start type, available tyres, weather), both teams with seed and record |
+| Outro | 5 s | CTC logo, matchday or round name, the slogan "GAME ON!" |
 
-With six matches and identical legs, the trailer runs about 1:40.
+The length follows the number of races: with six matches and identical legs, the trailer runs about 2:05. Track logos keep a transparent background; dark logos have their grey pixels inverted so they read on the dark scenes while coloured parts keep their colour.
 
 Scenes are generated per race. When both legs of a pairing have identical public setup content (car, track and every published setting), they share one track + car scene and one settings scene.
 
@@ -104,7 +105,7 @@ Before start, a service builds a checklist for the matchday or round. Every open
 
 - every non-bye race has a public setup, according to `PickPublicationService.publicProjection`, with car, track and all settings shown in the settings scene
 - every track used has a logo (`Track.imageUrl`), a `BACKGROUND` image and a `LAYOUT` image
-- every car used has a `STUDIO` image or a `CUTOUT` image
+- every car used has a `STUDIO` image or a `CUTOUT` image, and a `SCENE` image
 - at least one music track exists
 
 Missing cutouts are not blocking. The job creates them (see below).
@@ -203,7 +204,7 @@ Each delivery updates `CLAUDE.md`, `README.md` and the wiki.
 - **Cutout.** ONNX Runtime in Java (chosen); a Python `rembg` sidecar (second service and image); classic colour keying plus GrabCut (fails on black cars); macOS Vision (not available on the Linux box).
 - **Memory.** Container limit raised to 3 GB (chosen) versus staying at 2 GB with a smaller model or input size.
 - **Music.** Library table with backup (chosen) versus a plain folder on the volume (no credits, not in backups).
-- **Scenes.** One combined track + car scene per race (chosen) versus separate track and car scenes as in the Canva trailer.
+- **Scenes.** A combined track + studio-cutout scene plus a short car-in-action scene from a GT7 scene image per race (chosen). Cutting the car out of scene images was tested and dropped: motion blur and dark tyres left ghosting on one of four cars.
 
 ## Left to the builder
 

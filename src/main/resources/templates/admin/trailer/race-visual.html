@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="utf-8">
+<style th:replace="~{admin/trailer/fragments :: base}"></style>
+<style>
+  .photo { position: absolute; inset: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  .shade { position: absolute; inset: 0;
+           background: linear-gradient(90deg, rgba(11,11,11,.97) 0%, rgba(11,11,11,.9) 30%, rgba(11,11,11,.35) 58%, rgba(11,11,11,.15) 100%),
+                       linear-gradient(0deg, rgba(11,11,11,.85) 0%, rgba(11,11,11,0) 38%); }
+  .car { position: absolute; right: 40px; bottom: 70px; max-width: 1180px; max-height: 600px; object-fit: contain;
+         filter: drop-shadow(0 30px 40px rgba(0,0,0,.65)); }
+  .stripes { position: absolute; left: 900px; top: -40px; width: 70px; height: 1160px; transform: skewX(-16deg); }
+  .stripes::before, .stripes::after { content: ""; position: absolute; top: 0; bottom: 0; width: 10px; }
+  .stripes::before { left: 0; background: #fff; }
+  .stripes::after { left: 30px; background: var(--yellow); }
+  .tag { position: absolute; left: 112px; top: 210px; display: flex; height: 64px; font-family: "Barlow Condensed"; font-weight: 700;
+         font-size: 36px; letter-spacing: 3px; }
+  .tag .a { background: var(--yellow); color: #0b0b0b; padding: 0 22px; display: flex; align-items: center; }
+  .tag .b { background: #fff; color: #0b0b0b; padding: 0 22px; display: flex; align-items: center; max-width: 520px; }
+  .logo { position: absolute; left: 112px; top: 300px; width: 340px; height: 120px; display: flex; align-items: center; }
+  .logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .teams { position: absolute; right: 112px; top: 300px; width: 760px; height: 120px; background: rgba(11,11,11,.82);
+           border-top: 4px solid #fff; display: grid; grid-template-columns: 1fr 64px 1fr; align-items: center; padding: 0 20px; }
+  .side { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .side.away { flex-direction: row-reverse; text-align: right; }
+  .side img { width: 76px; height: 76px; object-fit: contain; flex: none; }
+  .side .text { min-width: 0; }
+  .side .short { font-family: "Conthrax"; font-size: 30px; line-height: 1.1; }
+  .side .standing { font-family: "Barlow Condensed"; font-weight: 600; font-size: 22px; letter-spacing: 3px; color: var(--grey); }
+  .teams .vs { text-align: center; font-family: "Barlow Condensed"; font-weight: 700; font-size: 28px; letter-spacing: 3px; color: var(--yellow); }
+  .headline { position: absolute; left: 106px; width: 760px; top: 440px; font-family: "Conthrax"; line-height: 1.02; }
+  .headline.fit-xl { font-size: 150px; }
+  .headline.fit-l { font-size: 104px; }
+  .headline.fit-m { font-size: 72px; white-space: normal; }
+  .headline.fit-s { font-size: 54px; white-space: normal; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+  .subline { position: absolute; left: 112px; width: 760px; top: 618px; font-family: "Barlow Condensed"; font-weight: 700;
+             font-size: 38px; letter-spacing: 6px; color: #fff; text-transform: uppercase; }
+  .map { position: absolute; left: 112px; top: 690px; width: 420px; height: 320px; background: rgba(22,22,22,.92);
+         border-top: 4px solid #fff; padding: 8px; overflow: hidden; }
+  .map img { width: 100%; height: 100%; object-fit: contain; transform: scale(1.2); filter: brightness(1.8) contrast(1.6); }
+  .carname { position: absolute; right: 112px; top: 210px; max-width: 760px; display: flex; height: 64px; font-family: "Barlow Condensed";
+             font-weight: 700; letter-spacing: 3px; text-transform: uppercase; }
+  .carname .label { background: var(--yellow); color: #0b0b0b; padding: 0 22px; display: flex; align-items: center; font-size: 30px; flex: none; }
+  .carname .value { background: #fff; color: #0b0b0b; padding: 0 22px; line-height: 64px; min-width: 0; }
+  .carname.fit-l .value { font-size: 36px; }
+  .carname.fit-m .value { font-size: 30px; }
+  .carname.fit-s .value { font-size: 24px; }
+</style>
+</head>
+<body th:class="${'layer-' + layer}">
+<th:block th:if="${layer == 'background'}">
+    <img class="photo" th:src="${trackBackground}" alt="">
+    <div class="shade"></div>
+</th:block>
+<th:block th:if="${layer == 'car'}">
+    <img class="car" th:if="${carCutout != null}" th:src="${carCutout}" alt="">
+</th:block>
+<th:block th:if="${layer == 'foreground'}">
+    <div class="stripes"></div>
+    <div th:replace="~{admin/trailer/fragments :: brand('small')}"></div>
+    <div class="tag"><span class="a" th:text="${legLabel}">LEG 1</span><span class="b clip" th:text="${pairing}">HOM vs AWY</span></div>
+    <div class="logo" th:if="${trackLogo != null}"><img th:src="${trackLogo}" alt=""></div>
+    <div class="headline clip" th:classappend="${headlineSize}" th:text="${#strings.toUpperCase(headline)}">SPA</div>
+    <div class="subline clip" th:if="${subline != null}" th:text="${subline}">Circuit de Spa-Francorchamps</div>
+    <div class="map" th:if="${trackLayout != null}"><img th:src="${trackLayout}" alt=""></div>
+    <div class="teams">
+        <div class="side"><img th:if="${homeLogo != null}" th:src="${homeLogo}" alt="">
+            <div class="text"><div class="short clip" th:text="${homeShort}">HOM</div>
+                <div class="standing clip" th:if="${homeStanding != null}" th:text="${homeStanding}">SEED 1</div></div></div>
+        <div class="vs">VS</div>
+        <div class="side away"><img th:if="${awayLogo != null}" th:src="${awayLogo}" alt="">
+            <div class="text"><div class="short clip" th:text="${awayShort}">AWY</div>
+                <div class="standing clip" th:if="${awayStanding != null}" th:text="${awayStanding}">SEED 2</div></div></div>
+    </div>
+    <div class="carname" th:classappend="${carNameSize}"><span class="label">Car</span><span class="value clip" th:text="${carName}">Car</span></div>
+</th:block>
+</body>
+</html>
