@@ -217,6 +217,60 @@ class PickDisclosureServiceTest {
         assertThatThrownBy(() -> service.forPublic(race.getId())).isInstanceOf(BusinessRuleException.class);
     }
 
+    @Test
+    void givenConfirmedFullRelease_whenReleasedContent_thenContentWithCarAndTrackIds() {
+        // given
+        var race = race(false); var carId = race.getCar().getId(); var trackId = race.getTrack().getId();
+        var full = confirmed(race, 1, PickDisclosureField.all(), 1, 0);
+        when(snapshots.findByAttemptRaceIdOrderByAttemptContentVersionDescConfirmedAtDesc(race.getId())).thenReturn(List.of(full));
+        // when
+        var content = publications.releasedContent(race);
+        // then
+        assertThat(content).hasValueSatisfying(value -> {
+            assertThat(value.carId()).isEqualTo(carId);
+            assertThat(value.trackId()).isEqualTo(trackId);
+            assertThat(value.weather()).isEqualTo("Test private weather");
+        });
+    }
+
+    @Test
+    void givenOnlyLobbyFieldsReleased_whenReleasedContent_thenEmpty() {
+        // given
+        var race = race(false); var lobby = confirmed(race, 1, PickDisclosureField.lobby(), 1, 0);
+        when(snapshots.findByAttemptRaceIdOrderByAttemptContentVersionDescConfirmedAtDesc(race.getId())).thenReturn(List.of(lobby));
+        // when / then
+        assertThat(publications.releasedContent(race)).as("the car is still withheld").isEmpty();
+    }
+
+    @Test
+    void givenUnpublishedLaterEdit_whenReleasedContent_thenReturnsConfirmedVersionNotCurrentRace() {
+        // given
+        var race = race(false); var publishedCar = race.getCar().getId();
+        var full = confirmed(race, 1, PickDisclosureField.all(), 1, 0);
+        var later = new Car("Test later", "Test later private car"); later.setId(UUID.randomUUID()); race.setCar(later);
+        when(snapshots.findByAttemptRaceIdOrderByAttemptContentVersionDescConfirmedAtDesc(race.getId())).thenReturn(List.of(full));
+        // when
+        var content = publications.releasedContent(race);
+        // then
+        assertThat(content).hasValueSatisfying(value -> assertThat(value.carId()).isEqualTo(publishedCar));
+    }
+
+    @Test
+    void givenNoAttempt_whenReleasedContent_thenEmpty() {
+        // given
+        var race = race(false);
+        // when / then
+        assertThat(publications.releasedContent(race)).isEmpty();
+    }
+
+    @Test
+    void givenFinishedRace_whenReleasedContent_thenStoredSetup() {
+        // given
+        var race = race(true);
+        // when / then
+        assertThat(publications.releasedContent(race)).hasValueSatisfying(value -> assertThat(value.trackId()).isEqualTo(race.getTrack().getId()));
+    }
+
     PickPublicationSnapshot confirmed(Race race, long version, Set<PickDisclosureField> fields, int seconds, long sourceVersion) {
         var at = Instant.parse("2026-11-03T00:00:00Z");
         var attempt = new PickPublicationAttempt(new PickPublicationAttempt.Capture(UUID.randomUUID(), race, version, sourceVersion,
@@ -236,7 +290,8 @@ class PickDisclosureServiceTest {
         var away = new Team("Test away", "T-DAWAY"); away.setId(UUID.randomUUID()); race.setAwayTeamOverride(away);
         race.setMatch(new Match(day, home, away));
         if (finished) race.getResults().add(new RaceResult());
-        race.setCar(new Car("Test public legacy", "Test private car")); race.setTrack(new Track("Test private track"));
+        var car = new Car("Test public legacy", "Test private car"); car.setId(UUID.randomUUID()); race.setCar(car);
+        var track = new Track("Test private track"); track.setId(UUID.randomUUID()); race.setTrack(track);
         var entry = new SeasonCarPoolEntry(); entry.setLabel("Test private entry"); race.setCarPoolEntry(entry);
         var settings = new RaceSettings(race); race.setSettings(settings);
         new RaceSettingsValues(12, 2, 3, 4, "Default", 1, TimeProgressionMode.MULTIPLIER, 0,
