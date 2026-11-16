@@ -470,7 +470,7 @@ def probe_environment(path, database_password):
                   DATABASE_URL='jdbc:mariadb://db:3306/ctcdb?rewriteBatchedStatements=true',
                   DATABASE_USERNAME='ctc', DATABASE_PASSWORD=database_password,
                   GOOGLE_SHEETS_CREDENTIALS_PATH='/run/ctc/google-credentials.json',
-                  JAVA_TOOL_OPTIONS='-XX:MaxRAMPercentage=50.0 -XX:+ExitOnOutOfMemoryError -Duser.timezone=Europe/Berlin',
+                  JAVA_TOOL_OPTIONS='-XX:MaxRAMPercentage=33.0 -XX:+ExitOnOutOfMemoryError -Duser.timezone=Europe/Berlin',
                   TZ='Europe/Berlin')
     return values
 

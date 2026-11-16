@@ -166,7 +166,7 @@ def validate(facts, expected_uuid):
         raise ValueError('rootless memory control requires cgroupv2 memory delegation')
     if facts.get('diskFree', 4 * 1024**3) < 3 * 1024**3:
         raise ValueError('insufficient installation storage')
-    if facts['memoryTotal'] < 4 * 1024**3:
+    if facts['memoryTotal'] < 5 * 1024**3:
         raise ValueError('insufficient host memory capacity for CTC and shared services')
     mount = facts['backupMount']
     if not mount or mount['target'] != BACKUP_PARENT:

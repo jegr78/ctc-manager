@@ -113,7 +113,7 @@ class HostSetupTest(unittest.TestCase):
         self.assertTrue(self.validate()['serveReady'])
 
     def test_insufficient_host_memory_is_rejected(self):
-        self.data['memoryTotal'] = 2*1024**3
+        self.data['memoryTotal'] = 5*1024**3 - 1
         with self.assertRaisesRegex(ValueError, 'memory capacity'):
             self.validate()
 
