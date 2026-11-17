@@ -16,7 +16,10 @@
     "jegr78"
   ],
   "rebaseWhen": "behind-base-branch",
-  "dependencyDashboard": true,
+  "dependencyDashboard": {
+    "enabled": true,
+    "osvVulnerabilitySummary": "all"
+  },
   "vulnerabilityAlerts": {
     "enabled": true,
     "labels": [
@@ -124,6 +127,5 @@
     "* * * * *"
   ],
   "dependencyDashboardApproval": false,
-  "osvVulnerabilityAlerts": true,
-  "dependencyDashboardOSVVulnerabilitySummary": "all"
+  "osvVulnerabilityAlerts": true
 }
