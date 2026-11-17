@@ -121,6 +121,8 @@ class DiscordFullMatchdayLifecycleE2ETest extends PlaywrightConfig {
 
 	private LifecycleFixture fixture;
 
+	private Runnable restoreGlobalConfig = () -> { };
+
 	@BeforeEach
 	void setUp() throws IOException {
 		setupPage();
@@ -142,6 +144,7 @@ class DiscordFullMatchdayLifecycleE2ETest extends PlaywrightConfig {
 	void tearDown() {
 		teardownPage();
 		discordPostRepository.deleteAll();
+		restoreGlobalConfig.run();
 	}
 
 	@Test
@@ -266,6 +269,17 @@ class DiscordFullMatchdayLifecycleE2ETest extends PlaywrightConfig {
 	private void seedGlobalConfig() {
 		DiscordGlobalConfig cfg = globalConfigRepository.findAll().stream().findFirst()
 				.orElseGet(DiscordGlobalConfig::new);
+		DiscordGlobalConfig previous = cfg.getId() == null ? null : copyOf(cfg);
+		restoreGlobalConfig = () -> {
+			if (previous == null) {
+				globalConfigRepository.findById(cfg.getId()).ifPresent(globalConfigRepository::delete);
+			} else {
+				globalConfigRepository.findById(previous.getId()).ifPresent(current -> {
+					applySeededFields(previous, current);
+					globalConfigRepository.save(current);
+				});
+			}
+		};
 		cfg.setGuildId(TEST_GUILD_ID);
 		cfg.setCurrentMatchCategoryId("100000000000088888");
 		cfg.setAnnouncementWebhookUrl(wmWebhookUrl(WEBHOOK_SNOWFLAKE, WEBHOOK_TOKEN));
@@ -276,6 +290,25 @@ class DiscordFullMatchdayLifecycleE2ETest extends PlaywrightConfig {
 		cfg.setBotApplicationId("100000000000077777");
 		cfg.setVsEmojiName("CTC");
 		globalConfigRepository.save(cfg);
+	}
+
+	private static DiscordGlobalConfig copyOf(DiscordGlobalConfig source) {
+		DiscordGlobalConfig copy = new DiscordGlobalConfig();
+		copy.setId(source.getId());
+		applySeededFields(source, copy);
+		return copy;
+	}
+
+	private static void applySeededFields(DiscordGlobalConfig source, DiscordGlobalConfig target) {
+		target.setGuildId(source.getGuildId());
+		target.setCurrentMatchCategoryId(source.getCurrentMatchCategoryId());
+		target.setAnnouncementWebhookUrl(source.getAnnouncementWebhookUrl());
+		target.setRaceResultsForumWebhookUrl(source.getRaceResultsForumWebhookUrl());
+		target.setRaceResultsForumChannelId(source.getRaceResultsForumChannelId());
+		target.setStandingsForumWebhookUrl(source.getStandingsForumWebhookUrl());
+		target.setStandingsForumChannelId(source.getStandingsForumChannelId());
+		target.setBotApplicationId(source.getBotApplicationId());
+		target.setVsEmojiName(source.getVsEmojiName());
 	}
 
 	private void seedRaceResults(boolean allRaces) {

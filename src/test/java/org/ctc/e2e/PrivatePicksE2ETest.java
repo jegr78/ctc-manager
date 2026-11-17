@@ -39,7 +39,7 @@ class PrivatePicksE2ETest extends PlaywrightConfig {
     @MockitoBean PickChannelPermissionSource permissions;
     TestHelper.SeasonFixture fixture;
     Long configId;
-    String oldGuild;
+    String oldGuild, oldBotApplicationId;
     boolean createdConfig;
 
     @BeforeEach
@@ -51,7 +51,9 @@ class PrivatePicksE2ETest extends PlaywrightConfig {
             fixture = helper.createFullSeasonFixture("TPE" + UUID.randomUUID().toString().substring(0, 7));
             var config = configs.findFirstByOrderByIdAsc(); createdConfig = config == null;
             if (config == null) config = new DiscordGlobalConfig();
-            oldGuild = config.getGuildId(); config.setGuildId(GUILD); configId = configs.saveAndFlush(config).getId();
+            oldGuild = config.getGuildId(); oldBotApplicationId = config.getBotApplicationId();
+            config.setGuildId(GUILD); config.setBotApplicationId(null);
+            configId = configs.saveAndFlush(config).getId();
         });
         when(discord.fetchBotUser()).thenReturn(new DiscordRestClient.BotUser(BOT, "Test bot", "0"));
         when(permissions.hasCurrentPrivateAccess(GUILD, CHANNEL, BOT)).thenReturn(true);
@@ -65,7 +67,11 @@ class PrivatePicksE2ETest extends PlaywrightConfig {
             seasons.flush();
             teams.deleteAllById(java.util.List.of(fixture.homeTeam().getId(), fixture.awayTeam().getId()));
             if (createdConfig) configs.deleteById(configId);
-            else configs.findById(configId).orElseThrow().setGuildId(oldGuild);
+            else {
+                var config = configs.findById(configId).orElseThrow();
+                config.setGuildId(oldGuild);
+                config.setBotApplicationId(oldBotApplicationId);
+            }
         });
     }
 
