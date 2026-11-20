@@ -10,6 +10,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.ctc.TestHelper;
 import org.ctc.discord.dto.DiscordPostRef;
@@ -17,6 +18,7 @@ import org.ctc.discord.dto.NamedAttachment;
 import org.ctc.discord.dto.WebhookPayload;
 import org.ctc.discord.model.DiscordPost;
 import org.ctc.discord.model.DiscordPostType;
+import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.Season;
@@ -61,6 +63,9 @@ class DiscordPostServiceWireMockIT {
 
 	@Autowired
 	private TestHelper helper;
+
+	@Autowired
+	private DiscordPostRepository postRepository;
 
 	@BeforeEach
 	void resetWireMock() {
@@ -155,6 +160,33 @@ class DiscordPostServiceWireMockIT {
 		assertThat(edited.getId()).isEqualTo(initialId);
 		assertThat(edited.getMessageId()).isEqualTo("msg-pre");
 		assertThat(edited.getAttachmentsReplacedAt()).isNull();
+	}
+
+	@Test
+	void givenExistingRow_whenEditedWithoutAttachments_thenUpdatedAtAdvances() throws Exception {
+		// given
+		Match match = seedMatch("TE");
+		String webhookPath = "/webhooks/500/tok-mno";
+		String webhookUrl = wm.baseUrl() + webhookPath;
+		wm.stubFor(post(urlPathEqualTo(webhookPath))
+				.willReturn(okJson("{\"id\":\"msg-te\",\"channel_id\":\"chan-t\"}")));
+		DiscordPost initial = service.postOrEdit("chan-t", webhookUrl, DiscordPostType.SCHEDULE,
+				new WebhookPayload("first", List.of()), List.of(), DiscordPostRef.match(match));
+		postRepository.flush();
+		LocalDateTime postedUpdatedAt = initial.getUpdatedAt();
+		wm.stubFor(patch(urlPathEqualTo(webhookPath + "/messages/msg-te"))
+				.willReturn(okJson("{\"id\":\"msg-te\",\"channel_id\":\"chan-t\"}")));
+		Thread.sleep(10);
+
+		// when
+		DiscordPost edited = service.postOrEdit("chan-t", webhookUrl, DiscordPostType.SCHEDULE,
+				new WebhookPayload("edited", List.of()), List.of(), DiscordPostRef.match(match));
+		postRepository.flush();
+
+		// then
+		assertThat(edited.getUpdatedAt())
+				.as("a text-only edit must mark the post current, otherwise the stale hint survives the re-post")
+				.isAfter(postedUpdatedAt);
 	}
 
 	@Test
