@@ -198,6 +198,20 @@ class IdleWorkerTest(unittest.TestCase):
         publisher.github.api.assert_not_called()
 
 
+class HelperLogTest(unittest.TestCase):
+    def test_helper_output_stays_out_of_the_container_log(self):
+        from unittest.mock import Mock
+        # given
+        publisher = object.__new__(publication.Publisher)
+        publisher.runtime = Mock(config={"appImage": "image"})
+        # when
+        publisher.helper("tar -cf - manifest.json site")
+        # then
+        arguments = publisher.runtime.docker.call_args.args[0]
+        self.assertEqual("none", arguments[arguments.index("--log-driver") + 1],
+                         "the snapshot tar on stdout must not be copied into the container log")
+
+
 class RequiredChecksTest(unittest.TestCase):
     def test_required_docker_checks_cannot_be_missing_even_for_owner_token(self):
         from unittest.mock import Mock

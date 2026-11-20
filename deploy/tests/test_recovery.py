@@ -596,6 +596,33 @@ class ProbeCleanupFailureTest(unittest.TestCase):
         result = json.loads((probe.directory / 'result.json').read_text())
         self.assertEqual('failed', result['status'])
 
+class DataTarStreamTest(unittest.TestCase):
+    def test_data_tar_stream_keeps_no_container_log(self):
+        # when
+        arguments = recovery.data_tar_arguments('ctc-manager_data', 'image')
+        # then
+        self.assertEqual('none', arguments[arguments.index('--log-driver') + 1],
+                         'the tar stream on stdout must not be copied into the container log')
+        self.assertLess(arguments.index('--log-driver'), arguments.index('image'))
+
+    def test_restore_check_streams_files_without_container_log(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock, patch
+        # given
+        fixture = RecoveryUnitTest()
+        fixture.setUp()
+        self.addCleanup(fixture.temp.cleanup)
+        runtime = SimpleNamespace(root=fixture.unit.parent, docker=Mock(return_value=b''))
+        probe = recovery.Probe(runtime, fixture.unit, fixture.manifest, 'sha256:' + 'a' * 64, 'sha256:' + 'b' * 64)
+        # when
+        with patch.object(recovery, 'data_inventory', return_value={}):
+            probe.verify_files()
+        # then
+        run = next(call.args[0] for call in runtime.docker.call_args_list if call.args[0][0] == 'run')
+        self.assertEqual('none', run[run.index('--log-driver') + 1],
+                         'the restore check must not copy the restored files into the container log')
+
+
 class SourceRuntimeGuardTest(unittest.TestCase):
     def setUp(self):
         from unittest.mock import Mock
