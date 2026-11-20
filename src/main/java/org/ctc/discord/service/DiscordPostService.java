@@ -975,6 +975,8 @@ public class DiscordPostService {
 						webhookUrl, row.getMessageId(), payload, attachments, threadId);
 				row.setAttachmentsReplacedAt(now);
 			}
+			// A text-only edit changes no column, so the audit listener would not advance updatedAt.
+			row.setUpdatedAt(now);
 			DiscordPost saved = discordPostRepository.save(row);
 			log.info("Edited {} for ref {} (messageId={})", type, ref, saved.getMessageId());
 			return saved;
