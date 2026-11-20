@@ -248,6 +248,35 @@ class CaptureTest(unittest.TestCase):
         self.assertTrue(self.runtime.running)
         self.assertFalse(any(p.name.startswith('recovery-') for p in self.destination.iterdir()))
 
+    def test_native_export_streams_data_without_container_log(self):
+        from unittest.mock import Mock, patch
+        # given
+        class DataStreamed(Exception):
+            pass
+        calls = []
+        def docker(arguments, **kwargs):
+            calls.append(arguments)
+            if arguments[0] == 'run':
+                raise DataStreamed()
+            return b''
+        native = object.__new__(recovery.NativeRuntime)
+        native.assert_no_other_writers = Mock()
+        native.is_app_running = Mock(return_value=False)
+        native.database_metadata = Mock(return_value={})
+        native.docker = docker
+        native.root = self.destination
+        native.deploy_root = self.destination
+        native.config = {'appImage': 'image'}
+        native.db = {'Id': 'db'}
+        # when
+        with patch('runtime.compose_spec', return_value=(None, {'CTC_DATA_VOLUME': 'ctc-manager_data'})), \
+                self.assertRaises(DataStreamed):
+            native.export(self.destination)
+        # then
+        run = next(call for call in calls if call[0] == 'run')
+        self.assertEqual('none', run[run.index('--log-driver') + 1],
+                         'the nightly capture must not copy the data volume into the container log')
+
     def test_originally_stopped_app_remains_stopped(self):
         self.runtime.running = False
         recovery.capture(self.runtime, self.destination)
@@ -515,6 +544,20 @@ class RestoreCheckTest(unittest.TestCase):
             recovery.restore_check(self.runtime, self.fixture.unit)
         self.assertEqual([], self.calls)
 
+    def test_restored_files_stream_without_container_log(self):
+        from unittest.mock import patch
+        # given
+        self.runtime.docker = lambda arguments, **kwargs: self.calls.append(arguments) or b''
+        probe = recovery.Probe(self.runtime, self.fixture.unit, self.fixture.manifest,
+                               'sha256:' + 'a' * 64, 'sha256:' + 'b' * 64)
+        # when
+        with patch.object(recovery, 'data_inventory', return_value={}):
+            probe.verify_files()
+        # then
+        run = next(call for call in self.calls if call[0] == 'run')
+        self.assertEqual('none', run[run.index('--log-driver') + 1],
+                         'the restore check must not copy the restored files into the container log')
+
 class ProbeCreationOwnershipTest(unittest.TestCase):
     def test_existing_volume_cannot_be_adopted_or_used_by_probe(self):
         from types import SimpleNamespace
@@ -595,6 +638,17 @@ class ProbeCleanupFailureTest(unittest.TestCase):
             probe.run()
         result = json.loads((probe.directory / 'result.json').read_text())
         self.assertEqual('failed', result['status'])
+
+
+class DataTarStreamTest(unittest.TestCase):
+    def test_data_tar_stream_keeps_no_container_log(self):
+        # when
+        arguments = recovery.data_tar_arguments('ctc-manager_data', 'image')
+        # then
+        self.assertEqual('none', arguments[arguments.index('--log-driver') + 1],
+                         'the tar stream on stdout must not be copied into the container log')
+        self.assertLess(arguments.index('--log-driver'), arguments.index('image'))
+
 
 class SourceRuntimeGuardTest(unittest.TestCase):
     def setUp(self):

@@ -157,6 +157,13 @@ def validate_data_archive(path, inventory=False):
     return result
 
 
+def data_tar_arguments(volume, image):
+    """Docker run arguments that stream the data volume as tar to stdout, without a container log copy."""
+    return ['run', '--rm', '--log-driver', 'none', '--network', 'none', '--read-only', '--cap-drop', 'ALL',
+            '--security-opt', 'no-new-privileges', '--mount', 'type=volume,src=' + volume + ',dst=/app/data,readonly',
+            '--entrypoint', 'tar', image, '-C', '/app/data', '-cf', '-', '.']
+
+
 def data_inventory(path):
     return validate_data_archive(path, inventory=True)
 
@@ -418,10 +425,7 @@ class NativeRuntime:
             self.docker(dump, stdout=output, timeout=1800)
         _, environment = compose_spec(self.root, self.config, self.deploy_root)
         with (staging / 'data.tar').open('xb') as output:
-            self.docker(['run', '--rm', '--network', 'none', '--read-only', '--cap-drop', 'ALL',
-                         '--security-opt', 'no-new-privileges', '--mount',
-                         'type=volume,src=' + environment['CTC_DATA_VOLUME'] + ',dst=/app/data,readonly',
-                         '--entrypoint', 'tar', self.config['appImage'], '-C', '/app/data', '-cf', '-', '.'],
+            self.docker(data_tar_arguments(environment['CTC_DATA_VOLUME'], self.config['appImage']),
                         stdout=output, timeout=1800)
         if 'installationId' not in self.config:
             self.config['installationId'] = str(uuid.uuid4())

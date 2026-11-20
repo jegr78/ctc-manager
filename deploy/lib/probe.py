@@ -150,14 +150,11 @@ class Probe:
             raise ValueError('restored schema history differs')
 
     def verify_files(self):
-        from recovery import data_inventory
+        from recovery import data_inventory, data_tar_arguments
         path = self.directory / 'restored-data.tar'
         with path.open('xb') as output:
             path.chmod(0o600)
-            self.helper('files-check', ['run', '--rm', '--network', 'none', '--read-only', '--cap-drop', 'ALL',
-                         '--security-opt', 'no-new-privileges', '--mount',
-                         'type=volume,src=' + self.volume('data') + ',dst=/app/data,readonly',
-                         '--entrypoint', 'tar', self.app_image, '-C', '/app/data', '-cf', '-', '.'], stdout=output, timeout=1800)
+            self.helper('files-check', data_tar_arguments(self.volume('data'), self.app_image), stdout=output, timeout=1800)
         if data_inventory(path) != data_inventory(self.unit / 'data.tar'):
             raise ValueError('restored file inventory differs')
         path.unlink()

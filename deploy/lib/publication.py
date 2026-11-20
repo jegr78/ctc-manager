@@ -172,7 +172,7 @@ class Publisher:
         generation = config.get('storageGeneration')
         volume = 'ctc-manager_' + (generation + '_' if generation else '') + 'data'
         clean_environment = {key: value for key, value in os.environ.items() if key not in {'GH_TOKEN', 'GITHUB_TOKEN'}}
-        return self.runtime.docker(['run', '--rm', '-i', '--network', 'none', '--read-only', '--user', 'ctc',
+        return self.runtime.docker(['run', '--rm', '-i', '--log-driver', 'none', '--network', 'none', '--read-only', '--user', 'ctc',
                 '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--memory', '128m', '--pids-limit', '32',
                 '--mount', 'type=volume,src=' + volume + ',dst=/data,volume-nocopy' + ('' if writable else ',readonly'),
                 '--entrypoint', '/bin/sh', config['appImage'], '-ec', script, 'publisher', *args],
