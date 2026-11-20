@@ -1,6 +1,6 @@
 # Stage 1: Build
 # Pinned to -noble: Playwright does not support Ubuntu 26.04 yet.
-FROM eclipse-temurin:25.0.5_8-jdk-noble AS build-dependencies
+FROM eclipse-temurin:25.0.5.1_2-jdk-noble AS build-dependencies
 
 WORKDIR /build
 
@@ -22,7 +22,7 @@ RUN ./mvnw package -DskipTests -B
 
 # Stage 2: Runtime
 # Pinned to -noble: Playwright does not support Ubuntu 26.04 yet.
-FROM eclipse-temurin:25.0.5_8-jre-noble AS browser-runtime
+FROM eclipse-temurin:25.0.5.1_2-jre-noble AS browser-runtime
 
 LABEL org.ctc.recovery.version="1"
 
