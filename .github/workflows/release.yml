@@ -99,22 +99,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.new_version }}
           IMAGE: ghcr.io/${{ github.repository_owner }}/ctc-manager
           DRY_RUN: ${{ inputs.dry-run == true }}
-        run: |
-          if [ "${DRY_RUN}" = "true" ]; then
-            echo "Dry-run: release v${VERSION} would be published"
-            exit 0
-          fi
-          echo "publish=true" >> "$GITHUB_OUTPUT"
-          if gh release view "v${VERSION}" > /dev/null 2>&1; then
-            echo "github_release=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "github_release=true" >> "$GITHUB_OUTPUT"
-          fi
-          if docker manifest inspect "${IMAGE}:${VERSION}" > /dev/null 2>&1; then
-            echo "image=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "image=true" >> "$GITHUB_OUTPUT"
-          fi
+        run: SHA=$(git rev-parse HEAD) bash scripts/ci/release-plan.sh
 
       - name: Set the release version for the build
         if: steps.plan.outputs.publish == 'true'
@@ -141,7 +126,8 @@ jobs:
           VERSION=${{ steps.version.outputs.new_version }}
           IMAGE=ghcr.io/${{ github.repository_owner }}/ctc-manager
 
-          docker build -t ${IMAGE}:${VERSION} -t ${IMAGE}:latest .
+          docker build --label "org.opencontainers.image.revision=$(git rev-parse HEAD)" \
+            -t ${IMAGE}:${VERSION} -t ${IMAGE}:latest .
           docker push ${IMAGE}:${VERSION}
           docker push ${IMAGE}:latest
 

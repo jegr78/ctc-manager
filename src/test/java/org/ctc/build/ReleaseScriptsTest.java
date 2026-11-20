@@ -18,9 +18,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Runs {@code scripts/ci/release-gate.sh} and {@code scripts/ci/release-version.sh} in a
- * temporary clone with a pushed master, and a fake {@code gh} that serves workflow-run and job JSON the way
- * {@code gh api --paginate --slurp} does, or fails like an API error.
+ * Runs the release scripts in {@code scripts/ci} in a temporary clone with a pushed master. Fake {@code gh}
+ * and {@code docker} commands serve workflow runs, jobs, an existing release and an image revision from files,
+ * or fail like an API error.
  */
 class ReleaseScriptsTest {
 
@@ -45,6 +45,16 @@ class ReleaseScriptsTest {
 		Path gh = bin.resolve("gh");
 		Files.writeString(gh, """
 				#!/usr/bin/env bash
+				if [ "$1 $2" = "release view" ]; then
+				  [ -f "$FAKE_DIR/release.fail" ] && { echo "HTTP 502: Bad Gateway" >&2; exit 1; }
+				  [ -f "$FAKE_DIR/release.txt" ] || { echo "release not found" >&2; exit 1; }
+				  cat "$FAKE_DIR/release.txt"
+				  exit 0
+				fi
+				if [ "$1 $2" = "release delete" ]; then
+				  echo "$3" >> "$FAKE_DIR/deleted.txt"
+				  exit 0
+				fi
 				[ "$1 $2 $3" = "api --method GET" ] || { echo "unexpected gh call: $*" >&2; exit 2; }
 				case "$4" in
 				  repos/owner/repo/actions/runs) file=runs ;;
@@ -58,6 +68,14 @@ class ReleaseScriptsTest {
 				printf '[%s]' "$(cat "$FAKE_DIR/$file.json")"
 				""");
 		Files.setPosixFilePermissions(gh, PosixFilePermissions.fromString("rwxr-xr-x"));
+		Path docker = bin.resolve("docker");
+		Files.writeString(docker, """
+				#!/usr/bin/env bash
+				[ "$1 $2 $3" = "buildx imagetools inspect" ] || { echo "unexpected docker call: $*" >&2; exit 2; }
+				[ -f "$FAKE_DIR/image-revision.txt" ] || { echo "not found" >&2; exit 1; }
+				cat "$FAKE_DIR/image-revision.txt"
+				""");
+		Files.setPosixFilePermissions(docker, PosixFilePermissions.fromString("rwxr-xr-x"));
 		Files.writeString(work.resolve("pom.xml"), pom("1.3.0-SNAPSHOT"));
 		git("add", "pom.xml");
 		commit("chore: initial commit");
@@ -336,7 +354,154 @@ class ReleaseScriptsTest {
 	}
 
 	@Nested
+	class Plan {
+
+		@Test
+		void givenNoReleaseAndNoImage_whenPlanned_thenEveryPartIsCreated() throws Exception {
+			// given
+			String sha = commitAndPush("fix: a bug");
+
+			// when
+			var run = plan(sha);
+
+			// then
+			assertThat(run.exit()).as("plan exit code: %s", run.output()).isZero();
+			assertThat(run.outputs()).as("plan outputs").containsEntry("publish", "true")
+					.containsEntry("github_release", "true").containsEntry("image", "true");
+		}
+
+		@Test
+		void givenDraftAndImageOfThisRevision_whenPlanned_thenTheRerunReusesBoth() throws Exception {
+			// given
+			String sha = commitAndPush("fix: a bug");
+			release(true, sha);
+			image(sha);
+
+			// when
+			var run = plan(sha);
+
+			// then
+			assertThat(run.exit()).as("plan exit code: %s", run.output()).isZero();
+			assertThat(run.outputs()).as("a rerun completes only the missing parts")
+					.containsEntry("github_release", "false").containsEntry("image", "false");
+			assertThat(bin.resolve("deleted.txt")).as("deleted releases").doesNotExist();
+		}
+
+		@Test
+		void givenDraftAndImageOfAnEarlierRevision_whenPlanned_thenBothAreReplaced() throws Exception {
+			// given
+			String earlier = commitAndPush("fix(deps): a dependency");
+			release(true, earlier);
+			image(earlier);
+			String sha = commitAndPush("fix: a bug");
+
+			// when
+			var run = plan(sha);
+
+			// then
+			assertThat(run.exit()).as("plan exit code: %s", run.output()).isZero();
+			assertThat(run.outputs()).as("the release must target the revision it contains")
+					.containsEntry("github_release", "true").containsEntry("image", "true");
+			assertThat(bin.resolve("deleted.txt")).as("the stale draft is removed").hasContent("v1.2.4");
+		}
+
+		@Test
+		void givenImageWithoutRevisionLabel_whenPlanned_thenTheImageIsRebuilt() throws Exception {
+			// given
+			String sha = commitAndPush("fix: a bug");
+			image("");
+
+			// when
+			var run = plan(sha);
+
+			// then
+			assertThat(run.outputs()).as("an image of unknown revision is never reused").containsEntry("image", "true");
+		}
+
+		@Test
+		void givenPublishedReleaseOfAnotherRevision_whenPlanned_thenThePlanFails() throws Exception {
+			// given
+			String earlier = commitAndPush("fix(deps): a dependency");
+			release(false, earlier);
+			String sha = commitAndPush("fix: a bug");
+
+			// when
+			var run = plan(sha);
+
+			// then
+			assertThat(run.exit()).as("plan exit code for a published foreign release").isNotZero();
+			assertThat(run.outputs()).as("plan outputs").doesNotContainKey("github_release");
+			assertThat(bin.resolve("deleted.txt")).as("a published release is never deleted").doesNotExist();
+		}
+
+		@Test
+		void givenDraftOfARevisionOutsideTheHistory_whenPlanned_thenThePlanFails() throws Exception {
+			// given
+			String sha = commitAndPush("fix: a bug");
+			release(true, "0123456789abcdef0123456789abcdef01234567");
+
+			// when
+			var run = plan(sha);
+
+			// then
+			assertThat(run.exit()).as("plan exit code for an unrelated draft").isNotZero();
+			assertThat(bin.resolve("deleted.txt")).as("an unrelated draft is never deleted").doesNotExist();
+		}
+
+		@Test
+		void givenReleaseApiFails_whenPlanned_thenThePlanFailsWithoutDecision() throws Exception {
+			// given
+			String sha = commitAndPush("fix: a bug");
+			Files.writeString(bin.resolve("release.fail"), "");
+
+			// when
+			var run = plan(sha);
+
+			// then
+			assertThat(run.exit()).as("plan exit code when the release API fails").isNotZero();
+			assertThat(run.outputs()).as("plan outputs").doesNotContainKey("github_release");
+		}
+
+		@Test
+		void givenDryRun_whenPlanned_thenNothingIsPublished() throws Exception {
+			// given
+			String sha = commitAndPush("fix: a bug");
+
+			// when
+			var run = script("release-plan.sh",
+					Map.of("SHA", sha, "VERSION", "1.2.4", "IMAGE", "ghcr.io/owner/ctc-manager", "DRY_RUN", "true"));
+
+			// then
+			assertThat(run.exit()).as("plan exit code: %s", run.output()).isZero();
+			assertThat(run.outputs()).as("a dry run publishes nothing").isEmpty();
+		}
+
+		private void release(boolean draft, String target) throws IOException {
+			Files.writeString(bin.resolve("release.txt"), draft + " " + target + "\n");
+		}
+
+		private void image(String revision) throws IOException {
+			Files.writeString(bin.resolve("image-revision.txt"), revision + "\n");
+		}
+
+		private Run plan(String sha) throws Exception {
+			return script("release-plan.sh",
+					Map.of("SHA", sha, "VERSION", "1.2.4", "IMAGE", "ghcr.io/owner/ctc-manager", "DRY_RUN", "false"));
+		}
+	}
+
+	@Nested
 	class Workflow {
+
+		@Test
+		void givenReleaseWorkflow_whenRead_thenThePlanChecksTheRevisionOfExistingParts() throws Exception {
+			// given
+			String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+
+			// then
+			assertThat(workflow).as("release planning").contains("bash scripts/ci/release-plan.sh")
+					.contains("--label \"org.opencontainers.image.revision=$(git rev-parse HEAD)\"");
+		}
 
 		@Test
 		void givenReleaseWorkflow_whenRead_thenItNeitherRetestsNorCommitsToMaster() throws Exception {
