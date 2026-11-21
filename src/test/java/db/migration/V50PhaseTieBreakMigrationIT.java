@@ -19,8 +19,8 @@ class V50PhaseTieBreakMigrationIT {
     @Test
     void givenV50_whenReadingColumnDefaults_thenTieBreakIsOffAndMatchupsUndecided() throws SQLException {
         // when / then
-        assertThat(defaultOf("SEASON_PHASES", "TIE_BREAK_RACE_WINNER")).as("phase flag default").containsIgnoringCase("false");
-        assertThat(defaultOf("PLAYOFF_MATCHUPS", "DECIDED_BY_TIE_BREAK")).as("matchup flag default").containsIgnoringCase("false");
+        assertThat(defaultOf("SEASON_PHASES", "TIE_BREAK_RACE_WINNER").toLowerCase()).as("phase flag default").isIn("false", "0");
+        assertThat(defaultOf("PLAYOFF_MATCHUPS", "DECIDED_BY_TIE_BREAK").toLowerCase()).as("matchup flag default").isIn("false", "0");
         assertThat(nullable("MATCHES", "TIE_BREAK_WINNER_ID")).as("tie-break winner is optional").isTrue();
     }
 
