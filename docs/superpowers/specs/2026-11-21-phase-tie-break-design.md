@@ -46,9 +46,9 @@ From the 2026 playoffs on, the league requires a winner in every playoff and pla
 - New migration `V50__phase_tie_break.sql`:
   - `season_phases.tie_break_race_winner BOOLEAN NOT NULL DEFAULT FALSE`
   - `matches.tie_break_winner_id` nullable FK to `teams`
-  - `matches.tie_break_race_id` and `playoff_matchups.tie_break_race_id`, nullable FKs to `races`: the deciding leg
-- `PlayoffMatchup` keeps its `winner` plus `decisionReason`/history; `tieBreakRace` marks that the decision came from the tie-break.
-- `tieBreakRace` is set exactly when a tie-break winner is set and belongs to the same pairing.
+  - `playoff_matchups.decided_by_tie_break BOOLEAN NOT NULL DEFAULT FALSE`
+- `PlayoffMatchup` keeps its `winner` plus `decisionReason`/history; `decidedByTieBreak` marks that the decision came from the tie-break.
+- The deciding leg is not stored: a FK from a pairing to its own race would form a restore cycle (races reference their pairing). Graphics find it with the same `TieBreakRule` over the stored legs.
 - Invariant for `Match.tieBreakWinner`: non-null only if the phase setting is on, scores are equal and non-null, the match is neither bye nor walkover, and the team is the home or away team.
 
 ### Aggregation

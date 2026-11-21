@@ -64,6 +64,9 @@ public class PlayoffMatchup extends BaseEntity {
 	@JoinColumn(name = "walkover_team_id")
 	private Team walkoverTeam;
 
+	@Column(name = "decided_by_tie_break", nullable = false)
+	private boolean decidedByTieBreak;
+
 	@Column(name = "decision_reason", length = 500)
 	private String decisionReason;
 

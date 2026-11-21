@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -90,9 +91,11 @@ public class ScoringService {
 			log.warn("Skipping match-score recompute for match {} — homeTeam is null", match.getId());
 			return;
 		}
-		int[] totals = legTotals(match);
+		var legs = raceRepository.findByMatchId(match.getId());
+		int[] totals = sumLegs(legs, match.getHomeTeam().getId(), this::lineupsOf);
 		match.setHomeScore(totals == null ? null : totals[0]);
 		match.setAwayScore(totals == null ? null : totals[1]);
+		match.setTieBreakWinner(tieBreakWinner(match, legs, totals));
 		matchRepository.save(match);
 		log.info("Recomputed match scores for match {}: {} : {}", match.getId(), match.getHomeScore(), match.getAwayScore());
 	}
@@ -115,8 +118,19 @@ public class ScoringService {
 		playoffMatchupRepository.save(matchup);
 	}
 
-	private int[] legTotals(Match match) {
-		return sumLegs(raceRepository.findByMatchId(match.getId()), match.getHomeTeam().getId(), this::lineupsOf);
+	private Team tieBreakWinner(Match match, List<Race> legs, int[] totals) {
+		var phase = match.getMatchday() == null ? null : match.getMatchday().getPhase();
+		if (phase == null || !phase.isTieBreakRaceWinner() || totals == null || totals[0] != totals[1]) return null;
+		return tieBreakDecision(legs, match.getHomeTeam().getId())
+				.map(decision -> decision.side() == TieBreakRule.Side.HOME ? match.getHomeTeam() : match.getAwayTeam())
+				.orElse(null);
+	}
+
+	/** Applies {@link TieBreakRule} to the legs of a pairing, attributing drivers like the team totals do. */
+	public Optional<TieBreakRule.Decision> tieBreakDecision(List<Race> legs, UUID homeTeamId) {
+		Map<UUID, Map<UUID, RaceLineup>> lineups = new java.util.HashMap<>();
+		return TieBreakRule.decide(legs, result -> isDriverInTeam(result, result.getRace(), homeTeamId,
+				lineups.computeIfAbsent(result.getRace().getId(), this::lineupsOf).get(result.getDriver().getId())));
 	}
 
 	private int[] legTotals(PlayoffMatchup matchup) {
