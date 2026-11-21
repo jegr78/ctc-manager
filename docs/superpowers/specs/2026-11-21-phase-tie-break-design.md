@@ -25,12 +25,14 @@ From the 2026 playoffs on, the league requires a winner in every playoff and pla
 ## Rule
 
 1. Applies only when the owning phase has the setting on and both official totals (after team penalties) are equal and non-null.
-2. Leg order is the existing `Match.races` order: `dateTime ASC NULLS LAST`, then race ID for equal or missing times. Playoff matchups use the same order.
-3. The deciding leg is the first leg in that order with driver results.
-4. The race winner is the result at classified position 1 according to `RaceClassification`. A disqualified driver is classified behind everyone else, so the next driver wins.
-5. The winning team is the side that driver scores for, using the same attribution as the team totals (RaceLineup first, parent/subteam rules, guests).
-6. Walkovers and byes are never ties and are untouched.
-7. A whole-match quick score with equal totals in an enabled phase is rejected with "Enter driver results for at least one leg to break the tie". No tied match without driver results can arise.
+2. "Match" means a regular `Match` or a `PlayoffMatchup`. Playoff legs are `Race` rows attached directly to the matchup (`Race.playoffMatchup`), not `Match` rows, so the tie is always the sum over all legs of the pairing, never a single leg.
+3. Leg order is the existing `Match.races` order: `dateTime ASC NULLS LAST`, then race ID for equal or missing times. Playoff matchups use the same order.
+4. The deciding leg is the first leg in that order with driver results.
+5. The race winner is the result at classified position 1 according to `RaceClassification`. A disqualified driver is classified behind everyone else, so the next driver wins.
+6. The winning team is the side that driver scores for, using the same attribution as the team totals (RaceLineup first, parent/subteam rules, guests).
+7. Walkovers and byes are never ties and are untouched.
+8. A whole-match quick score with equal totals in an enabled phase is always rejected before mutation with "Enter driver results for at least one leg to break the tie" (UI text is English). New tied matches without driver results cannot arise.
+9. A tie-break win counts exactly like a points win: the phase's win/loss match points, one win and one loss. Points for and against keep the equal totals. Buchholz and the points/difference ordering consume these win/loss records unchanged. (Builder call, follows "the victory will be awarded".)
 
 ## Approaches
 
@@ -50,12 +52,14 @@ From the 2026 playoffs on, the league requires a winner in every playoff and pla
 ### Aggregation
 
 - `ScoringService.recomputeMatchScores` sets or clears `tieBreakWinner` after writing totals, under the existing score-write locks.
+- Turning the setting off clears every `tieBreakWinner` in the phase. Decided playoff matchups keep their winner and history.
 - Changing the phase setting re-aggregates every scored match of that phase in the same transaction, through the owning-season lock used for other scoring changes.
 - A quick score sets the totals without results. In an enabled phase, `RaceService.quickScore` rejects equal totals before mutation.
 
 ### Playoffs
 
 - `PlayoffService.determineWinner`: on equal totals with the setting on, it determines the race winner per the rule and decides the matchup with the system reason "Tie-break: race winner of leg N" and the existing decision history. Without the setting, or without any leg with driver results, the existing tie rejection stays.
+- A decided matchup is already protected: `PlayoffDecisionGuard` rejects result changes until the matchup is reopened, and `determineWinner` runs again after reopening. No silent divergence can arise.
 - `setWinnerManually` remains available. A tie-break winner counts as the points leader, so no reason is required for that team.
 
 ### Readers
@@ -77,7 +81,7 @@ Views mark a tie-break win as such (for example "won on tie-break") next to the 
 
 - Backup schema 28 exports the phase flag and `Match.tieBreakWinner` as a UUID, eagerly fetched like `walkoverTeam`.
 - Schemas 1 to 27 restore with the flag false and no tie-break winner. Preflight rejects these fields in older schemas.
-- Schema 28 preflight validates the invariant above before wipe, without rescoring.
+- Schema 28 preflight validates the invariant above before wipe, without rescoring, including that `tieBreakWinner` references the match's own home or away team present in the archive. (Current schema verified as 27.)
 - Restore keeps the stored value and does not reaggregate.
 - The read-only Data Audit reports matches in enabled phases with equal totals and no tie-break winner, and tie-break winners that break the invariant or differ from the rule.
 
