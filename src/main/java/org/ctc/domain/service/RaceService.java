@@ -375,6 +375,9 @@ public class RaceService {
         if (legs.stream().anyMatch(penaltyGuard::protects) || legs.stream().anyMatch(disqualificationGuard::protects)) {
             throw new BusinessRuleException("Quick scores cannot replace a match with penalty or DSQ history; enter or correct each leg's driver results");
         }
+		if (race.getMatch() != null && homeScore == awayScore && race.getMatch().getMatchday().getPhase().isTieBreakRaceWinner()) {
+			throw new BusinessRuleException("Enter driver results for at least one leg to break the tie");
+		}
 		if (race.getMatch() != null) {
 			race.getMatch().setHomeScore(race.hasTeamOverrides() ? awayScore : homeScore);
 			race.getMatch().setAwayScore(race.hasTeamOverrides() ? homeScore : awayScore);

@@ -262,49 +262,90 @@ class PlayoffServiceTest {
 	@Nested
 	class TieBreaking {
 
-		@Test
-		void givenTiedScores_whenDetermineWinner_thenThrowsException() {
-			// given
+		private UUID tiedMatchup(boolean tieBreakRule) {
 			var playoff = playoffService.createPlayoff(season.getId(), "Tie Test", 4);
+			if (tieBreakRule) {
+				var phase = playoff.getPhase();
+				phase.setTieBreakRaceWinner(true);
+				seasonPhaseRepository.save(phase);
+			}
 			var sf = playoff.getRounds().get(0).getMatchups();
-
 			playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(0).getId(), 1);
 			playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(1).getId(), 2);
-
-			// Matchday is bound to a SeasonPhase (PLAYOFF here).
 			var matchday = matchdayRepository.save(new Matchday(playoff.getPhase(), "HF", 1));
 			var matchup = playoffMatchupRepository.findById(sf.get(0).getId()).orElseThrow();
-
 			var race = new Race();
 			race.setMatchday(matchday);
 			race.setPlayoffMatchup(matchup);
 			race = raceRepository.save(race);
-
-			var team0Drivers = seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), teams.get(0).getId());
-			var team1Drivers = seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), teams.get(1).getId());
-
 			int pos = 1;
-			for (var sd : team0Drivers) {
-				var rr = new RaceResult(race, sd.getDriver(), pos, pos, false);
-				scoringService.calculatePoints(rr, raceScoring);
-				rr.setPointsTotal(25);
-				race.getResults().add(rr);
-				pos++;
-			}
-			for (var sd : team1Drivers) {
-				var rr = new RaceResult(race, sd.getDriver(), pos, pos, false);
-				scoringService.calculatePoints(rr, raceScoring);
-				rr.setPointsTotal(25);
-				race.getResults().add(rr);
-				pos++;
+			for (var team : List.of(teams.get(0), teams.get(1))) {
+				for (var sd : seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), team.getId())) {
+					var rr = new RaceResult(race, sd.getDriver(), pos, pos, false);
+					scoringService.calculatePoints(rr, raceScoring);
+					rr.setPointsTotal(25);
+					race.getResults().add(rr);
+					pos++;
+				}
 			}
 			raceRepository.save(race);
 			entityManager.flush();
 			entityManager.clear();
+			return sf.get(0).getId();
+		}
 
+		@Test
+		void givenTiedScores_whenDetermineWinner_thenThrowsException() {
+			// given
+			var matchupId = tiedMatchup(false);
 			// when / then
-			assertThrows(IllegalStateException.class, () ->
-					playoffService.determineWinner(sf.get(0).getId()));
+			assertThrows(IllegalStateException.class, () -> playoffService.determineWinner(matchupId));
+		}
+
+		@Test
+		void givenTieBreakPhaseAndTie_whenDetermineWinner_thenRaceWinnerDecidedWithReason() {
+			// given
+			var matchupId = tiedMatchup(true);
+			// when
+			playoffService.determineWinner(matchupId);
+			// then
+			var resolved = playoffMatchupRepository.findById(matchupId).orElseThrow();
+			assertEquals(teams.get(0).getId(), resolved.getWinner().getId(), "team 0 driver won the race");
+			assertEquals("Tie-break: race winner of leg 1", resolved.getDecisionReason());
+			assertTrue(resolved.isDecidedByTieBreak(), "decision is marked as tie-break");
+			assertEquals(resolved.getHomeScore(), resolved.getAwayScore(), "scores stay tied");
+			assertEquals(teams.get(0).getId(), resolved.getNextMatchup().getTeam1().getId(), "winner advanced");
+		}
+
+		@Test
+		void givenTieBreakWinner_whenSetWinnerManuallyWithoutReason_thenAccepted() {
+			// given
+			var matchupId = tiedMatchup(true);
+			// when
+			playoffService.setWinnerManually(matchupId, teams.get(0).getId(), null);
+			// then
+			var resolved = playoffMatchupRepository.findById(matchupId).orElseThrow();
+			assertEquals(teams.get(0).getId(), resolved.getWinner().getId());
+			assertTrue(resolved.isDecidedByTieBreak(), "manual choice of the tie-break winner is a tie-break decision");
+		}
+
+		@Test
+		void givenTieBreakPhase_whenSetOtherWinnerWithoutReason_thenRejected() {
+			// given
+			var matchupId = tiedMatchup(true);
+			// when / then
+			assertThrows(IllegalStateException.class, () -> playoffService.setWinnerManually(matchupId, teams.get(1).getId(), null));
+		}
+
+		@Test
+		void givenTieBreakDecision_whenReopen_thenTieBreakMarkerCleared() {
+			// given
+			var matchupId = tiedMatchup(true);
+			playoffService.determineWinner(matchupId);
+			// when
+			playoffService.reopen(matchupId, "Result correction");
+			// then
+			assertFalse(playoffMatchupRepository.findById(matchupId).orElseThrow().isDecidedByTieBreak());
 		}
 	}
 
