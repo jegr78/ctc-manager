@@ -39,6 +39,12 @@ class SeasonPhaseServiceTest {
     @Mock
     private TeamRepository teamRepository;
 
+    @Mock
+    private MatchRepository matchRepository;
+
+    @Mock
+    private PlayoffMatchupRepository playoffMatchupRepository;
+
     @InjectMocks
     private SeasonPhaseService seasonPhaseService;
 
@@ -429,6 +435,64 @@ class SeasonPhaseServiceTest {
         var captor = ArgumentCaptor.forClass(SeasonPhase.class);
         verify(seasonPhaseRepository).save(captor.capture());
         assertThat(captor.getValue().getPhaseType()).isEqualTo(PhaseType.REGULAR);
+    }
+
+    @Test
+    void givenScoredMatch_whenToggleTieBreak_thenRejected() {
+        // given
+        var phase = PhaseTestFixtures.regularPhase(buildSeason("T-TieBreak-Scored"), null, null);
+        when(seasonPhaseRepository.findById(phase.getId())).thenReturn(Optional.of(phase));
+        when(matchRepository.existsScoredInPhase(phase.getId())).thenReturn(true);
+        // when / then
+        assertThatThrownBy(() -> updateTieBreak(phase, true))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("This phase has scored pairings. Keep its tie-break setting and use a new phase for a different rule.");
+        assertThat(phase.isTieBreakRaceWinner()).isFalse();
+        verify(seasonPhaseRepository, never()).save(any(SeasonPhase.class));
+    }
+
+    @Test
+    void givenDecidedPlayoffMatchup_whenToggleTieBreak_thenRejected() {
+        // given
+        var phase = PhaseTestFixtures.regularPhase(buildSeason("T-TieBreak-Playoff"), null, null);
+        when(seasonPhaseRepository.findById(phase.getId())).thenReturn(Optional.of(phase));
+        when(playoffMatchupRepository.existsScoredInPhase(phase.getId())).thenReturn(true);
+        // when / then
+        assertThatThrownBy(() -> updateTieBreak(phase, true)).isInstanceOf(BusinessRuleException.class);
+    }
+
+    @Test
+    void givenUnscoredPhase_whenToggleTieBreak_thenSaved() {
+        // given
+        var phase = PhaseTestFixtures.regularPhase(buildSeason("T-TieBreak-Open"), null, null);
+        when(seasonPhaseRepository.findById(phase.getId())).thenReturn(Optional.of(phase));
+        when(matchdayRepository.findByPhaseId(phase.getId())).thenReturn(List.of());
+        when(seasonPhaseRepository.save(any(SeasonPhase.class))).thenAnswer(inv -> inv.getArgument(0));
+        // when
+        updateTieBreak(phase, true);
+        // then
+        assertThat(phase.isTieBreakRaceWinner()).isTrue();
+    }
+
+    @Test
+    void givenScoredPhase_whenSaveUnchangedFlag_thenOtherFieldsSaved() {
+        // given
+        var phase = PhaseTestFixtures.regularPhase(buildSeason("T-TieBreak-Unchanged"), null, null);
+        phase.setTieBreakRaceWinner(true);
+        when(seasonPhaseRepository.findById(phase.getId())).thenReturn(Optional.of(phase));
+        when(matchdayRepository.findByPhaseId(phase.getId())).thenReturn(List.of());
+        when(seasonPhaseRepository.save(any(SeasonPhase.class))).thenAnswer(inv -> inv.getArgument(0));
+        // when
+        updateTieBreak(phase, true);
+        // then
+        assertThat(phase.getLabel()).isEqualTo("T-TieBreak-Label");
+        verify(matchRepository, never()).existsScoredInPhase(any());
+    }
+
+    private void updateTieBreak(SeasonPhase phase, boolean tieBreak) {
+        seasonPhaseService.update(phase.getId(), phase.getLayout(), phase.getFormat(),
+                null, null, null, null, null, phase.getLegs(), null, "T-TieBreak-Label",
+                phase.getSortIndex(), tieBreak);
     }
 
     // Helpers

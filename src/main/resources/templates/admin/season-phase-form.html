@@ -107,6 +107,11 @@ th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
                             </p>
                         </div>
                     </div>
+                    <div class="form-group">
+                        <input type="checkbox" th:field="*{tieBreakRaceWinner}" aria-describedby="tieBreakRaceWinner-hint">
+                        <label for="tieBreakRaceWinner1">Tie-break by race winner</label>
+                        <p id="tieBreakRaceWinner-hint" class="text-dim form-hint--sm">A tied match goes to the team whose driver wins the first leg with results.</p>
+                    </div>
                 </fieldset>
                 <fieldset id="phase-schedule">
                     <legend>Schedule</legend>

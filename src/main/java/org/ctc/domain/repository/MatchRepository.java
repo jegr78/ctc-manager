@@ -45,6 +45,10 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
 	 * {@code homeTeam}, {@code awayTeam}.
 	 */
 	@EntityGraph(attributePaths = {"matchday", "homeTeam", "awayTeam", "walkoverTeam"})
+	@Query("SELECT COUNT(m) > 0 FROM Match m WHERE m.matchday.phase.id = :phaseId AND m.bye = false "
+			+ "AND (m.homeScore IS NOT NULL OR m.awayScore IS NOT NULL OR m.walkoverTeam IS NOT NULL)")
+	boolean existsScoredInPhase(UUID phaseId);
+
 	@Query("SELECT e FROM Match e")
 	List<Match> findAllForBackup();
 }

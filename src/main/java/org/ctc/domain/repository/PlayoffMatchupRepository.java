@@ -28,6 +28,10 @@ public interface PlayoffMatchupRepository extends JpaRepository<PlayoffMatchup, 
 	 * {@code team1}, {@code team2}, {@code winner}, {@code nextMatchup} (self-FK).
 	 */
 	@EntityGraph(attributePaths = {"round", "team1", "team2", "winner", "nextMatchup"})
+	@Query("SELECT COUNT(pm) > 0 FROM PlayoffMatchup pm WHERE pm.round.playoff.phase.id = :phaseId AND pm.bye = false "
+			+ "AND (pm.homeScore IS NOT NULL OR pm.awayScore IS NOT NULL OR pm.winner IS NOT NULL)")
+	boolean existsScoredInPhase(UUID phaseId);
+
 	@Query("SELECT e FROM PlayoffMatchup e")
 	List<PlayoffMatchup> findAllForBackup();
 }

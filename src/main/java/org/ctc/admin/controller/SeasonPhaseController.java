@@ -200,6 +200,7 @@ public class SeasonPhaseController {
         form.setEndDate(phase.getEndDate());
         form.setTotalRounds(phase.getTotalRounds());
         form.setLegs(phase.getLegs());
+        form.setTieBreakRaceWinner(phase.isTieBreakRaceWinner());
         form.setEventDurationMinutes(phase.getEventDurationMinutes());
         form.setLabel(phase.getLabel());
         form.setSortIndex(phase.getSortIndex());
@@ -237,7 +238,7 @@ public class SeasonPhaseController {
                         form.getRaceScoringId(), form.getMatchScoringId(),
                         form.getStartDate(), form.getEndDate(),
                         form.getTotalRounds(), form.getLegs(), form.getEventDurationMinutes(),
-                        form.getLabel(), form.getSortIndex());
+                        form.getLabel(), form.getSortIndex(), form.isTieBreakRaceWinner());
                 redirectAttributes.addFlashAttribute("successMessage", "Phase updated");
                 return "redirect:/admin/seasons/" + seasonId + "/phases/" + form.getId();
             }
@@ -250,6 +251,7 @@ public class SeasonPhaseController {
                         /* numberOfTeams */ 4,
                         form.getStartDate(), form.getEndDate(),
                         form.getEventDurationMinutes());
+                if (form.isTieBreakRaceWinner()) seasonPhaseService.setTieBreakRaceWinner(playoff.getPhase().getId(), true);
                 redirectAttributes.addFlashAttribute("successMessage", "Playoff phase created: " + playoff.getName());
                 return "redirect:/admin/seasons/" + seasonId;
             }
@@ -269,6 +271,7 @@ public class SeasonPhaseController {
                     sortIndex, form.getLabel(), raceScoring, matchScoring,
                     form.getFormat(), form.getStartDate(), form.getEndDate(),
                     form.getTotalRounds(), form.getLegs(), form.getEventDurationMinutes());
+            if (form.isTieBreakRaceWinner()) seasonPhaseService.setTieBreakRaceWinner(phase.getId(), true);
             redirectAttributes.addFlashAttribute("successMessage", "Phase created");
             return "redirect:/admin/seasons/" + seasonId + "/phases/" + phase.getId();
 
