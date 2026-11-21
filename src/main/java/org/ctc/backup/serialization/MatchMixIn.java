@@ -22,4 +22,7 @@ public abstract class MatchMixIn {
 
     @JsonIdentityReference(alwaysAsId = true)
     abstract Team getWalkoverTeam();
+
+    @JsonIdentityReference(alwaysAsId = true)
+    abstract Team getTieBreakWinner();
 }

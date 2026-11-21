@@ -170,6 +170,53 @@ class DataAuditServiceIT {
         assertThat(matchRepository.findByMatchdayId(fixture.matchday().getId())).hasSize(2);
     }
 
+    @Test void givenTieBreakPhaseWithUnresolvedTie_whenAuditing_thenReportWithoutRepair() {
+        // given
+        var fixture = testHelper.createFullSeasonFixture("TTbOpen" + id);
+        fixture.matchday().getPhase().setTieBreakRaceWinner(true);
+        fixture.match().setHomeScore(40); fixture.match().setAwayScore(40);
+        entityManager.flush(); entityManager.clear();
+        // when / then
+        assertThat(dataAuditService.audit().findings(PAIRING)).anySatisfy(f -> {
+            assertThat(f.subject()).contains(fixture.match().getId().toString());
+            assertThat(f.evidence()).contains("tied match without a tie-break winner");
+        });
+        assertThat(entityManager.find(Match.class, fixture.match().getId()).getTieBreakWinner()).as("audit does not repair").isNull();
+    }
+
+    @Test void givenTieBreakWinnerBreakingInvariant_whenAuditing_thenReport() {
+        // given
+        var fixture = testHelper.createFullSeasonFixture("TTbBad" + id);
+        fixture.match().setHomeScore(41); fixture.match().setAwayScore(40); fixture.match().setTieBreakWinner(fixture.awayTeam());
+        entityManager.flush(); entityManager.clear();
+        // when / then
+        assertThat(dataAuditService.audit().findings(PAIRING)).anySatisfy(f -> {
+            assertThat(f.subject()).contains(fixture.match().getId().toString());
+            assertThat(f.evidence()).contains("tie-break winner breaks the rule");
+        });
+    }
+
+    @Test void givenStoredTieBreakWinnerDifferingFromRaceWinner_whenAuditing_thenReport() {
+        // given
+        var fixture = testHelper.createFullSeasonFixture("TTbDiff" + id);
+        fixture.matchday().getPhase().setTieBreakRaceWinner(true);
+        var homeDriver = testHelper.createDriver("Test_TB_home_" + id, "TB home");
+        var awayDriver = testHelper.createDriver("Test_TB_away_" + id, "TB away");
+        entityManager.persist(new org.ctc.domain.model.RaceLineup(fixture.race(), homeDriver, fixture.homeTeam()));
+        entityManager.persist(new org.ctc.domain.model.RaceLineup(fixture.race(), awayDriver, fixture.awayTeam()));
+        var winner = new org.ctc.domain.model.RaceResult(fixture.race(), homeDriver, 1, 1, false); winner.setPointsTotal(20);
+        var second = new org.ctc.domain.model.RaceResult(fixture.race(), awayDriver, 2, 2, false); second.setPointsTotal(20);
+        entityManager.persist(winner); entityManager.persist(second);
+        fixture.race().getResults().add(winner); fixture.race().getResults().add(second);
+        fixture.match().setHomeScore(20); fixture.match().setAwayScore(20); fixture.match().setTieBreakWinner(fixture.awayTeam());
+        entityManager.flush(); entityManager.clear();
+        // when / then
+        assertThat(dataAuditService.audit().findings(PAIRING)).anySatisfy(f -> {
+            assertThat(f.subject()).contains(fixture.match().getId().toString());
+            assertThat(f.evidence()).contains("differs from the race winner");
+        });
+    }
+
     @Test void givenPlayoffRaceWithWalkoverOnRegularAnchor_whenAuditing_thenReportWithoutRewritingEitherMarker() {
         var fixture = testHelper.createFullSeasonFixture("Test_PO_WO_Audit_" + id);
         var playoff = testHelper.createPlayoffInPhase(fixture.season(), "Test audit final " + id, 2);

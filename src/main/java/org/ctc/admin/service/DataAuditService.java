@@ -112,6 +112,7 @@ public class DataAuditService {
 		auditMatchAggregates(matches, legs, findings.get(STALE_AGGREGATE));
 		auditPlayoffAggregates(matchups, legs, findings.get(STALE_AGGREGATE));
 		auditPairings(matches, findings.get(PAIRING));
+		auditTieBreaks(matches, findings.get(PAIRING));
         auditSwissRounds(matchdayRepository.findAll(), matches, phaseTeams, findings.get(PAIRING));
         for (var race : races) {
             if (race.getPlayoffMatchup() != null && race.getMatch() != null && race.getMatch().getWalkoverTeam() != null)
@@ -387,6 +388,38 @@ public class DataAuditService {
 					"%d matches for one pairing on this matchday%s: %s".formatted(pairing.size(),
 							reversed ? ", in both orientations" : "", ids(pairing, Match::getId)),
 					"Decide which match keeps the legs and results, and merge the others into it"));
+		}
+	}
+
+	private void auditTieBreaks(List<Match> matches, List<DataAuditFinding> out) {
+		for (Match match : matches) {
+			var phase = match.getMatchday().getPhase();
+			var winner = match.getTieBreakWinner();
+			boolean tied = match.getHomeScore() != null && match.getHomeScore().equals(match.getAwayScore())
+					&& !match.isBye() && match.getWalkoverTeam() == null;
+			if (!org.ctc.domain.model.TieBreakRules.valid(phase.isTieBreakRaceWinner(), winner == null ? null : winner.getId(),
+					match.getHomeTeam() == null ? null : match.getHomeTeam().getId(),
+					match.getAwayTeam() == null ? null : match.getAwayTeam().getId(),
+					match.getHomeScore(), match.getAwayScore(), match.isBye(),
+					match.getWalkoverTeam() == null ? null : match.getWalkoverTeam().getId())) {
+				out.add(new DataAuditFinding(PAIRING, AMBIGUOUS, describe(match),
+						"The stored tie-break winner breaks the rule: it needs a tied, played pairing in a phase with the tie-break rule",
+						"Review the match result and correct the scores or the tie-break winner explicitly."));
+				continue;
+			}
+			if (!tied || !phase.isTieBreakRaceWinner()) continue;
+			var expected = scoringService.tieBreakDecision(raceRepository.findByMatchId(match.getId()), match.getHomeTeam().getId())
+					.map(decision -> decision.side() == org.ctc.domain.model.TieBreakRule.Side.HOME ? match.getHomeTeam() : match.getAwayTeam());
+			if (winner == null) {
+				out.add(new DataAuditFinding(PAIRING, expected.isPresent() ? RECONSTRUCTIBLE : UNDETERMINABLE, describe(match),
+						"A tied match without a tie-break winner in a phase with the tie-break rule",
+						expected.isPresent() ? "Save the results of the deciding leg again to store the tie-break winner."
+								: "Enter driver results for at least one leg; do not invent a winner."));
+			} else if (expected.isPresent() && !expected.get().getId().equals(winner.getId())) {
+				out.add(new DataAuditFinding(PAIRING, RECONSTRUCTIBLE, describe(match),
+						"The stored tie-break winner differs from the race winner of the deciding leg",
+						"Save the results of the deciding leg again to recompute the tie-break winner."));
+			}
 		}
 	}
 

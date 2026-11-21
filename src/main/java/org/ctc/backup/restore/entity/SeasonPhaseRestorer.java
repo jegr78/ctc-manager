@@ -52,8 +52,8 @@ public class SeasonPhaseRestorer implements EntityRestorer {
     private static final String INSERT_SQL =
             "INSERT INTO season_phases (id, season_id, sort_index, phase_type, layout, format, "
                     + "label, start_date, end_date, total_rounds, legs, event_duration_minutes, "
-                    + "race_scoring_id, match_scoring_id, created_at, updated_at) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    + "race_scoring_id, match_scoring_id, created_at, updated_at, tie_break_race_winner) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     @Override
     public String tableName() {
@@ -80,6 +80,7 @@ public class SeasonPhaseRestorer implements EntityRestorer {
                     ps.setObject(14, nullableUuid(row, "matchScoring"));
                     ps.setTimestamp(15, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
                     ps.setTimestamp(16, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
+                    ps.setBoolean(17, row.path("tieBreakRaceWinner").asBoolean(false));
                 });
         log.debug("SeasonPhaseRestorer: restored {} rows", rows.size());
     }
