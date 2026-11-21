@@ -52,8 +52,8 @@ From the 2026 playoffs on, the league requires a winner in every playoff and pla
 ### Aggregation
 
 - `ScoringService.recomputeMatchScores` sets or clears `tieBreakWinner` after writing totals, under the existing score-write locks.
-- Turning the setting off clears every `tieBreakWinner` in the phase. Decided playoff matchups keep their winner and history.
-- Changing the phase setting re-aggregates every scored match of that phase in the same transaction, through the owning-season lock used for other scoring changes.
+- The setting is locked once the phase has any scored pairing: a `Match` with scores or a walkover, a `PlayoffMatchup` with scores or a winner, or any leg with driver results. Byes do not count. Changing it then is rejected under the owning-season lock, like the existing rule that a scored phase's race-scoring reference cannot change. Because no scored pairing exists while the setting changes, no re-aggregation or clearing is needed.
+- Historical seasons have not been imported yet. Their phases keep the default off. Whoever imports them sets the flag before importing results if a phase used the rule.
 - A quick score sets the totals without results. In an enabled phase, `RaceService.quickScore` rejects equal totals before mutation.
 
 ### Playoffs
