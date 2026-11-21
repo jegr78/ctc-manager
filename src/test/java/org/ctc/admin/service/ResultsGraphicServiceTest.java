@@ -59,6 +59,46 @@ class ResultsGraphicServiceTest {
         assertThat(createService().buildHtml(race)).contains("<span>false</span><span>true</span><span>81</span><span>0</span><span>0</span>");
     }
 
+    @Test
+    void givenDecidingLegTie_whenBuildHtml_thenWinnerAndTieBreakBadge() throws Exception {
+        // given
+        var fixture = tiedRace();
+        when(scoringService.tieBreakWinnerForLeg(fixture.race())).thenReturn(Optional.of(fixture.away()));
+        Files.copy(Path.of("src/main/resources/templates/admin/results-render.html"), tempDir.resolve("results-template.html"));
+        // when
+        var html = createService().buildHtml(fixture.race());
+        // then
+        assertThat(html).as("badge on the away card").contains("TIE-BREAK");
+        assertThat(org.jsoup.Jsoup.parse(html).select(".footer .team-total.winner").text()).as("away total marked").isEqualTo("40");
+        assertThat(org.jsoup.Jsoup.parse(html).select(".footer .team-total.winner")).hasSize(1);
+    }
+
+    @Test
+    void givenOtherLegOfTieBreakMatch_whenBuildHtml_thenNoBadge() throws Exception {
+        // given
+        var fixture = tiedRace();
+        when(scoringService.tieBreakWinnerForLeg(fixture.race())).thenReturn(Optional.empty());
+        Files.writeString(tempDir.resolve("results-template.html"), "<span th:text=\"${homeIsWinner}\"></span><span th:text=\"${awayIsWinner}\"></span><span th:text=\"${homeIsTieBreakWinner}\"></span><span th:text=\"${awayIsTieBreakWinner}\"></span>");
+        // when / then
+        assertThat(createService().buildHtml(fixture.race())).contains("<span>false</span><span>false</span><span>false</span><span>false</span>");
+    }
+
+    private record TiedRace(Race race, Team away) { }
+
+    private TiedRace tiedRace() throws IOException {
+        var season = new Season("Test tie-break graphic"); season.setId(UUID.randomUUID());
+        var day = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Test round", 1);
+        var home = new Team("Test home", "TBH"); home.setId(UUID.randomUUID());
+        var away = new Team("Test away", "TBA"); away.setId(UUID.randomUUID());
+        var race = new Race(); race.setId(UUID.randomUUID()); race.setMatchday(day); race.setMatch(new Match(day, home, away));
+        race.getResults().add(createResult(race, "tb_away", "Away", away, 1, 20));
+        race.getResults().add(createResult(race, "tb_home", "Home", home, 2, 20));
+        var cards = tempDir.resolve("team-cards").resolve(season.getId().toString()); Files.createDirectories(cards);
+        Files.write(cards.resolve("TBH.png"), new byte[]{1}); Files.write(cards.resolve("TBA.png"), new byte[]{1});
+        when(scoringService.calculateRaceTotals(race, home.getId())).thenReturn(RacePenaltyTotals.calculate(40, 40, 0, 0));
+        return new TiedRace(race, away);
+    }
+
 	@Test
 	void givenRaceWithEvenTeams_whenBuildResultRows_thenRowsSortedByPointsDescending() {
 		// given

@@ -111,8 +111,13 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
         var forfeiter = WalkoverScoring.forfeitingTeam(race);
         ctx.setVariable("homeIsWalkover", forfeiter != null && homeTeam.getId().equals(forfeiter.getId()));
         ctx.setVariable("awayIsWalkover", forfeiter != null && awayTeam.getId().equals(forfeiter.getId()));
-		ctx.setVariable("homeIsWinner", homeTotal > awayTotal);
-		ctx.setVariable("awayIsWinner", awayTotal > homeTotal);
+		var tieBreakWinner = scoringService.tieBreakWinnerForLeg(race);
+		boolean homeTieBreak = tieBreakWinner.filter(team -> team.getId().equals(homeTeam.getId())).isPresent();
+		boolean awayTieBreak = tieBreakWinner.isPresent() && !homeTieBreak;
+		ctx.setVariable("homeIsWinner", homeTotal > awayTotal || homeTotal == awayTotal && homeTieBreak);
+		ctx.setVariable("awayIsWinner", awayTotal > homeTotal || homeTotal == awayTotal && awayTieBreak);
+		ctx.setVariable("homeIsTieBreakWinner", homeTieBreak);
+		ctx.setVariable("awayIsTieBreakWinner", awayTieBreak);
 		ctx.setVariable("resultRows", resultRows);
 		ctx.setVariable("ctcLogoBase64", encodeClasspathResource(CTC_LOGO_CLASSPATH, "image/png"));
 		ctx.setVariable("fontBase64", encodeClasspathResource(FONT_CLASSPATH, "font/woff2"));

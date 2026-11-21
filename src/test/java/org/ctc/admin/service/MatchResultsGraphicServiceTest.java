@@ -51,6 +51,47 @@ class MatchResultsGraphicServiceTest {
 	}
 
     @Test
+    void givenTieBreakMatch_whenBuildHtml_thenWinnerAndTieBreakBadge() throws Exception {
+        // given
+        var season = new Season("Test tie-break match"); season.setId(UUID.randomUUID());
+        var day = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Test round", 1);
+        var home = new Team("Test home", "TBH"); home.setId(UUID.randomUUID());
+        var away = new Team("Test away", "TBA"); away.setId(UUID.randomUUID());
+        var match = new Match(day, home, away); match.setId(UUID.randomUUID());
+        match.setHomeScore(40); match.setAwayScore(40); match.setTieBreakWinner(home);
+        match.getRaces().add(createRaceWithResults(match, day, home, 40, 40));
+        var cards = tempDir.resolve("team-cards").resolve(season.getId().toString()); Files.createDirectories(cards);
+        Files.write(cards.resolve("TBH.png"), new byte[]{1}); Files.write(cards.resolve("TBA.png"), new byte[]{1});
+        Files.copy(Path.of("src/main/resources/templates/admin/match-results-render.html"), tempDir.resolve("match-results-template.html"));
+        // when
+        var html = createService().buildHtml(match);
+        // then
+        var doc = org.jsoup.Jsoup.parse(html);
+        assertThat(html).contains("TIE-BREAK");
+        assertThat(doc.select(".footer .team-total.winner")).as("only the tie-break winner is marked").hasSize(1);
+        assertThat(doc.select(".footer .team-total").first().hasClass("winner")).as("home won").isTrue();
+    }
+
+    @Test
+    void givenRegularDraw_whenBuildHtml_thenNoWinnerNoBadge() throws Exception {
+        // given
+        var season = new Season("Test draw match"); season.setId(UUID.randomUUID());
+        var day = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Test round", 1);
+        var home = new Team("Test home", "TDH"); home.setId(UUID.randomUUID());
+        var away = new Team("Test away", "TDA"); away.setId(UUID.randomUUID());
+        var match = new Match(day, home, away); match.setId(UUID.randomUUID());
+        match.getRaces().add(createRaceWithResults(match, day, home, 40, 40));
+        var cards = tempDir.resolve("team-cards").resolve(season.getId().toString()); Files.createDirectories(cards);
+        Files.write(cards.resolve("TDH.png"), new byte[]{1}); Files.write(cards.resolve("TDA.png"), new byte[]{1});
+        Files.copy(Path.of("src/main/resources/templates/admin/match-results-render.html"), tempDir.resolve("match-results-template.html"));
+        // when
+        var html = createService().buildHtml(match);
+        // then
+        assertThat(html).doesNotContain("TIE-BREAK");
+        assertThat(org.jsoup.Jsoup.parse(html).select(".footer .team-total.winner")).isEmpty();
+    }
+
+    @Test
     void givenWalkoverWithTwoEmptyLegs_whenBuildingGraphic_thenOneTeamOnlyScoreWithoutBonuses() {
         var home = new Team("Test walkover home", "T-WOH"); home.setId(UUID.randomUUID());
         var away = new Team("Test walkover away", "T-WOA"); away.setId(UUID.randomUUID());
