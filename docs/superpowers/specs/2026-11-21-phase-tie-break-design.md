@@ -46,7 +46,9 @@ From the 2026 playoffs on, the league requires a winner in every playoff and pla
 - New migration `V50__phase_tie_break.sql`:
   - `season_phases.tie_break_race_winner BOOLEAN NOT NULL DEFAULT FALSE`
   - `matches.tie_break_winner_id` nullable FK to `teams`
-- `PlayoffMatchup` needs no new column. Its existing `winner` plus `decisionReason`/history record a tie-break decision.
+  - `matches.tie_break_race_id` and `playoff_matchups.tie_break_race_id`, nullable FKs to `races`: the deciding leg
+- `PlayoffMatchup` keeps its `winner` plus `decisionReason`/history; `tieBreakRace` marks that the decision came from the tie-break.
+- `tieBreakRace` is set exactly when a tie-break winner is set and belongs to the same pairing.
 - Invariant for `Match.tieBreakWinner`: non-null only if the phase setting is on, scores are equal and non-null, the match is neither bye nor walkover, and the team is the home or away team.
 
 ### Aggregation
@@ -72,6 +74,13 @@ Every place that derives win/draw/loss from scores reads the stored outcome inst
 - Public match cards and matchday pages
 
 Views mark a tie-break win as such (for example "won on tie-break") next to the equal score. The builder must grep for every comparison of home/away scores and route it through the shared method.
+
+### Results graphics
+
+- Race results graphic of the deciding leg and the match results graphic mark the tie-break winner as winner and add a badge "TIE-BREAK" on that side. No reason line.
+- Other legs' race graphics stay unchanged.
+- New template variables `homeIsTieBreakWinner` and `awayIsTieBreakWinner`, documented in the template editor. `homeIsWinner`/`awayIsWinner` follow the stored outcome, so custom templates get the right winner without changes.
+- Regeneration stays explicit.
 
 ### Admin UI
 

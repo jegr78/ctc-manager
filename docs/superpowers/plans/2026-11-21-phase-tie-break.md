@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Branch `feature/phase-tie-break`. No new migrations other than `V50__phase_tie_break.sql`; never edit V1–V49.
-- `season_phases.tie_break_race_winner BOOLEAN NOT NULL DEFAULT FALSE`; `matches.tie_break_winner_id` nullable FK to `teams(id)`.
+- `season_phases.tie_break_race_winner BOOLEAN NOT NULL DEFAULT FALSE`; `matches.tie_break_winner_id` nullable FK to `teams(id)`; `matches.tie_break_race_id` and `playoff_matchups.tie_break_race_id` nullable FKs to `races(id)`.
 - `BackupSchema.SCHEMA_VERSION` 27 → 28; add 28 to `BackupImportService.SUPPORTED_SCHEMA_VERSIONS`.
 - Leg order: `dateTime ASC NULLS LAST`, then race ID.
 - Race winner: classified position 1 via `RaceClassification.position(result, results)`.
@@ -58,11 +58,11 @@
 
 **Interfaces:**
 - Consumes: `TieBreakRule.decide`.
-- Produces: `SeasonPhase.isTieBreakRaceWinner()`/`setTieBreakRaceWinner(boolean)`; `Match.getTieBreakWinner()`/`setTieBreakWinner(Team)`; `record MatchOutcome(Team winner, Team loser, boolean tieBreak)` with `static MatchOutcome draw()`, `boolean isDraw()`, `boolean isWinner(Team)`; `Match.outcome()` returns null when unplayed, computed from official scores, walkover, then `tieBreakWinner`. `ScoringService.tieBreakDecision(List<Race> legs, UUID homeTeamId): Optional<TieBreakRule.Decision>` (public, reuses the lineup attribution of `sumLegs`).
+- Produces: `SeasonPhase.isTieBreakRaceWinner()`/`setTieBreakRaceWinner(boolean)`; `Match.getTieBreakWinner()`/`setTieBreakWinner(Team)`, `Match.getTieBreakRace()`/`setTieBreakRace(Race)`, `PlayoffMatchup.getTieBreakRace()`/`setTieBreakRace(Race)`; `record MatchOutcome(Team winner, Team loser, boolean tieBreak)` with `static MatchOutcome draw()`, `boolean isDraw()`, `boolean isWinner(Team)`; `Match.outcome()` returns null when unplayed, computed from official scores, walkover, then `tieBreakWinner`. `ScoringService.tieBreakDecision(List<Race> legs, UUID homeTeamId): Optional<TieBreakRule.Decision>` (public, reuses the lineup attribution of `sumLegs`).
 
 - [ ] **Step 1: Failing tests**: migration IT asserts both columns exist, default false, FK rejects unknown team (H2; mirror `V49CarImageCutoutMigrationIT`, plus a MariaDB variant like `V49CarImageCutoutMigrationMariaDbIT`). `MatchOutcomeTest`: home win, away win, walkover, draw, tie-break win (`tieBreak()==true`), unplayed → null. `ScoringServiceTest`: `givenTieBreakPhaseAndTiedLegs_whenRecompute_thenTieBreakWinnerStored`, `givenPhaseWithoutTieBreak_whenRecompute_thenNoTieBreakWinner`, `givenScoresNoLongerTied_whenRecompute_thenTieBreakWinnerCleared`, `givenPenaltyCausesTie_whenRecompute_thenRaceWinnerTeamStillWins`.
 - [ ] **Step 2: Run** the three tests → FAIL.
-- [ ] **Step 3: Implement** migration (H2 + MariaDB compatible `ALTER TABLE`s), fields, `MatchOutcome`, `Match.outcome()`; in `recomputeMatchScores` set `tieBreakWinner` only when phase flag on and totals equal non-null, else null. `recomputePlayoffMatchupScores` unchanged. Update `TestDataService`/`DevDataSeeder` only if they fail to compile.
+- [ ] **Step 3: Implement** migration (H2 + MariaDB compatible `ALTER TABLE`s), fields, `MatchOutcome`, `Match.outcome()`; in `recomputeMatchScores` set `tieBreakWinner` and `tieBreakRace` only when phase flag on and totals equal non-null, else null. `recomputePlayoffMatchupScores` unchanged. Update `TestDataService`/`DevDataSeeder` only if they fail to compile.
 - [ ] **Step 4: Run** → PASS.
 - [ ] **Step 5: Commit** `feat(scoring): store tie-break winner on tied matches`.
 
@@ -75,9 +75,9 @@
 **Interfaces:**
 - Consumes: `SeasonPhase.isTieBreakRaceWinner()`, `ScoringService.tieBreakDecision`.
 
-- [ ] **Step 1: Failing tests**: `givenTieBreakPhase_whenTiedQuickScore_thenRejectedBeforeMutation` (scores unchanged, message exact), `givenTieBreakPhaseAndOtherLegWithResults_whenTiedQuickScore_thenRejected`, `givenPhaseWithoutTieBreak_whenTiedQuickScore_thenSaved`; `givenTieBreakPhaseAndTie_whenDetermineWinner_thenRaceWinnerDecidedWithReason` (reason `Tie-break: race winner of leg 1`, advancement as usual), `givenTieBreakPhaseWithoutAnyDriverResults_whenDetermineWinner_thenExistingTieRejection`, `givenPhaseWithoutTieBreak_whenTie_thenExistingTieRejection`, `givenTieBreakWinner_whenSetWinnerManuallyWithoutReason_thenAccepted`.
+- [ ] **Step 1: Failing tests**: `givenTieBreakPhase_whenTiedQuickScore_thenRejectedBeforeMutation` (scores unchanged, message exact), `givenTieBreakPhaseAndOtherLegWithResults_whenTiedQuickScore_thenRejected`, `givenPhaseWithoutTieBreak_whenTiedQuickScore_thenSaved`; `givenTieBreakPhaseAndTie_whenDetermineWinner_thenRaceWinnerDecidedWithReason` (reason `Tie-break: race winner of leg 1`, `tieBreakRace` = deciding leg, advancement as usual), `givenTieBreakPhaseWithoutAnyDriverResults_whenDetermineWinner_thenExistingTieRejection`, `givenPhaseWithoutTieBreak_whenTie_thenExistingTieRejection`, `givenTieBreakWinner_whenSetWinnerManuallyWithoutReason_thenAccepted`.
 - [ ] **Step 2: Run** → FAIL.
-- [ ] **Step 3: Implement**: `quickScore` throws `BusinessRuleException` before any setter when phase flag on and `homeScore == awayScore`. `determineWinner` and `setWinnerManually` treat the tie-break side as points leader; phase via `matchup.getRound().getPlayoff().getPhase()`.
+- [ ] **Step 3: Implement**: `quickScore` throws `BusinessRuleException` before any setter when phase flag on and `homeScore == awayScore`. `determineWinner` and `setWinnerManually` treat the tie-break side as points leader (manual choice of that side also sets `tieBreakRace`); `reopen` clears `tieBreakRace`; phase via `matchup.getRound().getPlayoff().getPhase()`.
 - [ ] **Step 4: Run** → PASS.
 - [ ] **Step 5: Commit** `feat(playoffs): decide tied matchups by race winner`.
 
@@ -99,7 +99,7 @@
 ### Task 5: Readers use the stored outcome
 
 **Files:**
-- Modify: `StandingsService.java:411-456`, `sitegen/MatchdaysPageGenerator.java:284` (+ its view record and `site/matchday.html`/`fragments/match-card.html` for the label), `templates/admin/matchday-detail.html:80-85` (move comparisons into prepared fields), `MatchResultsGraphicService.java:73`, `race-detail.html:29-57` and `ResultsGraphicService.java:114` when the race's Match has exactly one leg
+- Modify: `StandingsService.java:411-456`, `sitegen/MatchdaysPageGenerator.java:284` (+ its view record and `site/matchday.html`/`fragments/match-card.html` for the label), `templates/admin/matchday-detail.html:80-85` (move comparisons into prepared fields), `race-detail.html:29-57` when the race's Match has exactly one leg
 - Test: `StandingsServiceTest.java`, `MatchdaysPageGeneratorTest` (or the existing generator test), `src/test/java/org/ctc/admin/controller/MatchdayDetailTieBreakIT.java`
 
 **Interfaces:**
@@ -111,15 +111,30 @@
 - [ ] **Step 4: Run** → PASS. Refresh generated site snapshots if a snapshot test fails on the new label.
 - [ ] **Step 5: Commit** `feat(standings): count tie-break wins in every view`.
 
+### Task 5b: Results graphics badge
+
+**Files:**
+- Modify: `ResultsGraphicService.java:110-116`, `MatchResultsGraphicService.java:70-75`, `templates/admin/results-render.html`, `templates/admin/match-results-render.html`, `templates/admin/template-editors.html` (variable rows for both graphics), `admin.css` only if render templates use it (they likely carry inline `<style>`)
+- Test: `ResultsGraphicServiceTest`/`MatchResultsGraphicServiceTest` on `buildHtml` (both services are JaCoCo-excluded but `buildHtml` is testable without Playwright)
+
+**Interfaces:**
+- Produces template variables `homeIsTieBreakWinner`, `awayIsTieBreakWinner` (boolean). `homeIsWinner`/`awayIsWinner` come from `Match.outcome()` or the matchup winner on the match graphic, and on the race graphic from the race totals unless the race is the pairing's `tieBreakRace`.
+
+- [ ] **Step 1: Failing tests**: `givenDecidingLeg_whenBuildHtml_thenWinnerAndTieBreakBadge` (HTML contains `TIE-BREAK` on the winner side), `givenOtherLegOfTieBreakMatch_whenBuildHtml_thenNoBadge`, `givenTieBreakMatch_whenBuildMatchHtml_thenWinnerAndBadge`, `givenPlayoffTieBreak_whenBuildHtml_thenBadge`, `givenRegularDraw_whenBuildHtml_thenNoWinnerNoBadge`.
+- [ ] **Step 2: Run** → FAIL.
+- [ ] **Step 3: Implement**: badge text exactly `TIE-BREAK`, no reason line, styled like the existing winner marker.
+- [ ] **Step 4: Run** → PASS. Render both graphics once with playwright-cli or the dev server and save screenshots to `.screenshots/`.
+- [ ] **Step 5: Commit** `feat(graphics): mark tie-break wins on results graphics`.
+
 ### Task 6: Backup schema 28, restore and audit
 
 **Files:**
 - Create: `src/main/java/org/ctc/backup/schema/TieBreakArchive.java`, `TieBreakBackupValidator.java`
-- Modify: `BackupSchema.java` (28), `BackupImportService.java` (supported set, `normalizeRestorableRow`, preflight validator), `MatchMixIn.java` (`@JsonIdentityReference(alwaysAsId = true) abstract Team getTieBreakWinner();`), backup graph fetch for `tieBreakWinner` next to `walkoverTeam`, `MatchRestorer.java`, `SeasonPhaseRestorer.java`, `DataAuditService.java` (category `PAIRING`)
+- Modify: `BackupSchema.java` (28), `BackupImportService.java` (supported set, `normalizeRestorableRow`, preflight validator), `MatchMixIn.java` (`getTieBreakWinner()`, `getTieBreakRace()` as ID references), `PlayoffMatchupMixIn.java` (`getTieBreakRace()`), `PlayoffMatchupRestorer.java`, backup graph fetch for `tieBreakWinner` next to `walkoverTeam`, `MatchRestorer.java`, `SeasonPhaseRestorer.java`, `DataAuditService.java` (category `PAIRING`)
 - Test: `TieBreakArchiveTest`, `TieBreakBackupValidatorTest`, `src/test/java/org/ctc/backup/service/BackupTieBreakRoundTripIT.java`, `DataAuditServiceIT`, plus existing schema-number assertions
 
 **Interfaces:**
-- Produces: `TieBreakArchive.normalize(int version, String table, JsonNode row): JsonNode`: for `season_phases` and `matches`: version < 28 rejects a present non-default value (`"Tie-break fields require backup schema 28"`) and sets `false`/`null`; version 28 requires a boolean flag. `TieBreakBackupValidator.accept(String table, JsonNode row)` / `validate()` with the 100,000-reference budget pattern of `MatchWalkoverBackupValidator`: a set `tieBreakWinner` must equal home or away team, scores non-null and equal, `bye` false, no walkover, owning phase flag true (resolve match → matchday → phase).
+- Produces: `TieBreakArchive.normalize(int version, String table, JsonNode row): JsonNode`: for `season_phases` and `matches`: version < 28 rejects a present non-default value (`"Tie-break fields require backup schema 28"`) and sets `false`/`null`; version 28 requires a boolean flag. `TieBreakBackupValidator.accept(String table, JsonNode row)` / `validate()` with the 100,000-reference budget pattern of `MatchWalkoverBackupValidator`: a set `tieBreakWinner` must come with a `tieBreakRace` of the same match and vice versa, equal home or away team, scores non-null and equal, `bye` false, no walkover, owning phase flag true (resolve match → matchday → phase).
 
 - [ ] **Step 1: Failing tests**: archive normalize for 27 (absent → defaults; present → rejected) and 28; validator rejects each invariant break; round-trip IT exports a phase with flag and a tie-break match and restores both unchanged without reaggregation; schema-27 archive restores flag false; audit reports (a) enabled-phase match with equal scores and null winner, (b) winner violating the invariant, (c) stored winner differing from `TieBreakRule`.
 - [ ] **Step 2: Run** → FAIL.
