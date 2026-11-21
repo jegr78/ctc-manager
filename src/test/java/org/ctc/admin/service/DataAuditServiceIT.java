@@ -184,11 +184,28 @@ class DataAuditServiceIT {
         assertThat(entityManager.find(Match.class, fixture.match().getId()).getTieBreakWinner()).as("audit does not repair").isNull();
     }
 
+    @Test void givenPlayoffDecidedByTieBreakWithoutReason_whenAuditing_thenNoMissingReasonFinding() {
+        // given
+        var fixture = testHelper.createFullSeasonFixture("TTbPo" + id);
+        var playoff = testHelper.createPlayoffInPhase(fixture.season(), "Test tie-break final " + id, 2);
+        var matchup = playoff.getRounds().getFirst().getMatchups().getFirst();
+        matchup.setTeam1(fixture.homeTeam()); matchup.setTeam2(fixture.awayTeam());
+        matchup.setHomeScore(30); matchup.setAwayScore(30); matchup.setWinner(fixture.awayTeam());
+        matchup.setDecidedByTieBreak(true); matchup.setDecisionHistory("2026-11-21T20:00:00Z DECIDED " + fixture.awayTeam().getShortName());
+        entityManager.flush(); entityManager.clear();
+        // when / then
+        assertThat(dataAuditService.audit().findings(PLAYOFF))
+                .as("a tie-break decision needs no reason")
+                .noneSatisfy(f -> assertThat(f.evidence()).contains("does not lead"));
+    }
+
     @Test void givenTieBreakWinnerBreakingInvariant_whenAuditing_thenReport() {
         // given
         var fixture = testHelper.createFullSeasonFixture("TTbBad" + id);
-        fixture.match().setHomeScore(41); fixture.match().setAwayScore(40); fixture.match().setTieBreakWinner(fixture.awayTeam());
-        entityManager.flush(); entityManager.clear();
+        entityManager.flush();
+        entityManager.createNativeQuery("UPDATE matches SET home_score = 41, away_score = 40, tie_break_winner_id = ? WHERE id = ?")
+                .setParameter(1, fixture.awayTeam().getId()).setParameter(2, fixture.match().getId()).executeUpdate();
+        entityManager.clear();
         // when / then
         assertThat(dataAuditService.audit().findings(PAIRING)).anySatisfy(f -> {
             assertThat(f.subject()).contains(fixture.match().getId().toString());

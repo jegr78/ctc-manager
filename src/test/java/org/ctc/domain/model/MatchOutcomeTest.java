@@ -66,6 +66,53 @@ class MatchOutcomeTest {
     }
 
     @Test
+    void givenTieBreakWinner_whenWalkoverSet_thenWinnerDroppedOnSave() {
+        // given
+        var match = match(45, 45);
+        match.setTieBreakWinner(away);
+        match.setWalkoverTeam(home);
+        // when
+        match.dropInvalidTieBreakWinner();
+        // then
+        assertThat(match.getTieBreakWinner()).as("a walkover replaces the tie-break").isNull();
+    }
+
+    @Test
+    void givenTieBreakWinner_whenScoresNoLongerTied_thenWinnerDroppedOnSave() {
+        // given
+        var match = match(45, 45);
+        match.setTieBreakWinner(away);
+        match.setHomeScore(60);
+        // when
+        match.dropInvalidTieBreakWinner();
+        // then
+        assertThat(match.getTieBreakWinner()).isNull();
+    }
+
+    @Test
+    void givenTieBreakWinner_whenTeamReplaced_thenWinnerDroppedOnSave() {
+        // given
+        var match = match(45, 45);
+        match.setTieBreakWinner(away);
+        match.setAwayTeam(team("NEW"));
+        // when
+        match.dropInvalidTieBreakWinner();
+        // then
+        assertThat(match.getTieBreakWinner()).isNull();
+    }
+
+    @Test
+    void givenValidTieBreakWinner_whenSaving_thenWinnerKept() {
+        // given
+        var match = match(45, 45);
+        match.setTieBreakWinner(away);
+        // when
+        match.dropInvalidTieBreakWinner();
+        // then
+        assertThat(match.getTieBreakWinner()).isSameAs(away);
+    }
+
+    @Test
     void givenUnplayedMatch_whenOutcome_thenNull() {
         // when / then
         assertThat(match(null, null).outcome()).isNull();

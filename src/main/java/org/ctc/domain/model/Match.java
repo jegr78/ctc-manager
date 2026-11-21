@@ -98,6 +98,18 @@ public class Match extends BaseEntity {
 		return walkoverTeam != null && team != null && walkoverTeam.getId().equals(team.getId());
 	}
 
+    /** Drops a tie-break winner that a walkover, a changed score or a replaced team has made invalid. */
+    @PrePersist
+    @PreUpdate
+    void dropInvalidTieBreakWinner() {
+        if (tieBreakWinner == null) return;
+        if (!TieBreakRules.valid(true, tieBreakWinner.getId(), homeTeam == null ? null : homeTeam.getId(),
+                awayTeam == null ? null : awayTeam.getId(), homeScore, awayScore, bye,
+                walkoverTeam == null ? null : walkoverTeam.getId())) {
+            tieBreakWinner = null;
+        }
+    }
+
     /** The stored result of this pairing, or null while it is unplayed. */
     public MatchOutcome outcome() {
         if (bye) return new MatchOutcome(homeTeam, null, false);

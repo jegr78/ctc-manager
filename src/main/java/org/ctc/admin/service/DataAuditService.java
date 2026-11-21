@@ -693,7 +693,7 @@ public class DataAuditService {
 		boolean regular = !matchup.isBye() && matchup.getWalkoverTeam() == null;
 		boolean noReason = matchup.getDecisionReason() == null || matchup.getDecisionReason().isBlank();
 		if (regular && noReason && matchup.getHomeScore() != null && matchup.getAwayScore() != null
-				&& !sameTeam(winner, leader(matchup))) {
+				&& !sameTeam(winner, leader(matchup)) && !matchup.isDecidedByTieBreak()) {
 			out.add(new DataAuditFinding(PLAYOFF, AMBIGUOUS, subject,
 					"The winner %s does not lead %s and no reason is recorded".formatted(team(winner),
 							score(matchup.getHomeScore(), matchup.getAwayScore())),

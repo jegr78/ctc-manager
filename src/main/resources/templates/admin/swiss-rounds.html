@@ -40,12 +40,12 @@
                                 <span th:if="${match.walkoverTeam.id == match.awayTeam.id}" class="match-wo">w/o</span>
                             </div>
                         </th:block>
-                        <th:block th:if="${match.walkoverTeam == null and match.officialHomeScore != null}">
-                            <div class="swiss-team" th:classappend="${match.officialHomeScore > match.officialAwayScore ? 'winner' : ''}">
+                        <th:block th:if="${match.walkoverTeam == null and match.officialHomeScore != null}" th:with="outcome=${match.outcome()}">
+                            <div class="swiss-team" th:classappend="${outcome.isWinner(match.homeTeam) ? 'winner' : ''}">
                                 <span th:text="${match.homeTeam.shortName}"></span>
                                 <span class="swiss-score" th:text="${match.officialHomeScore}"></span>
                             </div>
-                            <div class="swiss-team" th:classappend="${match.officialAwayScore > match.officialHomeScore ? 'winner' : ''}">
+                            <div class="swiss-team" th:classappend="${outcome.isWinner(match.awayTeam) ? 'winner' : ''}">
                                 <span th:text="${match.awayTeam.shortName}"></span>
                                 <span class="swiss-score" th:text="${match.officialAwayScore}"></span>
                             </div>

@@ -382,6 +382,28 @@ class ScoringServiceTest {
 		}
 
 		@Test
+		void givenRaceWinnerInSubTeamLineup_whenTieBreakDecision_thenParentSideWins() {
+			// given
+			var parent = createTeam("Parent");
+			var subTeam = createTeam("Sub");
+			subTeam.setParentTeam(parent);
+			var awayTeam = createTeam("Away");
+			var match = createMatch(parent, awayTeam);
+			var race = createRace(match);
+			var subDriver = createDriver("sub_p1");
+			var awayDriver = createDriver("away_p2");
+			var winner = createResult(race, subDriver, 20); winner.setPosition(1);
+			var second = createResult(race, awayDriver, 20); second.setPosition(2);
+			race.setResults(new ArrayList<>(List.of(winner, second)));
+			when(raceLineupRepository.findByRaceId(race.getId()))
+					.thenReturn(List.of(new RaceLineup(race, subDriver, subTeam), new RaceLineup(race, awayDriver, awayTeam)));
+			// when
+			var decision = scoringService.tieBreakDecision(List.of(race), parent.getId());
+			// then
+			assertEquals(Optional.of(TieBreakRule.Side.HOME), decision.map(TieBreakRule.Decision::side), "sub-team driver scores for the parent");
+		}
+
+		@Test
 		void givenTieBreakMatch_whenTieBreakWinnerForDecidingLeg_thenWinner() {
 			// given
 			var homeTeam = createTeam("Home");

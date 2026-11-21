@@ -373,6 +373,25 @@ class RaceServiceTest {
     }
 
     @Test
+    void givenTieBreakPhaseAndOtherLegWithResults_whenTiedQuickScore_thenRejected() {
+        // given
+        var raceId = UUID.randomUUID();
+        var race = createRaceWithScore(20, 20);
+        race.setId(raceId);
+        race.getMatch().getMatchday().getPhase().setTieBreakRaceWinner(true);
+        var scoredLeg = new Race();
+        scoredLeg.setId(UUID.randomUUID());
+        scoredLeg.setMatch(race.getMatch());
+        scoredLeg.getResults().add(new RaceResult(scoredLeg, new Driver("t_tb_leg", "TB leg"), 1, 1, false));
+        when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
+        lenient().when(raceRepository.findByMatchId(race.getMatch().getId())).thenReturn(List.of(race, scoredLeg));
+        // when / then
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.quickScore(raceId, 40, 40))
+                .as("a whole-match quick score replaces every leg, so a tie stays unresolved")
+                .isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class);
+    }
+
+    @Test
     void givenPhaseWithoutTieBreak_whenTiedQuickScore_thenSaved() {
         // given
         var raceId = UUID.randomUUID();
