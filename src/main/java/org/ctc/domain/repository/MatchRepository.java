@@ -38,17 +38,17 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
 
 	java.util.Optional<Match> findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(UUID matchdayId, UUID homeTeamId, UUID awayTeamId);
 
+	@Query("SELECT COUNT(m) > 0 FROM Match m WHERE m.matchday.phase.id = :phaseId AND m.bye = false "
+			+ "AND (m.homeScore IS NOT NULL OR m.awayScore IS NOT NULL OR m.walkoverTeam IS NOT NULL)")
+	boolean existsScoredInPhase(UUID phaseId);
+
 	/**
 	 * Full-table finder used by {@code BackupExportService}.
 	 *
 	 * <p>Eager-fetches the three {@code @ManyToOne} associations: {@code matchday},
 	 * {@code homeTeam}, {@code awayTeam}.
 	 */
-	@EntityGraph(attributePaths = {"matchday", "homeTeam", "awayTeam", "walkoverTeam"})
-	@Query("SELECT COUNT(m) > 0 FROM Match m WHERE m.matchday.phase.id = :phaseId AND m.bye = false "
-			+ "AND (m.homeScore IS NOT NULL OR m.awayScore IS NOT NULL OR m.walkoverTeam IS NOT NULL)")
-	boolean existsScoredInPhase(UUID phaseId);
-
+	@EntityGraph(attributePaths = {"matchday", "homeTeam", "awayTeam", "walkoverTeam", "tieBreakWinner"})
 	@Query("SELECT e FROM Match e")
 	List<Match> findAllForBackup();
 }
