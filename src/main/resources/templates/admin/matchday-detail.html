@@ -75,17 +75,18 @@
                             <span th:text="${match.homeTeam.shortName}"></span>
                             <span th:if="${match.walkoverTeam != null and match.walkoverTeam.id.equals(match.homeTeam.id)}" class="match-wo">w/o</span>
                         </div>
-                        <div th:if="${!match.bye}" class="match-score-area">
+                        <div th:if="${!match.bye}" class="match-score-area" th:with="outcome=${match.outcome()}">
                             <span th:if="${match.officialHomeScore != null}" class="match-score-value"
-                                  th:classappend="${match.officialAwayScore == null ? '' : (match.officialHomeScore > match.officialAwayScore ? 'score-win' : (match.officialHomeScore < match.officialAwayScore ? 'score-loss' : 'score-draw'))}"
+                                  th:classappend="${outcome == null ? '' : (outcome.isWinner(match.homeTeam) ? 'score-win' : (outcome.isDraw() ? 'score-draw' : 'score-loss'))}"
                                   th:text="${match.officialHomeScore}"></span>
                             <span th:unless="${match.officialHomeScore != null}" class="match-score-value match-score-value--dim">–</span>
                             <span class="match-score-separator">:</span>
                             <span th:if="${match.officialAwayScore != null}" class="match-score-value"
-                                  th:classappend="${match.officialHomeScore == null ? '' : (match.officialAwayScore > match.officialHomeScore ? 'score-win' : (match.officialAwayScore < match.officialHomeScore ? 'score-loss' : 'score-draw'))}"
+                                  th:classappend="${outcome == null ? '' : (outcome.isWinner(match.awayTeam) ? 'score-win' : (outcome.isDraw() ? 'score-draw' : 'score-loss'))}"
                                   th:text="${match.officialAwayScore}"></span>
                             <span th:unless="${match.officialAwayScore != null}" class="match-score-value match-score-value--dim">–</span>
                             <span th:if="${match.walkoverTeam != null}" class="match-wo">w/o</span>
+                            <span th:if="${outcome != null and outcome.tieBreak()}" class="match-wo">tie-break</span>
                         </div>
                         <div th:if="${match.bye}" class="match-score-area">
                             <span class="match-bye">Bye</span>

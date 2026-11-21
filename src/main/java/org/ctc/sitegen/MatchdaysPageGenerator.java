@@ -281,11 +281,13 @@ public class MatchdaysPageGenerator {
         var publicPick = disclosure.forPublic(race.getId());
 
         boolean hasResults = walkover || !race.getResults().isEmpty();
-        boolean homeTeamWon = hasResults && homeTotal > awayTotal;
-        boolean awayTeamWon = hasResults && awayTotal > homeTotal;
+        var tieBreakWinner = hasResults && homeTotal == awayTotal ? scoring.tieBreakWinnerForLeg(race) : java.util.Optional.<org.ctc.domain.model.Team>empty();
+        boolean homeTieBreak = tieBreakWinner.filter(t -> homeTeam != null && t.getId().equals(homeTeam.getId())).isPresent();
+        boolean homeTeamWon = hasResults && (homeTotal > awayTotal || homeTieBreak);
+        boolean awayTeamWon = hasResults && (awayTotal > homeTotal || tieBreakWinner.isPresent() && !homeTieBreak);
         return new RaceView(homeShortName, awayShortName,
                 publicPick.trackName(), publicPick.carName(), homeTotal, awayTotal, hasResults,
-                homeTeamWon, awayTeamWon, results, publicPick.poolEntryLabel(), totals);
+                homeTeamWon, awayTeamWon, results, publicPick.poolEntryLabel(), totals, tieBreakWinner.isPresent());
     }
 
 }

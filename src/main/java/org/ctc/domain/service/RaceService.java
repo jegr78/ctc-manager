@@ -152,6 +152,9 @@ public class RaceService {
 				&& race.getHomeTeam() != null
 				&& race.getAwayTeam() != null;
 
+		var tieBreakWinner = hasResults && homeTotal == awayTotal ? scoringService.tieBreakWinnerForLeg(race) : Optional.<Team>empty();
+		boolean homeTieBreakWinner = tieBreakWinner.filter(t -> race.getHomeTeam() != null && t.getId().equals(race.getHomeTeam().getId())).isPresent();
+		boolean awayTieBreakWinner = tieBreakWinner.isPresent() && !homeTieBreakWinner;
 		return new RaceDetailData(race, homeTotal, awayTotal, driverTeamMap, guestDriverMap,
 				hasLineup && hasHomeCard && hasAwayCard && !lineupExists,
 				!hasLineup, !hasHomeCard || !hasAwayCard, lineupExists,
@@ -163,7 +166,8 @@ public class RaceService {
 				hasMatch && !overlayExists, overlayExists,
 				calendarAvailable, hasCalendarEvent, canCreateCalendarEvent,
 				lobbySettingsReady && lobbyTeamsPresent && !lobbySettingsGraphicExists,
-				!lobbySettingsReady, lobbySettingsGraphicExists, RaceCarPresentation.from(race), penaltyTotals);
+				!lobbySettingsReady, lobbySettingsGraphicExists, RaceCarPresentation.from(race), penaltyTotals,
+				homeTieBreakWinner, awayTieBreakWinner);
 	}
 
     @Transactional
@@ -635,7 +639,27 @@ public class RaceService {
 	                             boolean calendarAvailable, boolean hasCalendarEvent,
 	                             boolean canCreateCalendarEvent,
 	                             boolean canGenerateLobbySettings, boolean lobbySettingsMissing,
-	                             boolean lobbySettingsExist, RaceCarPresentation carPresentation, RacePenaltyTotals penaltyTotals) {
+	                             boolean lobbySettingsExist, RaceCarPresentation carPresentation, RacePenaltyTotals penaltyTotals,
+	                             boolean homeTieBreakWinner, boolean awayTieBreakWinner) {
+
+		public RaceDetailData(Race race, int homeTotal, int awayTotal,
+		                      Map<UUID, String> driverTeamMap, Map<UUID, Boolean> guestDriverMap,
+		                      boolean canGenerateLineup,
+		                      boolean lineupMissing, boolean cardsMissing, boolean lineupExists,
+		                      boolean canGenerateResults, boolean resultsMissing, boolean resultsExist,
+		                      boolean canGenerateProvisional, boolean provisionalExists,
+		                      boolean canGenerateSettings, boolean settingsMissing, boolean settingsExist,
+		                      boolean canGenerateOverlay, boolean overlayExists,
+		                      boolean calendarAvailable, boolean hasCalendarEvent,
+		                      boolean canCreateCalendarEvent,
+		                      boolean canGenerateLobbySettings, boolean lobbySettingsMissing,
+		                      boolean lobbySettingsExist, RaceCarPresentation carPresentation, RacePenaltyTotals penaltyTotals) {
+			this(race, homeTotal, awayTotal, driverTeamMap, guestDriverMap, canGenerateLineup, lineupMissing, cardsMissing,
+					lineupExists, canGenerateResults, resultsMissing, resultsExist, canGenerateProvisional, provisionalExists,
+					canGenerateSettings, settingsMissing, settingsExist, canGenerateOverlay, overlayExists, calendarAvailable,
+					hasCalendarEvent, canCreateCalendarEvent, canGenerateLobbySettings, lobbySettingsMissing, lobbySettingsExist,
+					carPresentation, penaltyTotals, false, false);
+		}
 	}
 
 	public record ResultsFormData(RaceData data, Race race, RaceScoring raceScoring, RaceCarPresentation carPresentation) {

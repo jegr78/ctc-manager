@@ -126,6 +126,25 @@ public class ScoringService {
 				.orElse(null);
 	}
 
+	/** The pairing's tie-break winner when {@code race} is the leg that decided it, otherwise empty. */
+	@Transactional(readOnly = true)
+	public Optional<Team> tieBreakWinnerForLeg(Race race) {
+		var match = race.getMatch();
+		if (match != null) {
+			if (match.getTieBreakWinner() == null) return Optional.empty();
+			return decides(raceRepository.findByMatchId(match.getId()), match.getHomeTeam().getId(), race)
+					? Optional.of(match.getTieBreakWinner()) : Optional.empty();
+		}
+		var matchup = race.getPlayoffMatchup();
+		if (matchup == null || !matchup.isDecidedByTieBreak() || matchup.getWinner() == null) return Optional.empty();
+		return decides(raceRepository.findByPlayoffMatchupId(matchup.getId()), matchup.getTeam1().getId(), race)
+				? Optional.of(matchup.getWinner()) : Optional.empty();
+	}
+
+	private boolean decides(List<Race> legs, UUID homeTeamId, Race race) {
+		return tieBreakDecision(legs, homeTeamId).map(decision -> decision.race().getId().equals(race.getId())).orElse(false);
+	}
+
 	/** Applies {@link TieBreakRule} to the legs of a pairing, attributing drivers like the team totals do. */
 	public Optional<TieBreakRule.Decision> tieBreakDecision(List<Race> legs, UUID homeTeamId) {
 		Map<UUID, Map<UUID, RaceLineup>> lineups = new java.util.HashMap<>();

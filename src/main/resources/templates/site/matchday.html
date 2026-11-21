@@ -22,6 +22,7 @@
                     <span th:class="${race.awayTeamWon ? 'match-team match-team-winner' : 'match-team'}"
                           th:text="${race.awayTeamShortName}"></span>
                 </div>
+                <p class="match-meta" th:if="${race.tieBreak}">Won on tie-break</p>
                 <dl class="match-meta" th:if="${race.track != null or race.car != null}">
                     <div th:if="${race.track != null}"><dt>Track</dt><dd th:text="${race.track}"></dd></div>
                     <div th:if="${race.car != null}"><dt>Car</dt><dd th:text="${race.car}"></dd></div>

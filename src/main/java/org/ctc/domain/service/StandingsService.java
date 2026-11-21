@@ -432,14 +432,15 @@ public class StandingsService {
 			awayStanding.addPointsAgainst(homeTotal);
 		}
 
-		if (homeTotal > awayTotal) {
+		var outcome = match.outcome();
+		if (outcome.isWinner(match.getHomeTeam())) {
 			homeStanding.addWin();
 			homeStanding.addMatchPoints(pointsWin(matchScoring));
 			if (awayStanding != null) {
 				awayStanding.addLoss();
 				awayStanding.addMatchPoints(pointsLoss(matchScoring));
 			}
-		} else if (homeTotal < awayTotal) {
+		} else if (!outcome.isDraw()) {
 			homeStanding.addLoss();
 			homeStanding.addMatchPoints(pointsLoss(matchScoring));
 			if (awayStanding != null) {

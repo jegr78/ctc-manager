@@ -213,6 +213,30 @@ class StandingsServiceTest {
         }
 
         @Test
+        void givenTieBreakWin_whenCalculateStandings_thenWinAndLossWithWinPointsAndEqualPointsFor() {
+            // given
+            var matchday = new Matchday(regularPhase, "Matchday1", 1);
+            var match = createMatchWithScore(matchday, tnr, p1r, 50, 50);
+            match.setTieBreakWinner(p1r);
+            season.addTeam(tnr);
+            season.addTeam(p1r);
+            when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match));
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+            // when
+            var standings = standingsService.calculateStandings(regularPhase.getId(), null);
+            // then
+            var winner = findStanding(standings, p1r);
+            var loser = findStanding(standings, tnr);
+            assertEquals(1, winner.getWins(), "tie-break winner gets a win");
+            assertEquals(0, winner.getDraws());
+            assertEquals(3, winner.getPoints(), "full win points");
+            assertEquals(1, loser.getLosses());
+            assertEquals(0, loser.getPoints());
+            assertEquals(50, winner.getPointsFor());
+            assertEquals(50, winner.getPointsAgainst());
+        }
+
+        @Test
         void givenByeMatch_whenCalculateStandings_thenTeamGetsWin() {
             // given
             var matchday = new Matchday(regularPhase, "Matchday1", 1);

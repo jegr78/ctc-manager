@@ -381,6 +381,67 @@ class ScoringServiceTest {
 			assertSame(homeTeam, match.getTieBreakWinner(), "away winner is disqualified, home driver is classified first");
 		}
 
+		@Test
+		void givenTieBreakMatch_whenTieBreakWinnerForDecidingLeg_thenWinner() {
+			// given
+			var homeTeam = createTeam("Home");
+			var awayTeam = createTeam("Away");
+			var match = createMatch(homeTeam, awayTeam);
+			var race = tiedRace(match, homeTeam, awayTeam, false);
+			match.setTieBreakWinner(awayTeam);
+			// when / then
+			assertEquals(Optional.of(awayTeam), scoringService.tieBreakWinnerForLeg(race));
+		}
+
+		@Test
+		void givenTieBreakMatch_whenTieBreakWinnerForOtherLeg_thenEmpty() {
+			// given
+			var homeTeam = createTeam("Home");
+			var awayTeam = createTeam("Away");
+			var match = createMatch(homeTeam, awayTeam);
+			var deciding = tiedRace(match, homeTeam, awayTeam, false);
+			deciding.setDateTime(java.time.LocalDateTime.of(2026, 10, 24, 20, 0));
+			var later = createRace(match);
+			later.setDateTime(java.time.LocalDateTime.of(2026, 10, 24, 21, 0));
+			later.setResults(new ArrayList<>(List.of(createResult(later, createDriver("late"), 5))));
+			when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(later, deciding));
+			match.setTieBreakWinner(awayTeam);
+			// when / then
+			assertEquals(Optional.empty(), scoringService.tieBreakWinnerForLeg(later));
+		}
+
+		@Test
+		void givenMatchWithoutTieBreak_whenTieBreakWinnerForLeg_thenEmpty() {
+			// given
+			var race = createRace(createMatch(createTeam("Home"), createTeam("Away")));
+			// when / then
+			assertEquals(Optional.empty(), scoringService.tieBreakWinnerForLeg(race));
+		}
+
+		@Test
+		void givenPlayoffDecidedByTieBreak_whenTieBreakWinnerForLeg_thenMatchupWinner() {
+			// given
+			var team1 = createTeam("Team1");
+			var team2 = createTeam("Team2");
+			var matchup = new PlayoffMatchup();
+			matchup.setId(UUID.randomUUID());
+			matchup.setTeam1(team1);
+			matchup.setTeam2(team2);
+			matchup.setWinner(team2);
+			matchup.setDecidedByTieBreak(true);
+			var race = new Race();
+			race.setId(UUID.randomUUID());
+			race.setPlayoffMatchup(matchup);
+			var d1 = createDriver("t2_p1");
+			var winner = createResult(race, d1, 20);
+			winner.setPosition(1);
+			race.setResults(new ArrayList<>(List.of(winner)));
+			when(raceRepository.findByPlayoffMatchupId(matchup.getId())).thenReturn(List.of(race));
+			when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of(new RaceLineup(race, d1, team2)));
+			// when / then
+			assertEquals(Optional.of(team2), scoringService.tieBreakWinnerForLeg(race));
+		}
+
 		private Race tiedRace(Match match, Team homeTeam, Team awayTeam, boolean winnerDisqualified) {
 			var race = createRace(match);
 			var awayDriver = createDriver("away_p1");
@@ -393,7 +454,7 @@ class ScoringServiceTest {
 			race.setResults(new ArrayList<>(List.of(winner, second)));
 			when(raceLineupRepository.findByRaceId(race.getId()))
 					.thenReturn(List.of(new RaceLineup(race, homeDriver, homeTeam), new RaceLineup(race, awayDriver, awayTeam)));
-			when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
+			org.mockito.Mockito.lenient().when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
 			return race;
 		}
 
