@@ -27,32 +27,44 @@ class V50PhaseTieBreakMigrationIT {
     @Test
     void givenV50_whenTieBreakWinnerReferencesUnknownTeam_thenForeignKeyViolation() {
         // when / then
+        String matchId;
+        try (var connection = dataSource.getConnection();
+             var query = connection.prepareStatement("SELECT MIN(id) FROM matches");
+             var rows = query.executeQuery()) {
+            rows.next();
+            matchId = rows.getString(1);
+        } catch (SQLException e) {
+            throw new AssertionError(e);
+        }
+        assertThat(matchId).as("seeded match to update").isNotNull();
         assertThatThrownBy(() -> {
             try (var connection = dataSource.getConnection();
-                 var statement = connection.prepareStatement("UPDATE matches SET tie_break_winner_id = ? WHERE id = (SELECT MIN(id) FROM matches)")) {
+                 var statement = connection.prepareStatement("UPDATE matches SET tie_break_winner_id = ? WHERE id = ?")) {
                 statement.setObject(1, UUID.randomUUID().toString());
-                if (statement.executeUpdate() == 0) throw new SQLException("no match row to update");
+                statement.setString(2, matchId);
+                statement.executeUpdate();
             }
-        }).isInstanceOf(SQLException.class).hasMessageNotContaining("no match row");
+        }).isInstanceOf(SQLException.class);
     }
 
     private String defaultOf(String table, String column) throws SQLException {
-        try (var connection = dataSource.getConnection();
-             var columns = connection.getMetaData().getColumns(null, null, matchCase(connection, table), matchCase(connection, column))) {
-            assertThat(columns.next()).as(table + "." + column + " exists").isTrue();
-            return String.valueOf(columns.getString("COLUMN_DEF"));
-        }
+        return String.valueOf(column(table, column, "COLUMN_DEF"));
     }
 
     private boolean nullable(String table, String column) throws SQLException {
-        try (var connection = dataSource.getConnection();
-             var columns = connection.getMetaData().getColumns(null, null, matchCase(connection, table), matchCase(connection, column))) {
-            assertThat(columns.next()).as(table + "." + column + " exists").isTrue();
-            return "YES".equals(columns.getString("IS_NULLABLE"));
-        }
+        return "YES".equals(column(table, column, "IS_NULLABLE"));
     }
 
-    private static String matchCase(java.sql.Connection connection, String name) throws SQLException {
-        return connection.getMetaData().storesLowerCaseIdentifiers() ? name.toLowerCase() : name;
+    private String column(String table, String column, String attribute) throws SQLException {
+        try (var connection = dataSource.getConnection()) {
+            for (var name : new String[]{table.toLowerCase(), table.toUpperCase()}) {
+                try (var columns = connection.getMetaData().getColumns(connection.getCatalog(), null, name, null)) {
+                    while (columns.next()) {
+                        if (columns.getString("COLUMN_NAME").equalsIgnoreCase(column)) return columns.getString(attribute);
+                    }
+                }
+            }
+        }
+        throw new AssertionError(table + "." + column + " does not exist");
     }
 }
