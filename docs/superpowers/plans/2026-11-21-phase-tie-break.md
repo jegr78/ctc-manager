@@ -88,7 +88,7 @@
 - Test: `SeasonPhaseServiceTest.java`, `src/test/java/org/ctc/admin/controller/SeasonPhaseTieBreakControllerIT.java`
 
 **Interfaces:**
-- Produces: `boolean SeasonPhaseService.hasScoredPairing(UUID phaseId)` — true if any Match in the phase has non-null scores or a walkover, any PlayoffMatchup of its playoff has scores or a winner (byes excluded), or any race in the phase has results. Add repository exists-queries as needed.
+- Produces: `boolean SeasonPhaseService.hasScoredPairing(UUID phaseId)`: true if any Match in the phase has non-null scores or a walkover, any PlayoffMatchup of its playoff has scores or a winner (byes excluded), or any race in the phase has results. Add repository exists-queries as needed.
 
 - [ ] **Step 1: Failing tests**: `givenScoredMatch_whenToggleTieBreak_thenRejected` (exact text), `givenDecidedPlayoffMatchup_whenToggleTieBreak_thenRejected`, `givenOnlyByes_whenToggleTieBreak_thenSaved`, `givenScoredPhase_whenSaveUnchangedFlag_thenOtherFieldsSaved`; controller IT: form shows labeled checkbox `Tie-break by race winner` with hint `A tied match goes to the team whose driver wins the first leg with results.`, POST persists it, rejection lands in field/flash error with submitted values kept.
 - [ ] **Step 2: Run** → FAIL.
@@ -119,7 +119,7 @@
 - Test: `TieBreakArchiveTest`, `TieBreakBackupValidatorTest`, `src/test/java/org/ctc/backup/service/BackupTieBreakRoundTripIT.java`, `DataAuditServiceIT`, plus existing schema-number assertions
 
 **Interfaces:**
-- Produces: `TieBreakArchive.normalize(int version, String table, JsonNode row): JsonNode` — for `season_phases` and `matches`: version < 28 rejects a present non-default value (`"Tie-break fields require backup schema 28"`) and sets `false`/`null`; version 28 requires a boolean flag. `TieBreakBackupValidator.accept(String table, JsonNode row)` / `validate()` with the 100,000-reference budget pattern of `MatchWalkoverBackupValidator`: a set `tieBreakWinner` must equal home or away team, scores non-null and equal, `bye` false, no walkover, owning phase flag true (resolve match → matchday → phase).
+- Produces: `TieBreakArchive.normalize(int version, String table, JsonNode row): JsonNode`: for `season_phases` and `matches`: version < 28 rejects a present non-default value (`"Tie-break fields require backup schema 28"`) and sets `false`/`null`; version 28 requires a boolean flag. `TieBreakBackupValidator.accept(String table, JsonNode row)` / `validate()` with the 100,000-reference budget pattern of `MatchWalkoverBackupValidator`: a set `tieBreakWinner` must equal home or away team, scores non-null and equal, `bye` false, no walkover, owning phase flag true (resolve match → matchday → phase).
 
 - [ ] **Step 1: Failing tests**: archive normalize for 27 (absent → defaults; present → rejected) and 28; validator rejects each invariant break; round-trip IT exports a phase with flag and a tie-break match and restores both unchanged without reaggregation; schema-27 archive restores flag false; audit reports (a) enabled-phase match with equal scores and null winner, (b) winner violating the invariant, (c) stored winner differing from `TieBreakRule`.
 - [ ] **Step 2: Run** → FAIL.
