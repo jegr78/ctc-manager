@@ -179,11 +179,19 @@ public class PlayoffService {
 		matchup.setHomeScore(totals[0]);
 		matchup.setAwayScore(totals[1]);
 
-		// Explicit tie handling — ties are not silently resolved
 		if (totals[0] == totals[1]) {
-			playoffMatchupRepository.save(matchup);
-			throw new IllegalStateException(
-					"Tie (%d:%d) — Winner must be set manually".formatted(totals[0], totals[1]));
+			var decision = tieBreakDecision(matchup, legs);
+			if (decision.isEmpty()) {
+				playoffMatchupRepository.save(matchup);
+				throw new IllegalStateException(
+						"Tie (%d:%d) — Winner must be set manually".formatted(totals[0], totals[1]));
+			}
+			Team tieBreakWinner = sideTeam(matchup, decision.get().side());
+			validateAdvancement(matchup, tieBreakWinner);
+			matchup.setDecidedByTieBreak(true);
+			decide(matchup, tieBreakWinner, "Tie-break: race winner of leg " + TieBreakRule.legNumber(legs, decision.get().race()));
+			log.info("Matchup {} decided by tie-break for {}", matchupId, tieBreakWinner.getShortName());
+			return;
 		}
 
 		Team winner = totals[0] > totals[1] ? matchup.getTeam1() : matchup.getTeam2();
@@ -210,14 +218,17 @@ public class PlayoffService {
 
 		List<Race> legs = raceRepository.findByPlayoffMatchupId(matchupId);
 		int[] totals = totals(matchup, legs);
-		boolean pointsLeader = !legs.isEmpty() && allLegsScored(legs)
-				&& (isTeam1 ? totals[0] > totals[1] : totals[1] > totals[0]);
+		boolean scored = !legs.isEmpty() && allLegsScored(legs);
+		boolean tieBreakLeader = scored && totals[0] == totals[1] && tieBreakDecision(matchup, legs)
+				.map(decision -> decision.side() == (isTeam1 ? TieBreakRule.Side.HOME : TieBreakRule.Side.AWAY)).orElse(false);
+		boolean pointsLeader = scored && (isTeam1 ? totals[0] > totals[1] : totals[1] > totals[0]) || tieBreakLeader;
 		String decisionReason = normalizedReason(reason);
 		if (!pointsLeader && decisionReason == null) {
 			throw new IllegalStateException("A winner that is not the points leader of all scheduled legs needs a reason");
 		}
 
         validateAdvancement(matchup, winner);
+		matchup.setDecidedByTieBreak(tieBreakLeader);
 		decide(matchup, winner, decisionReason);
 		log.info("Matchup winner set manually: {}", winner.getShortName());
 	}
@@ -254,6 +265,7 @@ public class PlayoffService {
 		appendHistory(matchup, "REOPENED", previousWinner, reopenReason);
 		matchup.setWinner(null);
 		matchup.setDecisionReason(null);
+		matchup.setDecidedByTieBreak(false);
 		matchup.setBye(false);
 		matchup.setWalkoverTeam(null);
 		playoffMatchupRepository.save(matchup);
@@ -348,6 +360,15 @@ public class PlayoffService {
 
 	private static boolean allLegsUnscored(List<Race> legs) {
 		return legs.stream().allMatch(leg -> leg.getResults().isEmpty());
+	}
+
+	private Optional<TieBreakRule.Decision> tieBreakDecision(PlayoffMatchup matchup, List<Race> legs) {
+		if (!matchup.getRound().getPlayoff().getPhase().isTieBreakRaceWinner()) return Optional.empty();
+		return scoringService.tieBreakDecision(legs, matchup.getTeam1().getId());
+	}
+
+	private static Team sideTeam(PlayoffMatchup matchup, TieBreakRule.Side side) {
+		return side == TieBreakRule.Side.HOME ? matchup.getTeam1() : matchup.getTeam2();
 	}
 
 	private int[] totals(PlayoffMatchup matchup, List<Race> legs) {
@@ -454,7 +475,16 @@ public class PlayoffService {
 	public Playoff createPlayoff(UUID seasonId, String name, int numberOfTeams,
 	                             LocalDate startDate, LocalDate endDate,
 	                             Integer eventDurationMinutes) {
+		return createPlayoff(seasonId, name, numberOfTeams, startDate, endDate, eventDurationMinutes, false);
+	}
+
+	/** Like the other overload, with the playoff phase's tie-break rule set in the same transaction. */
+	@Transactional
+	public Playoff createPlayoff(UUID seasonId, String name, int numberOfTeams,
+	                             LocalDate startDate, LocalDate endDate,
+	                             Integer eventDurationMinutes, boolean tieBreakRaceWinner) {
 		var playoff = createPlayoff(seasonId, name, numberOfTeams);
+		seasonPhaseService.applyTieBreakRule(playoff.getPhase(), tieBreakRaceWinner);
 		playoff.setStartDate(startDate);
 		playoff.setEndDate(endDate);
 		playoff.setEventDurationMinutes(eventDurationMinutes);

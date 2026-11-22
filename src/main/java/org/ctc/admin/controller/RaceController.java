@@ -76,6 +76,8 @@ public class RaceController {
         model.addAttribute("carPresentation", data.carPresentation());
 		model.addAttribute("homeTotal", data.homeTotal());
 		model.addAttribute("awayTotal", data.awayTotal());
+		model.addAttribute("homeTieBreakWinner", data.homeTieBreakWinner());
+		model.addAttribute("awayTieBreakWinner", data.awayTieBreakWinner());
         model.addAttribute("penaltyTotals", data.penaltyTotals());
 		model.addAttribute("driverTeamMap", data.driverTeamMap());
 		model.addAttribute("guestDriverMap", data.guestDriverMap());

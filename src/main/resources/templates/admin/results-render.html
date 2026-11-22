@@ -77,6 +77,10 @@
         .penalty-summary { flex: none; display: flex; justify-content: space-between; gap: 24px;
             padding: 8px 90px; background: #121217; font-size: 15px; line-height: 1.5; }
         .penalty-summary p { max-width: 48%; overflow-wrap: anywhere; }
+        .team-card-container { position: relative; }
+        .tb-badge { position: absolute; top: 14px; left: 0; right: 0; text-align: center;
+            font-size: 34px; font-weight: 700; color: #f5c542; letter-spacing: 3px;
+            text-shadow: 0 2px 6px rgba(0,0,0,.7); }
     </style>
 </head>
 <body>
@@ -97,6 +101,7 @@
     <div class="main">
         <div class="team-card-container">
             <img th:src="${homeCardBase64}" alt="Home Team Card">
+            <div th:if="${homeIsTieBreakWinner == true}" class="tb-badge">TIE-BREAK</div>
         </div>
 
         <div class="results">
@@ -118,6 +123,7 @@
 
         <div class="team-card-container">
             <img th:src="${awayCardBase64}" alt="Away Team Card">
+            <div th:if="${awayIsTieBreakWinner == true}" class="tb-badge">TIE-BREAK</div>
         </div>
     </div>
 

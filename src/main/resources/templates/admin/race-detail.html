@@ -26,7 +26,7 @@
     <!-- Score Banner -->
     <div th:if="${homeTotal != null}" class="score-banner">
         <div class="score-banner__team"
-             th:with="isWinner=${homeTotal > awayTotal}, isLoser=${homeTotal < awayTotal}">
+             th:with="isWinner=${homeTotal > awayTotal or homeTieBreakWinner}, isLoser=${homeTotal < awayTotal or awayTieBreakWinner}">
             <div class="score-banner__label">Home</div>
             <div class="score-banner__name"
                  th:text="${race.homeTeam.shortName}"></div>
@@ -41,7 +41,7 @@
         <div class="score-separator">:</div>
 
         <div class="score-banner__team"
-             th:with="isWinner=${awayTotal > homeTotal}, isLoser=${awayTotal < homeTotal}">
+             th:with="isWinner=${awayTotal > homeTotal or awayTieBreakWinner}, isLoser=${awayTotal < homeTotal or homeTieBreakWinner}">
             <div class="score-banner__label">Away</div>
             <div class="score-banner__name"
                  th:text="${race.awayTeam?.shortName}"></div>
@@ -53,8 +53,11 @@
             </div>
         </div>
 
-        <div th:if="${homeTotal == awayTotal}" class="score-banner__draw-overlay">
+        <div th:if="${homeTotal == awayTotal and !homeTieBreakWinner and !awayTieBreakWinner}" class="score-banner__draw-overlay">
             <span class="result-badge--draw">DRAW</span>
+        </div>
+        <div th:if="${homeTieBreakWinner or awayTieBreakWinner}" class="score-banner__draw-overlay">
+            <span class="result-badge--draw">TIE-BREAK</span>
         </div>
     </div>
 

@@ -1,0 +1,155 @@
+package org.ctc.domain.model;
+
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class MatchOutcomeTest {
+    private final Team home = team("HOM");
+    private final Team away = team("AWY");
+
+    @Test
+    void givenHigherHomeScore_whenOutcome_thenHomeWins() {
+        // given
+        var match = match(50, 40);
+        // when
+        var outcome = match.outcome();
+        // then
+        assertThat(outcome.winner()).isSameAs(home);
+        assertThat(outcome.loser()).isSameAs(away);
+        assertThat(outcome.tieBreak()).isFalse();
+    }
+
+    @Test
+    void givenHigherAwayScore_whenOutcome_thenAwayWins() {
+        // when
+        var outcome = match(40, 50).outcome();
+        // then
+        assertThat(outcome.isWinner(away)).isTrue();
+        assertThat(outcome.isWinner(home)).isFalse();
+    }
+
+    @Test
+    void givenWalkover_whenOutcome_thenOpponentOfForfeiterWins() {
+        // given
+        var match = match(null, null);
+        match.setWalkoverTeam(home);
+        // when
+        var outcome = match.outcome();
+        // then
+        assertThat(outcome.winner()).isSameAs(away);
+        assertThat(outcome.tieBreak()).isFalse();
+    }
+
+    @Test
+    void givenEqualScoresWithoutTieBreakWinner_whenOutcome_thenDraw() {
+        // when
+        var outcome = match(45, 45).outcome();
+        // then
+        assertThat(outcome.isDraw()).isTrue();
+        assertThat(outcome.winner()).isNull();
+    }
+
+    @Test
+    void givenEqualScoresWithTieBreakWinner_whenOutcome_thenTieBreakWin() {
+        // given
+        var match = match(45, 45);
+        match.setTieBreakWinner(away);
+        // when
+        var outcome = match.outcome();
+        // then
+        assertThat(outcome.winner()).isSameAs(away);
+        assertThat(outcome.loser()).isSameAs(home);
+        assertThat(outcome.tieBreak()).isTrue();
+        assertThat(outcome.isDraw()).isFalse();
+    }
+
+    @Test
+    void givenTieBreakWinner_whenWalkoverSet_thenWinnerDroppedOnSave() {
+        // given
+        var match = match(45, 45);
+        match.setTieBreakWinner(away);
+        match.setWalkoverTeam(home);
+        // when
+        match.dropInvalidTieBreakWinner();
+        // then
+        assertThat(match.getTieBreakWinner()).as("a walkover replaces the tie-break").isNull();
+    }
+
+    @Test
+    void givenTieBreakWinner_whenScoresNoLongerTied_thenWinnerDroppedOnSave() {
+        // given
+        var match = match(45, 45);
+        match.setTieBreakWinner(away);
+        match.setHomeScore(60);
+        // when
+        match.dropInvalidTieBreakWinner();
+        // then
+        assertThat(match.getTieBreakWinner()).isNull();
+    }
+
+    @Test
+    void givenTieBreakWinner_whenTeamReplaced_thenWinnerDroppedOnSave() {
+        // given
+        var match = match(45, 45);
+        match.setTieBreakWinner(away);
+        match.setAwayTeam(team("NEW"));
+        // when
+        match.dropInvalidTieBreakWinner();
+        // then
+        assertThat(match.getTieBreakWinner()).isNull();
+    }
+
+    @Test
+    void givenValidTieBreakWinner_whenSaving_thenWinnerKept() {
+        // given
+        var match = match(45, 45);
+        match.setTieBreakWinner(away);
+        // when
+        match.dropInvalidTieBreakWinner();
+        // then
+        assertThat(match.getTieBreakWinner()).isSameAs(away);
+    }
+
+    @Test
+    void givenTieBreakWin_whenReadingResultFlags_thenAwayWonOnTieBreak() {
+        // given
+        var match = match(45, 45);
+        match.setTieBreakWinner(away);
+        // when / then
+        assertThat(match.isAwayWinner()).isTrue();
+        assertThat(match.isHomeWinner()).isFalse();
+        assertThat(match.isWonOnTieBreak()).isTrue();
+        assertThat(match.isScoredDraw()).isFalse();
+    }
+
+    @Test
+    void givenDraw_whenReadingResultFlags_thenScoredDrawWithoutWinner() {
+        // given
+        var match = match(45, 45);
+        // when / then
+        assertThat(match.isScoredDraw()).isTrue();
+        assertThat(match.isHomeWinner() || match.isAwayWinner() || match.isWonOnTieBreak()).isFalse();
+        assertThat(match(null, null).isScoredDraw()).as("unplayed is no draw").isFalse();
+    }
+
+    @Test
+    void givenUnplayedMatch_whenOutcome_thenNull() {
+        // when / then
+        assertThat(match(null, null).outcome()).isNull();
+    }
+
+    private Match match(Integer homeScore, Integer awayScore) {
+        var match = new Match(null, home, away);
+        match.setHomeScore(homeScore);
+        match.setAwayScore(awayScore);
+        return match;
+    }
+
+    private static Team team(String shortName) {
+        var team = new Team(shortName, shortName);
+        team.setId(UUID.randomUUID());
+        return team;
+    }
+}

@@ -34,6 +34,19 @@ public class MatchResultsGraphicService extends AbstractGraphicService implement
 	}
 
 	public byte[] generateMatchResults(Match match) throws IOException {
+		String html = buildHtml(match);
+
+		Path tempFile = Files.createTempFile("match-results-", ".png");
+		try {
+			renderScreenshot(html, tempFile);
+			log.info("Generated match results graphic for match {}", match.getId());
+			return Files.readAllBytes(tempFile);
+		} finally {
+			Files.deleteIfExists(tempFile);
+		}
+	}
+
+	String buildHtml(Match match) throws IOException {
 		if (match.getHomeTeam() == null) {
 			throw new IllegalStateException("Match has no home team");
 		}
@@ -70,8 +83,13 @@ public class MatchResultsGraphicService extends AbstractGraphicService implement
 		ctx.setVariable("awayCardBase64", awayCardBase64);
 		ctx.setVariable("homeTotal", homeTotal);
 		ctx.setVariable("awayTotal", awayTotal);
-		ctx.setVariable("homeIsWinner", homeTotal > awayTotal);
-		ctx.setVariable("awayIsWinner", awayTotal > homeTotal);
+		var tieBreakWinner = match.getTieBreakWinner();
+		boolean homeTieBreak = homeTotal == awayTotal && tieBreakWinner != null && tieBreakWinner.getId().equals(homeTeam.getId());
+		boolean awayTieBreak = homeTotal == awayTotal && tieBreakWinner != null && tieBreakWinner.getId().equals(awayTeam.getId());
+		ctx.setVariable("homeIsWinner", homeTotal > awayTotal || homeTieBreak);
+		ctx.setVariable("awayIsWinner", awayTotal > homeTotal || awayTieBreak);
+		ctx.setVariable("homeIsTieBreakWinner", homeTieBreak);
+		ctx.setVariable("awayIsTieBreakWinner", awayTieBreak);
 		var forfeiter = match.getRaces().stream().filter(WalkoverScoring::isPlayoffWalkover)
                 .map(WalkoverScoring::forfeitingTeam).findFirst().orElse(match.getWalkoverTeam());
         ctx.setVariable("homeIsWalkover", forfeiter != null && homeTeam.getId().equals(forfeiter.getId()));
@@ -80,16 +98,7 @@ public class MatchResultsGraphicService extends AbstractGraphicService implement
 		ctx.setVariable("ctcLogoBase64", encodeClasspathResource(CTC_LOGO_CLASSPATH, "image/png"));
 		ctx.setVariable("fontBase64", encodeClasspathResource(FONT_CLASSPATH, "font/woff2"));
 
-		String html = renderTemplate(ctx);
-
-		Path tempFile = Files.createTempFile("match-results-", ".png");
-		try {
-			renderScreenshot(html, tempFile);
-			log.info("Generated match results graphic for match {}", match.getId());
-			return Files.readAllBytes(tempFile);
-		} finally {
-			Files.deleteIfExists(tempFile);
-		}
+		return renderTemplate(ctx);
 	}
 
 	List<RaceResultRow> buildRaceRows(Match match) {

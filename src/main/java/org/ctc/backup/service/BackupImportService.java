@@ -138,7 +138,7 @@ public class BackupImportService {
      * {@code SUPPORTED_SCHEMA_VERSIONS.toString()}, where {@code Set.of(1, 2)} produces
      * a hash-randomised order that breaks message-matching assertions.
      */
-    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27));
+    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new LinkedHashSet<>(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28));
 
     /** Tables an older schema version never exported; they may be absent when the manifest announces no rows. */
     static final Set<String> INCIDENT_TABLES = Set.of("incident_match_contexts", "incident_report_windows", "incident_reports", "incident_report_revisions", "incident_report_events", "incident_deliveries", "incident_thread_publications", "incident_rulings", "incident_ruling_revisions", "incident_ruling_publications");
@@ -785,6 +785,7 @@ public class BackupImportService {
 
     private static JsonNode normalizeRestorableRow(int version, String table, JsonNode row) {
         row = org.ctc.backup.schema.SeasonDocumentArchive.normalize(version, table, row);
+        row = org.ctc.backup.schema.TieBreakArchive.normalize(version, table, row);
         row = org.ctc.backup.schema.LineupArchive.normalize(version, table, row);
         row = org.ctc.backup.schema.LobbyRulesArchive.normalize(version, table, row);
         row = org.ctc.backup.schema.DisqualificationArchive.normalize(version, table, row);
@@ -847,6 +848,7 @@ public class BackupImportService {
         var pickWindows = new org.ctc.backup.schema.PickWindowBackupValidator();
         var lobbyRulesValidator = new org.ctc.backup.schema.LobbyRulesBackupValidator();
         var walkoverValidator = new org.ctc.backup.schema.MatchWalkoverBackupValidator();
+        var tieBreakValidator = new org.ctc.backup.schema.TieBreakBackupValidator();
         var penaltyValidator = new org.ctc.backup.schema.RacePenaltyBackupValidator(manifest.schemaVersion());
         var disqualificationValidator = new org.ctc.backup.schema.DisqualificationBackupValidator(manifest.schemaVersion());
         var poolValidator = new org.ctc.backup.schema.CarPoolBackupValidator(manifest.schemaVersion());
@@ -868,6 +870,7 @@ public class BackupImportService {
                         activeSeasonValidator.accept(ref.tableName(), row);
                         pickWindows.accept(ref.tableName(), row);
                         walkoverValidator.accept(ref.tableName(), row);
+                        tieBreakValidator.accept(ref.tableName(), row);
                         penaltyValidator.accept(ref.tableName(), row);
                         disqualificationValidator.accept(ref.tableName(), row);
                         poolValidator.accept(ref.tableName(), row);
@@ -881,6 +884,7 @@ public class BackupImportService {
             }
             pickWindows.validate();
             walkoverValidator.validate();
+            tieBreakValidator.validate();
             penaltyValidator.validate();
             disqualificationValidator.validate();
             poolValidator.validate();

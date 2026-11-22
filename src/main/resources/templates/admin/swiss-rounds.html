@@ -41,11 +41,11 @@
                             </div>
                         </th:block>
                         <th:block th:if="${match.walkoverTeam == null and match.officialHomeScore != null}">
-                            <div class="swiss-team" th:classappend="${match.officialHomeScore > match.officialAwayScore ? 'winner' : ''}">
+                            <div class="swiss-team" th:classappend="${match.homeWinner ? 'winner' : ''}">
                                 <span th:text="${match.homeTeam.shortName}"></span>
                                 <span class="swiss-score" th:text="${match.officialHomeScore}"></span>
                             </div>
-                            <div class="swiss-team" th:classappend="${match.officialAwayScore > match.officialHomeScore ? 'winner' : ''}">
+                            <div class="swiss-team" th:classappend="${match.awayWinner ? 'winner' : ''}">
                                 <span th:text="${match.awayTeam.shortName}"></span>
                                 <span class="swiss-score" th:text="${match.officialAwayScore}"></span>
                             </div>

@@ -57,8 +57,9 @@ public class PlayoffMatchupRestorer implements EntityRestorer {
     private static final String INSERT_SQL_PASS1 =
             "INSERT INTO playoff_matchups (id, round_id, team1_id, team2_id, winner_id, "
                     + "next_matchup_id, bracket_position, home_score, away_score, decision_reason, "
-                    + "decision_history, bye, walkover_team_id, created_at, updated_at, pick_deadline_override, pick_window_version) "
-                    + "VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    + "decision_history, bye, walkover_team_id, created_at, updated_at, pick_deadline_override, pick_window_version, "
+                    + "decided_by_tie_break) "
+                    + "VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     /**
      * Pass-2 UPDATE binds {@code next_matchup_id} from the JSON, scoped by {@code id}.
@@ -99,6 +100,7 @@ public class PlayoffMatchupRestorer implements EntityRestorer {
             if (row.hasNonNull("pickDeadlineOverride")) ps.setTimestamp(15, Timestamp.valueOf(LocalDateTime.parse(row.get("pickDeadlineOverride").asText())));
             else ps.setNull(15, Types.TIMESTAMP);
             ps.setLong(16, row.path("pickWindowVersion").asLong(0));
+            ps.setBoolean(17, row.path("decidedByTieBreak").asBoolean(false));
         });
 
         // Pass 2: UPDATE next_matchup_id for the subset with a non-null nextMatchup reference

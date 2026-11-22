@@ -5,7 +5,15 @@ import java.util.List;
 public record RaceView(String homeTeamShortName, String awayTeamShortName, String track, String car, int homeTotal,
                        int awayTotal, boolean hasResults,
                        boolean homeTeamWon, boolean awayTeamWon,
-                       List<ResultView> results, String poolEntryLabel, org.ctc.domain.model.RacePenaltyTotals penaltyTotals) {
+                       List<ResultView> results, String poolEntryLabel, org.ctc.domain.model.RacePenaltyTotals penaltyTotals,
+                       boolean tieBreak) {
+
+    public RaceView(String homeTeamShortName, String awayTeamShortName, String track, String car, int homeTotal,
+                    int awayTotal, boolean hasResults, boolean homeTeamWon, boolean awayTeamWon,
+                    List<ResultView> results, String poolEntryLabel, org.ctc.domain.model.RacePenaltyTotals penaltyTotals) {
+        this(homeTeamShortName, awayTeamShortName, track, car, homeTotal, awayTotal, hasResults, homeTeamWon, awayTeamWon,
+                results, poolEntryLabel, penaltyTotals, false);
+    }
 
     public boolean isTeamOnlyResult() { return hasResults && results.isEmpty(); }
 

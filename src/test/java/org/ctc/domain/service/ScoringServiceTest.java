@@ -323,6 +323,204 @@ class ScoringServiceTest {
 			assertEquals(0, match.getAwayScore());
 		}
 
+		@Test
+		void givenTieBreakPhaseAndTiedLegs_whenRecompute_thenTieBreakWinnerStored() {
+			// given
+			var homeTeam = createTeam("Home");
+			var awayTeam = createTeam("Away");
+			var match = createMatch(homeTeam, awayTeam);
+			match.getMatchday().getPhase().setTieBreakRaceWinner(true);
+			var race = tiedRace(match, homeTeam, awayTeam, false);
+			// when
+			scoringService.recomputeMatchScoresFromAllLegs(race);
+			// then
+			assertEquals(match.getHomeScore(), match.getAwayScore(), "fixture produces a tie");
+			assertSame(awayTeam, match.getTieBreakWinner(), "away driver won the race");
+		}
+
+		@Test
+		void givenPhaseWithoutTieBreak_whenRecompute_thenNoTieBreakWinner() {
+			// given
+			var homeTeam = createTeam("Home");
+			var awayTeam = createTeam("Away");
+			var match = createMatch(homeTeam, awayTeam);
+			var race = tiedRace(match, homeTeam, awayTeam, false);
+			// when
+			scoringService.recomputeMatchScoresFromAllLegs(race);
+			// then
+			assertNull(match.getTieBreakWinner(), "rule is off for this phase");
+		}
+
+		@Test
+		void givenScoresNoLongerTied_whenRecompute_thenTieBreakWinnerCleared() {
+			// given
+			var homeTeam = createTeam("Home");
+			var awayTeam = createTeam("Away");
+			var match = createMatch(homeTeam, awayTeam);
+			match.getMatchday().getPhase().setTieBreakRaceWinner(true);
+			match.setTieBreakWinner(awayTeam);
+			var race = tiedRace(match, homeTeam, awayTeam, false);
+			race.getResults().getFirst().setPointsTotal(30);
+			// when
+			scoringService.recomputeMatchScoresFromAllLegs(race);
+			// then
+			assertNull(match.getTieBreakWinner(), "a decided score needs no tie-break");
+		}
+
+		@Test
+		void givenDisqualifiedRaceWinner_whenRecompute_thenNextClassifiedDriversTeamWins() {
+			// given
+			var homeTeam = createTeam("Home");
+			var awayTeam = createTeam("Away");
+			var match = createMatch(homeTeam, awayTeam);
+			match.getMatchday().getPhase().setTieBreakRaceWinner(true);
+			var race = tiedRace(match, homeTeam, awayTeam, true);
+			// when
+			scoringService.recomputeMatchScoresFromAllLegs(race);
+			// then
+			assertSame(homeTeam, match.getTieBreakWinner(), "away winner is disqualified, home driver is classified first");
+		}
+
+		@Test
+		void givenPenaltyCreatesTie_whenRecompute_thenRaceWinnerTeamStillWins() {
+			// given
+			var homeTeam = createTeam("Home");
+			var awayTeam = createTeam("Away");
+			var match = createMatch(homeTeam, awayTeam);
+			match.getMatchday().getPhase().setTieBreakRaceWinner(true);
+			var race = createRace(match);
+			var homeDriver = createDriver("pen_home_p1");
+			var awayDriver = createDriver("pen_away_p2");
+			var winner = createResult(race, homeDriver, 20); winner.setPosition(1);
+			var second = createResult(race, awayDriver, 17); second.setPosition(2);
+			race.setResults(new ArrayList<>(List.of(winner, second)));
+			var penalty = new RacePenaltyRevision(race, 1, 3, 0, 20, 17, "Test penalty", "test", "0".repeat(64));
+			org.springframework.test.util.ReflectionTestUtils.setField(penalty, "id", UUID.randomUUID());
+			penalty.setCreatedAt(java.time.LocalDateTime.of(2026, 11, 21, 20, 0));
+			penalty.setUpdatedAt(penalty.getCreatedAt());
+			race.getPenaltyRevisions().add(penalty);
+			when(raceLineupRepository.findByRaceId(race.getId()))
+					.thenReturn(List.of(new RaceLineup(race, homeDriver, homeTeam), new RaceLineup(race, awayDriver, awayTeam)));
+			when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
+			// when
+			scoringService.recomputeMatchScoresFromAllLegs(race);
+			// then
+			assertEquals(match.getHomeScore(), match.getAwayScore(), "penalty produces 17:17");
+			assertSame(homeTeam, match.getTieBreakWinner(), "the penalised team's driver still won the race");
+		}
+
+		@Test
+		void givenLegsWithoutDriverResults_whenTieBreakDecision_thenEmpty() {
+			// given
+			var match = createMatch(createTeam("Home"), createTeam("Away"));
+			var race = createRace(match);
+			race.setResults(new ArrayList<>());
+			// when / then
+			assertEquals(Optional.empty(), scoringService.tieBreakDecision(List.of(race), match.getHomeTeam().getId()),
+					"no race winner means no tie-break, so a tied playoff keeps the manual decision");
+		}
+
+		@Test
+		void givenRaceWinnerInSubTeamLineup_whenTieBreakDecision_thenParentSideWins() {
+			// given
+			var parent = createTeam("Parent");
+			var subTeam = createTeam("Sub");
+			subTeam.setParentTeam(parent);
+			var awayTeam = createTeam("Away");
+			var match = createMatch(parent, awayTeam);
+			var race = createRace(match);
+			var subDriver = createDriver("sub_p1");
+			var awayDriver = createDriver("away_p2");
+			var winner = createResult(race, subDriver, 20); winner.setPosition(1);
+			var second = createResult(race, awayDriver, 20); second.setPosition(2);
+			race.setResults(new ArrayList<>(List.of(winner, second)));
+			when(raceLineupRepository.findByRaceId(race.getId()))
+					.thenReturn(List.of(new RaceLineup(race, subDriver, subTeam), new RaceLineup(race, awayDriver, awayTeam)));
+			// when
+			var decision = scoringService.tieBreakDecision(List.of(race), parent.getId());
+			// then
+			assertEquals(Optional.of(TieBreakRule.Side.HOME), decision.map(TieBreakRule.Decision::side), "sub-team driver scores for the parent");
+		}
+
+		@Test
+		void givenTieBreakMatch_whenSingleLegTieBreakWinner_thenWinner() {
+			// given
+			var homeTeam = createTeam("Home");
+			var awayTeam = createTeam("Away");
+			var match = createMatch(homeTeam, awayTeam);
+			var race = tiedRace(match, homeTeam, awayTeam, false);
+			match.setTieBreakWinner(awayTeam);
+			// when / then
+			assertEquals(Optional.of(awayTeam), scoringService.singleLegTieBreakWinner(race));
+		}
+
+		@Test
+		void givenTieBreakMatch_whenSingleLegTieBreakWinnerOfMultiLegMatch_thenEmpty() {
+			// given
+			var homeTeam = createTeam("Home");
+			var awayTeam = createTeam("Away");
+			var match = createMatch(homeTeam, awayTeam);
+			var deciding = tiedRace(match, homeTeam, awayTeam, false);
+			deciding.setDateTime(java.time.LocalDateTime.of(2026, 10, 24, 20, 0));
+			var later = createRace(match);
+			later.setDateTime(java.time.LocalDateTime.of(2026, 10, 24, 21, 0));
+			later.setResults(new ArrayList<>(List.of(createResult(later, createDriver("late"), 5))));
+			when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(later, deciding));
+			match.setTieBreakWinner(awayTeam);
+			// when / then
+			assertEquals(Optional.empty(), scoringService.singleLegTieBreakWinner(later), "other leg");
+			assertEquals(Optional.empty(), scoringService.singleLegTieBreakWinner(deciding),
+					"with several legs the tie-break shows only on the match level, not on the deciding leg");
+		}
+
+		@Test
+		void givenMatchWithoutTieBreak_whenSingleLegTieBreakWinner_thenEmpty() {
+			// given
+			var race = createRace(createMatch(createTeam("Home"), createTeam("Away")));
+			// when / then
+			assertEquals(Optional.empty(), scoringService.singleLegTieBreakWinner(race));
+		}
+
+		@Test
+		void givenPlayoffDecidedByTieBreak_whenSingleLegTieBreakWinner_thenMatchupWinner() {
+			// given
+			var team1 = createTeam("Team1");
+			var team2 = createTeam("Team2");
+			var matchup = new PlayoffMatchup();
+			matchup.setId(UUID.randomUUID());
+			matchup.setTeam1(team1);
+			matchup.setTeam2(team2);
+			matchup.setWinner(team2);
+			matchup.setDecidedByTieBreak(true);
+			var race = new Race();
+			race.setId(UUID.randomUUID());
+			race.setPlayoffMatchup(matchup);
+			var d1 = createDriver("t2_p1");
+			var winner = createResult(race, d1, 20);
+			winner.setPosition(1);
+			race.setResults(new ArrayList<>(List.of(winner)));
+			when(raceRepository.findByPlayoffMatchupId(matchup.getId())).thenReturn(List.of(race));
+			when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of(new RaceLineup(race, d1, team2)));
+			// when / then
+			assertEquals(Optional.of(team2), scoringService.singleLegTieBreakWinner(race));
+		}
+
+		private Race tiedRace(Match match, Team homeTeam, Team awayTeam, boolean winnerDisqualified) {
+			var race = createRace(match);
+			var awayDriver = createDriver("away_p1");
+			var homeDriver = createDriver("home_p2");
+			var winner = createResult(race, awayDriver, 20);
+			winner.setPosition(1);
+			winner.setDisqualified(winnerDisqualified);
+			var second = createResult(race, homeDriver, 20);
+			second.setPosition(2);
+			race.setResults(new ArrayList<>(List.of(winner, second)));
+			org.mockito.Mockito.lenient().when(raceLineupRepository.findByRaceId(race.getId()))
+					.thenReturn(List.of(new RaceLineup(race, homeDriver, homeTeam), new RaceLineup(race, awayDriver, awayTeam)));
+			org.mockito.Mockito.lenient().when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
+			return race;
+		}
+
 		private Team createTeam(String name) {
 			var team = new Team(name, name);
 			team.setId(UUID.randomUUID());

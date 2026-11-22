@@ -52,6 +52,9 @@ public class SeasonPhase extends BaseEntity {
 	@Column(nullable = false)
 	private int legs = 1;
 
+	@Column(name = "tie_break_race_winner", nullable = false)
+	private boolean tieBreakRaceWinner;
+
 	@Column(name = "event_duration_minutes")
 	private Integer eventDurationMinutes;
 

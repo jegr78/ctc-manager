@@ -21,6 +21,10 @@ public interface PlayoffMatchupRepository extends JpaRepository<PlayoffMatchup, 
 
 	List<PlayoffMatchup> findByRoundPlayoffPhaseIdAndWinnerIsNotNull(UUID phaseId);
 
+	@Query("SELECT COUNT(pm) > 0 FROM PlayoffMatchup pm WHERE pm.round.playoff.phase.id = :phaseId AND pm.bye = false "
+			+ "AND (pm.homeScore IS NOT NULL OR pm.awayScore IS NOT NULL OR pm.winner IS NOT NULL)")
+	boolean existsScoredInPhase(UUID phaseId);
+
 	/**
 	 * Full-table finder used by {@code BackupExportService}.
 	 *

@@ -170,6 +170,86 @@ class DataAuditServiceIT {
         assertThat(matchRepository.findByMatchdayId(fixture.matchday().getId())).hasSize(2);
     }
 
+    @Test void givenTieBreakPhaseWithUnresolvedTie_whenAuditing_thenReportWithoutRepair() {
+        // given
+        var fixture = testHelper.createFullSeasonFixture("TTbOpen" + id);
+        fixture.matchday().getPhase().setTieBreakRaceWinner(true);
+        fixture.match().setHomeScore(40); fixture.match().setAwayScore(40);
+        entityManager.flush(); entityManager.clear();
+        // when / then
+        assertThat(dataAuditService.audit().findings(PAIRING)).anySatisfy(f -> {
+            assertThat(f.subject()).contains(fixture.match().getId().toString());
+            assertThat(f.evidence()).contains("tied match without a tie-break winner");
+        });
+        assertThat(entityManager.find(Match.class, fixture.match().getId()).getTieBreakWinner()).as("audit does not repair").isNull();
+    }
+
+    @Test void givenPlayoffDecidedByTieBreakWithoutReason_whenAuditing_thenNoMissingReasonFinding() {
+        // given
+        var fixture = testHelper.createFullSeasonFixture("TTbPo" + id);
+        var playoff = testHelper.createPlayoffInPhase(fixture.season(), "Test tie-break final " + id, 2);
+        var matchup = playoff.getRounds().getFirst().getMatchups().getFirst();
+        matchup.setTeam1(fixture.homeTeam()); matchup.setTeam2(fixture.awayTeam());
+        matchup.setHomeScore(30); matchup.setAwayScore(30); matchup.setWinner(fixture.awayTeam());
+        matchup.setDecidedByTieBreak(true); matchup.setDecisionHistory("2026-11-21T20:00:00Z DECIDED " + fixture.awayTeam().getShortName());
+        entityManager.flush(); entityManager.clear();
+        // when / then
+        assertThat(dataAuditService.audit().findings(PLAYOFF))
+                .as("a tie-break decision needs no reason")
+                .noneSatisfy(f -> assertThat(f.evidence()).contains("does not lead"));
+    }
+
+    @Test void givenPlayoffTieBreakInPhaseWithoutRule_whenAuditing_thenReport() {
+        // given
+        var fixture = testHelper.createFullSeasonFixture("TTbPoBad" + id);
+        var playoff = testHelper.createPlayoffInPhase(fixture.season(), "Test tie-break bad " + id, 2);
+        var matchup = playoff.getRounds().getFirst().getMatchups().getFirst();
+        matchup.setTeam1(fixture.homeTeam()); matchup.setTeam2(fixture.awayTeam());
+        matchup.setHomeScore(30); matchup.setAwayScore(30); matchup.setWinner(fixture.awayTeam());
+        matchup.setDecidedByTieBreak(true); matchup.setDecisionHistory("2026-11-21T20:00:00Z DECIDED " + fixture.awayTeam().getShortName());
+        entityManager.flush(); entityManager.clear();
+        // when / then
+        assertThat(dataAuditService.audit().findings(PLAYOFF)).anySatisfy(f -> {
+            assertThat(f.subject()).contains(matchup.getId().toString());
+            assertThat(f.evidence()).contains("tie-break decision breaks the rule");
+        });
+    }
+
+    @Test void givenTieBreakWinnerBreakingInvariant_whenAuditing_thenReport() {
+        // given
+        var fixture = testHelper.createFullSeasonFixture("TTbBad" + id);
+        entityManager.flush();
+        entityManager.createNativeQuery("UPDATE matches SET home_score = 41, away_score = 40, tie_break_winner_id = ? WHERE id = ?")
+                .setParameter(1, fixture.awayTeam().getId()).setParameter(2, fixture.match().getId()).executeUpdate();
+        entityManager.clear();
+        // when / then
+        assertThat(dataAuditService.audit().findings(PAIRING)).anySatisfy(f -> {
+            assertThat(f.subject()).contains(fixture.match().getId().toString());
+            assertThat(f.evidence()).contains("tie-break winner breaks the rule");
+        });
+    }
+
+    @Test void givenStoredTieBreakWinnerDifferingFromRaceWinner_whenAuditing_thenReport() {
+        // given
+        var fixture = testHelper.createFullSeasonFixture("TTbDiff" + id);
+        fixture.matchday().getPhase().setTieBreakRaceWinner(true);
+        var homeDriver = testHelper.createDriver("Test_TB_home_" + id, "TB home");
+        var awayDriver = testHelper.createDriver("Test_TB_away_" + id, "TB away");
+        entityManager.persist(new org.ctc.domain.model.RaceLineup(fixture.race(), homeDriver, fixture.homeTeam()));
+        entityManager.persist(new org.ctc.domain.model.RaceLineup(fixture.race(), awayDriver, fixture.awayTeam()));
+        var winner = new org.ctc.domain.model.RaceResult(fixture.race(), homeDriver, 1, 1, false); winner.setPointsTotal(20);
+        var second = new org.ctc.domain.model.RaceResult(fixture.race(), awayDriver, 2, 2, false); second.setPointsTotal(20);
+        entityManager.persist(winner); entityManager.persist(second);
+        fixture.race().getResults().add(winner); fixture.race().getResults().add(second);
+        fixture.match().setHomeScore(20); fixture.match().setAwayScore(20); fixture.match().setTieBreakWinner(fixture.awayTeam());
+        entityManager.flush(); entityManager.clear();
+        // when / then
+        assertThat(dataAuditService.audit().findings(PAIRING)).anySatisfy(f -> {
+            assertThat(f.subject()).contains(fixture.match().getId().toString());
+            assertThat(f.evidence()).contains("differs from the race winner");
+        });
+    }
+
     @Test void givenPlayoffRaceWithWalkoverOnRegularAnchor_whenAuditing_thenReportWithoutRewritingEitherMarker() {
         var fixture = testHelper.createFullSeasonFixture("Test_PO_WO_Audit_" + id);
         var playoff = testHelper.createPlayoffInPhase(fixture.season(), "Test audit final " + id, 2);

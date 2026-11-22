@@ -3,9 +3,11 @@ package org.ctc.domain.service;
 import static org.ctc.util.LogSanitizer.sanitize;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -90,9 +92,11 @@ public class ScoringService {
 			log.warn("Skipping match-score recompute for match {} — homeTeam is null", match.getId());
 			return;
 		}
-		int[] totals = legTotals(match);
+		var legs = raceRepository.findByMatchId(match.getId());
+		int[] totals = sumLegs(legs, match.getHomeTeam().getId(), this::lineupsOf);
 		match.setHomeScore(totals == null ? null : totals[0]);
 		match.setAwayScore(totals == null ? null : totals[1]);
+		match.setTieBreakWinner(tieBreakWinner(match, legs, totals));
 		matchRepository.save(match);
 		log.info("Recomputed match scores for match {}: {} : {}", match.getId(), match.getHomeScore(), match.getAwayScore());
 	}
@@ -115,8 +119,39 @@ public class ScoringService {
 		playoffMatchupRepository.save(matchup);
 	}
 
-	private int[] legTotals(Match match) {
-		return sumLegs(raceRepository.findByMatchId(match.getId()), match.getHomeTeam().getId(), this::lineupsOf);
+	private Team tieBreakWinner(Match match, List<Race> legs, int[] totals) {
+		var phase = match.getMatchday() == null ? null : match.getMatchday().getPhase();
+		if (phase == null || !phase.isTieBreakRaceWinner() || totals == null || totals[0] != totals[1]) return null;
+		return tieBreakDecision(legs, match.getHomeTeam().getId())
+				.map(decision -> decision.side() == TieBreakRule.Side.HOME ? match.getHomeTeam() : match.getAwayTeam())
+				.orElse(null);
+	}
+
+	/** The pairing's tie-break winner when {@code race} is its only leg; with several legs only the match level shows it. */
+	@Transactional(readOnly = true)
+	public Optional<Team> singleLegTieBreakWinner(Race race) {
+		var match = race.getMatch();
+		if (match != null) {
+			if (match.getTieBreakWinner() == null) return Optional.empty();
+			return decides(raceRepository.findByMatchId(match.getId()), match.getHomeTeam().getId(), race)
+					? Optional.of(match.getTieBreakWinner()) : Optional.empty();
+		}
+		var matchup = race.getPlayoffMatchup();
+		if (matchup == null || !matchup.isDecidedByTieBreak() || matchup.getWinner() == null) return Optional.empty();
+		return decides(raceRepository.findByPlayoffMatchupId(matchup.getId()), matchup.getTeam1().getId(), race)
+				? Optional.of(matchup.getWinner()) : Optional.empty();
+	}
+
+	private boolean decides(List<Race> legs, UUID homeTeamId, Race race) {
+		if (legs.size() != 1) return false;
+		return tieBreakDecision(legs, homeTeamId).map(decision -> decision.race().getId().equals(race.getId())).orElse(false);
+	}
+
+	/** Applies {@link TieBreakRule} to the legs of a pairing, attributing drivers like the team totals do. */
+	public Optional<TieBreakRule.Decision> tieBreakDecision(List<Race> legs, UUID homeTeamId) {
+		Map<UUID, Map<UUID, RaceLineup>> lineups = new HashMap<>();
+		return TieBreakRule.decide(legs, result -> isDriverInTeam(result, result.getRace(), homeTeamId,
+				lineups.computeIfAbsent(result.getRace().getId(), this::lineupsOf).get(result.getDriver().getId())));
 	}
 
 	private int[] legTotals(PlayoffMatchup matchup) {

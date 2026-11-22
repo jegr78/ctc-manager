@@ -42,6 +42,10 @@ public class Match extends BaseEntity {
 	@JoinColumn(name = "walkover_team_id")
 	private Team walkoverTeam;
 
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "tie_break_winner_id")
+	private Team tieBreakWinner;
+
 	private Integer homeScore;
 
 	private Integer awayScore;
@@ -93,6 +97,53 @@ public class Match extends BaseEntity {
 	public boolean isWalkoverFor(Team team) {
 		return walkoverTeam != null && team != null && walkoverTeam.getId().equals(team.getId());
 	}
+
+    /** Drops a tie-break winner that a walkover, a changed score or a replaced team has made invalid. */
+    @PrePersist
+    @PreUpdate
+    void dropInvalidTieBreakWinner() {
+        if (tieBreakWinner == null) return;
+        if (!TieBreakRules.valid(true, tieBreakWinner.getId(), homeTeam == null ? null : homeTeam.getId(),
+                awayTeam == null ? null : awayTeam.getId(), homeScore, awayScore, bye,
+                walkoverTeam == null ? null : walkoverTeam.getId())) {
+            tieBreakWinner = null;
+        }
+    }
+
+    /** The stored result of this pairing, or null while it is unplayed. */
+    public MatchOutcome outcome() {
+        if (bye) return new MatchOutcome(homeTeam, null, false);
+        if (walkoverTeam != null) {
+            boolean homeForfeits = homeTeam != null && walkoverTeam.getId().equals(homeTeam.getId());
+            return new MatchOutcome(homeForfeits ? awayTeam : homeTeam, walkoverTeam, false);
+        }
+        if (homeScore == null || awayScore == null) return null;
+        if (homeScore > awayScore) return new MatchOutcome(homeTeam, awayTeam, false);
+        if (awayScore > homeScore) return new MatchOutcome(awayTeam, homeTeam, false);
+        if (tieBreakWinner == null) return MatchOutcome.draw();
+        boolean homeWins = homeTeam != null && tieBreakWinner.getId().equals(homeTeam.getId());
+        return new MatchOutcome(tieBreakWinner, homeWins ? awayTeam : homeTeam, true);
+    }
+
+    public boolean isHomeWinner() {
+        var result = outcome();
+        return result != null && result.isWinner(homeTeam);
+    }
+
+    public boolean isAwayWinner() {
+        var result = outcome();
+        return result != null && result.isWinner(awayTeam);
+    }
+
+    public boolean isWonOnTieBreak() {
+        var result = outcome();
+        return result != null && result.tieBreak();
+    }
+
+    public boolean isScoredDraw() {
+        var result = outcome();
+        return result != null && result.isDraw();
+    }
 
     public Integer getOfficialHomeScore() {
         if (walkoverTeam == null) return homeScore;

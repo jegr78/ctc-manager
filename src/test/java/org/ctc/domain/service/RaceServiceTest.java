@@ -357,6 +357,56 @@ class RaceServiceTest {
 
 
     @Test
+    void givenTieBreakPhase_whenTiedQuickScore_thenRejectedBeforeMutation() {
+        // given
+        var raceId = UUID.randomUUID();
+        var race = createRaceWithScore(0, 0);
+        race.setId(raceId);
+        race.getMatch().getMatchday().getPhase().setTieBreakRaceWinner(true);
+        when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
+        // when / then
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.quickScore(raceId, 40, 40))
+                .isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class)
+                .hasMessage("Enter driver results for at least one leg to break the tie");
+        assertThat(race.getMatch().getHomeScore()).as("score unchanged").isZero();
+        verify(scoringService, never()).aggregateMatchScores(any());
+    }
+
+    @Test
+    void givenTieBreakPhaseAndOtherLegWithResults_whenTiedQuickScore_thenRejected() {
+        // given
+        var raceId = UUID.randomUUID();
+        var race = createRaceWithScore(20, 20);
+        race.setId(raceId);
+        race.getMatch().getMatchday().getPhase().setTieBreakRaceWinner(true);
+        var scoredLeg = new Race();
+        scoredLeg.setId(UUID.randomUUID());
+        scoredLeg.setMatch(race.getMatch());
+        scoredLeg.getResults().add(new RaceResult(scoredLeg, new Driver("t_tb_leg", "TB leg"), 1, 1, false));
+        when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
+        lenient().when(raceRepository.findByMatchId(race.getMatch().getId())).thenReturn(List.of(race, scoredLeg));
+        // when / then
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.quickScore(raceId, 40, 40))
+                .as("a whole-match quick score replaces every leg, so a tie stays unresolved")
+                .isInstanceOf(org.ctc.domain.exception.BusinessRuleException.class);
+    }
+
+    @Test
+    void givenPhaseWithoutTieBreak_whenTiedQuickScore_thenSaved() {
+        // given
+        var raceId = UUID.randomUUID();
+        var race = createRaceWithScore(0, 0);
+        race.setId(raceId);
+        when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
+        when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
+        // when
+        service.quickScore(raceId, 40, 40);
+        // then
+        assertThat(race.getMatch().getHomeScore()).isEqualTo(40);
+        assertThat(race.getMatch().getAwayScore()).isEqualTo(40);
+    }
+
+    @Test
     void givenExistingRace_whenDeleteRace_thenReturnsMatchdayId() {
         // given
         var raceId = UUID.randomUUID();

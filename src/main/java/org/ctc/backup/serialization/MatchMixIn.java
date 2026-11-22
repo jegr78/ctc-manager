@@ -8,7 +8,8 @@ import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.Team;
 
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "officialHomeScore", "officialAwayScore", "races"})
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "officialHomeScore", "officialAwayScore", "races",
+        "homeWinner", "awayWinner", "wonOnTieBreak", "scoredDraw"})
 public abstract class MatchMixIn {
 
     @JsonIdentityReference(alwaysAsId = true)
@@ -22,4 +23,7 @@ public abstract class MatchMixIn {
 
     @JsonIdentityReference(alwaysAsId = true)
     abstract Team getWalkoverTeam();
+
+    @JsonIdentityReference(alwaysAsId = true)
+    abstract Team getTieBreakWinner();
 }

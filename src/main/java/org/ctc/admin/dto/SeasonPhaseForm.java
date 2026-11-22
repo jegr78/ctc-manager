@@ -42,6 +42,7 @@ public class SeasonPhaseForm {
     private LocalDate endDate;
     private Integer totalRounds;     // optional → boxed
     private int legs = 1;            // mandatory default → primitive
+    private boolean tieBreakRaceWinner;
     private Integer eventDurationMinutes;
     private String label;            // optional, falls back to phaseType.displayName
     private Integer sortIndex;       // null → service auto-sets
