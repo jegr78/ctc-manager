@@ -443,7 +443,7 @@ class ScoringServiceTest {
 		}
 
 		@Test
-		void givenTieBreakMatch_whenTieBreakWinnerForDecidingLeg_thenWinner() {
+		void givenTieBreakMatch_whenSingleLegTieBreakWinner_thenWinner() {
 			// given
 			var homeTeam = createTeam("Home");
 			var awayTeam = createTeam("Away");
@@ -451,11 +451,11 @@ class ScoringServiceTest {
 			var race = tiedRace(match, homeTeam, awayTeam, false);
 			match.setTieBreakWinner(awayTeam);
 			// when / then
-			assertEquals(Optional.of(awayTeam), scoringService.tieBreakWinnerForLeg(race));
+			assertEquals(Optional.of(awayTeam), scoringService.singleLegTieBreakWinner(race));
 		}
 
 		@Test
-		void givenTieBreakMatch_whenTieBreakWinnerForOtherLeg_thenEmpty() {
+		void givenTieBreakMatch_whenSingleLegTieBreakWinnerOfMultiLegMatch_thenEmpty() {
 			// given
 			var homeTeam = createTeam("Home");
 			var awayTeam = createTeam("Away");
@@ -468,19 +468,21 @@ class ScoringServiceTest {
 			when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(later, deciding));
 			match.setTieBreakWinner(awayTeam);
 			// when / then
-			assertEquals(Optional.empty(), scoringService.tieBreakWinnerForLeg(later));
+			assertEquals(Optional.empty(), scoringService.singleLegTieBreakWinner(later), "other leg");
+			assertEquals(Optional.empty(), scoringService.singleLegTieBreakWinner(deciding),
+					"with several legs the tie-break shows only on the match level, not on the deciding leg");
 		}
 
 		@Test
-		void givenMatchWithoutTieBreak_whenTieBreakWinnerForLeg_thenEmpty() {
+		void givenMatchWithoutTieBreak_whenSingleLegTieBreakWinner_thenEmpty() {
 			// given
 			var race = createRace(createMatch(createTeam("Home"), createTeam("Away")));
 			// when / then
-			assertEquals(Optional.empty(), scoringService.tieBreakWinnerForLeg(race));
+			assertEquals(Optional.empty(), scoringService.singleLegTieBreakWinner(race));
 		}
 
 		@Test
-		void givenPlayoffDecidedByTieBreak_whenTieBreakWinnerForLeg_thenMatchupWinner() {
+		void givenPlayoffDecidedByTieBreak_whenSingleLegTieBreakWinner_thenMatchupWinner() {
 			// given
 			var team1 = createTeam("Team1");
 			var team2 = createTeam("Team2");
@@ -500,7 +502,7 @@ class ScoringServiceTest {
 			when(raceRepository.findByPlayoffMatchupId(matchup.getId())).thenReturn(List.of(race));
 			when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of(new RaceLineup(race, d1, team2)));
 			// when / then
-			assertEquals(Optional.of(team2), scoringService.tieBreakWinnerForLeg(race));
+			assertEquals(Optional.of(team2), scoringService.singleLegTieBreakWinner(race));
 		}
 
 		private Race tiedRace(Match match, Team homeTeam, Team awayTeam, boolean winnerDisqualified) {
@@ -513,7 +515,7 @@ class ScoringServiceTest {
 			var second = createResult(race, homeDriver, 20);
 			second.setPosition(2);
 			race.setResults(new ArrayList<>(List.of(winner, second)));
-			when(raceLineupRepository.findByRaceId(race.getId()))
+			org.mockito.Mockito.lenient().when(raceLineupRepository.findByRaceId(race.getId()))
 					.thenReturn(List.of(new RaceLineup(race, homeDriver, homeTeam), new RaceLineup(race, awayDriver, awayTeam)));
 			org.mockito.Mockito.lenient().when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
 			return race;

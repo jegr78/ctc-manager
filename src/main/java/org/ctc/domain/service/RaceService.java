@@ -152,7 +152,7 @@ public class RaceService {
 				&& race.getHomeTeam() != null
 				&& race.getAwayTeam() != null;
 
-		var tieBreakWinner = hasResults && homeTotal == awayTotal ? scoringService.tieBreakWinnerForLeg(race) : Optional.<Team>empty();
+		var tieBreakWinner = hasResults && homeTotal == awayTotal ? scoringService.singleLegTieBreakWinner(race) : Optional.<Team>empty();
 		boolean homeTieBreakWinner = tieBreakWinner.filter(t -> race.getHomeTeam() != null && t.getId().equals(race.getHomeTeam().getId())).isPresent();
 		boolean awayTieBreakWinner = tieBreakWinner.isPresent() && !homeTieBreakWinner;
 		return new RaceDetailData(race, homeTotal, awayTotal, driverTeamMap, guestDriverMap,

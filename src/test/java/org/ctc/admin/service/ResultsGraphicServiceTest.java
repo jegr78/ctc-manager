@@ -63,7 +63,7 @@ class ResultsGraphicServiceTest {
     void givenDecidingLegTie_whenBuildHtml_thenWinnerAndTieBreakBadge() throws Exception {
         // given
         var fixture = tiedRace();
-        when(scoringService.tieBreakWinnerForLeg(fixture.race())).thenReturn(Optional.of(fixture.away()));
+        when(scoringService.singleLegTieBreakWinner(fixture.race())).thenReturn(Optional.of(fixture.away()));
         Files.copy(Path.of("src/main/resources/templates/admin/results-render.html"), tempDir.resolve("results-template.html"));
         // when
         var html = createService().buildHtml(fixture.race());
@@ -77,7 +77,7 @@ class ResultsGraphicServiceTest {
     void givenOtherLegOfTieBreakMatch_whenBuildHtml_thenNoBadge() throws Exception {
         // given
         var fixture = tiedRace();
-        when(scoringService.tieBreakWinnerForLeg(fixture.race())).thenReturn(Optional.empty());
+        when(scoringService.singleLegTieBreakWinner(fixture.race())).thenReturn(Optional.empty());
         Files.writeString(tempDir.resolve("results-template.html"), "<span th:text=\"${homeIsWinner}\"></span><span th:text=\"${awayIsWinner}\"></span><span th:text=\"${homeIsTieBreakWinner}\"></span><span th:text=\"${awayIsTieBreakWinner}\"></span>");
         // when / then
         assertThat(createService().buildHtml(fixture.race())).contains("<span>false</span><span>false</span><span>false</span><span>false</span>");

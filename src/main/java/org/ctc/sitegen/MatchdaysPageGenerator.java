@@ -281,7 +281,7 @@ public class MatchdaysPageGenerator {
         var publicPick = disclosure.forPublic(race.getId());
 
         boolean hasResults = walkover || !race.getResults().isEmpty();
-        var tieBreakWinner = hasResults && homeTotal == awayTotal ? scoring.tieBreakWinnerForLeg(race) : Optional.<Team>empty();
+        var tieBreakWinner = hasResults && homeTotal == awayTotal ? scoring.singleLegTieBreakWinner(race) : Optional.<Team>empty();
         boolean homeTieBreak = tieBreakWinner.filter(t -> homeTeam != null && t.getId().equals(homeTeam.getId())).isPresent();
         boolean homeTeamWon = hasResults && (homeTotal > awayTotal || homeTieBreak);
         boolean awayTeamWon = hasResults && (awayTotal > homeTotal || tieBreakWinner.isPresent() && !homeTieBreak);

@@ -127,9 +127,9 @@ public class ScoringService {
 				.orElse(null);
 	}
 
-	/** The pairing's tie-break winner when {@code race} is the leg that decided it, otherwise empty. */
+	/** The pairing's tie-break winner when {@code race} is its only leg; with several legs only the match level shows it. */
 	@Transactional(readOnly = true)
-	public Optional<Team> tieBreakWinnerForLeg(Race race) {
+	public Optional<Team> singleLegTieBreakWinner(Race race) {
 		var match = race.getMatch();
 		if (match != null) {
 			if (match.getTieBreakWinner() == null) return Optional.empty();
@@ -143,6 +143,7 @@ public class ScoringService {
 	}
 
 	private boolean decides(List<Race> legs, UUID homeTeamId, Race race) {
+		if (legs.size() != 1) return false;
 		return tieBreakDecision(legs, homeTeamId).map(decision -> decision.race().getId().equals(race.getId())).orElse(false);
 	}
 

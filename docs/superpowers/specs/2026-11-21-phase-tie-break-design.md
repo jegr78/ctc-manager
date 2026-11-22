@@ -77,8 +77,8 @@ Views mark a tie-break win as such (for example "won on tie-break") next to the 
 
 ### Results graphics
 
-- Race results graphic of the deciding leg and the match results graphic mark the tie-break winner as winner and add a badge "TIE-BREAK" on that side. No reason line.
-- Other legs' race graphics stay unchanged.
+- A single-leg pairing: its race results graphic marks the tie-break winner and shows the badge "TIE-BREAK" on that side. No reason line.
+- Several legs: only the match results graphic shows the tie-break; the individual leg graphics and race views keep their own leg result.
 - New template variables `homeIsTieBreakWinner` and `awayIsTieBreakWinner`, documented in the template editor. `homeIsWinner`/`awayIsWinner` follow the stored outcome, so custom templates get the right winner without changes.
 - Regeneration stays explicit.
 

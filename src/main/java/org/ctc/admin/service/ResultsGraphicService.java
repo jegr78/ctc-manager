@@ -111,7 +111,7 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
         var forfeiter = WalkoverScoring.forfeitingTeam(race);
         ctx.setVariable("homeIsWalkover", forfeiter != null && homeTeam.getId().equals(forfeiter.getId()));
         ctx.setVariable("awayIsWalkover", forfeiter != null && awayTeam.getId().equals(forfeiter.getId()));
-		var tieBreakWinner = scoringService.tieBreakWinnerForLeg(race);
+		var tieBreakWinner = scoringService.singleLegTieBreakWinner(race);
 		boolean homeTieBreak = tieBreakWinner.filter(team -> team.getId().equals(homeTeam.getId())).isPresent();
 		boolean awayTieBreak = tieBreakWinner.isPresent() && !homeTieBreak;
 		ctx.setVariable("homeIsWinner", homeTotal > awayTotal || homeTotal == awayTotal && homeTieBreak);
