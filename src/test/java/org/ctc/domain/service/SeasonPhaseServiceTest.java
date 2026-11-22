@@ -489,6 +489,21 @@ class SeasonPhaseServiceTest {
         verify(matchRepository, never()).existsScoredInPhase(any());
     }
 
+    @Test
+    void givenTieBreak_whenCreate_thenPhaseSavedWithRuleInOneCall() {
+        // given
+        var season = buildSeason("T-TieBreak-Create");
+        when(seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.PLACEMENT)).thenReturn(Optional.empty());
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(seasonPhaseRepository.save(any(SeasonPhase.class))).thenAnswer(inv -> inv.getArgument(0));
+        // when
+        var phase = seasonPhaseService.create(season.getId(), PhaseType.PLACEMENT, PhaseLayout.LEAGUE, 20, null, null, null,
+                null, null, null, null, 1, null, true);
+        // then
+        assertThat(phase.isTieBreakRaceWinner()).isTrue();
+        verify(seasonPhaseRepository, times(1)).save(any(SeasonPhase.class));
+    }
+
     private void updateTieBreak(SeasonPhase phase, boolean tieBreak) {
         seasonPhaseService.update(phase.getId(), phase.getLayout(), phase.getFormat(),
                 null, null, null, null, null, phase.getLegs(), null, "T-TieBreak-Label",

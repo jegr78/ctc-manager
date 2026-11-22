@@ -382,6 +382,45 @@ class ScoringServiceTest {
 		}
 
 		@Test
+		void givenPenaltyCreatesTie_whenRecompute_thenRaceWinnerTeamStillWins() {
+			// given
+			var homeTeam = createTeam("Home");
+			var awayTeam = createTeam("Away");
+			var match = createMatch(homeTeam, awayTeam);
+			match.getMatchday().getPhase().setTieBreakRaceWinner(true);
+			var race = createRace(match);
+			var homeDriver = createDriver("pen_home_p1");
+			var awayDriver = createDriver("pen_away_p2");
+			var winner = createResult(race, homeDriver, 20); winner.setPosition(1);
+			var second = createResult(race, awayDriver, 17); second.setPosition(2);
+			race.setResults(new ArrayList<>(List.of(winner, second)));
+			var penalty = new RacePenaltyRevision(race, 1, 3, 0, 20, 17, "Test penalty", "test", "0".repeat(64));
+			org.springframework.test.util.ReflectionTestUtils.setField(penalty, "id", UUID.randomUUID());
+			penalty.setCreatedAt(java.time.LocalDateTime.of(2026, 11, 21, 20, 0));
+			penalty.setUpdatedAt(penalty.getCreatedAt());
+			race.getPenaltyRevisions().add(penalty);
+			when(raceLineupRepository.findByRaceId(race.getId()))
+					.thenReturn(List.of(new RaceLineup(race, homeDriver, homeTeam), new RaceLineup(race, awayDriver, awayTeam)));
+			when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
+			// when
+			scoringService.recomputeMatchScoresFromAllLegs(race);
+			// then
+			assertEquals(match.getHomeScore(), match.getAwayScore(), "penalty produces 17:17");
+			assertSame(homeTeam, match.getTieBreakWinner(), "the penalised team's driver still won the race");
+		}
+
+		@Test
+		void givenLegsWithoutDriverResults_whenTieBreakDecision_thenEmpty() {
+			// given
+			var match = createMatch(createTeam("Home"), createTeam("Away"));
+			var race = createRace(match);
+			race.setResults(new ArrayList<>());
+			// when / then
+			assertEquals(Optional.empty(), scoringService.tieBreakDecision(List.of(race), match.getHomeTeam().getId()),
+					"no race winner means no tie-break, so a tied playoff keeps the manual decision");
+		}
+
+		@Test
 		void givenRaceWinnerInSubTeamLineup_whenTieBreakDecision_thenParentSideWins() {
 			// given
 			var parent = createTeam("Parent");

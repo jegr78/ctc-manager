@@ -199,6 +199,22 @@ class DataAuditServiceIT {
                 .noneSatisfy(f -> assertThat(f.evidence()).contains("does not lead"));
     }
 
+    @Test void givenPlayoffTieBreakInPhaseWithoutRule_whenAuditing_thenReport() {
+        // given
+        var fixture = testHelper.createFullSeasonFixture("TTbPoBad" + id);
+        var playoff = testHelper.createPlayoffInPhase(fixture.season(), "Test tie-break bad " + id, 2);
+        var matchup = playoff.getRounds().getFirst().getMatchups().getFirst();
+        matchup.setTeam1(fixture.homeTeam()); matchup.setTeam2(fixture.awayTeam());
+        matchup.setHomeScore(30); matchup.setAwayScore(30); matchup.setWinner(fixture.awayTeam());
+        matchup.setDecidedByTieBreak(true); matchup.setDecisionHistory("2026-11-21T20:00:00Z DECIDED " + fixture.awayTeam().getShortName());
+        entityManager.flush(); entityManager.clear();
+        // when / then
+        assertThat(dataAuditService.audit().findings(PLAYOFF)).anySatisfy(f -> {
+            assertThat(f.subject()).contains(matchup.getId().toString());
+            assertThat(f.evidence()).contains("tie-break decision breaks the rule");
+        });
+    }
+
     @Test void givenTieBreakWinnerBreakingInvariant_whenAuditing_thenReport() {
         // given
         var fixture = testHelper.createFullSeasonFixture("TTbBad" + id);

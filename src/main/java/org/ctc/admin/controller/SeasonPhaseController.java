@@ -250,8 +250,7 @@ public class SeasonPhaseController {
                 var playoff = playoffService.createPlayoff(seasonId, playoffName,
                         /* numberOfTeams */ 4,
                         form.getStartDate(), form.getEndDate(),
-                        form.getEventDurationMinutes());
-                if (form.isTieBreakRaceWinner()) seasonPhaseService.setTieBreakRaceWinner(playoff.getPhase().getId(), true);
+                        form.getEventDurationMinutes(), form.isTieBreakRaceWinner());
                 redirectAttributes.addFlashAttribute("successMessage", "Playoff phase created: " + playoff.getName());
                 return "redirect:/admin/seasons/" + seasonId;
             }
@@ -270,8 +269,7 @@ public class SeasonPhaseController {
             var phase = seasonPhaseService.create(seasonId, form.getPhaseType(), form.getLayout(),
                     sortIndex, form.getLabel(), raceScoring, matchScoring,
                     form.getFormat(), form.getStartDate(), form.getEndDate(),
-                    form.getTotalRounds(), form.getLegs(), form.getEventDurationMinutes());
-            if (form.isTieBreakRaceWinner()) seasonPhaseService.setTieBreakRaceWinner(phase.getId(), true);
+                    form.getTotalRounds(), form.getLegs(), form.getEventDurationMinutes(), form.isTieBreakRaceWinner());
             redirectAttributes.addFlashAttribute("successMessage", "Phase created");
             return "redirect:/admin/seasons/" + seasonId + "/phases/" + phase.getId();
 

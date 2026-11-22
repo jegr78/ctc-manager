@@ -362,8 +362,8 @@ public class PlayoffService {
 		return legs.stream().allMatch(leg -> leg.getResults().isEmpty());
 	}
 
-	private java.util.Optional<TieBreakRule.Decision> tieBreakDecision(PlayoffMatchup matchup, List<Race> legs) {
-		if (!matchup.getRound().getPlayoff().getPhase().isTieBreakRaceWinner()) return java.util.Optional.empty();
+	private Optional<TieBreakRule.Decision> tieBreakDecision(PlayoffMatchup matchup, List<Race> legs) {
+		if (!matchup.getRound().getPlayoff().getPhase().isTieBreakRaceWinner()) return Optional.empty();
 		return scoringService.tieBreakDecision(legs, matchup.getTeam1().getId());
 	}
 
@@ -475,7 +475,16 @@ public class PlayoffService {
 	public Playoff createPlayoff(UUID seasonId, String name, int numberOfTeams,
 	                             LocalDate startDate, LocalDate endDate,
 	                             Integer eventDurationMinutes) {
+		return createPlayoff(seasonId, name, numberOfTeams, startDate, endDate, eventDurationMinutes, false);
+	}
+
+	/** Like the other overload, with the playoff phase's tie-break rule set in the same transaction. */
+	@Transactional
+	public Playoff createPlayoff(UUID seasonId, String name, int numberOfTeams,
+	                             LocalDate startDate, LocalDate endDate,
+	                             Integer eventDurationMinutes, boolean tieBreakRaceWinner) {
 		var playoff = createPlayoff(seasonId, name, numberOfTeams);
+		seasonPhaseService.applyTieBreakRule(playoff.getPhase(), tieBreakRaceWinner);
 		playoff.setStartDate(startDate);
 		playoff.setEndDate(endDate);
 		playoff.setEventDurationMinutes(eventDurationMinutes);

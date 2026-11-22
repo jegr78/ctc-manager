@@ -133,6 +133,16 @@ public class SeasonPhaseService {
                               String label, RaceScoring raceScoring, MatchScoring matchScoring,
                               SeasonFormat format, LocalDate startDate, LocalDate endDate,
                               Integer totalRounds, int legs, Integer eventDurationMinutes) {
+        return create(seasonId, type, layout, sortIndex, label, raceScoring, matchScoring, format, startDate, endDate,
+                totalRounds, legs, eventDurationMinutes, false);
+    }
+
+    /** Like the other overload, with the phase's tie-break rule set in the same transaction. */
+    @Transactional
+    public SeasonPhase create(UUID seasonId, PhaseType type, PhaseLayout layout, int sortIndex,
+                              String label, RaceScoring raceScoring, MatchScoring matchScoring,
+                              SeasonFormat format, LocalDate startDate, LocalDate endDate,
+                              Integer totalRounds, int legs, Integer eventDurationMinutes, boolean tieBreakRaceWinner) {
 
         if (seasonPhaseRepository.findBySeasonIdAndPhaseType(seasonId, type).isPresent()) {
             throw new BusinessRuleException("Season already has " + type + " phase");
@@ -153,6 +163,7 @@ public class SeasonPhaseService {
         phase.setTotalRounds(totalRounds);
         phase.setLegs(legs);
         phase.setEventDurationMinutes(eventDurationMinutes);
+        phase.setTieBreakRaceWinner(tieBreakRaceWinner);
 
         phase = seasonPhaseRepository.save(phase);
 
@@ -229,12 +240,7 @@ public class SeasonPhaseService {
         scoreLocks.lockAllSeasons();
         var phase = seasonPhaseRepository.findById(phaseId)
                 .orElseThrow(() -> new EntityNotFoundException("SeasonPhase", phaseId));
-        if (tieBreakRaceWinner != null && tieBreakRaceWinner != phase.isTieBreakRaceWinner()) {
-            if (hasScoredPairing(phaseId)) {
-                throw new BusinessRuleException(TIE_BREAK_LOCKED);
-            }
-            phase.setTieBreakRaceWinner(tieBreakRaceWinner);
-        }
+        if (tieBreakRaceWinner != null) applyTieBreakRule(phase, tieBreakRaceWinner);
         UUID currentScoringId = phase.getRaceScoring() == null ? null : phase.getRaceScoring().getId();
         if (!Objects.equals(currentScoringId, raceScoringId) && results.findFirstByRaceMatchdayPhaseId(phaseId).isPresent()) {
             throw new BusinessRuleException("This phase has results. Keep its race scoring and use a new phase for a different scheme.");
@@ -280,18 +286,13 @@ public class SeasonPhaseService {
                 || playoffMatchupRepository.existsScoredInPhase(phaseId);
     }
 
-    /** Sets the tie-break rule of a phase without scored pairings, such as a freshly created playoff phase. */
-    @Transactional
-    public void setTieBreakRaceWinner(UUID phaseId, boolean enabled) {
-        scoreLocks.lockAllSeasons();
-        var phase = seasonPhaseRepository.findById(phaseId)
-                .orElseThrow(() -> new EntityNotFoundException("SeasonPhase", phaseId));
+    /** Changes the phase's tie-break rule inside the caller's transaction; rejected once a pairing is scored. */
+    public void applyTieBreakRule(SeasonPhase phase, boolean enabled) {
         if (phase.isTieBreakRaceWinner() == enabled) return;
-        if (hasScoredPairing(phaseId)) {
+        if (phase.getId() != null && hasScoredPairing(phase.getId())) {
             throw new BusinessRuleException(TIE_BREAK_LOCKED);
         }
         phase.setTieBreakRaceWinner(enabled);
-        seasonPhaseRepository.save(phase);
     }
 
     /**

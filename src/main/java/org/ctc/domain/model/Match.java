@@ -125,6 +125,26 @@ public class Match extends BaseEntity {
         return new MatchOutcome(tieBreakWinner, homeWins ? awayTeam : homeTeam, true);
     }
 
+    public boolean isHomeWinner() {
+        var result = outcome();
+        return result != null && result.isWinner(homeTeam);
+    }
+
+    public boolean isAwayWinner() {
+        var result = outcome();
+        return result != null && result.isWinner(awayTeam);
+    }
+
+    public boolean isWonOnTieBreak() {
+        var result = outcome();
+        return result != null && result.tieBreak();
+    }
+
+    public boolean isScoredDraw() {
+        var result = outcome();
+        return result != null && result.isDraw();
+    }
+
     public Integer getOfficialHomeScore() {
         if (walkoverTeam == null) return homeScore;
         return WalkoverScoring.score(homeTeam, awayTeam, walkoverTeam, matchday.getPhase().getRaceScoring()).home();

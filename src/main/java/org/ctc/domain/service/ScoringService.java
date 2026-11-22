@@ -3,6 +3,7 @@ package org.ctc.domain.service;
 import static org.ctc.util.LogSanitizer.sanitize;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -147,7 +148,7 @@ public class ScoringService {
 
 	/** Applies {@link TieBreakRule} to the legs of a pairing, attributing drivers like the team totals do. */
 	public Optional<TieBreakRule.Decision> tieBreakDecision(List<Race> legs, UUID homeTeamId) {
-		Map<UUID, Map<UUID, RaceLineup>> lineups = new java.util.HashMap<>();
+		Map<UUID, Map<UUID, RaceLineup>> lineups = new HashMap<>();
 		return TieBreakRule.decide(legs, result -> isDriverInTeam(result, result.getRace(), homeTeamId,
 				lineups.computeIfAbsent(result.getRace().getId(), this::lineupsOf).get(result.getDriver().getId())));
 	}

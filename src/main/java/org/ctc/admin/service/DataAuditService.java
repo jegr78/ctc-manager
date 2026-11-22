@@ -47,6 +47,8 @@ import org.ctc.domain.model.SeasonTeam;
 import org.ctc.domain.model.SiteSlug;
 import org.ctc.domain.model.SiteSlugKind;
 import org.ctc.domain.model.Team;
+import org.ctc.domain.model.TieBreakRule;
+import org.ctc.domain.model.TieBreakRules;
 import org.ctc.domain.model.CarPoolMode;
 import org.ctc.domain.model.CarPoolState;
 import org.ctc.domain.repository.DriverRepository;
@@ -125,6 +127,7 @@ public class DataAuditService {
         findings.get(Category.SEASON_CONFIGURATION).addAll(auditActiveSeasons(seasonRepository.findAll()));
 		auditSuccession(seasonTeamRepository.findAllForBackup(), phaseTeams, findings.get(SUCCESSION));
 		auditPlayoffs(matchups, legs, findings.get(PLAYOFF));
+		auditPlayoffTieBreaks(matchups, findings.get(PLAYOFF));
 		auditPublicUrls(findings.get(PUBLIC_URL));
         auditCarMetadata(findings.get(CAR_METADATA), findings.get(CAR_ELIGIBILITY));
         auditCarPools(races, findings.get(CAR_POOL));
@@ -391,13 +394,38 @@ public class DataAuditService {
 		}
 	}
 
+	private void auditPlayoffTieBreaks(List<PlayoffMatchup> matchups, List<DataAuditFinding> out) {
+		for (PlayoffMatchup matchup : matchups) {
+			if (!matchup.isDecidedByTieBreak()) continue;
+			var phase = matchup.getRound().getPlayoff().getPhase();
+			var winner = matchup.getWinner();
+			if (winner == null || !TieBreakRules.valid(phase.isTieBreakRaceWinner(), winner.getId(),
+					matchup.getTeam1() == null ? null : matchup.getTeam1().getId(),
+					matchup.getTeam2() == null ? null : matchup.getTeam2().getId(),
+					matchup.getHomeScore(), matchup.getAwayScore(), matchup.isBye(),
+					matchup.getWalkoverTeam() == null ? null : matchup.getWalkoverTeam().getId())) {
+				out.add(new DataAuditFinding(PLAYOFF, AMBIGUOUS, describe(matchup),
+						"The tie-break decision breaks the rule: it needs a tied, played matchup with a participant winner in a phase with the tie-break rule",
+						"Review the matchup and reopen it to decide again."));
+				continue;
+			}
+			var expected = scoringService.tieBreakDecision(raceRepository.findByPlayoffMatchupId(matchup.getId()), matchup.getTeam1().getId())
+					.map(decision -> decision.side() == TieBreakRule.Side.HOME ? matchup.getTeam1() : matchup.getTeam2());
+			if (expected.isPresent() && !expected.get().getId().equals(winner.getId())) {
+				out.add(new DataAuditFinding(PLAYOFF, AMBIGUOUS, describe(matchup),
+						"The tie-break winner differs from the race winner of the deciding leg",
+						"Reopen the matchup and determine the winner again."));
+			}
+		}
+	}
+
 	private void auditTieBreaks(List<Match> matches, List<DataAuditFinding> out) {
 		for (Match match : matches) {
 			var phase = match.getMatchday().getPhase();
 			var winner = match.getTieBreakWinner();
 			boolean tied = match.getHomeScore() != null && match.getHomeScore().equals(match.getAwayScore())
 					&& !match.isBye() && match.getWalkoverTeam() == null;
-			if (!org.ctc.domain.model.TieBreakRules.valid(phase.isTieBreakRaceWinner(), winner == null ? null : winner.getId(),
+			if (!TieBreakRules.valid(phase.isTieBreakRaceWinner(), winner == null ? null : winner.getId(),
 					match.getHomeTeam() == null ? null : match.getHomeTeam().getId(),
 					match.getAwayTeam() == null ? null : match.getAwayTeam().getId(),
 					match.getHomeScore(), match.getAwayScore(), match.isBye(),
@@ -409,7 +437,7 @@ public class DataAuditService {
 			}
 			if (!tied || !phase.isTieBreakRaceWinner()) continue;
 			var expected = scoringService.tieBreakDecision(raceRepository.findByMatchId(match.getId()), match.getHomeTeam().getId())
-					.map(decision -> decision.side() == org.ctc.domain.model.TieBreakRule.Side.HOME ? match.getHomeTeam() : match.getAwayTeam());
+					.map(decision -> decision.side() == TieBreakRule.Side.HOME ? match.getHomeTeam() : match.getAwayTeam());
 			if (winner == null) {
 				out.add(new DataAuditFinding(PAIRING, expected.isPresent() ? RECONSTRUCTIBLE : UNDETERMINABLE, describe(match),
 						"A tied match without a tie-break winner in a phase with the tie-break rule",

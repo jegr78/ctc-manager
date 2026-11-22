@@ -113,6 +113,28 @@ class MatchOutcomeTest {
     }
 
     @Test
+    void givenTieBreakWin_whenReadingResultFlags_thenAwayWonOnTieBreak() {
+        // given
+        var match = match(45, 45);
+        match.setTieBreakWinner(away);
+        // when / then
+        assertThat(match.isAwayWinner()).isTrue();
+        assertThat(match.isHomeWinner()).isFalse();
+        assertThat(match.isWonOnTieBreak()).isTrue();
+        assertThat(match.isScoredDraw()).isFalse();
+    }
+
+    @Test
+    void givenDraw_whenReadingResultFlags_thenScoredDrawWithoutWinner() {
+        // given
+        var match = match(45, 45);
+        // when / then
+        assertThat(match.isScoredDraw()).isTrue();
+        assertThat(match.isHomeWinner() || match.isAwayWinner() || match.isWonOnTieBreak()).isFalse();
+        assertThat(match(null, null).isScoredDraw()).as("unplayed is no draw").isFalse();
+    }
+
+    @Test
     void givenUnplayedMatch_whenOutcome_thenNull() {
         // when / then
         assertThat(match(null, null).outcome()).isNull();

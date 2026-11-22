@@ -295,6 +295,14 @@ class PlayoffServiceTest {
 		}
 
 		@Test
+		void givenTieBreakRule_whenCreatePlayoff_thenPlayoffPhaseCarriesRule() {
+			// when
+			var playoff = playoffService.createPlayoff(season.getId(), "Tie-break rule", 4, null, null, null, true);
+			// then
+			assertTrue(seasonPhaseRepository.findById(playoff.getPhase().getId()).orElseThrow().isTieBreakRaceWinner());
+		}
+
+		@Test
 		void givenTiedScores_whenDetermineWinner_thenThrowsException() {
 			// given
 			var matchupId = tiedMatchup(false);
